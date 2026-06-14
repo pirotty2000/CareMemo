@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -50,9 +51,9 @@ fun UnifiedRecordScreen(
     val currentRecord by viewModel.currentRecordState.collectAsState()
     val records by viewModel.records.collectAsState()
 
-    // カテゴリが変更されたらサンプルデータを再ロード
-    LaunchedEffect(currentCategory) {
-        viewModel.loadSampleData(currentCategory)
+    // カテゴリが変更されたらデータをリロード
+    LaunchedEffect(currentCategory, personId) {
+        viewModel.loadRecords(personId, currentCategory)
         viewModel.clearCurrentRecord()
     }
 
@@ -84,13 +85,10 @@ fun UnifiedRecordScreen(
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.clearCurrentRecord() }) {
-                Icon(Icons.Default.Add, contentDescription = "新規登録")
-            }
         }
     ) { paddingValues ->
+        var showHistory by remember { mutableStateOf(true) }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,31 +100,58 @@ fun UnifiedRecordScreen(
             InputForm(
                 categoryType = currentCategory,
                 recordData = currentRecord,
+                personId = personId,
+                records = records, // 履歴データを渡す
                 onSave = { viewModel.saveRecord(it) },
                 onClear = { viewModel.clearCurrentRecord() }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             HorizontalDivider(thickness = 1.dp)
 
-            // --- [中央] グラフ表示 ---
+            // --- [中央] 履歴/グラフ 切り替え (所見メモ以外) ---
             if (currentCategory != Category.CONDITION_AT_VISIT) {
-                GraphView(records, currentCategory)
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(thickness = 1.dp)
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SegmentedButton(
+                        selected = showHistory,
+                        onClick = { showHistory = true },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text("履歴")
+                    }
+                    SegmentedButton(
+                        selected = !showHistory,
+                        onClick = { showHistory = false },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text("グラフ")
+                    }
+                }
             }
 
-            // --- [下部] 履歴一覧 (LazyColumn) ---
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(records.size) { index ->
-                    val record = records[index]
-                    RecordListItem(
-                        categoryType = currentCategory,
-                        record = record,
-                        onClick = { viewModel.selectRecord(record) },
-                        isEditable = currentRecord == record
-                    )
+            // --- [下部] メインコンテンツエリア ---
+            Box(modifier = Modifier.weight(1f)) {
+                if (currentCategory == Category.CONDITION_AT_VISIT || showHistory) {
+                    // 履歴一覧を表示
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(records.size) { index ->
+                            val record = records[index]
+                            RecordListItem(
+                                categoryType = currentCategory,
+                                record = record,
+                                onClick = { viewModel.selectRecord(record) },
+                                isEditable = currentRecord == record
+                            )
+                        }
+                    }
+                } else {
+                    // グラフを表示
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        GraphView(records, currentCategory)
+                    }
                 }
             }
         }
@@ -137,6 +162,8 @@ fun UnifiedRecordScreen(
 fun InputForm(
     categoryType: Category,
     recordData: Any?,
+    personId: Int,
+    records: List<Any>,
     onSave: (Any?) -> Unit,
     onClear: () -> Unit
 ) {
@@ -212,7 +239,14 @@ fun InputForm(
                 minuteText = "00"
             }
             // データ項目のみリセット
-            heightText = ""
+            if (categoryType == Category.HEIGHT_AND_WEIGHT) {
+                // 身長は最新の値をデフォルトセット
+                val latestHeight = records.filterIsInstance<HeightAndWeight>()
+                    .maxByOrNull { it.recordTime }?.height
+                heightText = latestHeight?.toString() ?: ""
+            } else {
+                heightText = ""
+            }
             weightText = ""
             bpSystolicText = ""
             bpDiastolicText = ""
@@ -248,96 +282,97 @@ fun InputForm(
 
     val isDateTimeValid = !isYearError && !isMonthError && !isDayError && !isHourError && !isMinuteError
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = if (isEditMode) "記録の修正" else "新規登録",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (isEditMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-        )
-
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // 共通項目：記録日時（分割入力）
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = "記録日時", style = MaterialTheme.typography.labelMedium)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 年 (4桁)
-                OutlinedTextField(
-                    value = yearText,
-                    onValueChange = { 
-                        if (it.length <= 4) {
-                            yearText = it
-                            isUserModifiedTime = true
-                        }
-                    },
-                    modifier = Modifier.weight(1.8f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    isError = isYearError,
-                    suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
-                )
-                // 月
-                OutlinedTextField(
-                    value = monthText,
-                    onValueChange = { 
-                        if (it.length <= 2) {
-                            monthText = it
-                            isUserModifiedTime = true
-                        }
-                    },
-                    modifier = Modifier.weight(1.2f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    isError = isMonthError,
-                    suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
-                )
-                // 日
-                OutlinedTextField(
-                    value = dayText,
-                    onValueChange = { 
-                        if (it.length <= 2) {
-                            dayText = it
-                            isUserModifiedTime = true
-                        }
-                    },
-                    modifier = Modifier.weight(1.2f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    isError = isDayError,
-                    suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
-                )
-                // 時
-                OutlinedTextField(
-                    value = hourText,
-                    onValueChange = { 
-                        if (it.length <= 2) {
-                            hourText = it
-                            isUserModifiedTime = true
-                        }
-                    },
-                    modifier = Modifier.weight(1.1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    isError = isHourError,
-                    suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
-                )
-                // 分
-                OutlinedTextField(
-                    value = minuteText,
-                    onValueChange = { 
-                        if (it.length <= 2) {
-                            minuteText = it
-                            isUserModifiedTime = true
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    isError = isMinuteError
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 年 (4桁)
+            OutlinedTextField(
+                value = yearText,
+                onValueChange = { 
+                    if (it.length <= 4) {
+                        yearText = it
+                        isUserModifiedTime = true
+                    }
+                },
+                modifier = Modifier
+                    .weight(1.8f)
+                    .onFocusChanged { if (it.isFocused) yearText = "" },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                isError = isYearError,
+                suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
+            )
+            // 月
+            OutlinedTextField(
+                value = monthText,
+                onValueChange = { 
+                    if (it.length <= 2) {
+                        monthText = it
+                        isUserModifiedTime = true
+                    }
+                },
+                modifier = Modifier
+                    .weight(1.2f)
+                    .onFocusChanged { if (it.isFocused) monthText = "" },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                isError = isMonthError,
+                suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
+            )
+            // 日
+            OutlinedTextField(
+                value = dayText,
+                onValueChange = { 
+                    if (it.length <= 2) {
+                        dayText = it
+                        isUserModifiedTime = true
+                    }
+                },
+                modifier = Modifier
+                    .weight(1.2f)
+                    .onFocusChanged { if (it.isFocused) dayText = "" },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                isError = isDayError,
+                suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
+            )
+            // 時
+            OutlinedTextField(
+                value = hourText,
+                onValueChange = { 
+                    if (it.length <= 2) {
+                        hourText = it
+                        isUserModifiedTime = true
+                    }
+                },
+                modifier = Modifier
+                    .weight(1.1f)
+                    .onFocusChanged { if (it.isFocused) hourText = "" },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                isError = isHourError,
+                suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
+            )
+            // 分
+            OutlinedTextField(
+                value = minuteText,
+                onValueChange = { 
+                    if (it.length <= 2) {
+                        minuteText = it
+                        isUserModifiedTime = true
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .onFocusChanged { if (it.isFocused) minuteText = "" },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                isError = isMinuteError
+            )
         }
 
         // カテゴリ別項目
@@ -351,7 +386,9 @@ fun InputForm(
                         value = heightText,
                         onValueChange = { heightText = it },
                         label = { Text("身長") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) heightText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
                     )
@@ -359,7 +396,9 @@ fun InputForm(
                         value = weightText,
                         onValueChange = { weightText = it },
                         label = { Text("体重") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) weightText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
                     )
@@ -374,7 +413,9 @@ fun InputForm(
                         value = bpSystolicText,
                         onValueChange = { bpSystolicText = it },
                         label = { Text("血圧(上)") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) bpSystolicText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -382,7 +423,9 @@ fun InputForm(
                         value = bpDiastolicText,
                         onValueChange = { bpDiastolicText = it },
                         label = { Text("血圧(下)") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) bpDiastolicText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -390,7 +433,9 @@ fun InputForm(
                         value = pulseText,
                         onValueChange = { pulseText = it },
                         label = { Text("脈拍") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) pulseText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -405,7 +450,9 @@ fun InputForm(
                         value = glucoseText,
                         onValueChange = { glucoseText = it },
                         label = { Text("血糖値") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) glucoseText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -413,7 +460,9 @@ fun InputForm(
                         value = hba1cText,
                         onValueChange = { hba1cText = it },
                         label = { Text("HbA1c") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.isFocused) hba1cText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
                     )
@@ -447,11 +496,73 @@ fun InputForm(
         ) {
             Button(
                 onClick = {
-                    // TODO: 実際のデータオブジェクト生成ロジック
-                    onSave(recordData)
+                    val recordTime = try {
+                        val year = yearText.toInt()
+                        val month = monthText.toInt()
+                        val day = dayText.toInt()
+                        val hour = hourText.toIntOrNull() ?: 0
+                        val minute = minuteText.toIntOrNull() ?: 0
+                        java.time.LocalDateTime.of(year, month, day, hour, minute)
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant()
+                    } catch (_: Exception) {
+                        Instant.now()
+                    }
+
+                    val newRecord = when (categoryType) {
+                        Category.HEIGHT_AND_WEIGHT -> {
+                            val id = (recordData as? HeightAndWeight)?.id ?: 0
+                            HeightAndWeight(
+                                id = id,
+                                personId = personId,
+                                height = heightText.toDoubleOrNull(),
+                                weight = weightText.toDoubleOrNull() ?: 0.0,
+                                recordTime = recordTime
+                            )
+                        }
+                        Category.BP_AND_PULSE -> {
+                            val id = (recordData as? BpAndPulse)?.id ?: 0
+                            BpAndPulse(
+                                id = id,
+                                personId = personId,
+                                bpSystolic = bpSystolicText.toIntOrNull(),
+                                bpDiastolic = bpDiastolicText.toIntOrNull(),
+                                pulse = pulseText.toIntOrNull(),
+                                recordTime = recordTime
+                            )
+                        }
+                        Category.GLUCOSE_AND_HBA1C -> {
+                            val id = (recordData as? GlucoseAndHbA1c)?.id ?: 0
+                            GlucoseAndHbA1c(
+                                id = id,
+                                personId = personId,
+                                glucose = glucoseText.toIntOrNull(),
+                                hba1c = hba1cText.toDoubleOrNull(),
+                                recordTime = recordTime
+                            )
+                        }
+                        Category.CONDITION_AT_VISIT -> {
+                            val id = (recordData as? ConditionAtVisit)?.id ?: 0
+                            ConditionAtVisit(
+                                id = id,
+                                personId = personId,
+                                title = titleText,
+                                condition = conditionText,
+                                author = authorText,
+                                recordTime = recordTime
+                            )
+                        }
+                    }
+                    onSave(newRecord)
                 },
                 modifier = Modifier.weight(1f),
-                enabled = isDateTimeValid
+                enabled = isDateTimeValid && when (categoryType) {
+                    Category.HEIGHT_AND_WEIGHT -> {
+                        weightText.toDoubleOrNull() != null
+                    }
+                    Category.CONDITION_AT_VISIT -> authorText.isNotBlank()
+                    else -> true
+                }
             ) {
                 Text(if (isEditMode) "更新" else "保存")
             }
@@ -522,7 +633,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     yStep = 1.0
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                     if (selectedSubCategory == 0) {
-                        listOf(ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to it.weight }, Color.Blue))
+                        listOf(ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue))
                     } else {
                         listOf(ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to calculateBMI(it) }, Color.Red))
                     }
@@ -734,28 +845,37 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                 Category.HEIGHT_AND_WEIGHT -> {
                     if (record is HeightAndWeight) {
                         val bmi = calculateBMI(record)
+                        val heightStr = record.height?.let { "${it}cm" } ?: "---"
+                        val weightStr = record.weight?.let { "${it}kg" } ?: "---"
+                        val bmiStr = if (bmi > 0) "%.1f".format(bmi) else "---"
+                        val evaluation = if (bmi > 0) evaluateBMI(bmi) else "---"
+                        
                         Text(
-                            text = "身長: ${record.height}cm, 体重: ${record.weight}kg, BMI: %.1f (%s)".format(
-                                bmi, evaluateBMI(bmi)
-                            ),
+                            text = "身長: $heightStr, 体重: $weightStr, BMI: $bmiStr ($evaluation)",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
                 Category.BP_AND_PULSE -> {
                     if (record is BpAndPulse) {
+                        val systolicStr = record.bpSystolic?.toString() ?: "---"
+                        val diastolicStr = record.bpDiastolic?.toString() ?: "---"
+                        val pulseStr = record.pulse?.toString() ?: "---"
+                        val evaluation = checkLowBloodPressureAndBradycardia(record)
+                        
                         Text(
-                            text = "血圧: ${record.bpSystolic}/${record.bpDiastolic} mmHg, 脈拍: ${record.pulse} bpm (%s)".format(
-                                checkLowBloodPressureAndBradycardia(record)
-                            ),
+                            text = "血圧: $systolicStr/$diastolicStr mmHg, 脈拍: $pulseStr bpm ($evaluation)",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
                 Category.GLUCOSE_AND_HBA1C -> {
                     if (record is GlucoseAndHbA1c) {
+                        val glucoseStr = record.glucose?.let { "${it} mg/dL" } ?: "---"
+                        val hba1cStr = record.hba1c?.let { "${it}%" } ?: "---"
+                        
                         Text(
-                            text = "血糖値: ${record.glucose} mg/dL, HbA1c: ${record.hba1c}%",
+                            text = "血糖値: $glucoseStr, HbA1c: $hba1cStr",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -763,7 +883,7 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                 Category.CONDITION_AT_VISIT -> {
                     if (record is ConditionAtVisit) {
                         Text(
-                            text = "タイトル: ${record.title ?: "なし"}, 記録者: ${record.author}",
+                            text = "タイトル: ${record.title ?: "---"}, 記録者: ${record.author.ifBlank { "---" }}",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -775,9 +895,11 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
 
 // 補助関数の実装
 fun calculateBMI(record: HeightAndWeight): Double {
-    val heightM = (record.height ?: 0.0) / 100.0
+    val h = record.height ?: 0.0
+    val w = record.weight ?: 0.0
+    val heightM = h / 100.0
     if (heightM <= 0.0) return 0.0
-    return record.weight / (heightM * heightM)
+    return w / (heightM * heightM)
 }
 
 fun evaluateBMI(bmi: Double): String {
@@ -839,14 +961,9 @@ fun formatRecordTime(instant: Instant): String {
 @Preview(showBackground = true)
 @Composable
 fun UnifiedRecordScreenPreview() {
-    val viewModel = PersonDetailViewModel()
-    viewModel.loadSampleData(Category.HEIGHT_AND_WEIGHT)
+    // プレビュー用にダミーのViewModel（またはRepositoryをMockしたもの）が必要
+    // ここでは簡易的に空の状態で表示確認
     MaterialTheme {
-        UnifiedRecordScreen(
-            viewModel = viewModel,
-            initialCategoryType = Category.HEIGHT_AND_WEIGHT,
-            personId = 1,
-            onBack = {}
-        )
+        Text("Preview requires a ViewModel with Repository")
     }
 }

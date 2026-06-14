@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    kotlin("plugin.serialization") version "2.2.10"
 }
 
 android {
@@ -53,6 +54,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 
     // Room
     implementation(libs.room.runtime)

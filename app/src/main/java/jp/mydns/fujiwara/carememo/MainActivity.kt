@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +18,7 @@ import jp.mydns.fujiwara.carememo.ui.screens.MainScreen
 import jp.mydns.fujiwara.carememo.ui.screens.UnifiedRecordScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,10 +35,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CareMemoApp() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val application = context.applicationContext as CareMemoApplication
+    val repository = application.repository
 
     NavHost(navController = navController, startDestination = "main") {
         composable("main") {
+            val listViewModel: PersonListViewModel = viewModel(
+                factory = PersonListViewModel.Factory(repository)
+            )
             MainScreen(
+                viewModel = listViewModel,
                 onNavigateToDetail = { personId, category ->
                     navController.navigate("detail/$personId/${category.name}")
                 }
@@ -52,7 +61,10 @@ fun CareMemoApp() {
             val personId = backStackEntry.arguments?.getInt("personId") ?: 0
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.CONDITION_AT_VISIT.name
             val category = Category.valueOf(categoryName)
-            val detailViewModel: PersonDetailViewModel = viewModel()
+            
+            val detailViewModel: PersonDetailViewModel = viewModel(
+                factory = PersonDetailViewModel.Factory(repository)
+            )
             
             // 画面遷移確認用のサンプルデータをロード
             LaunchedEffect(category) {

@@ -4,21 +4,30 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.chrono.JapaneseDate
 import java.time.format.DateTimeFormatter
@@ -27,39 +36,31 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    viewModel: PersonListViewModel,
     onNavigateToDetail: (Int, Category) -> Unit,
 ) {
-    // val userList by viewModel.userList.collectAsState(initial = emptyList())
-    val userList = listOf(
-        Person(
-            id = 1,
-            name = "山田 太郎",
-            furigana = "ヤマダ タロウ",
-            birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()
-        ),
-        Person(
-            id = 2,
-            name = "佐藤 花子",
-            furigana = "サトウ ハナコ",
-            birthday = LocalDate.of(1965, 5, 20).atStartOfDay(ZoneId.systemDefault()).toInstant()
-        ),
-        Person(
-            id = 3,
-            name = "鈴木 一郎",
-            furigana = "スズキ イチロウ",
-            birthday = LocalDate.of(1940, 11, 10).atStartOfDay(ZoneId.systemDefault()).toInstant()
-        )
-    )
+    val userList by viewModel.userList.collectAsState()
 
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var showSheet by remember { mutableStateOf(false) }
+    
+    // 登録・編集ダイアログの状態
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingPerson by remember { mutableStateOf<Person?>(null) }
 
     MainScreenContent(
         userList = userList,
         onUserClick = { person ->
             selectedPerson = person
             showSheet = true
+        },
+        onAddClick = {
+            editingPerson = null
+            showEditDialog = true
+        },
+        onInitClick = { context ->
+            viewModel.loadInitialData(context)
         }
     )
 
@@ -73,9 +74,29 @@ fun MainScreen(
                 onCategorySelect = { category ->
                     showSheet = false
                     onNavigateToDetail(selectedPerson!!.id, category)
+                },
+                onEditPerson = {
+                    showSheet = false
+                    editingPerson = selectedPerson
+                    showEditDialog = true
                 }
             )
         }
+    }
+
+    if (showEditDialog) {
+        UserEditDialog(
+            person = editingPerson,
+            onDismiss = { showEditDialog = false },
+            onSave = { person ->
+                if (editingPerson == null) {
+                    viewModel.addPerson(person)
+                } else {
+                    viewModel.updatePerson(person)
+                }
+                showEditDialog = false
+            }
+        )
     }
 }
 
@@ -83,15 +104,38 @@ fun MainScreen(
 @Composable
 fun MainScreenContent(
     userList: List<Person>,
-    onUserClick: (Person) -> Unit
+    onUserClick: (Person) -> Unit,
+    onAddClick: () -> Unit,
+    onInitClick: (android.content.Context) -> Unit,
 ) {
     var searchText by remember { mutableStateOf("") }
+    
+    // インクリメンタルサーチのフィルタリング（前方一致）と、ふりがなでのソート
+    val filteredList = remember(userList, searchText) {
+        userList
+            .filter { user ->
+                searchText.isBlank() || (user.furigana?.startsWith(searchText) ?: false)
+            }
+            .sortedBy { it.furigana ?: "" }
+    }
+    
+    val context = LocalContext.current
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("健康管理メモ帳", fontWeight = FontWeight.Bold) }
+                title = { Text("健康管理メモ帳", fontWeight = FontWeight.Bold) },
+                actions = {
+                    TextButton(onClick = { onInitClick(context) }) {
+                        Text("データ読込", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddClick) {
+                Icon(Icons.Default.Add, contentDescription = "利用者登録")
+            }
         }
     ) { paddingValues ->
         Column(
@@ -113,7 +157,7 @@ fun MainScreenContent(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(userList) { user ->
+                items(filteredList) { user ->
                     val age = calculateAge(user.birthday)
                     val birthdayStr = formatToJapaneseEra(user.birthday)
                     
@@ -159,7 +203,8 @@ fun MainScreenContent(
 @Composable
 fun CategorySelectionSheet(
     personName: String,
-    onCategorySelect: (Category) -> Unit
+    onCategorySelect: (Category) -> Unit,
+    onEditPerson: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -168,11 +213,20 @@ fun CategorySelectionSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "$personName さんの記録を選択",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$personName さんの記録を選択",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            IconButton(onClick = onEditPerson) {
+                Icon(Icons.Default.Edit, contentDescription = "情報を編集")
+            }
+        }
         
         Category.entries.forEach { category ->
             Button(
@@ -187,6 +241,122 @@ fun CategorySelectionSheet(
             }
         }
     }
+}
+
+@Composable
+fun UserEditDialog(
+    person: Person?,
+    onDismiss: () -> Unit,
+    onSave: (Person) -> Unit,
+) {
+    var name by remember { mutableStateOf(person?.name ?: "") }
+    var furigana by remember { mutableStateOf(person?.furigana ?: "") }
+    
+    val initialDate = person?.birthday?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.now()
+    var yearText by remember { mutableStateOf(initialDate.year.toString()) }
+    var monthText by remember { mutableStateOf(initialDate.monthValue.toString()) }
+    var dayText by remember { mutableStateOf(initialDate.dayOfMonth.toString()) }
+
+    val y = yearText.toIntOrNull()
+    val m = monthText.toIntOrNull()
+    val d = dayText.toIntOrNull()
+
+    val isYearError = y == null || y !in 1900..2100
+    val isMonthError = m == null || m !in 1..12
+    val isDayError = try {
+        if (y != null && m != null && d != null) {
+            d < 1 || d > YearMonth.of(y, m).lengthOfMonth()
+        } else {
+            true
+        }
+    } catch (_: Exception) {
+        true
+    }
+
+    val isInputValid = name.isNotBlank() && !isYearError && !isMonthError && !isDayError
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (person == null) "利用者登録" else "登録情報の編集") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("氏名 (必須)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = furigana,
+                    onValueChange = { furigana = it },
+                    label = { Text("ふりがな") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("生年月日", style = MaterialTheme.typography.labelMedium)
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = yearText,
+                        onValueChange = { if (it.length <= 4) yearText = it },
+                        modifier = Modifier.weight(1.5f),
+                        label = { Text("年") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isYearError,
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = monthText,
+                        onValueChange = { if (it.length <= 2) monthText = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("月") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isMonthError,
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = dayText,
+                        onValueChange = { if (it.length <= 2) dayText = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("日") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isDayError,
+                        singleLine = true
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (isInputValid && y != null && m != null && d != null) {
+                        val birthday = LocalDate.of(y, m, d)
+                            .atStartOfDay(ZoneId.systemDefault())
+                            .toInstant()
+                        onSave(
+                            person?.copy(name = name, furigana = furigana, birthday = birthday)
+                                ?: Person(name = name, furigana = furigana, birthday = birthday)
+                        )
+                    }
+                },
+                enabled = isInputValid
+            ) {
+                Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("キャンセル")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true)
@@ -213,12 +383,17 @@ fun MainScreenPreview() {
         )
     )
     CareMemoTheme {
-        MainScreenContent(userList = mockUserList, onUserClick = { })
+        MainScreenContent(
+            userList = mockUserList, 
+            onUserClick = { }, 
+            onAddClick = { },
+            onInitClick = { }
+        )
     }
 }
 
 fun calculateAge(birthday: Instant): Int {
-    val birthDate = LocalDate.ofInstant(birthday, ZoneId.systemDefault())
+    val birthDate = birthday.atZone(ZoneId.systemDefault()).toLocalDate()
     val currentDate = LocalDate.now()
     return Period.between(birthDate, currentDate).years
 }
@@ -227,7 +402,7 @@ fun calculateAge(birthday: Instant): Int {
  * Instant を和暦（例：昭和25年1月1日）の文字列に変換する
  */
 fun formatToJapaneseEra(instant: Instant): String {
-    val localDate = LocalDate.ofInstant(instant, ZoneId.systemDefault())
+    val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
     val japaneseDate = JapaneseDate.from(localDate)
     val formatter = DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)
     return japaneseDate.format(formatter)
@@ -238,8 +413,17 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = { onQueryChange(it) },
-        label = { Text("利用者名検索") },
+        placeholder = { 
+            Text(
+                "ひらがなの読み名で入力してください",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray
+            )
+        },
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        )
     )
 }
