@@ -9,20 +9,35 @@ import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.Person
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.Period
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class PersonDetailViewModel(private val repository: CareMemoRepository) : ViewModel() {
+    private val _currentPerson = MutableStateFlow<Person?>(null)
+    val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
+
     private val _currentRecordState = MutableStateFlow<Any?>(null)
     val currentRecordState: StateFlow<Any?> = _currentRecordState.asStateFlow()
 
     private val _records = MutableStateFlow<List<Any>>(emptyList())
     val records: StateFlow<List<Any>> = _records.asStateFlow()
+
+    fun loadPerson(personId: Int) {
+        viewModelScope.launch {
+            repository.getPersonById(personId).collectLatest {
+                _currentPerson.value = it
+            }
+        }
+    }
 
     fun loadRecords(personId: Int, category: Category) {
         viewModelScope.launch {

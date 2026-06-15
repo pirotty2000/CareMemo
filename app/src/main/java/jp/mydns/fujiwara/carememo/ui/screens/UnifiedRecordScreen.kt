@@ -4,7 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,12 +32,31 @@ import androidx.compose.ui.unit.sp
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.chrono.JapaneseDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
+
+// 健康指標の判定基準
+object HealthThresholds {
+    // 高血圧・低血圧・頻脈・徐脈の判定ルールとなる数値
+    const val BP_HIGH_SYSTOLIC = 140.0  // 高血圧：血圧（上）
+    const val BP_HIGH_DIASTOLIC = 90.0  // 高血圧：血圧（下）
+    const val BP_LOW_SYSTOLIC = 100.0   // 低血圧：血圧（上）
+    const val BP_LOW_DIASTOLIC = 60.0   // 低血圧：血圧（下）
+    const val PULSE_HIGH = 100.0        // 頻脈
+    const val PULSE_LOW = 50.0          // 徐脈
+
+    // 血糖値・HbA1cの判定基準
+    const val GLUCOSE_NORMAL_HIGH = 99.0
+    const val GLUCOSE_NORMAL_LOW = 70.0
+    const val HBA1C_GOOD = 5.5
+    const val HBA1C_PREDIABETES = 6.0
+    const val HBA1C_DIABETES = 6.5
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,18 +71,36 @@ fun UnifiedRecordScreen(
     
     val currentRecord by viewModel.currentRecordState.collectAsState()
     val records by viewModel.records.collectAsState()
+    val person by viewModel.currentPerson.collectAsState()
 
-    // カテゴリが変更されたらデータをリロード
+    // カテゴリや利用者が変更されたらデータをリロード
     LaunchedEffect(currentCategory, personId) {
+        viewModel.loadPerson(personId)
         viewModel.loadRecords(personId, currentCategory)
         viewModel.clearCurrentRecord()
+    }
+
+    // 年齢計算
+    val age = remember(person) {
+        person?.birthday?.let { birthdayInstant ->
+            val birthDate = birthdayInstant.atZone(ZoneId.systemDefault()).toLocalDate()
+            val now = LocalDate.now()
+            java.time.Period.between(birthDate, now).years
+        }
     }
 
     Scaffold(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("利用者記録", fontWeight = FontWeight.Bold) },
+                    title = { 
+                        val titleText = if (person != null) {
+                            "${person?.name}さん（${age}歳）の利用者記録"
+                        } else {
+                            "利用者記録"
+                        }
+                        Text(titleText, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
@@ -132,7 +171,7 @@ fun UnifiedRecordScreen(
                 }
             }
 
-            // --- [下部] メインコンテンツエリア ---
+    // --- [下部] メインコンテンツエリア ---
             Box(modifier = Modifier.weight(1f)) {
                 if (currentCategory == Category.CONDITION_AT_VISIT || showHistory) {
                     // 履歴一覧を表示
@@ -148,8 +187,12 @@ fun UnifiedRecordScreen(
                         }
                     }
                 } else {
-                    // グラフを表示
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    // グラフを表示（スクロール可能にする）
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         GraphView(records, currentCategory)
                     }
                 }
@@ -582,93 +625,147 @@ fun InputForm(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphView(records: List<Any>, categoryType: Category) {
-    var selectedSubCategory by remember { mutableIntStateOf(0) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (categoryType == Category.GLUCOSE_AND_HBA1C || categoryType == Category.HEIGHT_AND_WEIGHT) {
-            SingleChoiceSegmentedButtonRow(
+        if (categoryType == Category.BP_AND_PULSE) {
+            // 血圧グラフ
+            Text("血圧", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Box(
                 modifier = Modifier
+                    .height(220.dp)
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(horizontal = 8.dp)
             ) {
-                val labels = if (categoryType == Category.HEIGHT_AND_WEIGHT) {
-                    listOf("体重", "BMI")
+                val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
+                val chartDataList = listOf(
+                    ChartLineData("血圧(上)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpSystolic?.toDouble() ?: 0.0) }, Color.Red),
+                    ChartLineData("血圧(下)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpDiastolic?.toDouble() ?: 0.0) }, Color.Blue)
+                )
+                val ranges = listOf(ChartRangeHighlight(HealthThresholds.BP_HIGH_DIASTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)))
+                
+                if (chartDataList.any { it.points.isNotEmpty() }) {
+                    LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0)
                 } else {
-                    listOf("血糖値", "HbA1c")
-                }
-
-                SegmentedButton(
-                    selected = selectedSubCategory == 0,
-                    onClick = { selectedSubCategory = 0 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                ) {
-                    Text(labels[0])
-                }
-                SegmentedButton(
-                    selected = selectedSubCategory == 1,
-                    onClick = { selectedSubCategory = 1 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                ) {
-                    Text(labels[1])
+                    Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
             }
-        }
 
-        Box(
-            modifier = Modifier
-                .height(220.dp)
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-        ) {
-            var yStep = 5.0
-            var limits = emptyList<ChartLimitLine>()
-            
-            val chartDataList = when (categoryType) {
-                Category.HEIGHT_AND_WEIGHT -> {
-                    yStep = 1.0
-                    val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
-                    if (selectedSubCategory == 0) {
-                        listOf(ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue))
-                    } else {
-                        listOf(ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to calculateBMI(it) }, Color.Red))
-                    }
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 脈拍グラフ
+            Text("脈拍", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Box(
+                modifier = Modifier
+                    .height(220.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
+                val chartDataList = listOf(
+                    ChartLineData("脈拍", data.map { it.recordTime.toEpochMilli().toDouble() to (it.pulse?.toDouble() ?: 0.0) }, Color(0xFF4CAF50))
+                )
+                val ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, Color(0xFFE8F5E9)))
+                
+                if (chartDataList.any { it.points.isNotEmpty() }) {
+                    LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 40.0, maxYConstraint = 110.0)
+                } else {
+                    Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
-                Category.BP_AND_PULSE -> {
-                    val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
-                    limits = listOf(
-                        ChartLimitLine("High BP ≥ 140", 140.0, Color.Gray, isLabelAbove = true),
-                        ChartLimitLine("Low BP < 100", 100.0, Color.Gray, isLabelAbove = false)
-                    )
-                    listOf(
-                        ChartLineData("血圧(上)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpSystolic?.toDouble() ?: 0.0) }, Color.Red),
-                        ChartLineData("血圧(下)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpDiastolic?.toDouble() ?: 0.0) }, Color.Blue)
-                    )
+            }
+        } else if (categoryType == Category.GLUCOSE_AND_HBA1C) {
+            // 血糖値グラフ
+            Text("血糖値", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Box(
+                modifier = Modifier
+                    .height(220.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
+                val chartDataList = listOf(
+                    ChartLineData("血糖値", data.map { it.recordTime.toEpochMilli().toDouble() to (it.glucose?.toDouble() ?: 0.0) }, Color.Magenta)
+                )
+                val ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, Color(0xFFE8F5E9)))
+                
+                if (chartDataList.any { it.points.isNotEmpty() }) {
+                    LineChart(chartDataList, stepY = 20.0, ranges = ranges, minYConstraint = 60.0, maxYConstraint = 110.0)
+                } else {
+                    Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
-                Category.GLUCOSE_AND_HBA1C -> {
-                    val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
-                    if (selectedSubCategory == 0) {
-                        listOf(ChartLineData("血糖値", data.map { it.recordTime.toEpochMilli().toDouble() to (it.glucose?.toDouble() ?: 0.0) }, Color.Magenta))
-                    } else {
-                        yStep = 0.5
-                        limits = listOf(
-                            ChartLimitLine("Upper Limit < 6.2", 6.2, Color.Gray, isLabelAbove = true),
-                            ChartLimitLine("Lower Limit > 4.6", 4.6, Color.Gray, isLabelAbove = false)
-                        )
-                        listOf(ChartLineData("HbA1c", data.map { it.recordTime.toEpochMilli().toDouble() to (it.hba1c ?: 0.0) }, Color.Red))
-                    }
-                }
-                else -> emptyList()
             }
 
-            if (chartDataList.isNotEmpty() && chartDataList.any { it.points.isNotEmpty() }) {
-                LineChart(chartDataList, stepY = yStep, limits = limits)
-            } else {
-                Text("データがありません", modifier = Modifier.align(Alignment.Center))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // HbA1cグラフ
+            Text("HbA1c", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Box(
+                modifier = Modifier
+                    .height(220.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
+                val chartDataList = listOf(
+                    ChartLineData("HbA1c", data.map { it.recordTime.toEpochMilli().toDouble() to (it.hba1c ?: 0.0) }, Color.Red)
+                )
+                val ranges = listOf(
+                    ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)),
+                    ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, 6.4, Color(0xFFFFFDE7)),
+                    ChartRangeHighlight(HealthThresholds.HBA1C_DIABETES, 100.0, Color(0xFFFFEBEE))
+                )
+                
+                if (chartDataList.any { it.points.isNotEmpty() }) {
+                    LineChart(chartDataList, stepY = 0.5, ranges = ranges, minYConstraint = 3.0, maxYConstraint = 7.0)
+                } else {
+                    Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                }
+            }
+        } else if (categoryType == Category.HEIGHT_AND_WEIGHT) {
+            // 体重グラフ
+            Text("体重", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Box(
+                modifier = Modifier
+                    .height(220.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
+                val chartDataList = listOf(
+                    ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue)
+                )
+                if (chartDataList.any { it.points.isNotEmpty() }) {
+                    LineChart(chartDataList, stepY = 1.0, minYConstraint = 0.0)
+                } else {
+                    Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // BMIグラフ
+            Text("BMI", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Box(
+                modifier = Modifier
+                    .height(220.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
+                val chartDataList = listOf(
+                    ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to calculateBMI(it) }, Color.Red)
+                )
+                // 18.5～25.0 を薄い緑色でハイライト
+                val ranges = listOf(ChartRangeHighlight(18.5, 25.0, Color(0xFFE8F5E9)))
+                
+                if (chartDataList.any { it.points.isNotEmpty() }) {
+                    LineChart(chartDataList, stepY = 1.0, ranges = ranges, minYConstraint = 15.0, maxYConstraint = 30.0)
+                } else {
+                    Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                }
             }
         }
     }
@@ -687,11 +784,20 @@ data class ChartLimitLine(
     val isLabelAbove: Boolean
 )
 
+data class ChartRangeHighlight(
+    val startValue: Double,
+    val endValue: Double,
+    val color: Color
+)
+
 @Composable
 fun LineChart(
     dataList: List<ChartLineData>,
     stepY: Double = 5.0,
-    limits: List<ChartLimitLine> = emptyList()
+    limits: List<ChartLimitLine> = emptyList(),
+    ranges: List<ChartRangeHighlight> = emptyList(),
+    minYConstraint: Double? = null,
+    maxYConstraint: Double? = null
 ) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = Color.Gray)
@@ -706,10 +812,14 @@ fun LineChart(
         val minX = allPoints.minOf { it.first }
         val maxX = allPoints.maxOf { it.first }
         
-        // データの最小最大と、Limit Line の値を考慮して軸範囲を決定
+        // データの最小最大と、Limit Line の値を考慮して軸範囲を決定（Range Highlight は背景なので軸範囲には含めない）
         val allYValues = allPoints.map { it.second } + limits.map { it.value }
-        val minYInput = allYValues.minOf { it }
-        val maxYInput = allYValues.maxOf { it }
+        var minYInput = allYValues.minOf { it }
+        var maxYInput = allYValues.maxOf { it }
+        
+        // 制約があれば適用（データが制約外ならデータを優先）
+        minYConstraint?.let { minYInput = minOf(minYInput, it) }
+        maxYConstraint?.let { maxYInput = maxOf(maxYInput, it) }
         
         // --- 縦軸の範囲を「stepY 刻み」で計算 ---
         val minY = floor(minYInput / stepY) * stepY
@@ -728,6 +838,24 @@ fun LineChart(
         
         val chartWidth = size.width - paddingLeft - paddingRight
         val chartHeight = size.height - paddingTop - paddingBottom
+
+        // --- 0. Range Highlights (範囲ハイライト) の描画 ---
+        ranges.forEach { range ->
+            val pyStart = paddingTop + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
+            val pyEnd = paddingTop + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
+            
+            // 描画範囲をチャート内に収める
+            val top = pyEnd.coerceIn(paddingTop, paddingTop + chartHeight)
+            val bottom = pyStart.coerceIn(paddingTop, paddingTop + chartHeight)
+            
+            if (bottom > top) {
+                drawRect(
+                    color = range.color,
+                    topLeft = Offset(paddingLeft, top),
+                    size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top)
+                )
+            }
+        }
 
         // --- 1. 凡例の描画 ---
         var legendOffsetX = paddingLeft
@@ -906,21 +1034,23 @@ fun evaluateBMI(bmi: Double): String {
     return when {
         bmi <= 0.0 -> "-"
         bmi < 18.5 -> "低体重"
-        bmi < 25.0 -> "標準体重"
-        bmi < 30.0 -> "肥満（軽度）"
-        else -> "肥満（重度以上）"
+        bmi < 25.0 -> "普通体重"
+        bmi < 30.0 -> "肥満(１度)"
+        bmi < 35.0 -> "肥満(２度)"
+        bmi < 40.0 -> "肥満(３度)"
+        else -> "肥満(４度)"
     }
 }
 
 fun checkLowBloodPressureAndBradycardia(record: BpAndPulse): String {
-    val systolic = record.bpSystolic ?: 100
+    val systolic = record.bpSystolic ?: 120
     val diastolic = record.bpDiastolic ?: 80
     val pulse = record.pulse ?: 70
 
-    val isHighBp = systolic >= 140 || diastolic >= 90
-    val isLowBp = systolic < 100
-    val isBradycardia = pulse <= 50
-    val isTachycardia = pulse >= 100
+    val isHighBp = systolic >= HealthThresholds.BP_HIGH_SYSTOLIC || diastolic >= HealthThresholds.BP_HIGH_DIASTOLIC
+    val isLowBp = systolic < HealthThresholds.BP_LOW_SYSTOLIC || diastolic < HealthThresholds.BP_LOW_DIASTOLIC
+    val isBradycardia = pulse <= HealthThresholds.PULSE_LOW
+    val isTachycardia = pulse >= HealthThresholds.PULSE_HIGH
 
     return when {
         isHighBp && isTachycardia -> "高・頻"
