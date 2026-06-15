@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,6 +57,56 @@ object HealthThresholds {
     const val HBA1C_GOOD = 5.5
     const val HBA1C_PREDIABETES = 6.0
     const val HBA1C_DIABETES = 6.5
+
+    // BMIの判定基準
+    const val BMI_NORMAL_LOW = 18.5
+    const val BMI_NORMAL_HIGH = 25.0
+    const val BMI_OBESITY_1 = 30.0
+    const val BMI_OBESITY_2 = 35.0
+    const val BMI_OBESITY_3 = 40.0
+
+    // 指標の説明文（文字テンプレートを使用し、定数と連動）
+    val BP_EXPLANATION = """
+        血圧グラフの見方：
+        ・赤い線（血圧・上）が、上の薄い緑色の範囲（${BP_LOW_SYSTOLIC.toInt()}〜${BP_HIGH_SYSTOLIC.toInt()}）にあれば正常です。
+        ・青い線（血圧・下）が、下の薄い緑色の範囲（${BP_LOW_DIASTOLIC.toInt()}〜${BP_HIGH_DIASTOLIC.toInt()}）にあれば正常です。
+        
+        ※ いずれかの線が緑色の範囲より上にあれば「高血圧」、下にあれば「低血圧」の目安となります。
+    """.trimIndent()
+
+    val PULSE_EXPLANATION = """
+        脈拍グラフの見方：
+        ・線が薄い緑色の範囲（${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()}）にあれば正常です。
+        
+        ※ 範囲より上にあれば「頻脈」、下にあれば「徐脈」の目安となります。
+    """.trimIndent()
+
+    val GLUCOSE_EXPLANATION = """
+        血糖値グラフの見方：
+        ・線が薄い緑色の範囲（${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()}）にあれば正常範囲（空腹時などの目安）です。
+    """.trimIndent()
+
+    val HBA1C_EXPLANATION = """
+        HbA1cグラフの見方：
+        ・薄い緑色（$HBA1C_GOOD％以下）：良好
+        ・薄い黄色（$HBA1C_PREDIABETES％〜6.4％）：糖尿病予備軍
+        ・薄い赤色（$HBA1C_DIABETES％以上）：糖尿病が強く疑われる値
+    """.trimIndent()
+
+    val BMI_EXPLANATION = """
+        BMIグラフの見方：
+        ・薄い緑色（${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満）：普通体重
+        ・薄い青色（${BMI_NORMAL_LOW}未満）：低体重（低栄養への注意）
+        ・薄い赤色（${BMI_OBESITY_2}以上）：高度な肥満（３度以上）
+        
+        【判定基準（WHO）】
+        ・${BMI_NORMAL_LOW}未満：低体重
+        ・${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満：普通体重
+        ・${BMI_NORMAL_HIGH}〜${BMI_OBESITY_1}未満：肥満(１度)
+        ・${BMI_OBESITY_1}〜${BMI_OBESITY_2}未満：肥満(２度)
+        ・${BMI_OBESITY_2}〜${BMI_OBESITY_3}未満：肥満(３度)
+        ・${BMI_OBESITY_3}以上：肥満(４度)
+    """.trimIndent()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -625,6 +676,22 @@ fun InputForm(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphView(records: List<Any>, categoryType: Category) {
+    var showHelpDialog by remember { mutableStateOf<String?>(null) }
+
+    // ヘルプダイアログ
+    if (showHelpDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = null },
+            title = { Text("数値の目安") },
+            text = { Text(showHelpDialog!!) },
+            confirmButton = {
+                TextButton(onClick = { showHelpDialog = null }) {
+                    Text("閉じる")
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -633,7 +700,12 @@ fun GraphView(records: List<Any>, categoryType: Category) {
     ) {
         if (categoryType == Category.BP_AND_PULSE) {
             // 血圧グラフ
-            Text("血圧", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("血圧", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }) {
+                    Icon(Icons.Outlined.HelpOutline, contentDescription = "説明を表示", modifier = Modifier.size(20.dp), tint = Color.Gray)
+                }
+            }
             Box(
                 modifier = Modifier
                     .height(220.dp)
@@ -645,7 +717,11 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     ChartLineData("血圧(上)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpSystolic?.toDouble() ?: 0.0) }, Color.Red),
                     ChartLineData("血圧(下)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpDiastolic?.toDouble() ?: 0.0) }, Color.Blue)
                 )
-                val ranges = listOf(ChartRangeHighlight(HealthThresholds.BP_HIGH_DIASTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)))
+                // 2つの独立した正常値バンドを表示
+                val ranges = listOf(
+                    ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)), // 上の正常範囲
+                    ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9)) // 下の正常範囲
+                )
                 
                 if (chartDataList.any { it.points.isNotEmpty() }) {
                     LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0)
@@ -657,7 +733,12 @@ fun GraphView(records: List<Any>, categoryType: Category) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // 脈拍グラフ
-            Text("脈拍", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("脈拍", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }) {
+                    Icon(Icons.Outlined.HelpOutline, contentDescription = "説明を表示", modifier = Modifier.size(20.dp), tint = Color.Gray)
+                }
+            }
             Box(
                 modifier = Modifier
                     .height(220.dp)
@@ -678,7 +759,12 @@ fun GraphView(records: List<Any>, categoryType: Category) {
             }
         } else if (categoryType == Category.GLUCOSE_AND_HBA1C) {
             // 血糖値グラフ
-            Text("血糖値", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("血糖値", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { showHelpDialog = HealthThresholds.GLUCOSE_EXPLANATION }) {
+                    Icon(Icons.Outlined.HelpOutline, contentDescription = "説明を表示", modifier = Modifier.size(20.dp), tint = Color.Gray)
+                }
+            }
             Box(
                 modifier = Modifier
                     .height(220.dp)
@@ -701,7 +787,12 @@ fun GraphView(records: List<Any>, categoryType: Category) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // HbA1cグラフ
-            Text("HbA1c", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("HbA1c", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { showHelpDialog = HealthThresholds.HBA1C_EXPLANATION }) {
+                    Icon(Icons.Outlined.HelpOutline, contentDescription = "説明を表示", modifier = Modifier.size(20.dp), tint = Color.Gray)
+                }
+            }
             Box(
                 modifier = Modifier
                     .height(220.dp)
@@ -738,7 +829,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue)
                 )
                 if (chartDataList.any { it.points.isNotEmpty() }) {
-                    LineChart(chartDataList, stepY = 1.0, minYConstraint = 0.0)
+                    LineChart(chartDataList, stepY = 10.0, minYConstraint = 0.0, showDecimal = true)
                 } else {
                     Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
@@ -747,7 +838,12 @@ fun GraphView(records: List<Any>, categoryType: Category) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // BMIグラフ
-            Text("BMI", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("BMI", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { showHelpDialog = HealthThresholds.BMI_EXPLANATION }) {
+                    Icon(Icons.Outlined.HelpOutline, contentDescription = "説明を表示", modifier = Modifier.size(20.dp), tint = Color.Gray)
+                }
+            }
             Box(
                 modifier = Modifier
                     .height(220.dp)
@@ -758,11 +854,15 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 val chartDataList = listOf(
                     ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to calculateBMI(it) }, Color.Red)
                 )
-                // 18.5～25.0 を薄い緑色でハイライト
-                val ranges = listOf(ChartRangeHighlight(18.5, 25.0, Color(0xFFE8F5E9)))
+                // 3段構えのハイライト
+                val ranges = listOf(
+                    ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)), // 低体重: 薄い青
+                    ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)), // 普通体重: 薄い緑
+                    ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE)) // 肥満3度以上: 薄い赤
+                )
                 
                 if (chartDataList.any { it.points.isNotEmpty() }) {
-                    LineChart(chartDataList, stepY = 1.0, ranges = ranges, minYConstraint = 15.0, maxYConstraint = 30.0)
+                    LineChart(chartDataList, stepY = 1.0, ranges = ranges, minYConstraint = 10.0, maxYConstraint = 35.0)
                 } else {
                     Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
@@ -797,7 +897,8 @@ fun LineChart(
     limits: List<ChartLimitLine> = emptyList(),
     ranges: List<ChartRangeHighlight> = emptyList(),
     minYConstraint: Double? = null,
-    maxYConstraint: Double? = null
+    maxYConstraint: Double? = null,
+    showDecimal: Boolean = false
 ) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = Color.Gray)
@@ -878,7 +979,7 @@ fun LineChart(
                 strokeWidth = 1.dp.toPx()
             )
             
-            val label = if (stepY >= 1.0) yVal.toInt().toString() else "%.1f".format(yVal)
+            val label = if (showDecimal || stepY <= 1.0) "%.1f".format(yVal) else yVal.toInt().toString()
             val textLayout = textMeasurer.measure(label, labelStyle)
             drawText(textLayout, topLeft = Offset(paddingLeft - textLayout.size.width - 4.dp.toPx(), py - textLayout.size.height / 2))
         }
@@ -934,7 +1035,7 @@ fun LineChart(
                 drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
                 
                 // 各ポイントに値を表示
-                val valueStr = if (stepY >= 1.0) y.toInt().toString() else "%.1f".format(y)
+                val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
                 val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color))
                 drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
             }
@@ -1033,11 +1134,11 @@ fun calculateBMI(record: HeightAndWeight): Double {
 fun evaluateBMI(bmi: Double): String {
     return when {
         bmi <= 0.0 -> "-"
-        bmi < 18.5 -> "低体重"
-        bmi < 25.0 -> "普通体重"
-        bmi < 30.0 -> "肥満(１度)"
-        bmi < 35.0 -> "肥満(２度)"
-        bmi < 40.0 -> "肥満(３度)"
+        bmi < HealthThresholds.BMI_NORMAL_LOW -> "低体重"
+        bmi < HealthThresholds.BMI_NORMAL_HIGH -> "普通体重"
+        bmi < HealthThresholds.BMI_OBESITY_1 -> "肥満(１度)"
+        bmi < HealthThresholds.BMI_OBESITY_2 -> "肥満(２度)"
+        bmi < HealthThresholds.BMI_OBESITY_3 -> "肥満(３度)"
         else -> "肥満(４度)"
     }
 }
