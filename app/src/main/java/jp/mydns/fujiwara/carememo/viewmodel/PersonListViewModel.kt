@@ -43,7 +43,21 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
         }
     }
 
-    // 削除
+    // 論理削除
+    fun logicalDeletePerson(person: Person) {
+        viewModelScope.launch {
+            repository.logicalDeletePerson(person.id)
+        }
+    }
+
+    // 復元
+    fun restorePerson(person: Person) {
+        viewModelScope.launch {
+            repository.restorePerson(person.id)
+        }
+    }
+
+    // 物理削除
     fun deletePerson(person: Person) {
         viewModelScope.launch {
             repository.deletePerson(person)

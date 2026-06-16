@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.data
 
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -15,12 +16,40 @@ class CareMemoRepository(
     // --- Person ---
     fun getAllPersons(): Flow<List<Person>> = personDao.getAllPersons()
     
+    fun getDeletedPersons(): Flow<List<Person>> = personDao.getDeletedPersons()
+
     fun getPersonById(id: Int): Flow<Person?> = personDao.getPersonById(id)
     
     suspend fun insertPerson(person: Person) = personDao.insert(person)
     
     suspend fun updatePerson(person: Person) = personDao.update(person)
-    
+
+    /**
+     * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
+     */
+    suspend fun logicalDeletePerson(personId: Int) {
+        val timestamp = System.currentTimeMillis()
+        personDao.logicalDelete(personId, timestamp)
+        heightAndWeightDao.logicalDeleteByPersonId(personId, timestamp)
+        bpAndPulseDao.logicalDeleteByPersonId(personId, timestamp)
+        glucoseAndHbA1cDao.logicalDeleteByPersonId(personId, timestamp)
+        conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
+    }
+
+    /**
+     * 論理削除された利用者と、紐づくすべての記録を復元します。
+     */
+    suspend fun restorePerson(personId: Int) {
+        personDao.restore(personId)
+        heightAndWeightDao.restoreByPersonId(personId)
+        bpAndPulseDao.restoreByPersonId(personId)
+        glucoseAndHbA1cDao.restoreByPersonId(personId)
+        conditionAtVisitDao.restoreByPersonId(personId)
+    }
+
+    /**
+     * 利用者を物理削除します。外部キーの CASCADE 設定により、子データも自動で物理削除されます。
+     */
     suspend fun deletePerson(person: Person) = personDao.delete(person)
 
     // --- HeightAndWeight ---

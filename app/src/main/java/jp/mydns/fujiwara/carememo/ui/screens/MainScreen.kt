@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,9 +9,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +43,8 @@ fun MainScreen(
     onNavigateToDetail: (Int, Category) -> Unit,
 ) {
     val userList by viewModel.userList.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
     val sheetState = rememberModalBottomSheetState()
@@ -51,6 +56,7 @@ fun MainScreen(
 
     MainScreenContent(
         userList = userList,
+        snackbarHostState = snackbarHostState,
         onUserClick = { person ->
             selectedPerson = person
             showSheet = true
@@ -61,6 +67,21 @@ fun MainScreen(
         },
         onInitClick = { context ->
             viewModel.loadInitialData(context)
+        },
+        onDeleteUser = { person ->
+            viewModel.logicalDeletePerson(person)
+            scope.launch {
+                val result = snackbarHostState.showSnackbar(
+                    message = "${person.name} さんを削除しました",
+                    actionLabel = "元に戻す",
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.restorePerson(person)
+                    // 「元に戻す」が実行されたら、スナックバーを即座に閉じる
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+            }
         }
     )
 
@@ -104,9 +125,11 @@ fun MainScreen(
 @Composable
 fun MainScreenContent(
     userList: List<Person>,
+    snackbarHostState: SnackbarHostState,
     onUserClick: (Person) -> Unit,
     onAddClick: () -> Unit,
     onInitClick: (android.content.Context) -> Unit,
+    onDeleteUser: (Person) -> Unit,
 ) {
     var searchText by remember { mutableStateOf("") }
     
@@ -132,6 +155,7 @@ fun MainScreenContent(
                 }
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
                 Icon(Icons.Default.Add, contentDescription = "利用者登録")
@@ -157,41 +181,86 @@ fun MainScreenContent(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredList) { user ->
+                items(filteredList, key = { it.id }) { user ->
                     val age = calculateAge(user.birthday)
                     val birthdayStr = formatToJapaneseEra(user.birthday)
                     
-                    ListItem(
-                        headlineContent = {
-                            Column {
-                                Text(
-                                    text = user.furigana ?: "",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                                Text(
-                                    text = user.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                    val currentOnDeleteUser by rememberUpdatedState(onDeleteUser)
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart) {
+                                currentOnDeleteUser(user)
+                                true
+                            } else {
+                                false
                             }
-                        },
-                        supportingContent = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        }
+                    )
+
+                    // 項目が再表示された（復元された）ときにスワイプ状態をリセットする
+                    LaunchedEffect(user) {
+                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                            dismissState.reset()
+                        }
+                    }
+
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = {
+                            val color = when (dismissState.dismissDirection) {
+                                SwipeToDismissBoxValue.EndToStart -> Color.Red.copy(alpha = 0.8f)
+                                else -> Color.Transparent
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(color)
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.CenterEnd
                             ) {
-                                Text("生年月日: $birthdayStr", style = MaterialTheme.typography.bodySmall)
-                                Text("年齢: ${age}歳", style = MaterialTheme.typography.bodySmall)
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "削除",
+                                    tint = Color.White
+                                )
                             }
                         },
-                        trailingContent = {
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "カテゴリを選択"
+                        content = {
+                            ListItem(
+                                headlineContent = {
+                                    Column {
+                                        Text(
+                                            text = user.furigana ?: "",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                        Text(
+                                            text = user.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                },
+                                supportingContent = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        Text("生年月日: $birthdayStr", style = MaterialTheme.typography.bodySmall)
+                                        Text("年齢: ${age}歳", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "カテゴリを選択"
+                                    )
+                                },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                                    .clickable { onUserClick(user) }
                             )
-                        },
-                        modifier = Modifier.clickable { onUserClick(user) }
+                        }
                     )
                     HorizontalDivider()
                 }
@@ -385,9 +454,11 @@ fun MainScreenPreview() {
     CareMemoTheme {
         MainScreenContent(
             userList = mockUserList, 
+            snackbarHostState = remember { SnackbarHostState() },
             onUserClick = { }, 
             onAddClick = { },
-            onInitClick = { }
+            onInitClick = { },
+            onDeleteUser = { }
         )
     }
 }

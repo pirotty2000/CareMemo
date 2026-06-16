@@ -2,6 +2,8 @@ package jp.mydns.fujiwara.carememo.data
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -25,22 +27,46 @@ data class Person(
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "furigana") val furigana: String?,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "birthday") val birthday: Instant // java.time.Instant を使用
+    @ColumnInfo(name = "birthday") val birthday: Instant,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
 @Serializable
-@Entity(tableName = "height_and_weight_db")
+@Entity(
+    tableName = "height_and_weight_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["person_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["person_id"])]
+)
 data class HeightAndWeight(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "person_id") val personId: Int,
     @ColumnInfo(name = "height") val height: Double?,
     @ColumnInfo(name = "weight") val weight: Double? = null,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant
+    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
 @Serializable
-@Entity(tableName = "bp_and_pulse_db")
+@Entity(
+    tableName = "bp_and_pulse_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["person_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["person_id"])]
+)
 data class BpAndPulse(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "person_id") val personId: Int,
@@ -48,22 +74,46 @@ data class BpAndPulse(
     @ColumnInfo(name = "bp_diastolic") val bpDiastolic: Int? = null,
     @ColumnInfo(name = "pulse") val pulse: Int? = null,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant
+    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
 @Serializable
-@Entity(tableName = "glucose_and_hba1c_db")
+@Entity(
+    tableName = "glucose_and_hba1c_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["person_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["person_id"])]
+)
 data class GlucoseAndHbA1c(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "person_id") val personId: Int,
     @ColumnInfo(name = "glucose") val glucose: Int? = null,
     @ColumnInfo(name = "hba1c") val hba1c: Double? = null,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant
+    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
 @Serializable
-@Entity(tableName = "condition_at_visit_db")
+@Entity(
+    tableName = "condition_at_visit_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["person_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["person_id"])]
+)
 data class ConditionAtVisit(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "person_id") val personId: Int,
@@ -71,5 +121,6 @@ data class ConditionAtVisit(
     @ColumnInfo(name = "condition") val condition: String?,
     @ColumnInfo(name = "author") val author: String,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant
+    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )

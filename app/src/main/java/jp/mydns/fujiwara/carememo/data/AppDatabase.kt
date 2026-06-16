@@ -14,7 +14,7 @@ import androidx.room.TypeConverters
         GlucoseAndHbA1c::class,
         ConditionAtVisit::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
