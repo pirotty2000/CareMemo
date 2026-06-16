@@ -1,10 +1,15 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,6 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -26,7 +33,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -222,7 +231,7 @@ fun UnifiedRecordScreen(
                 }
             }
 
-    // --- [下部] メインコンテンツエリア ---
+            // --- [下部] メインコンテンツエリア ---
             Box(modifier = Modifier.weight(1f)) {
                 if (currentCategory == Category.CONDITION_AT_VISIT || showHistory) {
                     // 履歴一覧を表示
@@ -238,13 +247,61 @@ fun UnifiedRecordScreen(
                         }
                     }
                 } else {
-                    // グラフを表示（スクロール可能にする）
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        GraphView(records, currentCategory)
+                    // グラフを表示（スクロールバーとページインジケーター付き）
+                    val scrollState = rememberScrollState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                                .padding(end = 16.dp) // インジケーター用の余白
+                        ) {
+                            GraphView(records, currentCategory)
+                            Spacer(modifier = Modifier.height(32.dp)) // 下部の余白
+                        }
+
+                        // 簡易スクロールバー
+                        if (scrollState.maxValue > 0) {
+                            val barHeight = 60.dp
+                            val density = LocalDensity.current
+                            val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
+                            val maxOffset = viewportHeight - barHeight
+                            val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
+                            
+                            Box(
+                                modifier = Modifier
+                                    .width(4.dp)
+                                    .height(barHeight)
+                                    .align(Alignment.TopEnd)
+                                    .offset(y = maxOffset * scrollFraction)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                            )
+                        }
+
+                        // ページインジケーター（右側中央）
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            val isPage2 = scrollState.value > scrollState.maxValue / 2 && scrollState.maxValue > 0
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (!isPage2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isPage2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                            )
+                        }
                     }
                 }
             }
@@ -380,11 +437,11 @@ fun InputForm(
         // 共通項目：記録日時（分割入力）
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 年 (4桁)
-            OutlinedTextField(
+            CompactTextField(
                 value = yearText,
                 onValueChange = { 
                     if (it.length <= 4) {
@@ -392,16 +449,14 @@ fun InputForm(
                         isUserModifiedTime = true
                     }
                 },
-                modifier = Modifier
-                    .weight(1.8f)
-                    .onFocusChanged { if (it.isFocused) yearText = "" },
+                modifier = Modifier.weight(1.8f),
+                onFocusChanged = { if (it.isFocused) yearText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
                 isError = isYearError,
                 suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
             )
             // 月
-            OutlinedTextField(
+            CompactTextField(
                 value = monthText,
                 onValueChange = { 
                     if (it.length <= 2) {
@@ -409,16 +464,14 @@ fun InputForm(
                         isUserModifiedTime = true
                     }
                 },
-                modifier = Modifier
-                    .weight(1.2f)
-                    .onFocusChanged { if (it.isFocused) monthText = "" },
+                modifier = Modifier.weight(1.2f),
+                onFocusChanged = { if (it.isFocused) monthText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
                 isError = isMonthError,
                 suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
             )
             // 日
-            OutlinedTextField(
+            CompactTextField(
                 value = dayText,
                 onValueChange = { 
                     if (it.length <= 2) {
@@ -426,16 +479,14 @@ fun InputForm(
                         isUserModifiedTime = true
                     }
                 },
-                modifier = Modifier
-                    .weight(1.2f)
-                    .onFocusChanged { if (it.isFocused) dayText = "" },
+                modifier = Modifier.weight(1.2f),
+                onFocusChanged = { if (it.isFocused) dayText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
                 isError = isDayError,
                 suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
             )
             // 時
-            OutlinedTextField(
+            CompactTextField(
                 value = hourText,
                 onValueChange = { 
                     if (it.length <= 2) {
@@ -443,16 +494,14 @@ fun InputForm(
                         isUserModifiedTime = true
                     }
                 },
-                modifier = Modifier
-                    .weight(1.1f)
-                    .onFocusChanged { if (it.isFocused) hourText = "" },
+                modifier = Modifier.weight(1.1f),
+                onFocusChanged = { if (it.isFocused) hourText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
                 isError = isHourError,
                 suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
             )
             // 分
-            OutlinedTextField(
+            CompactTextField(
                 value = minuteText,
                 onValueChange = { 
                     if (it.length <= 2) {
@@ -460,11 +509,9 @@ fun InputForm(
                         isUserModifiedTime = true
                     }
                 },
-                modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { if (it.isFocused) minuteText = "" },
+                modifier = Modifier.weight(1f),
+                onFocusChanged = { if (it.isFocused) minuteText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
                 isError = isMinuteError
             )
         }
@@ -829,7 +876,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue)
                 )
                 if (chartDataList.any { it.points.isNotEmpty() }) {
-                    LineChart(chartDataList, stepY = 10.0, minYConstraint = 0.0, showDecimal = true)
+                    LineChart(chartDataList, stepY = 10.0, minYConstraint = 40.0, showDecimal = true)
                 } else {
                     Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
@@ -906,144 +953,169 @@ fun LineChart(
     val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
     val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val allPoints = dataList.flatMap { it.points }
-        if (allPoints.isEmpty()) return@Canvas
+    // スクロール状態の管理
+    val scrollState = rememberScrollState()
+    
+    // データ点数に基づいて必要な幅を計算
+    val allPoints = dataList.flatMap { it.points }
+    if (allPoints.isEmpty()) return
+    
+    val pointCount = allPoints.size
+    val minX = allPoints.minOf { it.first }
+    val maxX = allPoints.maxOf { it.first }
+    val xRange = if (maxX - minX == 0.0) 1.0 else maxX - minX
 
-        val minX = allPoints.minOf { it.first }
-        val maxX = allPoints.maxOf { it.first }
-        
-        // データの最小最大と、Limit Line の値を考慮して軸範囲を決定（Range Highlight は背景なので軸範囲には含めない）
-        val allYValues = allPoints.map { it.second } + limits.map { it.value }
-        var minYInput = allYValues.minOf { it }
-        var maxYInput = allYValues.maxOf { it }
-        
-        // 制約があれば適用（データが制約外ならデータを優先）
-        minYConstraint?.let { minYInput = minOf(minYInput, it) }
-        maxYConstraint?.let { maxYInput = maxOf(maxYInput, it) }
-        
-        // --- 縦軸の範囲を「stepY 刻み」で計算 ---
-        val minY = floor(minYInput / stepY) * stepY
-        val maxY = ceil(maxYInput / stepY) * stepY
-        
-        val yRange = if (maxY - minY == 0.0) stepY else maxY - minY
-        val yStepsCount = (yRange / stepY).toInt()
+    // 軸範囲の計算
+    val allYValues = allPoints.map { it.second } + limits.map { it.value }
+    var minYInput = allYValues.minOf { it }
+    var maxYInput = allYValues.maxOf { it }
+    minYConstraint?.let { minYInput = minOf(minYInput, it) }
+    maxYConstraint?.let { maxYInput = maxOf(maxYInput, it) }
+    val minY = floor(minYInput / stepY) * stepY
+    val maxY = ceil(maxYInput / stepY) * stepY
+    val yRange = if (maxY - minY == 0.0) stepY else maxY - minY
+    val yStepsCount = (yRange / stepY).toInt()
 
-        val xRange = if (maxX - minX == 0.0) 1.0 else maxX - minX
+    val density = LocalDensity.current
+    val paddingLeft = 50.dp
+    val paddingTop = 40.dp
+    val paddingBottom = 40.dp
+    val paddingRight = 20.dp
 
-        // パディング設定
-        val paddingLeft = 50.dp.toPx()
-        val paddingBottom = 40.dp.toPx()
-        val paddingTop = 40.dp.toPx()
-        val paddingRight = 20.dp.toPx()
-        
-        val chartWidth = size.width - paddingLeft - paddingRight
-        val chartHeight = size.height - paddingTop - paddingBottom
+    // 最新データへ自動スクロール
+    LaunchedEffect(pointCount) {
+        scrollState.scrollTo(scrollState.maxValue)
+    }
 
-        // --- 0. Range Highlights (範囲ハイライト) の描画 ---
-        ranges.forEach { range ->
-            val pyStart = paddingTop + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
-            val pyEnd = paddingTop + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
-            
-            // 描画範囲をチャート内に収める
-            val top = pyEnd.coerceIn(paddingTop, paddingTop + chartHeight)
-            val bottom = pyStart.coerceIn(paddingTop, paddingTop + chartHeight)
-            
-            if (bottom > top) {
-                drawRect(
-                    color = range.color,
-                    topLeft = Offset(paddingLeft, top),
-                    size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top)
-                )
-            }
-        }
-
-        // --- 1. 凡例の描画 ---
-        var legendOffsetX = paddingLeft
-        dataList.forEach { lineData ->
-            drawCircle(lineData.color, radius = 5.dp.toPx(), center = Offset(legendOffsetX, paddingTop / 2))
-            val legendLayout = textMeasurer.measure(lineData.label, legendStyle)
-            drawText(legendLayout, topLeft = Offset(legendOffsetX + 8.dp.toPx(), paddingTop / 2 - legendLayout.size.height / 2))
-            legendOffsetX += legendLayout.size.width + 32.dp.toPx()
-        }
-
-        // --- 2. 罫線と軸ラベルの描画 ---
-        for (i in 0..yStepsCount) {
-            val yVal = minY + stepY * i
-            val py = paddingTop + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
-            
-            drawLine(
-                color = Color.LightGray.copy(alpha = 0.5f),
-                start = Offset(paddingLeft, py),
-                end = Offset(paddingLeft + chartWidth, py),
-                strokeWidth = 1.dp.toPx()
-            )
-            
-            val label = if (showDecimal || stepY <= 1.0) "%.1f".format(yVal) else yVal.toInt().toString()
-            val textLayout = textMeasurer.measure(label, labelStyle)
-            drawText(textLayout, topLeft = Offset(paddingLeft - textLayout.size.width - 4.dp.toPx(), py - textLayout.size.height / 2))
-        }
-
-        // 縦罫線 (日付軸)
-        val xSteps = 3
-        for (i in 0..xSteps) {
-            val xVal = minX + (xRange / xSteps) * i
-            val px = paddingLeft + (i.toFloat() / xSteps) * chartWidth
-            drawLine(
-                color = Color.LightGray.copy(alpha = 0.3f),
-                start = Offset(px, paddingTop),
-                end = Offset(px, paddingTop + chartHeight),
-                strokeWidth = 1.dp.toPx()
-            )
-            val dateStr = DateTimeFormatter.ofPattern("MM/dd")
-                .withLocale(Locale.JAPAN)
-                .format(Instant.ofEpochMilli(xVal.toLong()).atZone(ZoneId.systemDefault()))
-            val textLayout = textMeasurer.measure(dateStr, labelStyle)
-            drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, paddingTop + chartHeight + 4.dp.toPx()))
-        }
-
-        // --- 3. Limit Line (境界線) の描画 ---
-        limits.forEach { limit ->
-            val py = paddingTop + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
-            if (py in paddingTop..(paddingTop + chartHeight)) {
-                drawLine(
-                    color = limit.color.copy(alpha = 0.6f),
-                    start = Offset(paddingLeft, py),
-                    end = Offset(paddingLeft + chartWidth, py),
-                    strokeWidth = 1.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                )
-                
-                val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color))
-                val labelY = if (limit.isLabelAbove) {
-                    py - labelLayout.size.height - 2.dp.toPx()
-                } else {
-                    py + 2.dp.toPx()
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 凡例 (固定)
+        Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                dataList.forEach { lineData ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Canvas(modifier = Modifier.size(8.dp)) {
+                            drawCircle(lineData.color)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(lineData.label, style = legendStyle.copy(fontSize = 11.sp))
+                    }
                 }
-                // 左端に表示
-                drawText(labelLayout, topLeft = Offset(paddingLeft + 4.dp.toPx(), labelY))
             }
         }
 
-        // --- 4. グラフ線の描画 ---
-        dataList.forEach { lineData ->
-            val path = Path()
-            lineData.points.forEachIndexed { index, (x, y) ->
-                val px = paddingLeft + ((x - minX) / xRange).toFloat() * chartWidth
-                val py = paddingTop + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
-                if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
-                drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
+        Row(modifier = Modifier.weight(1f)) {
+            // Y軸ラベル (左側に固定)
+            Canvas(modifier = Modifier
+                .width(paddingLeft)
+                .fillMaxHeight()) {
+                val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
+                val topPx = paddingTop.toPx()
                 
-                // 各ポイントに値を表示
-                val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
-                val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color))
-                drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
+                for (i in 0..yStepsCount) {
+                    val yVal = minY + stepY * i
+                    val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
+                    val label = if (showDecimal || stepY <= 1.0) "%.1f".format(yVal) else yVal.toInt().toString()
+                    val textLayout = textMeasurer.measure(label, labelStyle)
+                    drawText(textLayout, topLeft = Offset(size.width - textLayout.size.width - 8.dp.toPx(), py - textLayout.size.height / 2))
+                }
             }
-            drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
+
+            // グラフ本体 (横スクロール可能)
+            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                val leftBufferPx = with(density) { 32.dp.toPx() }
+                val rightBufferPx = with(density) { 8.dp.toPx() } // 4dpから8dpに微調整
+                
+                // 1年（365日）を画面幅（availableWidth）とする
+                val availableWidthPx = with(density) { maxWidth.toPx() } - rightBufferPx
+                val oneYearMillis = 365.0 * 24 * 60 * 60 * 1000.0
+                
+                // 全体の期間（最低でも1年分は確保）
+                val totalDuration = maxOf(maxX - minX, oneYearMillis)
+                // コンテンツ幅 = (期間比率 * 表示幅) + 左右のパディング
+                val graphContentWidthPx = (totalDuration / oneYearMillis) * availableWidthPx + leftBufferPx + rightBufferPx
+                
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(scrollState)) {
+                    
+                    val graphWidthDp = with(density) { graphContentWidthPx.toFloat().toDp() }
+                    Canvas(modifier = Modifier
+                        .width(graphWidthDp)
+                        .fillMaxHeight()) {
+                        val chartWidth = size.width - leftBufferPx - rightBufferPx
+                        val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
+                        val topPx = paddingTop.toPx()
+                        val startX = leftBufferPx
+                        
+                        // --- 0. Range Highlights ---
+                        ranges.forEach { range ->
+                            val pyStart = topPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
+                            val pyEnd = topPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
+                            val top = pyEnd.coerceIn(topPx, topPx + chartHeight)
+                            val bottom = pyStart.coerceIn(topPx, topPx + chartHeight)
+                            if (bottom > top) {
+                                drawRect(color = range.color, topLeft = Offset(startX, top), size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top))
+                            }
+                        }
+
+                        // --- 2. 罫線 (水平) ---
+                        for (i in 0..yStepsCount) {
+                            val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
+                            drawLine(color = Color.LightGray.copy(alpha = 0.5f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx())
+                        }
+
+                        // --- 罫線 (垂直: 四半期ごと) と X軸ラベル ---
+                        val quarterMillis = oneYearMillis / 4.0 // 約91.25日
+                        var currentX = minX
+                        while (currentX <= maxX || currentX <= minX + totalDuration) {
+                            val px = startX + ((currentX - minX) / totalDuration).toFloat() * chartWidth
+                            
+                            if (px <= startX + chartWidth) {
+                                drawLine(color = Color.LightGray.copy(alpha = 0.3f), start = Offset(px, topPx), end = Offset(px, topPx + chartHeight), strokeWidth = 1.dp.toPx())
+                                
+                                val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd")
+                                    .withLocale(Locale.JAPAN)
+                                    .format(Instant.ofEpochMilli(currentX.toLong()).atZone(ZoneId.systemDefault()))
+                                val textLayout = textMeasurer.measure(dateStr, labelStyle)
+                                drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, topPx + chartHeight + 4.dp.toPx()))
+                            }
+                            currentX += quarterMillis
+                            if (quarterMillis == 0.0) break // 安全策
+                        }
+
+                        // --- 3. Limit Line ---
+                        limits.forEach { limit ->
+                            val py = topPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
+                            if (py in topPx..(topPx + chartHeight)) {
+                                drawLine(color = limit.color.copy(alpha = 0.6f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
+                                val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color))
+                                drawText(labelLayout, topLeft = Offset(startX + 4.dp.toPx(), if (limit.isLabelAbove) py - labelLayout.size.height - 2.dp.toPx() else py + 2.dp.toPx()))
+                            }
+                        }
+
+                        // --- 4. グラフ線 ---
+                        dataList.forEach { lineData ->
+                            val path = Path()
+                            val sortedPoints = lineData.points.sortedBy { it.first }
+                            sortedPoints.forEachIndexed { index, (x, y) ->
+                                val px = startX + ((x - minX) / totalDuration).toFloat() * chartWidth
+                                val py = topPx + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
+                                if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                                drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
+                                val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
+                                val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color))
+                                drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
+                            }
+                            drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
+                        }
+                        
+                        // 軸の線
+                        drawLine(Color.Gray, Offset(startX, topPx), Offset(startX, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+                        drawLine(Color.Gray, Offset(startX, topPx + chartHeight), Offset(startX + chartWidth, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+                    }
+                }
+            }
         }
-        
-        drawLine(Color.Gray, Offset(paddingLeft, paddingTop), Offset(paddingLeft, paddingTop + chartHeight), strokeWidth = 1.5.dp.toPx())
-        drawLine(Color.Gray, Offset(paddingLeft, paddingTop + chartHeight), Offset(paddingLeft + chartWidth, paddingTop + chartHeight), strokeWidth = 1.5.dp.toPx())
     }
 }
 
@@ -1120,6 +1192,56 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CompactTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    suffix: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onFocusChanged: (FocusState) -> Unit = {}
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.onFocusChanged(onFocusChanged),
+        interactionSource = interactionSource,
+        enabled = true,
+        singleLine = true,
+        keyboardOptions = keyboardOptions,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        ),
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = innerTextField,
+                enabled = true,
+                singleLine = true,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interactionSource,
+                isError = isError,
+                suffix = suffix,
+                colors = OutlinedTextFieldDefaults.colors(),
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+                container = {
+                    OutlinedTextFieldDefaults.ContainerBox(
+                        enabled = true,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = OutlinedTextFieldDefaults.colors(),
+                        shape = OutlinedTextFieldDefaults.shape
+                    )
+                }
+            )
+        }
+    )
 }
 
 // 補助関数の実装
