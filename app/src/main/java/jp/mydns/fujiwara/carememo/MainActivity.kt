@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.ui.screens.DeletedUserListScreen
 import jp.mydns.fujiwara.carememo.ui.screens.MainScreen
 import jp.mydns.fujiwara.carememo.ui.screens.UnifiedRecordScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -48,7 +49,19 @@ fun CareMemoApp() {
                 viewModel = listViewModel,
                 onNavigateToDetail = { personId, category ->
                     navController.navigate("detail/$personId/${category.name}")
+                },
+                onNavigateToRestore = {
+                    navController.navigate("restore")
                 }
+            )
+        }
+        composable("restore") {
+            val listViewModel: PersonListViewModel = viewModel(
+                factory = PersonListViewModel.Factory(repository)
+            )
+            DeletedUserListScreen(
+                viewModel = listViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
         composable(

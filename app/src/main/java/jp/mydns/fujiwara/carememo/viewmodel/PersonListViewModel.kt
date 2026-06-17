@@ -22,6 +22,14 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
             initialValue = emptyList()
         )
 
+    // 削除済みの利用者をリアルタイムで取得
+    val deletedUserList: StateFlow<List<Person>> = repository.getDeletedPersons()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     // デバッグ用：初期データのロード
     fun loadInitialData(context: Context) {
         viewModelScope.launch {

@@ -74,6 +74,17 @@ class PersonDetailViewModel(private val repository: CareMemoRepository) : ViewMo
         }
     }
 
+    fun deleteRecord(record: Any) {
+        viewModelScope.launch {
+            when (record) {
+                is HeightAndWeight -> repository.deleteHeightAndWeight(record)
+                is BpAndPulse -> repository.deleteBpAndPulse(record)
+                is GlucoseAndHbA1c -> repository.deleteGlucoseAndHbA1c(record)
+                is ConditionAtVisit -> repository.deleteConditionAtVisit(record)
+            }
+        }
+    }
+
     fun selectRecord(record: Any) {
         _currentRecordState.value = record
     }

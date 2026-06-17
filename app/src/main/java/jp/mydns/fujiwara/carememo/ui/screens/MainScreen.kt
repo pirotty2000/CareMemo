@@ -11,6 +11,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -41,6 +43,7 @@ import java.util.Locale
 fun MainScreen(
     viewModel: PersonListViewModel,
     onNavigateToDetail: (Int, Category) -> Unit,
+    onNavigateToRestore: () -> Unit
 ) {
     val userList by viewModel.userList.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -82,7 +85,8 @@ fun MainScreen(
                     snackbarHostState.currentSnackbarData?.dismiss()
                 }
             }
-        }
+        },
+        onNavigateToRestore = onNavigateToRestore
     )
 
     if (showSheet && selectedPerson != null) {
@@ -130,8 +134,10 @@ fun MainScreenContent(
     onAddClick: () -> Unit,
     onInitClick: (android.content.Context) -> Unit,
     onDeleteUser: (Person) -> Unit,
+    onNavigateToRestore: () -> Unit,
 ) {
     var searchText by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
     
     // インクリメンタルサーチのフィルタリング（前方一致）と、ふりがなでのソート
     val filteredList = remember(userList, searchText) {
@@ -151,6 +157,23 @@ fun MainScreenContent(
                 actions = {
                     TextButton(onClick = { onInitClick(context) }) {
                         Text("データ読込", color = MaterialTheme.colorScheme.primary)
+                    }
+                    
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
+                    }
+                    
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("削除データの復旧") },
+                            onClick = {
+                                showMenu = false
+                                onNavigateToRestore()
+                            }
+                        )
                     }
                 }
             )
@@ -197,11 +220,9 @@ fun MainScreenContent(
                         }
                     )
 
-                    // 項目が再表示された（復元された）ときにスワイプ状態をリセットする
-                    LaunchedEffect(user) {
-                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                            dismissState.reset()
-                        }
+                    // 項目が再表示された（復元された）ときに強制的にリセット
+                    LaunchedEffect(user.id) {
+                        dismissState.reset()
                     }
 
                     SwipeToDismissBox(
@@ -209,7 +230,7 @@ fun MainScreenContent(
                         enableDismissFromStartToEnd = false,
                         backgroundContent = {
                             val color = when (dismissState.dismissDirection) {
-                                SwipeToDismissBoxValue.EndToStart -> Color.Red.copy(alpha = 0.8f)
+                                SwipeToDismissBoxValue.EndToStart -> Color.Gray.copy(alpha = 0.8f) // 論理削除はグレー
                                 else -> Color.Transparent
                             }
                             Box(
@@ -220,8 +241,8 @@ fun MainScreenContent(
                                 contentAlignment = Alignment.CenterEnd
                             ) {
                                 Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "削除",
+                                    Icons.Default.Inventory, // アーカイブアイコン
+                                    contentDescription = "アーカイブ",
                                     tint = Color.White
                                 )
                             }
@@ -458,7 +479,8 @@ fun MainScreenPreview() {
             onUserClick = { }, 
             onAddClick = { },
             onInitClick = { },
-            onDeleteUser = { }
+            onDeleteUser = { },
+            onNavigateToRestore = { }
         )
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
@@ -186,15 +187,41 @@ fun UnifiedRecordScreen(
             }
         }
     ) { paddingValues ->
-        var showHistory by remember { mutableStateOf(true) }
+    var showHistory by remember { mutableStateOf(true) }
+    var recordToDelete by remember { mutableStateOf<Any?>(null) }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    // 削除確認ダイアログ
+    if (recordToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { recordToDelete = null },
+            title = { Text("データの削除") },
+            text = { Text("この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        recordToDelete?.let { viewModel.deleteRecord(it) }
+                        recordToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("削除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { recordToDelete = null }) {
+                    Text("キャンセル")
+                }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
             // --- [上部] 入力フォーム ---
             InputForm(
                 categoryType = currentCategory,
@@ -236,14 +263,55 @@ fun UnifiedRecordScreen(
                 if (currentCategory == Category.CONDITION_AT_VISIT || showHistory) {
                     // 履歴一覧を表示
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(records.size) { index ->
+                        items(records.size, key = { index ->
+                            // IDをキーにする（型に応じてキャストが必要）
+                            when (val r = records[index]) {
+                                is HeightAndWeight -> r.id
+                                is BpAndPulse -> r.id
+                                is GlucoseAndHbA1c -> r.id
+                                is ConditionAtVisit -> r.id
+                                else -> index
+                            }
+                        }) { index ->
                             val record = records[index]
-                            RecordListItem(
-                                categoryType = currentCategory,
-                                record = record,
-                                onClick = { viewModel.selectRecord(record) },
-                                isEditable = currentRecord == record
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    if (it == SwipeToDismissBoxValue.EndToStart) {
+                                        recordToDelete = record
+                                        false // ダイアログで確認するため、一旦スワイプを差し戻す（あるいはtrueにしてダイアログで消去）
+                                    } else {
+                                        false
+                                    }
+                                }
                             )
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    val color = when (dismissState.dismissDirection) {
+                                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f) // 物理削除ははっきりとした赤
+                                        else -> Color.Transparent
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(vertical = 4.dp)
+                                            .background(color, shape = CardDefaults.shape) // カードに合わせた角丸に
+                                            .padding(horizontal = 16.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = "物理削除", tint = Color.White)
+                                    }
+                                }
+                            ) {
+                                RecordListItem(
+                                    categoryType = currentCategory,
+                                    record = record,
+                                    onClick = { viewModel.selectRecord(record) },
+                                    isEditable = currentRecord == record
+                                )
+                            }
                         }
                     }
                 } else {
