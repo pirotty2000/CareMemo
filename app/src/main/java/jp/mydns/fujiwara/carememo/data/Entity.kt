@@ -21,13 +21,17 @@ object InstantSerializer : KSerializer<Instant> {
 }
 
 @Serializable
-@Entity(tableName = "person_db")
+@Entity(
+    tableName = "person_db",
+    indices = [Index(value = ["name", "birthday", "note"], unique = true)]
+)
 data class Person(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "furigana") val furigana: String?,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "birthday") val birthday: Instant,
+    @ColumnInfo(name = "note") val note: String = "", // 同姓同名識別用メモ
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
@@ -42,7 +46,10 @@ data class Person(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["person_id"])]
+    indices = [
+        Index(value = ["person_id"]),
+        Index(value = ["person_id", "record_time"], unique = true) // 分単位の一意制約（保存時に丸め込み前提）
+    ]
 )
 data class HeightAndWeight(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -65,7 +72,10 @@ data class HeightAndWeight(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["person_id"])]
+    indices = [
+        Index(value = ["person_id"]),
+        Index(value = ["person_id", "record_time"], unique = true)
+    ]
 )
 data class BpAndPulse(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -89,7 +99,10 @@ data class BpAndPulse(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["person_id"])]
+    indices = [
+        Index(value = ["person_id"]),
+        Index(value = ["person_id", "record_time"], unique = true)
+    ]
 )
 data class GlucoseAndHbA1c(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -112,7 +125,10 @@ data class GlucoseAndHbA1c(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["person_id"])]
+    indices = [
+        Index(value = ["person_id"]),
+        Index(value = ["person_id", "record_time"], unique = true)
+    ]
 )
 data class ConditionAtVisit(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,

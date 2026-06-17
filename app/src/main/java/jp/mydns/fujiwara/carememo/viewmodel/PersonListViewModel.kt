@@ -8,11 +8,21 @@ import jp.mydns.fujiwara.carememo.data.InitialDataLoader
 import jp.mydns.fujiwara.carememo.data.Person
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 
 class PersonListViewModel(private val repository: CareMemoRepository) : ViewModel() {
+
+    private val _errorFlow = MutableStateFlow<String?>(null)
+    val errorFlow: StateFlow<String?> = _errorFlow.asStateFlow()
+
+    fun clearError() {
+        _errorFlow.value = null
+    }
     
     // データベースから全利用者をリアルタイムで取得（StateFlowとして保持）
     val userList: StateFlow<List<Person>> = repository.getAllPersons()
@@ -40,14 +50,22 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
     // 新規登録
     fun addPerson(person: Person) {
         viewModelScope.launch {
-            repository.insertPerson(person)
+            try {
+                repository.insertPerson(person)
+            } catch (e: SQLiteConstraintException) {
+                _errorFlow.value = "この利用者は既に登録されています。同姓同名・同生年月日の場合は「識別用メモ」を入力して区別してください。"
+            }
         }
     }
 
     // 更新
     fun updatePerson(person: Person) {
         viewModelScope.launch {
-            repository.updatePerson(person)
+            try {
+                repository.updatePerson(person)
+            } catch (e: SQLiteConstraintException) {
+                _errorFlow.value = "変更後の内容は既に他の利用者として登録されています。「識別用メモ」などを調整してください。"
+            }
         }
     }
 

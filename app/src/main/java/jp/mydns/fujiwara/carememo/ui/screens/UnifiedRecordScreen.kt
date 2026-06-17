@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -134,6 +135,9 @@ fun UnifiedRecordScreen(
     val records by viewModel.records.collectAsState()
     val person by viewModel.currentPerson.collectAsState()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     // カテゴリや利用者が変更されたらデータをリロード
     LaunchedEffect(currentCategory, personId) {
         viewModel.loadPerson(personId)
@@ -151,6 +155,7 @@ fun UnifiedRecordScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 TopAppBar(
@@ -229,7 +234,8 @@ fun UnifiedRecordScreen(
                 personId = personId,
                 records = records, // 履歴データを渡す
                 onSave = { viewModel.saveRecord(it) },
-                onClear = { viewModel.clearCurrentRecord() }
+                onClear = { viewModel.clearCurrentRecord() },
+                snackbarHostState = snackbarHostState
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -384,9 +390,11 @@ fun InputForm(
     personId: Int,
     records: List<Any>,
     onSave: (Any?) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     val isEditMode = recordData != null
+    val scope = rememberCoroutineScope()
 
     // 各入力項目の状態管理
     var yearText by remember { mutableStateOf("") }
@@ -714,8 +722,24 @@ fun InputForm(
                         java.time.LocalDateTime.of(year, month, day, hour, minute)
                             .atZone(ZoneId.systemDefault())
                             .toInstant()
+                            .truncatedTo(java.time.temporal.ChronoUnit.MINUTES) // 分単位で丸める
                     } catch (_: Exception) {
-                        Instant.now()
+                        Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+                    }
+
+                    // 入力チェック：値が一つもなければ保存しない
+                    val hasData = when (categoryType) {
+                        Category.HEIGHT_AND_WEIGHT -> heightText.isNotBlank() || weightText.isNotBlank()
+                        Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
+                        Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
+                        Category.CONDITION_AT_VISIT -> titleText.isNotBlank() || conditionText.isNotBlank()
+                    }
+
+                    if (!hasData) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("保存するデータがありません")
+                        }
+                        return@Button
                     }
 
                     val newRecord = when (categoryType) {

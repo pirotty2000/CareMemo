@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -56,6 +57,21 @@ fun MainScreen(
     // 登録・編集ダイアログの状態
     var showEditDialog by remember { mutableStateOf(false) }
     var editingPerson by remember { mutableStateOf<Person?>(null) }
+
+    val errorMsg by viewModel.errorFlow.collectAsState()
+
+    if (errorMsg != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearError() },
+            title = { Text("登録エラー") },
+            text = { Text(errorMsg!!) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     MainScreenContent(
         userList = userList,
@@ -257,9 +273,16 @@ fun MainScreenContent(
                                             color = MaterialTheme.colorScheme.secondary
                                         )
                                         Text(
-                                            text = user.name,
+                                            text = buildString {
+                                                append(user.name)
+                                                if (!user.note.isNullOrBlank()) {
+                                                    append(" (${user.note})")
+                                                }
+                                            },
                                             style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 },
@@ -341,6 +364,7 @@ fun UserEditDialog(
 ) {
     var name by remember { mutableStateOf(person?.name ?: "") }
     var furigana by remember { mutableStateOf(person?.furigana ?: "") }
+    var note by remember { mutableStateOf(person?.note ?: "") }
     
     val initialDate = person?.birthday?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.now()
     var yearText by remember { mutableStateOf(initialDate.year.toString()) }
@@ -383,6 +407,14 @@ fun UserEditDialog(
                     label = { Text("ふりがな") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("同姓同名識別用メモ (任意)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("例：302号室") }
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -431,8 +463,8 @@ fun UserEditDialog(
                             .atStartOfDay(ZoneId.systemDefault())
                             .toInstant()
                         onSave(
-                            person?.copy(name = name, furigana = furigana, birthday = birthday)
-                                ?: Person(name = name, furigana = furigana, birthday = birthday)
+                            person?.copy(name = name, furigana = furigana, birthday = birthday, note = note)
+                                ?: Person(name = name, furigana = furigana, birthday = birthday, note = note)
                         )
                     }
                 },
