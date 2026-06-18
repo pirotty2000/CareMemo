@@ -30,6 +30,7 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.ui.screens.CompactTextField
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
@@ -275,7 +276,7 @@ fun MainScreenContent(
                                         Text(
                                             text = buildString {
                                                 append(user.name)
-                                                if (!user.note.isNullOrBlank()) {
+                                                if (user.note.isNotBlank()) {
                                                     append(" (${user.note})")
                                                 }
                                             },
@@ -356,6 +357,11 @@ fun CategorySelectionSheet(
     }
 }
 
+enum class BirthEra(val displayName: String) {
+    AD("西暦"), SHOWA("昭和"), HEISEI("平成"), REIWA("令和")
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserEditDialog(
     person: Person?,
@@ -367,19 +373,68 @@ fun UserEditDialog(
     var note by remember { mutableStateOf(person?.note ?: "") }
     
     val initialDate = person?.birthday?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.now()
-    var yearText by remember { mutableStateOf(initialDate.year.toString()) }
-    var monthText by remember { mutableStateOf(initialDate.monthValue.toString()) }
-    var dayText by remember { mutableStateOf(initialDate.dayOfMonth.toString()) }
+    
+    // 元号の初期判定
+    var selectedEra by remember { 
+        mutableStateOf(
+            if (person == null) {
+                BirthEra.SHOWA 
+            } else {
+                when {
+                    initialDate.year in 1926..1989 -> BirthEra.SHOWA
+                    initialDate.year in 1990..2019 -> BirthEra.HEISEI
+                    initialDate.year >= 2020 -> BirthEra.REIWA
+                    else -> BirthEra.AD
+                }
+            }
+        )
+    }
 
-    val y = yearText.toIntOrNull()
+    var yearText by remember { 
+        mutableStateOf(
+            if (person == null) {
+                "" 
+            } else {
+                val y = initialDate.year
+                when (selectedEra) {
+                    BirthEra.SHOWA -> (y - 1925).toString()
+                    BirthEra.HEISEI -> (y - 1988).toString()
+                    BirthEra.REIWA -> (y - 2018).toString()
+                    BirthEra.AD -> y.toString()
+                }
+            }
+        )
+    }
+    var monthText by remember { mutableStateOf(if (person == null) "" else initialDate.monthValue.toString()) }
+    var dayText by remember { mutableStateOf(if (person == null) "" else initialDate.dayOfMonth.toString()) }
+
+    var eraExpanded by remember { mutableStateOf(false) }
+
+    val yInput = yearText.toIntOrNull()
     val m = monthText.toIntOrNull()
     val d = dayText.toIntOrNull()
 
-    val isYearError = y == null || y !in 1900..2100
+    // 西暦への変換ロジック
+    val westernYear = yInput?.let {
+        when (selectedEra) {
+            BirthEra.SHOWA -> it + 1925
+            BirthEra.HEISEI -> it + 1988
+            BirthEra.REIWA -> it + 2018
+            BirthEra.AD -> it
+        }
+    }
+
+    val isYearError = yInput == null || when (selectedEra) {
+        BirthEra.SHOWA -> yInput !in 1..64
+        BirthEra.HEISEI -> yInput !in 1..31
+        BirthEra.REIWA -> yInput !in 1..99
+        BirthEra.AD -> yInput !in 1900..2100
+    }
+    
     val isMonthError = m == null || m !in 1..12
     val isDayError = try {
-        if (y != null && m != null && d != null) {
-            d < 1 || d > YearMonth.of(y, m).lengthOfMonth()
+        if (westernYear != null && m != null && d != null) {
+            d < 1 || d > YearMonth.of(westernYear, m).lengthOfMonth()
         } else {
             true
         }
@@ -422,35 +477,79 @@ fun UserEditDialog(
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
+                    // 元号選択プルダウン (Compact風)
+                    ExposedDropdownMenuBox(
+                        expanded = eraExpanded,
+                        onExpandedChange = { eraExpanded = !eraExpanded },
+                        modifier = Modifier.weight(2.0f)
+                    ) {
+                        OutlinedTextField(
+                            value = selectedEra.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                        ExposedDropdownMenu(
+                            expanded = eraExpanded,
+                            onDismissRequest = { eraExpanded = false }
+                        ) {
+                            BirthEra.entries.forEach { era ->
+                                DropdownMenuItem(
+                                    text = { Text(era.displayName, style = MaterialTheme.typography.bodyMedium) },
+                                    onClick = {
+                                        selectedEra = era
+                                        eraExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // 年月日は CompactTextField を再利用して余白を詰め、高さを揃える
+                    CompactTextField(
                         value = yearText,
                         onValueChange = { if (it.length <= 4) yearText = it },
-                        modifier = Modifier.weight(1.5f),
-                        label = { Text("年") },
+                        modifier = Modifier.weight(1.2f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isYearError,
-                        singleLine = true
+                        suffix = { Text("年", style = MaterialTheme.typography.labelSmall) }
                     )
-                    OutlinedTextField(
+                    CompactTextField(
                         value = monthText,
                         onValueChange = { if (it.length <= 2) monthText = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("月") },
+                        modifier = Modifier.weight(0.9f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isMonthError,
-                        singleLine = true
+                        suffix = { Text("月", style = MaterialTheme.typography.labelSmall) }
                     )
-                    OutlinedTextField(
+                    CompactTextField(
                         value = dayText,
                         onValueChange = { if (it.length <= 2) dayText = it },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("日") },
+                        modifier = Modifier.weight(0.9f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isDayError,
-                        singleLine = true
+                        suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+                
+                // エラー時の補助テキスト (Rowの外に配置してレイアウト崩れを防ぐ)
+                if (isYearError && yearText.isNotBlank()) {
+                    Text(
+                        text = when(selectedEra) {
+                            BirthEra.SHOWA -> "昭和は1〜64年です"
+                            BirthEra.HEISEI -> "平成は1〜31年です"
+                            else -> "年の値が不正です"
+                        },
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 }
             }
@@ -458,8 +557,8 @@ fun UserEditDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (isInputValid && y != null && m != null && d != null) {
-                        val birthday = LocalDate.of(y, m, d)
+                    if (isInputValid && westernYear != null && m != null && d != null) {
+                        val birthday = LocalDate.of(westernYear, m, d)
                             .atStartOfDay(ZoneId.systemDefault())
                             .toInstant()
                         onSave(
