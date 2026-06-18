@@ -24,8 +24,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.lazy.rememberLazyListState
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -50,9 +55,10 @@ fun MainScreen(
     val userList by viewModel.userList.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
 
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showSheet by remember { mutableStateOf(false) }
     
     // 登録・編集ダイアログの状態
@@ -77,9 +83,14 @@ fun MainScreen(
     MainScreenContent(
         userList = userList,
         snackbarHostState = snackbarHostState,
+        lazyListState = lazyListState,
         onUserClick = { person ->
             selectedPerson = person
             showSheet = true
+        },
+        onEditUser = { person ->
+            editingPerson = person
+            showEditDialog = true
         },
         onAddClick = {
             editingPerson = null
@@ -98,6 +109,10 @@ fun MainScreen(
                 )
                 if (result == SnackbarResult.ActionPerformed) {
                     viewModel.restorePerson(person)
+                    // 復元した際に最上部へスクロールして、復活を確認しやすくする
+                    scope.launch {
+                        lazyListState.animateScrollToItem(0)
+                    }
                     // 「元に戻す」が実行されたら、スナックバーを即座に閉じる
                     snackbarHostState.currentSnackbarData?.dismiss()
                 }
@@ -116,11 +131,6 @@ fun MainScreen(
                 onCategorySelect = { category ->
                     showSheet = false
                     onNavigateToDetail(selectedPerson!!.id, category)
-                },
-                onEditPerson = {
-                    showSheet = false
-                    editingPerson = selectedPerson
-                    showEditDialog = true
                 }
             )
         }
@@ -147,7 +157,9 @@ fun MainScreen(
 fun MainScreenContent(
     userList: List<Person>,
     snackbarHostState: SnackbarHostState,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState,
     onUserClick: (Person) -> Unit,
+    onEditUser: (Person) -> Unit,
     onAddClick: () -> Unit,
     onInitClick: (android.content.Context) -> Unit,
     onDeleteUser: (Person) -> Unit,
@@ -219,95 +231,81 @@ fun MainScreenContent(
             
             // --- 利用者一覧リスト ---
             LazyColumn(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                state = lazyListState
             ) {
                 items(filteredList, key = { it.id }) { user ->
                     val age = calculateAge(user.birthday)
                     val birthdayStr = formatToJapaneseEra(user.birthday)
                     
-                    val currentOnDeleteUser by rememberUpdatedState(onDeleteUser)
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = {
-                            if (it == SwipeToDismissBoxValue.EndToStart) {
-                                currentOnDeleteUser(user)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                    )
+                    var showItemMenu by remember { mutableStateOf(false) }
 
-                    // 項目が再表示された（復元された）ときに強制的にリセット
-                    LaunchedEffect(user.id) {
-                        dismissState.reset()
-                    }
-
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        enableDismissFromStartToEnd = false,
-                        backgroundContent = {
-                            val color = when (dismissState.dismissDirection) {
-                                SwipeToDismissBoxValue.EndToStart -> Color.Gray.copy(alpha = 0.8f) // 論理削除はグレー
-                                else -> Color.Transparent
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(color)
-                                    .padding(horizontal = 16.dp),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                Icon(
-                                    Icons.Default.Inventory, // アーカイブアイコン
-                                    contentDescription = "アーカイブ",
-                                    tint = Color.White
-                                )
-                            }
-                        },
-                        content = {
-                            ListItem(
-                                headlineContent = {
-                                    Column {
-                                        Text(
-                                            text = user.furigana ?: "",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                        Text(
-                                            text = buildString {
-                                                append(user.name)
-                                                if (user.note.isNotBlank()) {
-                                                    append(" (${user.note})")
-                                                }
-                                            },
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                },
-                                supportingContent = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
-                                        Text("生年月日: $birthdayStr", style = MaterialTheme.typography.bodySmall)
-                                        Text("年齢: ${age}歳", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                },
-                                trailingContent = {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = "カテゴリを選択"
+                    Column(modifier = Modifier.animateItem()) {
+                        ListItem(
+                            headlineContent = {
+                                Column {
+                                    Text(
+                                        text = user.furigana ?: "",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
-                                },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                                    .clickable { onUserClick(user) }
-                            )
-                        }
-                    )
-                    HorizontalDivider()
+                                    Text(
+                                        text = buildString {
+                                            append(user.name)
+                                            if (user.note.isNotBlank()) {
+                                                append(" (${user.note})")
+                                            }
+                                        },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            },
+                            supportingContent = {
+                                Text(
+                                    text = "${birthdayStr}生　${age}歳",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            },
+                            trailingContent = {
+                                Box {
+                                    IconButton(onClick = { showItemMenu = true }) {
+                                        Icon(
+                                            Icons.Default.MoreVert,
+                                            contentDescription = "操作メニュー"
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showItemMenu,
+                                        onDismissRequest = { showItemMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("利用者情報を編集") },
+                                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                            onClick = {
+                                                showItemMenu = false
+                                                onEditUser(user)
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("利用者を削除", color = MaterialTheme.colorScheme.error) },
+                                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                            onClick = {
+                                                showItemMenu = false
+                                                onDeleteUser(user)
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.surface)
+                                .clickable { onUserClick(user) }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }
@@ -318,34 +316,24 @@ fun MainScreenContent(
 fun CategorySelectionSheet(
     personName: String,
     onCategorySelect: (Category) -> Unit,
-    onEditPerson: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 48.dp, start = 16.dp, end = 16.dp),
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "$personName さんの記録を選択",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            IconButton(onClick = onEditPerson) {
-                Icon(Icons.Default.Edit, contentDescription = "情報を編集")
-            }
-        }
+        Text(
+            text = "$personName さんの記録を選択",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start)
+        )
         
         Category.entries.forEach { category ->
             Button(
                 onClick = { onCategorySelect(category) },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -372,6 +360,12 @@ fun UserEditDialog(
     var furigana by remember { mutableStateOf(person?.furigana ?: "") }
     var note by remember { mutableStateOf(person?.note ?: "") }
     
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val yearFocusRequester = remember { FocusRequester() }
+    val monthFocusRequester = remember { FocusRequester() }
+    val dayFocusRequester = remember { FocusRequester() }
+
     val initialDate = person?.birthday?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.now()
     
     // 元号の初期判定
@@ -515,24 +509,46 @@ fun UserEditDialog(
                     // 年月日は CompactTextField を再利用して余白を詰め、高さを揃える
                     CompactTextField(
                         value = yearText,
-                        onValueChange = { if (it.length <= 4) yearText = it },
-                        modifier = Modifier.weight(1.2f),
+                        onValueChange = { 
+                            val filtered = it.filter { char -> char.isDigit() }
+                            val maxLength = if (selectedEra == BirthEra.AD) 4 else 2
+                            if (filtered.length <= maxLength) {
+                                yearText = filtered
+                                if (filtered.length == maxLength) {
+                                    monthFocusRequester.requestFocus()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1.2f).focusRequester(yearFocusRequester),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isYearError,
                         suffix = { Text("年", style = MaterialTheme.typography.labelSmall) }
                     )
                     CompactTextField(
                         value = monthText,
-                        onValueChange = { if (it.length <= 2) monthText = it },
-                        modifier = Modifier.weight(0.9f),
+                        onValueChange = { 
+                            val filtered = it.filter { char -> char.isDigit() }
+                            if (filtered.length <= 2) {
+                                monthText = filtered
+                                if (filtered.length == 2) {
+                                    dayFocusRequester.requestFocus()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(0.9f).focusRequester(monthFocusRequester),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isMonthError,
                         suffix = { Text("月", style = MaterialTheme.typography.labelSmall) }
                     )
                     CompactTextField(
                         value = dayText,
-                        onValueChange = { if (it.length <= 2) dayText = it },
-                        modifier = Modifier.weight(0.9f),
+                        onValueChange = { 
+                            val filtered = it.filter { char -> char.isDigit() }
+                            if (filtered.length <= 2) {
+                                dayText = filtered
+                            }
+                        },
+                        modifier = Modifier.weight(0.9f).focusRequester(dayFocusRequester),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = isDayError,
                         suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
@@ -558,6 +574,7 @@ fun UserEditDialog(
             Button(
                 onClick = {
                     if (isInputValid && westernYear != null && m != null && d != null) {
+                        keyboardController?.hide()
                         val birthday = LocalDate.of(westernYear, m, d)
                             .atStartOfDay(ZoneId.systemDefault())
                             .toInstant()
@@ -607,7 +624,9 @@ fun MainScreenPreview() {
         MainScreenContent(
             userList = mockUserList, 
             snackbarHostState = remember { SnackbarHostState() },
+            lazyListState = rememberLazyListState(),
             onUserClick = { }, 
+            onEditUser = { },
             onAddClick = { },
             onInitClick = { },
             onDeleteUser = { },

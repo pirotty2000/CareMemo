@@ -40,6 +40,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.launch
@@ -402,6 +408,22 @@ fun InputForm(
     var dayText by remember { mutableStateOf("") }
     var hourText by remember { mutableStateOf("") }
     var minuteText by remember { mutableStateOf("") }
+    var secondText by remember { mutableStateOf("") }
+
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val yearFocusRequester = remember { FocusRequester() }
+    val monthFocusRequester = remember { FocusRequester() }
+    val dayFocusRequester = remember { FocusRequester() }
+    val hourFocusRequester = remember { FocusRequester() }
+    val minuteFocusRequester = remember { FocusRequester() }
+    val secondFocusRequester = remember { FocusRequester() }
+    val categoryFirstFocusRequester = remember { FocusRequester() }
+
+    // データ項目用の FocusRequester
+    val dataField2Requester = remember { FocusRequester() } // 体重, 血圧(下), HbA1c, 記録者
+    val dataField3Requester = remember { FocusRequester() } // 脈拍, 所見メモ
 
     var heightText by remember { mutableStateOf("") }
     var weightText by remember { mutableStateOf("") }
@@ -433,6 +455,7 @@ fun InputForm(
             dayText = zonedDateTime.dayOfMonth.toString()
             hourText = "%02d".format(zonedDateTime.hour)
             minuteText = "%02d".format(zonedDateTime.minute)
+            secondText = "%02d".format(zonedDateTime.second)
             isUserModifiedTime = true // 編集時は「ユーザー操作あり」として扱う
 
             when (recordData) {
@@ -464,6 +487,7 @@ fun InputForm(
                 dayText = now.dayOfMonth.toString()
                 hourText = "00"
                 minuteText = "00"
+                secondText = "00"
             }
             // データ項目のみリセット
             if (categoryType == Category.HEIGHT_AND_WEIGHT) {
@@ -483,6 +507,28 @@ fun InputForm(
             titleText = ""
             authorText = ""
             conditionText = ""
+
+            // 新規モードへのリセット時、最初の項目にフォーカス
+            if (isUserModifiedTime) {
+                if (categoryType == Category.CONDITION_AT_VISIT) {
+                    categoryFirstFocusRequester.requestFocus()
+                } else {
+                    yearFocusRequester.requestFocus()
+                }
+            }
+        }
+    }
+
+    // 入力フィルタリング関数
+    fun filterInteger(text: String): String = text.filter { it.isDigit() }
+
+    fun filterDecimal(text: String): String {
+        val filtered = text.filter { it.isDigit() || it == '.' }
+        val parts = filtered.split('.')
+        return when {
+            parts.size > 2 -> parts[0] + "." + parts[1]
+            parts.size == 2 -> parts[0] + "." + parts[1].take(1)
+            else -> filtered
         }
     }
 
@@ -492,6 +538,7 @@ fun InputForm(
     val d = dayText.toIntOrNull()
     val hh = hourText.toIntOrNull() ?: 0
     val mm = minuteText.toIntOrNull() ?: 0
+    val ss = secondText.toIntOrNull() ?: 0
 
     val isYearError = y == null || y < 1900 || y > 2100
     val isMonthError = m == null || m < 1 || m > 12
@@ -506,8 +553,9 @@ fun InputForm(
     }
     val isHourError = hh !in 0..23
     val isMinuteError = mm !in 0..59
+    val isSecondError = ss !in 0..59
 
-    val isDateTimeValid = !isYearError && !isMonthError && !isDayError && !isHourError && !isMinuteError
+    val isDateTimeValid = !isYearError && !isMonthError && !isDayError && !isHourError && !isMinuteError && !isSecondError
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // 共通項目：記録日時（分割入力）
@@ -520,12 +568,14 @@ fun InputForm(
             CompactTextField(
                 value = yearText,
                 onValueChange = { 
-                    if (it.length <= 4) {
-                        yearText = it
+                    val filtered = filterInteger(it)
+                    if (filtered.length <= 4) {
+                        yearText = filtered
                         isUserModifiedTime = true
+                        if (filtered.length == 4) monthFocusRequester.requestFocus()
                     }
                 },
-                modifier = Modifier.weight(1.8f),
+                modifier = Modifier.weight(1.8f).focusRequester(yearFocusRequester),
                 onFocusChanged = { if (it.isFocused) yearText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = isYearError,
@@ -535,12 +585,14 @@ fun InputForm(
             CompactTextField(
                 value = monthText,
                 onValueChange = { 
-                    if (it.length <= 2) {
-                        monthText = it
+                    val filtered = filterInteger(it)
+                    if (filtered.length <= 2) {
+                        monthText = filtered
                         isUserModifiedTime = true
+                        if (filtered.length == 2) dayFocusRequester.requestFocus()
                     }
                 },
-                modifier = Modifier.weight(1.2f),
+                modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester),
                 onFocusChanged = { if (it.isFocused) monthText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = isMonthError,
@@ -550,27 +602,31 @@ fun InputForm(
             CompactTextField(
                 value = dayText,
                 onValueChange = { 
-                    if (it.length <= 2) {
-                        dayText = it
+                    val filtered = filterInteger(it)
+                    if (filtered.length <= 2) {
+                        dayText = filtered
                         isUserModifiedTime = true
+                        if (filtered.length == 2) hourFocusRequester.requestFocus()
                     }
                 },
-                modifier = Modifier.weight(1.2f),
+                modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester),
                 onFocusChanged = { if (it.isFocused) dayText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = isDayError,
-                suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
+                suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
             )
             // 時
             CompactTextField(
                 value = hourText,
                 onValueChange = { 
-                    if (it.length <= 2) {
-                        hourText = it
+                    val filtered = filterInteger(it)
+                    if (filtered.length <= 2) {
+                        hourText = filtered
                         isUserModifiedTime = true
+                        if (filtered.length == 2) minuteFocusRequester.requestFocus()
                     }
                 },
-                modifier = Modifier.weight(1.1f),
+                modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester),
                 onFocusChanged = { if (it.isFocused) hourText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = isHourError,
@@ -580,15 +636,33 @@ fun InputForm(
             CompactTextField(
                 value = minuteText,
                 onValueChange = { 
-                    if (it.length <= 2) {
-                        minuteText = it
+                    val filtered = filterInteger(it)
+                    if (filtered.length <= 2) {
+                        minuteText = filtered
+                        isUserModifiedTime = true
+                        if (filtered.length == 2) secondFocusRequester.requestFocus()
+                    }
+                },
+                modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
+                onFocusChanged = { if (it.isFocused) minuteText = "" },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = isMinuteError,
+                suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
+            )
+            // 秒
+            CompactTextField(
+                value = secondText,
+                onValueChange = { 
+                    val filtered = filterInteger(it)
+                    if (filtered.length <= 2) {
+                        secondText = filtered
                         isUserModifiedTime = true
                     }
                 },
-                modifier = Modifier.weight(1f),
-                onFocusChanged = { if (it.isFocused) minuteText = "" },
+                modifier = Modifier.weight(1f).focusRequester(secondFocusRequester),
+                onFocusChanged = { if (it.isFocused) secondText = "" },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isMinuteError
+                isError = isSecondError
             )
         }
 
@@ -601,22 +675,32 @@ fun InputForm(
                 ) {
                     OutlinedTextField(
                         value = heightText,
-                        onValueChange = { heightText = it },
+                        onValueChange = { heightText = filterDecimal(it) },
                         label = { Text("身長") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) heightText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            .onFocusChanged { if (it.isFocused) heightText = "" }
+                            .focusRequester(categoryFirstFocusRequester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = weightText,
-                        onValueChange = { weightText = it },
+                        onValueChange = { weightText = filterDecimal(it) },
                         label = { Text("体重") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) weightText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            .onFocusChanged { if (it.isFocused) weightText = "" }
+                            .focusRequester(dataField2Requester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         singleLine = true
                     )
                 }
@@ -628,32 +712,47 @@ fun InputForm(
                 ) {
                     OutlinedTextField(
                         value = bpSystolicText,
-                        onValueChange = { bpSystolicText = it },
+                        onValueChange = { bpSystolicText = filterInteger(it) },
                         label = { Text("血圧(上)") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) bpSystolicText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            .onFocusChanged { if (it.isFocused) bpSystolicText = "" }
+                            .focusRequester(categoryFirstFocusRequester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = bpDiastolicText,
-                        onValueChange = { bpDiastolicText = it },
+                        onValueChange = { bpDiastolicText = filterInteger(it) },
                         label = { Text("血圧(下)") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) bpDiastolicText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            .onFocusChanged { if (it.isFocused) bpDiastolicText = "" }
+                            .focusRequester(dataField2Requester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() }),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = pulseText,
-                        onValueChange = { pulseText = it },
+                        onValueChange = { pulseText = filterInteger(it) },
                         label = { Text("脈拍") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) pulseText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            .onFocusChanged { if (it.isFocused) pulseText = "" }
+                            .focusRequester(dataField3Requester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         singleLine = true
                     )
                 }
@@ -665,22 +764,32 @@ fun InputForm(
                 ) {
                     OutlinedTextField(
                         value = glucoseText,
-                        onValueChange = { glucoseText = it },
+                        onValueChange = { glucoseText = filterInteger(it) },
                         label = { Text("血糖値") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) glucoseText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            .onFocusChanged { if (it.isFocused) glucoseText = "" }
+                            .focusRequester(categoryFirstFocusRequester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = hba1cText,
-                        onValueChange = { hba1cText = it },
+                        onValueChange = { hba1cText = filterDecimal(it) },
                         label = { Text("HbA1c") },
                         modifier = Modifier
                             .weight(1f)
-                            .onFocusChanged { if (it.isFocused) hba1cText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            .onFocusChanged { if (it.isFocused) hba1cText = "" }
+                            .focusRequester(dataField2Requester),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         singleLine = true
                     )
                 }
@@ -690,21 +799,40 @@ fun InputForm(
                     value = titleText,
                     onValueChange = { titleText = it },
                     label = { Text("タイトル") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(categoryFirstFocusRequester),
+                    keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() })
                 )
                 OutlinedTextField(
                     value = authorText,
                     onValueChange = { authorText = it },
                     label = { Text("記録者") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(dataField2Requester),
+                    keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() })
                 )
                 TextField(
                     value = conditionText,
                     onValueChange = { conditionText = it },
                     label = { Text("所見メモ") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(dataField3Requester),
+                    keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
             }
+        }
+
+        val hasData = when (categoryType) {
+            Category.HEIGHT_AND_WEIGHT -> heightText.isNotBlank() || weightText.isNotBlank()
+            Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
+            Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
+            Category.CONDITION_AT_VISIT -> titleText.isNotBlank() || conditionText.isNotBlank()
         }
 
         Row(
@@ -713,26 +841,19 @@ fun InputForm(
         ) {
             Button(
                 onClick = {
+                    keyboardController?.hide()
                     val recordTime = try {
                         val year = yearText.toInt()
                         val month = monthText.toInt()
                         val day = dayText.toInt()
                         val hour = hourText.toIntOrNull() ?: 0
                         val minute = minuteText.toIntOrNull() ?: 0
-                        java.time.LocalDateTime.of(year, month, day, hour, minute)
+                        val second = secondText.toIntOrNull() ?: 0
+                        java.time.LocalDateTime.of(year, month, day, hour, minute, second)
                             .atZone(ZoneId.systemDefault())
                             .toInstant()
-                            .truncatedTo(java.time.temporal.ChronoUnit.MINUTES) // 分単位で丸める
                     } catch (_: Exception) {
-                        Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-                    }
-
-                    // 入力チェック：値が一つもなければ保存しない
-                    val hasData = when (categoryType) {
-                        Category.HEIGHT_AND_WEIGHT -> heightText.isNotBlank() || weightText.isNotBlank()
-                        Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
-                        Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
-                        Category.CONDITION_AT_VISIT -> titleText.isNotBlank() || conditionText.isNotBlank()
+                        Instant.now()
                     }
 
                     if (!hasData) {
@@ -787,9 +908,26 @@ fun InputForm(
                         }
                     }
                     onSave(newRecord)
+
+                    // 保存後に入力欄をリセット（新規登録モードの場合）
+                    if (!isEditMode) {
+                        heightText = ""
+                        weightText = ""
+                        bpSystolicText = ""
+                        bpDiastolicText = ""
+                        pulseText = ""
+                        glucoseText = ""
+                        hba1cText = ""
+                        titleText = ""
+                        // authorText = "" // 記録者は連続入力時に残っている方が便利なので、一旦そのままにしています
+                        conditionText = ""
+
+                        // 入力フォームからフォーカスを外す（ユーザーの要望：どこにもフォーカスさせない）
+                        focusManager.clearFocus()
+                    }
                 },
                 modifier = Modifier.weight(1f),
-                enabled = isDateTimeValid && when (categoryType) {
+                enabled = isDateTimeValid && hasData && when (categoryType) {
                     Category.HEIGHT_AND_WEIGHT -> {
                         weightText.toDoubleOrNull() != null
                     }
@@ -1295,6 +1433,7 @@ fun CompactTextField(
     isError: Boolean = false,
     suffix: @Composable (() -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
     onFocusChanged: (FocusState) -> Unit = {}
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -1306,6 +1445,7 @@ fun CompactTextField(
         enabled = true,
         singleLine = true,
         keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
