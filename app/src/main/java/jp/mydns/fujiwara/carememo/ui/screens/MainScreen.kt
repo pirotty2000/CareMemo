@@ -232,7 +232,8 @@ fun MainScreenContent(
             // --- 利用者一覧リスト ---
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                state = lazyListState
+                state = lazyListState,
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(filteredList, key = { it.id }) { user ->
                     val age = calculateAge(user.birthday)

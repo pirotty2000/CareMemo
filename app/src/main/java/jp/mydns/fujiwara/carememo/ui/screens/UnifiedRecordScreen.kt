@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.HelpOutline
@@ -179,60 +180,74 @@ fun UnifiedRecordScreen(
                         }
                     }
                 )
-                // カテゴリ切り替え用タブ (最新の SecondaryScrollableTabRow に修正)
-                SecondaryScrollableTabRow(
-                    selectedTabIndex = Category.entries.indexOf(currentCategory),
-                    edgePadding = 16.dp,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    divider = {}
+                // カテゴリ切り替え用チップ
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Spacer(modifier = Modifier.width(8.dp))
                     Category.entries.forEach { category ->
-                        Tab(
+                        FilterChip(
                             selected = currentCategory == category,
                             onClick = { currentCategory = category },
-                            text = { Text(category.displayName) }
+                            label = { Text(category.displayName) },
+                            leadingIcon = if (currentCategory == category) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
                         )
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
             }
         }
     ) { paddingValues ->
-    var showHistory by remember { mutableStateOf(true) }
-    var recordToDelete by remember { mutableStateOf<Any?>(null) }
+        var showHistory by remember { mutableStateOf(true) }
+        var recordToDelete by remember { mutableStateOf<Any?>(null) }
 
-    // 削除確認ダイアログ
-    if (recordToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { recordToDelete = null },
-            title = { Text("データの削除") },
-            text = { Text("この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        recordToDelete?.let { viewModel.deleteRecord(it) }
-                        recordToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("削除")
+        // 削除確認ダイアログ
+        if (recordToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { recordToDelete = null },
+                title = { Text("データの削除") },
+                text = { Text("この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            recordToDelete?.let { viewModel.deleteRecord(it) }
+                            recordToDelete = null
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("削除")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { recordToDelete = null }) {
+                        Text("キャンセル")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { recordToDelete = null }) {
-                    Text("キャンセル")
-                }
-            }
-        )
-    }
+            )
+        }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Spacer(modifier = Modifier.height(4.dp)) // カテゴリ選択欄との間に少し隙間を追加
+
             // --- [上部] 入力フォーム ---
             InputForm(
                 categoryType = currentCategory,
@@ -243,10 +258,6 @@ fun UnifiedRecordScreen(
                 onClear = { viewModel.clearCurrentRecord() },
                 snackbarHostState = snackbarHostState
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            HorizontalDivider(thickness = 1.dp)
 
             // --- [中央] 履歴/グラフ 切り替え (所見メモ以外) ---
             if (currentCategory != Category.CONDITION_AT_VISIT) {
@@ -290,7 +301,7 @@ fun UnifiedRecordScreen(
                                 confirmValueChange = {
                                     if (it == SwipeToDismissBoxValue.EndToStart) {
                                         recordToDelete = record
-                                        false // ダイアログで確認するため、一旦スワイプを差し戻す（あるいはtrueにしてダイアログで消去）
+                                        false // ダイアログで確認するため、一旦スワイプを差し戻す
                                     } else {
                                         false
                                     }
@@ -302,14 +313,14 @@ fun UnifiedRecordScreen(
                                 enableDismissFromStartToEnd = false,
                                 backgroundContent = {
                                     val color = when (dismissState.dismissDirection) {
-                                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f) // 物理削除ははっきりとした赤
+                                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                                         else -> Color.Transparent
                                     }
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(vertical = 4.dp)
-                                            .background(color, shape = CardDefaults.shape) // カードに合わせた角丸に
+                                            .background(color, shape = CardDefaults.shape)
                                             .padding(horizontal = 16.dp),
                                         contentAlignment = Alignment.CenterEnd
                                     ) {
@@ -334,10 +345,10 @@ fun UnifiedRecordScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(scrollState)
-                                .padding(end = 16.dp) // インジケーター用の余白
+                                .padding(end = 16.dp)
                         ) {
                             GraphView(records, currentCategory)
-                            Spacer(modifier = Modifier.height(32.dp)) // 下部の余白
+                            Spacer(modifier = Modifier.height(32.dp))
                         }
 
                         // 簡易スクロールバー
@@ -402,7 +413,6 @@ fun InputForm(
     val isEditMode = recordData != null
     val scope = rememberCoroutineScope()
 
-    // 各入力項目の状態管理
     var yearText by remember { mutableStateOf("") }
     var monthText by remember { mutableStateOf("") }
     var dayText by remember { mutableStateOf("") }
@@ -421,9 +431,8 @@ fun InputForm(
     val secondFocusRequester = remember { FocusRequester() }
     val categoryFirstFocusRequester = remember { FocusRequester() }
 
-    // データ項目用の FocusRequester
-    val dataField2Requester = remember { FocusRequester() } // 体重, 血圧(下), HbA1c, 記録者
-    val dataField3Requester = remember { FocusRequester() } // 脈拍, 所見メモ
+    val dataField2Requester = remember { FocusRequester() }
+    val dataField3Requester = remember { FocusRequester() }
 
     var heightText by remember { mutableStateOf("") }
     var weightText by remember { mutableStateOf("") }
@@ -436,10 +445,8 @@ fun InputForm(
     var authorText by remember { mutableStateOf("") }
     var conditionText by remember { mutableStateOf("") }
 
-    // ユーザーが一度でも入力操作をしたかどうかのフラグ
     var isUserModifiedTime by remember { mutableStateOf(false) }
 
-    // 編集対象が選択されたら値をセット、クリアされたらリセット
     LaunchedEffect(recordData) {
         if (recordData != null) {
             val recordTime = when (recordData) {
@@ -456,7 +463,7 @@ fun InputForm(
             hourText = "%02d".format(zonedDateTime.hour)
             minuteText = "%02d".format(zonedDateTime.minute)
             secondText = "%02d".format(zonedDateTime.second)
-            isUserModifiedTime = true // 編集時は「ユーザー操作あり」として扱う
+            isUserModifiedTime = true
 
             when (recordData) {
                 is HeightAndWeight -> {
@@ -479,7 +486,6 @@ fun InputForm(
                 }
             }
         } else {
-            // 新規モード時：ユーザーがまだ操作していなければ、年月日+00:00をセット
             if (!isUserModifiedTime) {
                 val now = Instant.now().atZone(ZoneId.systemDefault())
                 yearText = now.year.toString()
@@ -489,9 +495,7 @@ fun InputForm(
                 minuteText = "00"
                 secondText = "00"
             }
-            // データ項目のみリセット
             if (categoryType == Category.HEIGHT_AND_WEIGHT) {
-                // 身長は最新の値をデフォルトセット
                 val latestHeight = records.filterIsInstance<HeightAndWeight>()
                     .maxByOrNull { it.recordTime }?.height
                 heightText = latestHeight?.toString() ?: ""
@@ -508,7 +512,6 @@ fun InputForm(
             authorText = ""
             conditionText = ""
 
-            // 新規モードへのリセット時、最初の項目にフォーカス
             if (isUserModifiedTime) {
                 if (categoryType == Category.CONDITION_AT_VISIT) {
                     categoryFirstFocusRequester.requestFocus()
@@ -519,7 +522,6 @@ fun InputForm(
         }
     }
 
-    // 入力フィルタリング関数
     fun filterInteger(text: String): String = text.filter { it.isDigit() }
 
     fun filterDecimal(text: String): String {
@@ -532,7 +534,6 @@ fun InputForm(
         }
     }
 
-    // バリデーションロジック
     val y = yearText.toIntOrNull()
     val m = monthText.toIntOrNull()
     val d = dayText.toIntOrNull()
@@ -557,393 +558,402 @@ fun InputForm(
 
     val isDateTimeValid = !isYearError && !isMonthError && !isDayError && !isHourError && !isMinuteError && !isSecondError
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        // 共通項目：記録日時（分割入力）
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 年 (4桁)
-            CompactTextField(
-                value = yearText,
-                onValueChange = { 
-                    val filtered = filterInteger(it)
-                    if (filtered.length <= 4) {
-                        yearText = filtered
-                        isUserModifiedTime = true
-                        if (filtered.length == 4) monthFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1.8f).focusRequester(yearFocusRequester),
-                onFocusChanged = { if (it.isFocused) yearText = "" },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isYearError,
-                suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
-            )
-            // 月
-            CompactTextField(
-                value = monthText,
-                onValueChange = { 
-                    val filtered = filterInteger(it)
-                    if (filtered.length <= 2) {
-                        monthText = filtered
-                        isUserModifiedTime = true
-                        if (filtered.length == 2) dayFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester),
-                onFocusChanged = { if (it.isFocused) monthText = "" },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isMonthError,
-                suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
-            )
-            // 日
-            CompactTextField(
-                value = dayText,
-                onValueChange = { 
-                    val filtered = filterInteger(it)
-                    if (filtered.length <= 2) {
-                        dayText = filtered
-                        isUserModifiedTime = true
-                        if (filtered.length == 2) hourFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester),
-                onFocusChanged = { if (it.isFocused) dayText = "" },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isDayError,
-                suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
-            )
-            // 時
-            CompactTextField(
-                value = hourText,
-                onValueChange = { 
-                    val filtered = filterInteger(it)
-                    if (filtered.length <= 2) {
-                        hourText = filtered
-                        isUserModifiedTime = true
-                        if (filtered.length == 2) minuteFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester),
-                onFocusChanged = { if (it.isFocused) hourText = "" },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isHourError,
-                suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
-            )
-            // 分
-            CompactTextField(
-                value = minuteText,
-                onValueChange = { 
-                    val filtered = filterInteger(it)
-                    if (filtered.length <= 2) {
-                        minuteText = filtered
-                        isUserModifiedTime = true
-                        if (filtered.length == 2) secondFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
-                onFocusChanged = { if (it.isFocused) minuteText = "" },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isMinuteError,
-                suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
-            )
-            // 秒
-            CompactTextField(
-                value = secondText,
-                onValueChange = { 
-                    val filtered = filterInteger(it)
-                    if (filtered.length <= 2) {
-                        secondText = filtered
-                        isUserModifiedTime = true
-                    }
-                },
-                modifier = Modifier.weight(1f).focusRequester(secondFocusRequester),
-                onFocusChanged = { if (it.isFocused) secondText = "" },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = isSecondError
-            )
-        }
-
-        // カテゴリ別項目
-        when (categoryType) {
-            Category.HEIGHT_AND_WEIGHT -> {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "記録日時",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = heightText,
-                        onValueChange = { heightText = filterDecimal(it) },
-                        label = { Text("身長") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) heightText = "" }
-                            .focusRequester(categoryFirstFocusRequester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                        singleLine = true
+                    CompactTextField(
+                        value = yearText,
+                        onValueChange = { 
+                            val filtered = filterInteger(it)
+                            if (filtered.length <= 4) {
+                                yearText = filtered
+                                isUserModifiedTime = true
+                                if (filtered.length == 4) monthFocusRequester.requestFocus()
+                            }
+                        },
+                        modifier = Modifier.weight(1.8f).focusRequester(yearFocusRequester),
+                        onFocusChanged = { if (it.isFocused) yearText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isYearError,
+                        suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
                     )
-                    OutlinedTextField(
-                        value = weightText,
-                        onValueChange = { weightText = filterDecimal(it) },
-                        label = { Text("体重") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) weightText = "" }
-                            .focusRequester(dataField2Requester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                        singleLine = true
+                    CompactTextField(
+                        value = monthText,
+                        onValueChange = { 
+                            val filtered = filterInteger(it)
+                            if (filtered.length <= 2) {
+                                monthText = filtered
+                                isUserModifiedTime = true
+                                if (filtered.length == 2) dayFocusRequester.requestFocus()
+                            }
+                        },
+                        modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester),
+                        onFocusChanged = { if (it.isFocused) monthText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isMonthError,
+                        suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    CompactTextField(
+                        value = dayText,
+                        onValueChange = { 
+                            val filtered = filterInteger(it)
+                            if (filtered.length <= 2) {
+                                dayText = filtered
+                                isUserModifiedTime = true
+                                if (filtered.length == 2) hourFocusRequester.requestFocus()
+                            }
+                        },
+                        modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester),
+                        onFocusChanged = { if (it.isFocused) dayText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isDayError,
+                        suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
+                    )
+                    CompactTextField(
+                        value = hourText,
+                        onValueChange = { 
+                            val filtered = filterInteger(it)
+                            if (filtered.length <= 2) {
+                                hourText = filtered
+                                isUserModifiedTime = true
+                                if (filtered.length == 2) minuteFocusRequester.requestFocus()
+                            }
+                        },
+                        modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester),
+                        onFocusChanged = { if (it.isFocused) hourText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isHourError,
+                        suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    CompactTextField(
+                        value = minuteText,
+                        onValueChange = { 
+                            val filtered = filterInteger(it)
+                            if (filtered.length <= 2) {
+                                minuteText = filtered
+                                isUserModifiedTime = true
+                                if (filtered.length == 2) secondFocusRequester.requestFocus()
+                            }
+                        },
+                        modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
+                        onFocusChanged = { if (it.isFocused) minuteText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isMinuteError,
+                        suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    CompactTextField(
+                        value = secondText,
+                        onValueChange = { 
+                            val filtered = filterInteger(it)
+                            if (filtered.length <= 2) {
+                                secondText = filtered
+                                isUserModifiedTime = true
+                            }
+                        },
+                        modifier = Modifier.weight(1f).focusRequester(secondFocusRequester),
+                        onFocusChanged = { if (it.isFocused) secondText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = isSecondError
                     )
                 }
             }
-            Category.BP_AND_PULSE -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = bpSystolicText,
-                        onValueChange = { bpSystolicText = filterInteger(it) },
-                        label = { Text("血圧(上)") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) bpSystolicText = "" }
-                            .focusRequester(categoryFirstFocusRequester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = bpDiastolicText,
-                        onValueChange = { bpDiastolicText = filterInteger(it) },
-                        label = { Text("血圧(下)") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) bpDiastolicText = "" }
-                            .focusRequester(dataField2Requester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() }),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = pulseText,
-                        onValueChange = { pulseText = filterInteger(it) },
-                        label = { Text("脈拍") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) pulseText = "" }
-                            .focusRequester(dataField3Requester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                        singleLine = true
-                    )
-                }
-            }
-            Category.GLUCOSE_AND_HBA1C -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = glucoseText,
-                        onValueChange = { glucoseText = filterInteger(it) },
-                        label = { Text("血糖値") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) glucoseText = "" }
-                            .focusRequester(categoryFirstFocusRequester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = hba1cText,
-                        onValueChange = { hba1cText = filterDecimal(it) },
-                        label = { Text("HbA1c") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.isFocused) hba1cText = "" }
-                            .focusRequester(dataField2Requester),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                        singleLine = true
-                    )
-                }
-            }
-            Category.CONDITION_AT_VISIT -> {
-                OutlinedTextField(
-                    value = titleText,
-                    onValueChange = { titleText = it },
-                    label = { Text("タイトル") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(categoryFirstFocusRequester),
-                    keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() })
-                )
-                OutlinedTextField(
-                    value = authorText,
-                    onValueChange = { authorText = it },
-                    label = { Text("記録者") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(dataField2Requester),
-                    keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() })
-                )
-                TextField(
-                    value = conditionText,
-                    onValueChange = { conditionText = it },
-                    label = { Text("所見メモ") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(dataField3Requester),
-                    keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                )
-            }
-        }
 
-        val hasData = when (categoryType) {
-            Category.HEIGHT_AND_WEIGHT -> heightText.isNotBlank() || weightText.isNotBlank()
-            Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
-            Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
-            Category.CONDITION_AT_VISIT -> titleText.isNotBlank() || conditionText.isNotBlank()
-        }
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = {
-                    keyboardController?.hide()
-                    val recordTime = try {
-                        val year = yearText.toInt()
-                        val month = monthText.toInt()
-                        val day = dayText.toInt()
-                        val hour = hourText.toIntOrNull() ?: 0
-                        val minute = minuteText.toIntOrNull() ?: 0
-                        val second = secondText.toIntOrNull() ?: 0
-                        java.time.LocalDateTime.of(year, month, day, hour, minute, second)
-                            .atZone(ZoneId.systemDefault())
-                            .toInstant()
-                    } catch (_: Exception) {
-                        Instant.now()
-                    }
-
-                    if (!hasData) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("保存するデータがありません")
-                        }
-                        return@Button
-                    }
-
-                    val newRecord = when (categoryType) {
-                        Category.HEIGHT_AND_WEIGHT -> {
-                            val id = (recordData as? HeightAndWeight)?.id ?: 0
-                            HeightAndWeight(
-                                id = id,
-                                personId = personId,
-                                height = heightText.toDoubleOrNull(),
-                                weight = weightText.toDoubleOrNull() ?: 0.0,
-                                recordTime = recordTime
-                            )
-                        }
-                        Category.BP_AND_PULSE -> {
-                            val id = (recordData as? BpAndPulse)?.id ?: 0
-                            BpAndPulse(
-                                id = id,
-                                personId = personId,
-                                bpSystolic = bpSystolicText.toIntOrNull(),
-                                bpDiastolic = bpDiastolicText.toIntOrNull(),
-                                pulse = pulseText.toIntOrNull(),
-                                recordTime = recordTime
-                            )
-                        }
-                        Category.GLUCOSE_AND_HBA1C -> {
-                            val id = (recordData as? GlucoseAndHbA1c)?.id ?: 0
-                            GlucoseAndHbA1c(
-                                id = id,
-                                personId = personId,
-                                glucose = glucoseText.toIntOrNull(),
-                                hba1c = hba1cText.toDoubleOrNull(),
-                                recordTime = recordTime
-                            )
-                        }
-                        Category.CONDITION_AT_VISIT -> {
-                            val id = (recordData as? ConditionAtVisit)?.id ?: 0
-                            ConditionAtVisit(
-                                id = id,
-                                personId = personId,
-                                title = titleText,
-                                condition = conditionText,
-                                author = authorText,
-                                recordTime = recordTime
-                            )
-                        }
-                    }
-                    onSave(newRecord)
-
-                    // 保存後に入力欄をリセット（新規登録モードの場合）
-                    if (!isEditMode) {
-                        heightText = ""
-                        weightText = ""
-                        bpSystolicText = ""
-                        bpDiastolicText = ""
-                        pulseText = ""
-                        glucoseText = ""
-                        hba1cText = ""
-                        titleText = ""
-                        // authorText = "" // 記録者は連続入力時に残っている方が便利なので、一旦そのままにしています
-                        conditionText = ""
-
-                        // 入力フォームからフォーカスを外す（ユーザーの要望：どこにもフォーカスさせない）
-                        focusManager.clearFocus()
-                    }
-                },
-                modifier = Modifier.weight(1f),
-                enabled = isDateTimeValid && hasData && when (categoryType) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                when (categoryType) {
                     Category.HEIGHT_AND_WEIGHT -> {
-                        weightText.toDoubleOrNull() != null
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = heightText,
+                                onValueChange = { heightText = filterDecimal(it) },
+                                label = { Text("身長") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) heightText = "" }
+                                    .focusRequester(categoryFirstFocusRequester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = weightText,
+                                onValueChange = { weightText = filterDecimal(it) },
+                                label = { Text("体重") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) weightText = "" }
+                                    .focusRequester(dataField2Requester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                                singleLine = true
+                            )
+                        }
                     }
-                    Category.CONDITION_AT_VISIT -> authorText.isNotBlank()
-                    else -> true
+                    Category.BP_AND_PULSE -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = bpSystolicText,
+                                onValueChange = { bpSystolicText = filterInteger(it) },
+                                label = { Text("血圧(上)") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) bpSystolicText = "" }
+                                    .focusRequester(categoryFirstFocusRequester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = bpDiastolicText,
+                                onValueChange = { bpDiastolicText = filterInteger(it) },
+                                label = { Text("血圧(下)") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) bpDiastolicText = "" }
+                                    .focusRequester(dataField2Requester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() }),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = pulseText,
+                                onValueChange = { pulseText = filterInteger(it) },
+                                label = { Text("脈拍") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) pulseText = "" }
+                                    .focusRequester(dataField3Requester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                                singleLine = true
+                            )
+                        }
+                    }
+                    Category.GLUCOSE_AND_HBA1C -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = glucoseText,
+                                onValueChange = { glucoseText = filterInteger(it) },
+                                label = { Text("血糖値") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) glucoseText = "" }
+                                    .focusRequester(categoryFirstFocusRequester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                                ),
+                                keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = hba1cText,
+                                onValueChange = { hba1cText = filterDecimal(it) },
+                                label = { Text("HbA1c") },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged { if (it.isFocused) hba1cText = "" }
+                                    .focusRequester(dataField2Requester),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                                singleLine = true
+                            )
+                        }
+                    }
+                    Category.CONDITION_AT_VISIT -> {
+                        OutlinedTextField(
+                            value = titleText,
+                            onValueChange = { titleText = it },
+                            label = { Text("タイトル") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(categoryFirstFocusRequester),
+                            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() })
+                        )
+                        OutlinedTextField(
+                            value = authorText,
+                            onValueChange = { authorText = it },
+                            label = { Text("記録者") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(dataField2Requester),
+                            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() })
+                        )
+                        TextField(
+                            value = conditionText,
+                            onValueChange = { conditionText = it },
+                            label = { Text("所見メモ") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(dataField3Requester),
+                            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                        )
+                    }
                 }
-            ) {
-                Text(if (isEditMode) "更新" else "保存")
             }
 
-            if (isEditMode) {
-                OutlinedButton(
-                    onClick = onClear,
-                    modifier = Modifier.weight(1f)
+            val hasData = when (categoryType) {
+                Category.HEIGHT_AND_WEIGHT -> heightText.isNotBlank() || weightText.isNotBlank()
+                Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
+                Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
+                Category.CONDITION_AT_VISIT -> titleText.isNotBlank() || conditionText.isNotBlank()
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        keyboardController?.hide()
+                        val recordTime = try {
+                            val year = yearText.toInt()
+                            val month = monthText.toInt()
+                            val day = dayText.toInt()
+                            val hour = hourText.toIntOrNull() ?: 0
+                            val minute = minuteText.toIntOrNull() ?: 0
+                            val second = secondText.toIntOrNull() ?: 0
+                            java.time.LocalDateTime.of(year, month, day, hour, minute, second)
+                                .atZone(ZoneId.systemDefault())
+                                .toInstant()
+                        } catch (_: Exception) {
+                            Instant.now()
+                        }
+
+                        if (!hasData) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("保存するデータがありません")
+                            }
+                            return@Button
+                        }
+
+                        val newRecord = when (categoryType) {
+                            Category.HEIGHT_AND_WEIGHT -> {
+                                val id = (recordData as? HeightAndWeight)?.id ?: 0
+                                HeightAndWeight(
+                                    id = id,
+                                    personId = personId,
+                                    height = heightText.toDoubleOrNull(),
+                                    weight = weightText.toDoubleOrNull() ?: 0.0,
+                                    recordTime = recordTime
+                                )
+                            }
+                            Category.BP_AND_PULSE -> {
+                                val id = (recordData as? BpAndPulse)?.id ?: 0
+                                BpAndPulse(
+                                    id = id,
+                                    personId = personId,
+                                    bpSystolic = bpSystolicText.toIntOrNull(),
+                                    bpDiastolic = bpDiastolicText.toIntOrNull(),
+                                    pulse = pulseText.toIntOrNull(),
+                                    recordTime = recordTime
+                                )
+                            }
+                            Category.GLUCOSE_AND_HBA1C -> {
+                                val id = (recordData as? GlucoseAndHbA1c)?.id ?: 0
+                                GlucoseAndHbA1c(
+                                    id = id,
+                                    personId = personId,
+                                    glucose = glucoseText.toIntOrNull(),
+                                    hba1c = hba1cText.toDoubleOrNull(),
+                                    recordTime = recordTime
+                                )
+                            }
+                            Category.CONDITION_AT_VISIT -> {
+                                val id = (recordData as? ConditionAtVisit)?.id ?: 0
+                                ConditionAtVisit(
+                                    id = id,
+                                    personId = personId,
+                                    title = titleText,
+                                    condition = conditionText,
+                                    author = authorText,
+                                    recordTime = recordTime
+                                )
+                            }
+                        }
+                        onSave(newRecord)
+
+                        if (!isEditMode) {
+                            heightText = ""
+                            weightText = ""
+                            bpSystolicText = ""
+                            bpDiastolicText = ""
+                            pulseText = ""
+                            glucoseText = ""
+                            hba1cText = ""
+                            titleText = ""
+                            conditionText = ""
+                            focusManager.clearFocus()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = isDateTimeValid && hasData && when (categoryType) {
+                        Category.HEIGHT_AND_WEIGHT -> {
+                            weightText.toDoubleOrNull() != null
+                        }
+                        Category.CONDITION_AT_VISIT -> authorText.isNotBlank()
+                        else -> true
+                    }
                 ) {
-                    Text("キャンセル")
+                    Text(if (isEditMode) "更新" else "保存")
+                }
+
+                if (isEditMode) {
+                    OutlinedButton(
+                        onClick = onClear,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("キャンセル")
+                    }
                 }
             }
         }
@@ -955,7 +965,6 @@ fun InputForm(
 fun GraphView(records: List<Any>, categoryType: Category) {
     var showHelpDialog by remember { mutableStateOf<String?>(null) }
 
-    // ヘルプダイアログ
     if (showHelpDialog != null) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = null },
@@ -976,7 +985,6 @@ fun GraphView(records: List<Any>, categoryType: Category) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (categoryType == Category.BP_AND_PULSE) {
-            // 血圧グラフ
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("血圧", style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }) {
@@ -994,10 +1002,9 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     ChartLineData("血圧(上)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpSystolic?.toDouble() ?: 0.0) }, Color.Red),
                     ChartLineData("血圧(下)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpDiastolic?.toDouble() ?: 0.0) }, Color.Blue)
                 )
-                // 2つの独立した正常値バンドを表示
                 val ranges = listOf(
-                    ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)), // 上の正常範囲
-                    ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9)) // 下の正常範囲
+                    ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)),
+                    ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9))
                 )
                 
                 if (chartDataList.any { it.points.isNotEmpty() }) {
@@ -1009,7 +1016,6 @@ fun GraphView(records: List<Any>, categoryType: Category) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 脈拍グラフ
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("脈拍", style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }) {
@@ -1035,7 +1041,6 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 }
             }
         } else if (categoryType == Category.GLUCOSE_AND_HBA1C) {
-            // 血糖値グラフ
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("血糖値", style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = { showHelpDialog = HealthThresholds.GLUCOSE_EXPLANATION }) {
@@ -1063,7 +1068,6 @@ fun GraphView(records: List<Any>, categoryType: Category) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // HbA1cグラフ
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("HbA1c", style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = { showHelpDialog = HealthThresholds.HBA1C_EXPLANATION }) {
@@ -1093,7 +1097,6 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 }
             }
         } else if (categoryType == Category.HEIGHT_AND_WEIGHT) {
-            // 体重グラフ
             Text("体重", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
             Box(
                 modifier = Modifier
@@ -1114,7 +1117,6 @@ fun GraphView(records: List<Any>, categoryType: Category) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // BMIグラフ
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("BMI", style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = { showHelpDialog = HealthThresholds.BMI_EXPLANATION }) {
@@ -1131,11 +1133,10 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 val chartDataList = listOf(
                     ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to calculateBMI(it) }, Color.Red)
                 )
-                // 3段構えのハイライト
                 val ranges = listOf(
-                    ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)), // 低体重: 薄い青
-                    ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)), // 普通体重: 薄い緑
-                    ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE)) // 肥満3度以上: 薄い赤
+                    ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)),
+                    ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)),
+                    ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE))
                 )
                 
                 if (chartDataList.any { it.points.isNotEmpty() }) {
@@ -1150,7 +1151,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
 
 data class ChartLineData(
     val label: String,
-    val points: List<Pair<Double, Double>>, // x: timestamp, y: value
+    val points: List<Pair<Double, Double>>,
     val color: Color
 )
 
@@ -1183,19 +1184,15 @@ fun LineChart(
     val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
     val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-    // スクロール状態の管理
     val scrollState = rememberScrollState()
     
-    // データ点数に基づいて必要な幅を計算
     val allPoints = dataList.flatMap { it.points }
     if (allPoints.isEmpty()) return
     
     val pointCount = allPoints.size
     val minX = allPoints.minOf { it.first }
     val maxX = allPoints.maxOf { it.first }
-    val xRange = if (maxX - minX == 0.0) 1.0 else maxX - minX
 
-    // 軸範囲の計算
     val allYValues = allPoints.map { it.second } + limits.map { it.value }
     var minYInput = allYValues.minOf { it }
     var maxYInput = allYValues.maxOf { it }
@@ -1210,15 +1207,12 @@ fun LineChart(
     val paddingLeft = 50.dp
     val paddingTop = 40.dp
     val paddingBottom = 40.dp
-    val paddingRight = 20.dp
 
-    // 最新データへ自動スクロール
     LaunchedEffect(pointCount) {
         scrollState.scrollTo(scrollState.maxValue)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 凡例 (固定)
         Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 dataList.forEach { lineData ->
@@ -1234,7 +1228,6 @@ fun LineChart(
         }
 
         Row(modifier = Modifier.weight(1f)) {
-            // Y軸ラベル (左側に固定)
             Canvas(modifier = Modifier
                 .width(paddingLeft)
                 .fillMaxHeight()) {
@@ -1250,18 +1243,14 @@ fun LineChart(
                 }
             }
 
-            // グラフ本体 (横スクロール可能)
             BoxWithConstraints(modifier = Modifier.weight(1f)) {
                 val leftBufferPx = with(density) { 32.dp.toPx() }
-                val rightBufferPx = with(density) { 8.dp.toPx() } // 4dpから8dpに微調整
+                val rightBufferPx = with(density) { 8.dp.toPx() }
                 
-                // 1年（365日）を画面幅（availableWidth）とする
                 val availableWidthPx = with(density) { maxWidth.toPx() } - rightBufferPx
                 val oneYearMillis = 365.0 * 24 * 60 * 60 * 1000.0
                 
-                // 全体の期間（最低でも1年分は確保）
                 val totalDuration = maxOf(maxX - minX, oneYearMillis)
-                // コンテンツ幅 = (期間比率 * 表示幅) + 左右のパディング
                 val graphContentWidthPx = (totalDuration / oneYearMillis) * availableWidthPx + leftBufferPx + rightBufferPx
                 
                 Box(modifier = Modifier
@@ -1277,7 +1266,6 @@ fun LineChart(
                         val topPx = paddingTop.toPx()
                         val startX = leftBufferPx
                         
-                        // --- 0. Range Highlights ---
                         ranges.forEach { range ->
                             val pyStart = topPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
                             val pyEnd = topPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
@@ -1288,14 +1276,12 @@ fun LineChart(
                             }
                         }
 
-                        // --- 2. 罫線 (水平) ---
                         for (i in 0..yStepsCount) {
                             val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
                             drawLine(color = Color.LightGray.copy(alpha = 0.5f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx())
                         }
 
-                        // --- 罫線 (垂直: 四半期ごと) と X軸ラベル ---
-                        val quarterMillis = oneYearMillis / 4.0 // 約91.25日
+                        val quarterMillis = oneYearMillis / 4.0
                         var currentX = minX
                         while (currentX <= maxX || currentX <= minX + totalDuration) {
                             val px = startX + ((currentX - minX) / totalDuration).toFloat() * chartWidth
@@ -1310,10 +1296,9 @@ fun LineChart(
                                 drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, topPx + chartHeight + 4.dp.toPx()))
                             }
                             currentX += quarterMillis
-                            if (quarterMillis == 0.0) break // 安全策
+                            if (quarterMillis == 0.0) break
                         }
 
-                        // --- 3. Limit Line ---
                         limits.forEach { limit ->
                             val py = topPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
                             if (py in topPx..(topPx + chartHeight)) {
@@ -1323,7 +1308,6 @@ fun LineChart(
                             }
                         }
 
-                        // --- 4. グラフ線 ---
                         dataList.forEach { lineData ->
                             val path = Path()
                             val sortedPoints = lineData.points.sortedBy { it.first }
@@ -1339,7 +1323,6 @@ fun LineChart(
                             drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
                         }
                         
-                        // 軸の線
                         drawLine(Color.Gray, Offset(startX, topPx), Offset(startX, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                         drawLine(Color.Gray, Offset(startX, topPx + chartHeight), Offset(startX + chartWidth, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                     }
@@ -1359,7 +1342,6 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
         colors = if (isEditable) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else CardDefaults.cardColors()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // リストアイテムの表示内容（例：日時、値など）
             val instant = when (record) {
                 is HeightAndWeight -> record.recordTime
                 is BpAndPulse -> record.recordTime
@@ -1476,7 +1458,6 @@ fun CompactTextField(
     )
 }
 
-// 補助関数の実装
 fun calculateBMI(record: HeightAndWeight): Double {
     val h = record.height ?: 0.0
     val w = record.weight ?: 0.0
@@ -1520,15 +1501,11 @@ fun checkLowBloodPressureAndBradycardia(record: BpAndPulse): String {
     }
 }
 
-/**
- * 記録日時を和暦含みの形式（例：2026(令和8)年6月14日 17:17）に変換する
- */
 fun formatRecordTime(instant: Instant): String {
     val zoneId = ZoneId.systemDefault()
     val localDateTime = instant.atZone(zoneId).toLocalDateTime()
     val localDate = localDateTime.toLocalDate()
     
-    // 西暦部分のフォーマッタ
     val eraDate = JapaneseDate.from(localDate)
     val eraYearFormatter = DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN)
     val eraYear = eraDate.get(java.time.temporal.ChronoField.YEAR_OF_ERA)
@@ -1546,8 +1523,6 @@ fun formatRecordTime(instant: Instant): String {
 @Preview(showBackground = true)
 @Composable
 fun UnifiedRecordScreenPreview() {
-    // プレビュー用にダミーのViewModel（またはRepositoryをMockしたもの）が必要
-    // ここでは簡易的に空の状態で表示確認
     MaterialTheme {
         Text("Preview requires a ViewModel with Repository")
     }
