@@ -84,8 +84,8 @@ fun DeletedUserListScreen(
             ) {
                 items(deletedUsers, key = { it.id }) { user ->
                     ListItem(
-                        headlineContent = { Text(user.name) },
-                        supportingContent = { Text(user.furigana ?: "") },
+                        headlineContent = { Text("${user.lastName}\u3000${user.firstName}") },
+                        supportingContent = { Text("${user.lastNameFurigana}\u3000${user.firstNameFurigana}") },
                         leadingContent = {
                             Checkbox(
                                 checked = selectedUserIds.contains(user.id),

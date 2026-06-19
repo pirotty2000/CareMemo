@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PersonDao {
-    @Query("SELECT * FROM person_db WHERE deleted_at IS NULL ORDER BY name ASC")
+    @Query("SELECT * FROM person_db WHERE deleted_at IS NULL ORDER BY last_name_furigana ASC, first_name_furigana ASC")
     fun getAllPersons(): Flow<List<Person>>
 
     @Query("SELECT * FROM person_db WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")

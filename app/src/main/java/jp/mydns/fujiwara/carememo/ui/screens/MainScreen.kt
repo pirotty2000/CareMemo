@@ -7,11 +7,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,7 +32,6 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
-import jp.mydns.fujiwara.carememo.ui.screens.CompactTextField
 import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
@@ -102,8 +98,9 @@ fun MainScreen(
         onDeleteUser = { person ->
             viewModel.logicalDeletePerson(person)
             scope.launch {
+                val fullName = "${person.lastName} ${person.firstName}"
                 val result = snackbarHostState.showSnackbar(
-                    message = "${person.name} さんを削除しました",
+                    message = "${fullName} さんを削除しました",
                     actionLabel = "元に戻す",
                     duration = SnackbarDuration.Short
                 )
@@ -127,7 +124,7 @@ fun MainScreen(
             sheetState = sheetState,
         ) {
             CategorySelectionSheet(
-                personName = selectedPerson!!.name,
+                personName = "${selectedPerson!!.lastName} ${selectedPerson!!.firstName}",
                 onCategorySelect = { category ->
                     showSheet = false
                     onNavigateToDetail(selectedPerson!!.id, category)
@@ -169,12 +166,13 @@ fun MainScreenContent(
     var showMenu by remember { mutableStateOf(false) }
     
     // インクリメンタルサーチのフィルタリング（前方一致）と、ふりがなでのソート
+    // 姓のふりがなで検索
     val filteredList = remember(userList, searchText) {
         userList
             .filter { user ->
-                searchText.isBlank() || (user.furigana?.startsWith(searchText) ?: false)
+                searchText.isBlank() || (user.lastNameFurigana.startsWith(searchText)) || (user.firstNameFurigana.startsWith(searchText))
             }
-            .sortedBy { it.furigana ?: "" }
+            .sortedWith(compareBy({ it.lastNameFurigana }, { it.firstNameFurigana }))
     }
     
     val context = LocalContext.current
@@ -246,13 +244,13 @@ fun MainScreenContent(
                             headlineContent = {
                                 Column {
                                     Text(
-                                        text = user.furigana ?: "",
+                                        text = "${user.lastNameFurigana} ${user.firstNameFurigana}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.secondary
                                     )
                                     Text(
                                         text = buildString {
-                                            append(user.name)
+                                            append("${user.lastName}\u3000${user.firstName}")
                                             if (user.note.isNotBlank()) {
                                                 append(" (${user.note})")
                                             }
@@ -357,8 +355,10 @@ fun UserEditDialog(
     onDismiss: () -> Unit,
     onSave: (Person) -> Unit,
 ) {
-    var name by remember { mutableStateOf(person?.name ?: "") }
-    var furigana by remember { mutableStateOf(person?.furigana ?: "") }
+    var lastName by remember { mutableStateOf(person?.lastName ?: "") }
+    var firstName by remember { mutableStateOf(person?.firstName ?: "") }
+    var lastNameFurigana by remember { mutableStateOf(person?.lastNameFurigana ?: "") }
+    var firstNameFurigana by remember { mutableStateOf(person?.firstNameFurigana ?: "") }
     var note by remember { mutableStateOf(person?.note ?: "") }
     
     val focusManager = LocalFocusManager.current
@@ -437,27 +437,45 @@ fun UserEditDialog(
         true
     }
 
-    val isInputValid = name.isNotBlank() && !isYearError && !isMonthError && !isDayError
+    val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && !isYearError && !isMonthError && !isDayError
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (person == null) "利用者登録" else "登録情報の編集") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("氏名 (必須)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = furigana,
-                    onValueChange = { furigana = it },
-                    label = { Text("ふりがな") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text("姓") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text("名") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = lastNameFurigana,
+                        onValueChange = { lastNameFurigana = it },
+                        label = { Text("せい") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = firstNameFurigana,
+                        onValueChange = { firstNameFurigana = it },
+                        label = { Text("めい") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -579,10 +597,23 @@ fun UserEditDialog(
                         val birthday = LocalDate.of(westernYear, m, d)
                             .atStartOfDay(ZoneId.systemDefault())
                             .toInstant()
-                        onSave(
-                            person?.copy(name = name, furigana = furigana, birthday = birthday, note = note)
-                                ?: Person(name = name, furigana = furigana, birthday = birthday, note = note)
+                        
+                        val newPerson = person?.copy(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        ) ?: Person(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
                         )
+                        onSave(newPerson)
                     }
                 },
                 enabled = isInputValid
@@ -604,20 +635,26 @@ fun MainScreenPreview() {
     val mockUserList = listOf(
         Person(
             id = 1,
-            name = "山田 太郎",
-            furigana = "ヤマダ タロウ",
+            lastName = "山田",
+            firstName = "太郎",
+            lastNameFurigana = "ヤマダ",
+            firstNameFurigana = "タロウ",
             birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()
         ),
         Person(
             id = 2,
-            name = "佐藤 花子",
-            furigana = "サトウ ハナコ",
+            lastName = "佐藤",
+            firstName = "花子",
+            lastNameFurigana = "サトウ",
+            firstNameFurigana = "ハナコ",
             birthday = LocalDate.of(1965, 5, 20).atStartOfDay(ZoneId.systemDefault()).toInstant()
         ),
         Person(
             id = 3,
-            name = "鈴木 一郎",
-            furigana = "スズキ イチロウ",
+            lastName = "鈴木",
+            firstName = "一郎",
+            lastNameFurigana = "スズキ",
+            firstNameFurigana = "イチロウ",
             birthday = LocalDate.of(1940, 11, 10).atStartOfDay(ZoneId.systemDefault()).toInstant()
         )
     )

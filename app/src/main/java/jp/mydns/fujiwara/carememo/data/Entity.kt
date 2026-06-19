@@ -23,12 +23,14 @@ object InstantSerializer : KSerializer<Instant> {
 @Serializable
 @Entity(
     tableName = "person_db",
-    indices = [Index(value = ["name", "birthday", "note"], unique = true)]
+    indices = [Index(value = ["last_name", "first_name", "birthday", "note"], unique = true)]
 )
 data class Person(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "furigana") val furigana: String?,
+    @ColumnInfo(name = "last_name") val lastName: String,
+    @ColumnInfo(name = "first_name") val firstName: String,
+    @ColumnInfo(name = "last_name_furigana") val lastNameFurigana: String,
+    @ColumnInfo(name = "first_name_furigana") val firstNameFurigana: String,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "birthday") val birthday: Instant,
     @ColumnInfo(name = "note") val note: String = "", // 同姓同名識別用メモ

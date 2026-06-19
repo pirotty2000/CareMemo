@@ -168,7 +168,7 @@ fun UnifiedRecordScreen(
                 TopAppBar(
                     title = { 
                         val titleText = if (person != null) {
-                            "${person?.name}さん（${age}歳）の利用者記録"
+                            "${person?.lastName}\u3000${person?.firstName}さん（${age}歳）の利用者記録"
                         } else {
                             "利用者記録"
                         }
