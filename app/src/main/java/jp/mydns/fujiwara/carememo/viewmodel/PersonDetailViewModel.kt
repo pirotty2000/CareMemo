@@ -11,9 +11,11 @@ import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
@@ -40,6 +42,9 @@ class PersonDetailViewModel(
 
     private val _records = MutableStateFlow<List<Any>>(emptyList())
     val records: StateFlow<List<Any>> = _records.asStateFlow()
+
+    private val _snackbarFlow = MutableSharedFlow<String>()
+    val snackbarFlow = _snackbarFlow.asSharedFlow()
 
     fun loadPerson(personId: Int) {
         viewModelScope.launch {
@@ -74,12 +79,22 @@ class PersonDetailViewModel(
 
     fun saveRecord(record: Any?) {
         viewModelScope.launch {
+            val isUpdate = when (record) {
+                is HeightAndWeight -> record.id != 0
+                is BpAndPulse -> record.id != 0
+                is GlucoseAndHbA1c -> record.id != 0
+                is ConditionAtVisit -> record.id != 0
+                else -> false
+            }
+
             when (record) {
                 is HeightAndWeight -> repository.insertHeightAndWeight(record)
                 is BpAndPulse -> repository.insertBpAndPulse(record)
                 is GlucoseAndHbA1c -> repository.insertGlucoseAndHbA1c(record)
                 is ConditionAtVisit -> repository.insertConditionAtVisit(record)
             }
+            
+            _snackbarFlow.emit(if (isUpdate) "記録を更新しました" else "記録を保存しました")
             _currentRecordState.value = null
         }
     }
@@ -92,6 +107,7 @@ class PersonDetailViewModel(
                 is GlucoseAndHbA1c -> repository.deleteGlucoseAndHbA1c(record)
                 is ConditionAtVisit -> repository.deleteConditionAtVisit(record)
             }
+            _snackbarFlow.emit("記録を削除しました")
         }
     }
 

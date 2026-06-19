@@ -6,17 +6,28 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Info
+import android.speech.RecognizerIntent
+import android.content.Intent
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -143,11 +154,31 @@ fun UnifiedRecordScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(Unit) {
+        viewModel.snackbarFlow.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    // カテゴリ選択欄のスクロール管理
+    val categoryListState = rememberLazyListState()
+
+    // 所見メモ用のダイアログ管理
+    var showMemoDialog by remember { mutableStateOf<ConditionAtVisit?>(null) }
+    var isMemoEditMode by remember { mutableStateOf(false) }
+    var showMemoCreateDialog by remember { mutableStateOf(false) }
+
     // カテゴリや利用者が変更されたらデータをリロード
     LaunchedEffect(currentCategory, personId) {
         viewModel.loadPerson(personId)
         viewModel.loadRecords(personId, currentCategory)
         viewModel.clearCurrentRecord()
+        
+        // 選択されたカテゴリが画面内に収まるようにスクロール
+        val index = Category.entries.indexOf(currentCategory)
+        if (index >= 0) {
+            categoryListState.animateScrollToItem(index)
+        }
     }
 
     // 年齢計算
@@ -179,16 +210,16 @@ fun UnifiedRecordScreen(
                     }
                 )
                 // カテゴリ切り替え用チップ
-                Row(
+                LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .horizontalScroll(rememberScrollState())
                         .padding(vertical = 8.dp),
+                    state = categoryListState,
+                    contentPadding = PaddingValues(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Category.entries.forEach { category ->
+                    itemsIndexed(Category.entries) { index, category ->
                         FilterChip(
                             selected = currentCategory == category,
                             onClick = { currentCategory = category },
@@ -204,7 +235,13 @@ fun UnifiedRecordScreen(
                             } else null
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+        },
+        floatingActionButton = {
+            if (currentCategory == Category.CONDITION_AT_VISIT) {
+                FloatingActionButton(onClick = { showMemoCreateDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "所見追加")
                 }
             }
         }
@@ -246,18 +283,27 @@ fun UnifiedRecordScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp)) // カテゴリ選択欄との間に少し隙間を追加
 
-            // --- [上部] 入力フォーム ---
-            // 選択中のカテゴリーに応じた入力項目が表示されます。
-            // 編集モード時には既存データが自動セットされます。
-            InputForm(
-                categoryType = currentCategory,
-                recordData = currentRecord,
-                personId = personId,
-                records = records, // 履歴データを渡す
-                onSave = { viewModel.saveRecord(it) },
-                onClear = { viewModel.clearCurrentRecord() },
-                snackbarHostState = snackbarHostState
+            // 件数表示
+            Text(
+                text = "${currentCategory.displayName}の記録: ${records.size}件",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(start = 4.dp)
             )
+
+            // --- [上部] 入力フォーム ---
+            // 所見メモの場合は表示せず、FABからダイアログで入力する
+            if (currentCategory != Category.CONDITION_AT_VISIT) {
+                InputForm(
+                    categoryType = currentCategory,
+                    recordData = currentRecord,
+                    personId = personId,
+                    records = records, // 履歴データを渡す
+                    onSave = { viewModel.saveRecord(it) },
+                    onClear = { viewModel.clearCurrentRecord() },
+                    snackbarHostState = snackbarHostState
+                )
+            }
 
             // --- [中央] 履歴/グラフ 切り替え (所見メモ以外) ---
             if (currentCategory != Category.CONDITION_AT_VISIT) {
@@ -283,120 +329,177 @@ fun UnifiedRecordScreen(
 
             // --- [下部] メインコンテンツエリア ---
             Box(modifier = Modifier.weight(1f)) {
-                if (currentCategory == Category.CONDITION_AT_VISIT || showHistory) {
-                    // 履歴一覧を表示
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(records.size, key = { index ->
-                            // IDをキーにする（型に応じてキャストが必要）
-                            when (val r = records[index]) {
-                                is HeightAndWeight -> r.id
-                                is BpAndPulse -> r.id
-                                is GlucoseAndHbA1c -> r.id
-                                is ConditionAtVisit -> r.id
-                                else -> index
-                            }
-                        }) { index ->
-                            val record = records[index]
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = {
-                                    if (it == SwipeToDismissBoxValue.EndToStart) {
-                                        recordToDelete = record
-                                        false // ダイアログで確認するため、一旦スワイプを差し戻す
-                                    } else {
-                                        false
-                                    }
+                if (currentCategory == Category.CONDITION_AT_VISIT) {
+                    // 所見メモ専用のリスト表示（日付グループ化・サマリー表示）
+                    val memos = records.filterIsInstance<ConditionAtVisit>()
+                    if (memos.isEmpty()) {
+                        EmptyState(
+                            message = "記録がありません",
+                            description = "右下の ＋ ボタンをタップして、\n日々の変化や気づきを記録しましょう",
+                            icon = Icons.Outlined.Description
+                        )
+                    } else {
+                        MemoHistoryList(
+                            records = memos,
+                            onItemClick = { memo ->
+                                showMemoDialog = memo
+                                isMemoEditMode = false
+                            },
+                            onDeleteClick = { recordToDelete = it }
+                        )
+                    }
+                } else if (showHistory) {
+                    if (records.isEmpty()) {
+                        EmptyState(
+                            message = "履歴がありません",
+                            icon = Icons.Outlined.Info
+                        )
+                    } else {
+                        // 履歴一覧を表示
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(records.size, key = { index ->
+                                // IDをキーにする（型に応じてキャストが必要）
+                                when (val r = records[index]) {
+                                    is HeightAndWeight -> r.id
+                                    is BpAndPulse -> r.id
+                                    is GlucoseAndHbA1c -> r.id
+                                    is ConditionAtVisit -> r.id
+                                    else -> index
                                 }
-                            )
-
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                enableDismissFromStartToEnd = false,
-                                backgroundContent = {
-                                    val color = when (dismissState.dismissDirection) {
-                                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                                        else -> Color.Transparent
+                            }) { index ->
+                                val record = records[index]
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = {
+                                        if (it == SwipeToDismissBoxValue.EndToStart) {
+                                            recordToDelete = record
+                                            false // ダイアログで確認するため、一旦スワイプを差し戻す
+                                        } else {
+                                            false
+                                        }
                                     }
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(vertical = 4.dp)
-                                            .background(color, shape = CardDefaults.shape)
-                                            .padding(horizontal = 16.dp),
-                                        contentAlignment = Alignment.CenterEnd
-                                    ) {
-                                        Icon(Icons.Default.Delete, contentDescription = "物理削除", tint = Color.White)
-                                    }
-                                }
-                            ) {
-                                RecordListItem(
-                                    categoryType = currentCategory,
-                                    record = record,
-                                    onClick = { viewModel.selectRecord(record) },
-                                    isEditable = currentRecord == record
                                 )
+
+                                SwipeToDismissBox(
+                                    state = dismissState,
+                                    enableDismissFromStartToEnd = false,
+                                    backgroundContent = {
+                                        val color = when (dismissState.dismissDirection) {
+                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                                            else -> Color.Transparent
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(vertical = 4.dp)
+                                                .background(color, shape = CardDefaults.shape)
+                                                .padding(horizontal = 16.dp),
+                                            contentAlignment = Alignment.CenterEnd
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = "物理削除", tint = Color.White)
+                                        }
+                                    }
+                                ) {
+                                    RecordListItem(
+                                        categoryType = currentCategory,
+                                        record = record,
+                                        onClick = { viewModel.selectRecord(record) },
+                                        isEditable = currentRecord == record
+                                    )
+                                }
                             }
                         }
                     }
                 } else {
-                    // グラフを表示（スクロールバーとページインジケーター付き）
-                    val scrollState = rememberScrollState()
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(scrollState)
-                                .padding(end = 16.dp)
-                        ) {
-                            GraphView(records, currentCategory)
-                            Spacer(modifier = Modifier.height(32.dp))
-                        }
+                    // グラフを表示
+                    if (records.isEmpty()) {
+                        EmptyState(
+                            message = "グラフのデータがありません",
+                            icon = Icons.Outlined.Info
+                        )
+                    } else {
+                        // グラフを表示（スクロールバーとページインジケーター付き）
+                        val scrollState = rememberScrollState()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(scrollState)
+                                    .padding(end = 16.dp)
+                            ) {
+                                GraphView(records, currentCategory)
+                                Spacer(modifier = Modifier.height(32.dp))
+                            }
 
-                        // 簡易スクロールバー
-                        if (scrollState.maxValue > 0) {
-                            val barHeight = 60.dp
-                            val density = LocalDensity.current
-                            val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
-                            val maxOffset = viewportHeight - barHeight
-                            val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
-                            
-                            Box(
-                                modifier = Modifier
-                                    .width(4.dp)
-                                    .height(barHeight)
-                                    .align(Alignment.TopEnd)
-                                    .offset(y = maxOffset * scrollFraction)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                            )
-                        }
+                            // 簡易スクロールバー
+                            if (scrollState.maxValue > 0) {
+                                val barHeight = 60.dp
+                                val density = LocalDensity.current
+                                val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
+                                val maxOffset = viewportHeight - barHeight
+                                val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .height(barHeight)
+                                        .align(Alignment.TopEnd)
+                                        .offset(y = maxOffset * scrollFraction)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                                )
+                            }
 
-                        // ページインジケーター（右側中央）
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            val isPage2 = scrollState.value > scrollState.maxValue / 2 && scrollState.maxValue > 0
-                            
-                            Box(
+                            // ページインジケーター（右側中央）
+                            Column(
                                 modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (!isPage2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isPage2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                            )
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                val isPage2 = scrollState.value > scrollState.maxValue / 2 && scrollState.maxValue > 0
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(if (!isPage2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isPage2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // 所見メモ用ダイアログの表示
+    if (showMemoCreateDialog) {
+        MemoEditDialog(
+            memo = null,
+            personId = personId,
+            isEditMode = true,
+            onEditClick = {},
+            onDismiss = { showMemoCreateDialog = false },
+            onSave = { viewModel.saveRecord(it); showMemoCreateDialog = false }
+        )
+    }
+
+    if (showMemoDialog != null) {
+        MemoEditDialog(
+            memo = showMemoDialog,
+            personId = personId,
+            isEditMode = isMemoEditMode,
+            onEditClick = { isMemoEditMode = true },
+            onDismiss = { showMemoDialog = null; isMemoEditMode = false },
+            onSave = { viewModel.saveRecord(it); showMemoDialog = null; isMemoEditMode = false }
+        )
     }
 }
 
@@ -1610,6 +1713,342 @@ fun formatRecordTime(instant: Instant): String {
     val minute = localDateTime.minute
     
     return "%d(%s%d)年%d月%d日 %02d:%02d".format(year, eraName, eraYear, month, day, hour, minute)
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun MemoHistoryList(
+    records: List<ConditionAtVisit>,
+    onItemClick: (ConditionAtVisit) -> Unit,
+    onDeleteClick: (ConditionAtVisit) -> Unit
+) {
+    val groupedRecords = remember(records) {
+        records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }
+            .toSortedMap(compareByDescending { it })
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 80.dp)
+    ) {
+        groupedRecords.forEach { (date, memos) ->
+            stickyHeader {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = formatDateHeader(date),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            items(memos.size, key = { index -> memos[index].id }) { index ->
+                val memo = memos[index]
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart) {
+                            onDeleteClick(memo)
+                            false
+                        } else false
+                    }
+                )
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    enableDismissFromStartToEnd = false,
+                    backgroundContent = {
+                        val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                            MaterialTheme.colorScheme.error
+                        } else Color.Transparent
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "削除", tint = Color.White)
+                        }
+                    }
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onItemClick(memo) }
+                            .padding(vertical = 1.dp),
+                        shape = androidx.compose.ui.graphics.RectangleShape,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = formatTime(memo.recordTime),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                if (!memo.title.isNullOrBlank()) {
+                                    Text(
+                                        text = memo.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = memo.condition ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 3,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "記録者: ${memo.author}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
+            }
+        }
+    }
+}
+
+fun formatDateHeader(date: LocalDate): String {
+    val eraDate = JapaneseDate.from(date)
+    val formatter = DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)
+    return eraDate.format(formatter)
+}
+
+fun formatTime(instant: Instant): String {
+    val formatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+    return formatter.format(instant)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MemoEditDialog(
+    memo: ConditionAtVisit?,
+    personId: Int,
+    isEditMode: Boolean,
+    onEditClick: () -> Unit,
+    onDismiss: () -> Unit,
+    onSave: (ConditionAtVisit) -> Unit
+) {
+    var title by remember { mutableStateOf(memo?.title ?: "") }
+    var condition by remember { mutableStateOf(memo?.condition ?: "") }
+    var author by remember { mutableStateOf(memo?.author ?: "") }
+    
+    val initialTime = memo?.recordTime ?: Instant.now()
+    val zonedDateTime = initialTime.atZone(ZoneId.systemDefault())
+    var year by remember { mutableStateOf(zonedDateTime.year.toString()) }
+    var month by remember { mutableStateOf(zonedDateTime.monthValue.toString()) }
+    var day by remember { mutableStateOf(zonedDateTime.dayOfMonth.toString()) }
+    var hour by remember { mutableStateOf("%02d".format(zonedDateTime.hour)) }
+    var minute by remember { mutableStateOf("%02d".format(zonedDateTime.minute)) }
+
+    val monthFocusRequester = remember { FocusRequester() }
+    val dayFocusRequester = remember { FocusRequester() }
+    val hourFocusRequester = remember { FocusRequester() }
+    val minuteFocusRequester = remember { FocusRequester() }
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
+            if (spokenText != null) {
+                condition = if (condition.isBlank()) spokenText else "$condition\n$spokenText"
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            if (isEditMode) {
+                Button(onClick = {
+                    val recordTime = try {
+                        java.time.LocalDateTime.of(year.toInt(), month.toInt(), day.toInt(), hour.toInt(), minute.toInt())
+                            .atZone(ZoneId.systemDefault()).toInstant()
+                    } catch (e: Exception) { initialTime }
+                    
+                    onSave(ConditionAtVisit(
+                        id = memo?.id ?: 0,
+                        personId = personId,
+                        title = title,
+                        condition = condition,
+                        author = author,
+                        recordTime = recordTime
+                    ))
+                }, enabled = author.isNotBlank() && condition.isNotBlank()) {
+                    Text("保存")
+                }
+            } else {
+                Button(onClick = onEditClick) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("記録を修正")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(if (isEditMode) "キャンセル" else "閉じる")
+            }
+        },
+        title = { Text(if (memo == null) "新規記録" else if (isEditMode) "記録の編集" else "記録の参照") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (isEditMode) {
+                    Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CompactTextField(
+                            value = year,
+                            onValueChange = { 
+                                val filtered = it.filter { c -> c.isDigit() }
+                                if (filtered.length <= 4) {
+                                    year = filtered
+                                    if (filtered.length == 4) monthFocusRequester.requestFocus()
+                                }
+                            },
+                            modifier = Modifier.weight(1.8f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
+                        )
+                        CompactTextField(
+                            value = month,
+                            onValueChange = { 
+                                val filtered = it.filter { c -> c.isDigit() }
+                                if (filtered.length <= 2) {
+                                    month = filtered
+                                    if (filtered.length == 2) dayFocusRequester.requestFocus()
+                                }
+                            },
+                            modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
+                        )
+                        CompactTextField(
+                            value = day,
+                            onValueChange = { 
+                                val filtered = it.filter { c -> c.isDigit() }
+                                if (filtered.length <= 2) {
+                                    day = filtered
+                                    if (filtered.length == 2) hourFocusRequester.requestFocus()
+                                }
+                            },
+                            modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
+                        )
+                        CompactTextField(
+                            value = hour,
+                            onValueChange = { 
+                                val filtered = it.filter { c -> c.isDigit() }
+                                if (filtered.length <= 2) {
+                                    hour = filtered
+                                    if (filtered.length == 2) minuteFocusRequester.requestFocus()
+                                }
+                            },
+                            modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
+                        )
+                        CompactTextField(
+                            value = minute,
+                            onValueChange = { 
+                                val filtered = it.filter { c -> c.isDigit() }
+                                if (filtered.length <= 2) minute = filtered
+                            },
+                            modifier = Modifier.weight(1.1f).focusRequester(minuteFocusRequester),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("タイトル (任意)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth())
+                    
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = condition,
+                            onValueChange = { condition = it },
+                            label = { Text("所見メモ") },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                            trailingIcon = {
+                                IconButton(onClick = {
+                                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString())
+                                        putExtra(RecognizerIntent.EXTRA_PROMPT, "音声入力してください")
+                                    }
+                                    speechLauncher.launch(intent)
+                                }) {
+                                    Icon(Icons.Default.Mic, contentDescription = "音声入力", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        )
+                    }
+                } else {
+                    Text(text = "日時: ${formatRecordTime(memo!!.recordTime)}", style = MaterialTheme.typography.labelLarge)
+                    Text(text = "記録者: ${memo.author}", style = MaterialTheme.typography.labelLarge)
+                    if (!memo.title.isNullOrBlank()) {
+                        Text(text = "タイトル: ${memo.title}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                    HorizontalDivider()
+                    Text(text = memo.condition ?: "", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun EmptyState(
+    message: String,
+    description: String? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+        if (description != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
 }
 
 @Preview(showBackground = true)

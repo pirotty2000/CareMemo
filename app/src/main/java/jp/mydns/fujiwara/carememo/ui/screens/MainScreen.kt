@@ -81,6 +81,12 @@ fun MainScreen(
 
     val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        viewModel.snackbarFlow.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     // ファイル・フォルダ選択ランチャー
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")

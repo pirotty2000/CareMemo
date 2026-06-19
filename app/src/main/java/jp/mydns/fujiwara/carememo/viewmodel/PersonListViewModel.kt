@@ -19,6 +19,8 @@ import android.provider.DocumentsContract
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -35,6 +37,9 @@ class PersonListViewModel(
 
     private val _infoFlow = MutableStateFlow<String?>(null)
     val infoFlow: StateFlow<String?> = _infoFlow.asStateFlow()
+
+    private val _snackbarFlow = MutableSharedFlow<String>()
+    val snackbarFlow = _snackbarFlow.asSharedFlow()
 
     val isNameMaskingEnabled: StateFlow<Boolean> = userSettingsRepository.isNameMaskingEnabled
         .stateIn(
@@ -101,6 +106,7 @@ class PersonListViewModel(
         viewModelScope.launch {
             try {
                 repository.insertPerson(person)
+                _snackbarFlow.emit("${person.getMaskedName(isNameMaskingEnabled.value)} さんを登録しました")
             } catch (_: SQLiteConstraintException) {
                 _errorFlow.value = "この利用者は既に登録されています。"
             }
@@ -111,6 +117,7 @@ class PersonListViewModel(
         viewModelScope.launch {
             try {
                 repository.updatePerson(person)
+                _snackbarFlow.emit("利用者情報を更新しました")
             } catch (_: SQLiteConstraintException) {
                 _errorFlow.value = "変更後の内容は既に他の利用者として登録されています。"
             }
@@ -126,6 +133,7 @@ class PersonListViewModel(
     fun restorePerson(person: Person) {
         viewModelScope.launch {
             repository.restorePerson(person.id)
+            _snackbarFlow.emit("${person.getMaskedName(isNameMaskingEnabled.value)} さんを一覧に戻しました")
         }
     }
 
