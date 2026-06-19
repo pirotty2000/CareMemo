@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -29,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
@@ -183,20 +186,45 @@ fun MainScreenContent(
 ) {
     var searchText by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    // 検索テキストに基づいたフィルタリングと、ふりがな順でのソート処理
-    val filteredList = remember(userList, searchText) { 
-        userList.filter { user -> 
-            searchText.isBlank() || 
-            user.lastNameFurigana.startsWith(searchText) || 
-            user.firstNameFurigana.startsWith(searchText) 
-        }.sortedWith(compareBy({ it.lastNameFurigana }, { it.firstNameFurigana })) 
+    val kanaGroups = listOf("全", "あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他")
+    val kanaMap = mapOf(
+        "あ" to "あいうえお",
+        "か" to "かきくけこがぎぐげご",
+        "さ" to "さしすせそざじずぜぞ",
+        "た" to "たちつてとだぢづでど",
+        "な" to "なにぬねの",
+        "は" to "はひふへほばびぶべぼぱぴぷぺぽ",
+        "ま" to "まみむめも",
+        "や" to "やゆよ",
+        "ら" to "らりるれろ",
+        "わ" to "わをん"
+    )
+
+    // 50音タブに基づいたフィルタリング処理 (検索テキストは将来機能のため現在は無視)
+    val filteredList = remember(userList, selectedTabIndex) {
+        userList.filter { user ->
+            // 50音タブによる絞り込み
+            val group = kanaGroups[selectedTabIndex]
+            when (group) {
+                "全" -> true
+                "他" -> {
+                    val firstChar = user.lastNameFurigana.firstOrNull()
+                    firstChar == null || firstChar !in '\u3041'..'\u3096'
+                }
+                else -> {
+                    val firstChar = user.lastNameFurigana.firstOrNull()
+                    firstChar != null && kanaMap[group]?.contains(firstChar) == true
+                }
+            }
+        }.sortedWith(compareBy({ it.lastNameFurigana }, { it.firstNameFurigana }))
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("健康管理メモ帳", fontWeight = FontWeight.Bold) },
+                title = { Text("CareMemo", fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
@@ -207,13 +235,13 @@ fun MainScreenContent(
                         HorizontalDivider()
                         DropdownMenuItem(text = { Text("データのバックアップ (保存)") }, onClick = { showMenu = false; onExportClick() })
                         DropdownMenuItem(text = { Text("データの復元 (読込)") }, onClick = { showMenu = false; onImportClick() })
-                        
+
                         // データベースが空の時のみ表示
                         if (isDatabaseEmpty) {
                             HorizontalDivider()
                             DropdownMenuItem(text = { Text("初期データの読込 (旧アプリ移行)") }, onClick = { showMenu = false; onLegacyFolderClick() })
                         }
-                        
+
                         HorizontalDivider()
                         DropdownMenuItem(text = { Text("(開発用) assets読込") }, onClick = { showMenu = false; onDevAssetsClick() })
                         DropdownMenuItem(text = { Text("(開発用) データクリア") }, onClick = { showMenu = false; onDevClearClick() })
@@ -226,7 +254,46 @@ fun MainScreenContent(
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SearchBar(query = searchText, onQueryChange = { searchText = it })
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                kanaGroups.forEachIndexed { index, title ->
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(48.dp)
+                            .clickable { selectedTabIndex = index },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxHeight(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (selectedTabIndex == index) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = 4.dp)
+                                        .width(24.dp)
+                                        .height(2.dp)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(modifier = Modifier.fillMaxSize(), state = lazyListState, contentPadding = PaddingValues(bottom = 80.dp)) {
                 items(filteredList, key = { it.id }) { user ->
                     val age = calculateAge(user.birthday)
@@ -399,5 +466,14 @@ fun formatToJapaneseEra(instant: Instant): String {
 
 @Composable
 fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
-    OutlinedTextField(value = query, onValueChange = { onQueryChange(it) }, placeholder = { Text("ひらがなの読み名で入力してください", style = MaterialTheme.typography.bodyMedium, color = Color.Gray) }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)))
+    OutlinedTextField(
+        value = query,
+        onValueChange = { onQueryChange(it) },
+        label = { Text("所見メモ検索(仮)") },
+        placeholder = { Text("特定のキーワードを含む利用者を検索（将来機能）", style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+    )
 }
