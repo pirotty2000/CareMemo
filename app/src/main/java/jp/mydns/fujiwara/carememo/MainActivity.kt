@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.screens.DeletedUserListScreen
 import jp.mydns.fujiwara.carememo.ui.screens.MainScreen
+import jp.mydns.fujiwara.carememo.ui.screens.SettingsScreen
 import jp.mydns.fujiwara.carememo.ui.screens.UnifiedRecordScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -39,11 +40,12 @@ fun CareMemoApp() {
     val context = LocalContext.current
     val application = context.applicationContext as CareMemoApplication
     val repository = application.repository
+    val userSettingsRepository = application.userSettingsRepository
 
     NavHost(navController = navController, startDestination = "main") {
         composable("main") {
             val listViewModel: PersonListViewModel = viewModel(
-                factory = PersonListViewModel.Factory(repository)
+                factory = PersonListViewModel.Factory(repository, userSettingsRepository)
             )
             MainScreen(
                 viewModel = listViewModel,
@@ -52,14 +54,26 @@ fun CareMemoApp() {
                 },
                 onNavigateToRestore = {
                     navController.navigate("restore")
+                },
+                onNavigateToSettings = {
+                    navController.navigate("settings")
                 }
             )
         }
         composable("restore") {
             val listViewModel: PersonListViewModel = viewModel(
-                factory = PersonListViewModel.Factory(repository)
+                factory = PersonListViewModel.Factory(repository, userSettingsRepository)
             )
             DeletedUserListScreen(
+                viewModel = listViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("settings") {
+            val listViewModel: PersonListViewModel = viewModel(
+                factory = PersonListViewModel.Factory(repository, userSettingsRepository)
+            )
+            SettingsScreen(
                 viewModel = listViewModel,
                 onBack = { navController.popBackStack() }
             )
@@ -76,7 +90,7 @@ fun CareMemoApp() {
             val category = Category.valueOf(categoryName)
             
             val detailViewModel: PersonDetailViewModel = viewModel(
-                factory = PersonDetailViewModel.Factory(repository)
+                factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             
             UnifiedRecordScreen(

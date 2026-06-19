@@ -51,9 +51,6 @@ interface HeightAndWeightDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: HeightAndWeight)
 
-    @Update
-    suspend fun update(item: HeightAndWeight)
-
     @Query("UPDATE height_and_weight_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
 
@@ -72,6 +69,9 @@ interface HeightAndWeightDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<HeightAndWeight>)
+
+    @Query("SELECT DISTINCT person_id FROM height_and_weight_db WHERE (height IS NOT NULL OR weight IS NOT NULL) AND deleted_at IS NULL")
+    fun getPersonIdsWithHeightWeight(): Flow<List<Int>>
 }
 
 @Dao
@@ -81,9 +81,6 @@ interface BpAndPulseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: BpAndPulse)
-
-    @Update
-    suspend fun update(item: BpAndPulse)
 
     @Query("UPDATE bp_and_pulse_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -103,6 +100,12 @@ interface BpAndPulseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<BpAndPulse>)
+
+    @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE pulse IS NOT NULL AND deleted_at IS NULL")
+    fun getPersonIdsWithPulse(): Flow<List<Int>>
+
+    @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE (bp_systolic IS NOT NULL OR bp_diastolic IS NOT NULL) AND deleted_at IS NULL")
+    fun getPersonIdsWithBp(): Flow<List<Int>>
 }
 
 @Dao
@@ -112,9 +115,6 @@ interface GlucoseAndHbA1cDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: GlucoseAndHbA1c)
-
-    @Update
-    suspend fun update(item: GlucoseAndHbA1c)
 
     @Query("UPDATE glucose_and_hba1c_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -134,6 +134,9 @@ interface GlucoseAndHbA1cDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<GlucoseAndHbA1c>)
+
+    @Query("SELECT DISTINCT person_id FROM glucose_and_hba1c_db WHERE (glucose IS NOT NULL OR hba1c IS NOT NULL) AND deleted_at IS NULL")
+    fun getPersonIdsWithGlucose(): Flow<List<Int>>
 }
 
 @Dao
@@ -143,9 +146,6 @@ interface ConditionAtVisitDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: ConditionAtVisit)
-
-    @Update
-    suspend fun update(item: ConditionAtVisit)
 
     @Query("UPDATE condition_at_visit_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -165,4 +165,7 @@ interface ConditionAtVisitDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<ConditionAtVisit>)
+
+    @Query("SELECT DISTINCT person_id FROM condition_at_visit_db WHERE deleted_at IS NULL")
+    fun getPersonIdsWithCondition(): Flow<List<Int>>
 }

@@ -17,9 +17,10 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 @Composable
 fun DeletedUserListScreen(
     viewModel: PersonListViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val endedUsers by viewModel.deletedUserList.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val selectedUserIds = remember { mutableStateListOf<Int>() }
 
     Scaffold(
@@ -83,8 +84,8 @@ fun DeletedUserListScreen(
             ) {
                 items(endedUsers, key = { it.id }) { user ->
                     ListItem(
-                        headlineContent = { Text("${user.lastName}\u3000${user.firstName}") },
-                        supportingContent = { Text("${user.lastNameFurigana}\u3000${user.firstNameFurigana}") },
+                        headlineContent = { Text(user.getMaskedName(isNameMaskingEnabled)) },
+                        supportingContent = { Text(user.getMaskedFurigana(isNameMaskingEnabled)) },
                         leadingContent = {
                             Checkbox(
                                 checked = selectedUserIds.contains(user.id),

@@ -12,7 +12,7 @@ class CareMemoRepository(
     private val heightAndWeightDao: HeightAndWeightDao,
     private val bpAndPulseDao: BpAndPulseDao,
     private val glucoseAndHbA1cDao: GlucoseAndHbA1cDao,
-    private val conditionAtVisitDao: ConditionAtVisitDao
+    private val conditionAtVisitDao: ConditionAtVisitDao,
 ) {
     // --- Person ---
     fun getAllPersons(): Flow<List<Person>> = personDao.getAllPersons()
@@ -27,6 +27,7 @@ class CareMemoRepository(
 
     /**
      * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
+     * Roomの標準機能では論理削除の連動が難しいため、手動でタイムスタンプを一括更新しています。
      */
     suspend fun logicalDeletePerson(personId: Int) {
         val timestamp = System.currentTimeMillis()
@@ -67,8 +68,6 @@ class CareMemoRepository(
     
     suspend fun insertHeightAndWeight(item: HeightAndWeight) = heightAndWeightDao.insert(item)
     
-    suspend fun updateHeightAndWeight(item: HeightAndWeight) = heightAndWeightDao.update(item)
-    
     suspend fun deleteHeightAndWeight(item: HeightAndWeight) = heightAndWeightDao.delete(item)
 
     // --- BpAndPulse ---
@@ -76,8 +75,6 @@ class CareMemoRepository(
         bpAndPulseDao.getByPersonId(personId)
     
     suspend fun insertBpAndPulse(item: BpAndPulse) = bpAndPulseDao.insert(item)
-    
-    suspend fun updateBpAndPulse(item: BpAndPulse) = bpAndPulseDao.update(item)
     
     suspend fun deleteBpAndPulse(item: BpAndPulse) = bpAndPulseDao.delete(item)
 
@@ -87,8 +84,6 @@ class CareMemoRepository(
     
     suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c) = glucoseAndHbA1cDao.insert(item)
     
-    suspend fun updateGlucoseAndHbA1c(item: GlucoseAndHbA1c) = glucoseAndHbA1cDao.update(item)
-    
     suspend fun deleteGlucoseAndHbA1c(item: GlucoseAndHbA1c) = glucoseAndHbA1cDao.delete(item)
 
     // --- ConditionAtVisit ---
@@ -96,8 +91,6 @@ class CareMemoRepository(
         conditionAtVisitDao.getByPersonId(personId)
     
     suspend fun insertConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.insert(item)
-    
-    suspend fun updateConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.update(item)
     
     suspend fun deleteConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.delete(item)
 
@@ -127,6 +120,7 @@ class CareMemoRepository(
 
     /**
      * すべてのテーブルのデータを物理削除します。
+     * データベースの初期化や旧アプリデータの引き継ぎ時に使用します。
      */
     suspend fun clearAllData() {
         database.withTransaction {
@@ -137,4 +131,11 @@ class CareMemoRepository(
             personDao.deleteAll()
         }
     }
+
+    // --- existence check ---
+    fun getPersonIdsWithHeightWeight(): Flow<List<Int>> = heightAndWeightDao.getPersonIdsWithHeightWeight()
+    fun getPersonIdsWithPulse(): Flow<List<Int>> = bpAndPulseDao.getPersonIdsWithPulse()
+    fun getPersonIdsWithBp(): Flow<List<Int>> = bpAndPulseDao.getPersonIdsWithBp()
+    fun getPersonIdsWithGlucose(): Flow<List<Int>> = glucoseAndHbA1cDao.getPersonIdsWithGlucose()
+    fun getPersonIdsWithCondition(): Flow<List<Int>> = conditionAtVisitDao.getPersonIdsWithCondition()
 }

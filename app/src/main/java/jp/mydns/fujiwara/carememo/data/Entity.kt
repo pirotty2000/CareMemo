@@ -34,8 +34,41 @@ data class Person(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "birthday") val birthday: Instant,
     @ColumnInfo(name = "note") val note: String = "", // 同姓同名識別用メモ
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
-)
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null // ヌルなら有効、値があれば削除日時（論理削除用）
+) {
+    /**
+     * 伏せ字を適用した氏名を返す
+     */
+    fun getMaskedName(isEnabled: Boolean): String {
+        return if (isEnabled) {
+            "${lastName.mask()}\u3000${firstName.mask()}"
+        } else {
+            "${lastName}\u3000${firstName}"
+        }
+    }
+
+    /**
+     * 伏せ字を適用したふりがなを返す
+     */
+    fun getMaskedFurigana(isEnabled: Boolean): String {
+        return if (isEnabled) {
+            "${lastNameFurigana.mask()}\u3000${firstNameFurigana.mask()}"
+        } else {
+            "${lastNameFurigana}\u3000${firstNameFurigana}"
+        }
+    }
+}
+
+/**
+ * 文字列に伏せ字ルールを適用する拡張関数
+ * 2文字以上の場合、偶数番目の文字を「○」で置き換える
+ */
+fun String.mask(): String {
+    if (this.length < 2) return this
+    return this.mapIndexed { index, char ->
+        if ((index + 1) % 2 == 0) '○' else char
+    }.joinToString("")
+}
 
 @Serializable
 @Entity(
@@ -154,4 +187,15 @@ data class CareMemoBackup(
     val bpAndPulses: List<BpAndPulse>,
     val glucoseAndHbA1cs: List<GlucoseAndHbA1c>,
     val conditionAtVisits: List<ConditionAtVisit>
+)
+
+/**
+ * 利用者ごとの記録有無サマリー (4つのカテゴリーに対応)
+ * メイン画面のインジケーター（バッジ）点灯判定に使用
+ */
+data class PersonCategorySummary(
+    val hasHeightWeight: Boolean = false,
+    val hasBpAndPulse: Boolean = false,
+    val hasGlucoseAndHbA1c: Boolean = false,
+    val hasCondition: Boolean = false
 )

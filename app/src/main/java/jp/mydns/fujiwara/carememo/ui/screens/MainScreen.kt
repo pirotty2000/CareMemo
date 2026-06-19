@@ -31,6 +31,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.rememberLazyListState
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.ui.components.CategoryBadges
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import java.time.Instant
@@ -47,10 +49,13 @@ import java.util.Locale
 fun MainScreen(
     viewModel: PersonListViewModel,
     onNavigateToDetail: (Int, Category) -> Unit,
-    onNavigateToRestore: () -> Unit
+    onNavigateToRestore: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
+    val categorySummaries by viewModel.categorySummaries.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
@@ -117,7 +122,9 @@ fun MainScreen(
 
     MainScreenContent(
         userList = userList,
+        categorySummaries = categorySummaries,
         isDatabaseEmpty = userList.isEmpty() && endedUserList.isEmpty(),
+        isNameMaskingEnabled = isNameMaskingEnabled,
         snackbarHostState = snackbarHostState,
         lazyListState = lazyListState,
         onUserClick = { person -> selectedPerson = person; showSheet = true },
@@ -126,12 +133,13 @@ fun MainScreen(
         onEndUser = { person ->
             viewModel.logicalDeletePerson(person)
             scope.launch {
-                val fullName = "${person.lastName} ${person.firstName}"
+                val fullName = person.getMaskedName(isNameMaskingEnabled)
                 val result = snackbarHostState.showSnackbar(message = "$fullName さんの利用を終了しました", actionLabel = "元に戻す", duration = SnackbarDuration.Short)
                 if (result == SnackbarResult.ActionPerformed) { viewModel.restorePerson(person); scope.launch { lazyListState.animateScrollToItem(0) } }
             }
         },
         onNavigateToRestore = onNavigateToRestore,
+        onNavigateToSettings = onNavigateToSettings,
         onExportClick = { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.json") },
         onImportClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream")) },
         onLegacyFolderClick = { legacyFolderLauncher.launch(null) },
@@ -142,7 +150,7 @@ fun MainScreen(
 
     if (showSheet && selectedPerson != null) {
         ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
-            CategorySelectionSheet(personName = "${selectedPerson!!.lastName} ${selectedPerson!!.firstName}", onCategorySelect = { category -> showSheet = false; onNavigateToDetail(selectedPerson!!.id, category) })
+            CategorySelectionSheet(personName = selectedPerson!!.getMaskedName(isNameMaskingEnabled), onCategorySelect = { category -> showSheet = false; onNavigateToDetail(selectedPerson!!.id, category) })
         }
     }
 
@@ -155,7 +163,9 @@ fun MainScreen(
 @Composable
 fun MainScreenContent(
     userList: List<Person>,
+    categorySummaries: Map<Int, PersonCategorySummary>,
     isDatabaseEmpty: Boolean,
+    isNameMaskingEnabled: Boolean,
     snackbarHostState: SnackbarHostState,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
     onUserClick: (Person) -> Unit,
@@ -163,6 +173,7 @@ fun MainScreenContent(
     onAddClick: () -> Unit,
     onEndUser: (Person) -> Unit,
     onNavigateToRestore: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onExportClick: () -> Unit,
     onImportClick: () -> Unit,
     onLegacyFolderClick: () -> Unit,
@@ -172,7 +183,15 @@ fun MainScreenContent(
 ) {
     var searchText by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
-    val filteredList = remember(userList, searchText) { userList.filter { user -> searchText.isBlank() || user.lastNameFurigana.startsWith(searchText) || user.firstNameFurigana.startsWith(searchText) }.sortedWith(compareBy({ it.lastNameFurigana }, { it.firstNameFurigana })) }
+
+    // 検索テキストに基づいたフィルタリングと、ふりがな順でのソート処理
+    val filteredList = remember(userList, searchText) { 
+        userList.filter { user -> 
+            searchText.isBlank() || 
+            user.lastNameFurigana.startsWith(searchText) || 
+            user.firstNameFurigana.startsWith(searchText) 
+        }.sortedWith(compareBy({ it.lastNameFurigana }, { it.firstNameFurigana })) 
+    }
     
     Scaffold(
         topBar = {
@@ -181,6 +200,8 @@ fun MainScreenContent(
                 actions = {
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("設定") }, onClick = { showMenu = false; onNavigateToSettings() })
+                        HorizontalDivider()
                         DropdownMenuItem(text = { Text("利用終了者の復帰") }, onClick = { showMenu = false; onNavigateToRestore() })
                         DropdownMenuItem(text = { Text("利用終了者のデータを完全に抹消") }, onClick = { showMenu = false; onEraseClick() })
                         HorizontalDivider()
@@ -213,7 +234,28 @@ fun MainScreenContent(
                     var showItemMenu by remember { mutableStateOf(false) }
                     Column(modifier = Modifier.animateItem()) {
                         ListItem(
-                            headlineContent = { Column { Text(text = "${user.lastNameFurigana} ${user.firstNameFurigana}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary); Text(text = buildString { append("${user.lastName}\u3000${user.firstName}"); if (user.note.isNotBlank()) append(" (${user.note})") }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+                            leadingContent = {
+                                CategoryBadges(summary = categorySummaries[user.id] ?: PersonCategorySummary())
+                            },
+                            headlineContent = { 
+                                Column { 
+                                    Text(
+                                        text = user.getMaskedFurigana(isNameMaskingEnabled), 
+                                        style = MaterialTheme.typography.labelSmall, 
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                    Text(
+                                        text = buildString { 
+                                            append(user.getMaskedName(isNameMaskingEnabled))
+                                            if (user.note.isNotBlank()) append(" (${user.note})") 
+                                        }, 
+                                        style = MaterialTheme.typography.titleMedium, 
+                                        fontWeight = FontWeight.Bold, 
+                                        maxLines = 1, 
+                                        overflow = TextOverflow.Ellipsis
+                                    ) 
+                                } 
+                            },
                             supportingContent = { Text(text = "${birthdayStr}生　${age}歳", style = MaterialTheme.typography.bodySmall) },
                             trailingContent = {
                                 Box {
@@ -236,6 +278,7 @@ fun MainScreenContent(
 
 @Composable
 fun CategorySelectionSheet(personName: String, onCategorySelect: (Category) -> Unit) {
+    // 利用者をクリックした際に表示される、記録カテゴリー選択用のボトムシート
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "$personName さんの記録を選択", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
         Category.entries.forEach { category ->
@@ -301,7 +344,35 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                 }
             }
         },
-        confirmButton = { Button(onClick = { if (isInputValid && westernYear != null && m != null && d != null) { keyboardController?.hide(); val birthday = LocalDate.of(westernYear, m, d).atStartOfDay(ZoneId.systemDefault()).toInstant(); val newPerson = person?.copy(lastName = lastName, firstName = firstName, lastNameFurigana = lastNameFurigana, firstNameFurigana = firstNameFurigana, birthday = birthday, note = note) ?: Person(lastName = lastName, firstName = firstName, lastNameFurigana = lastNameFurigana, firstNameFurigana = firstNameFurigana, birthday = birthday, note = note); onSave(newPerson) } }, enabled = isInputValid) { Text("保存") } },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (isInputValid && westernYear != null && m != null && d != null) {
+                        keyboardController?.hide()
+                        val birthday = LocalDate.of(westernYear, m, d)
+                            .atStartOfDay(ZoneId.systemDefault())
+                            .toInstant()
+                        val newPerson = person?.copy(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        ) ?: Person(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        )
+                        onSave(newPerson)
+                    }
+                },
+                enabled = isInputValid
+            ) { Text("保存") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("キャンセル") } }
     )
 }
@@ -310,7 +381,7 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
 @Composable
 fun MainScreenPreview() {
     val mockUserList = listOf(Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()))
-    CareMemoTheme { MainScreenContent(userList = mockUserList, isDatabaseEmpty = false, snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(), onUserClick = { }, onEditUser = { }, onAddClick = { }, onEndUser = { }, onNavigateToRestore = { }, onExportClick = { }, onImportClick = { }, onLegacyFolderClick = { }, onDevAssetsClick = { }, onDevClearClick = { }, onEraseClick = { }) }
+    CareMemoTheme { MainScreenContent(userList = mockUserList, categorySummaries = emptyMap(), isDatabaseEmpty = false, isNameMaskingEnabled = false, snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(), onUserClick = { }, onEditUser = { }, onAddClick = { }, onEndUser = { }, onNavigateToRestore = { }, onNavigateToSettings = { }, onExportClick = { }, onImportClick = { }, onLegacyFolderClick = { }, onDevAssetsClick = { }, onDevClearClick = { }, onEraseClick = { }) }
 }
 
 fun calculateAge(birthday: Instant): Int {

@@ -17,16 +17,37 @@ import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
 import android.provider.DocumentsContract
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class PersonListViewModel(private val repository: CareMemoRepository) : ViewModel() {
+class PersonListViewModel(
+    private val repository: CareMemoRepository,
+    private val userSettingsRepository: UserSettingsRepository,
+) : ViewModel() {
+
+    private val json = Json { prettyPrint = true }
 
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow: StateFlow<String?> = _errorFlow.asStateFlow()
 
     private val _infoFlow = MutableStateFlow<String?>(null)
     val infoFlow: StateFlow<String?> = _infoFlow.asStateFlow()
+
+    val isNameMaskingEnabled: StateFlow<Boolean> = userSettingsRepository.isNameMaskingEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    fun setNameMaskingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettingsRepository.setNameMaskingEnabled(enabled)
+        }
+    }
 
     fun clearError() {
         _errorFlow.value = null
@@ -50,11 +71,37 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
             initialValue = emptyList()
         )
 
+    /**
+     * 各カテゴリーのデータ有無を監視し、バッジ表示用のMapに統合するロジック。
+     * いずれかのカテゴリーでデータが更新されると、自動的に再計算されてUIに通知されます。
+     */
+    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = combine(
+        repository.getPersonIdsWithHeightWeight(),
+        repository.getPersonIdsWithPulse(),
+        repository.getPersonIdsWithBp(),
+        repository.getPersonIdsWithGlucose(),
+        repository.getPersonIdsWithCondition()
+    ) { hwIds, pulseIds, bpIds, glucoseIds, conditionIds ->
+        val allIds = (hwIds + pulseIds + bpIds + glucoseIds + conditionIds).distinct()
+        allIds.associateWith { id ->
+            PersonCategorySummary(
+                hasHeightWeight = hwIds.contains(id),
+                hasBpAndPulse = pulseIds.contains(id) || bpIds.contains(id),
+                hasGlucoseAndHbA1c = glucoseIds.contains(id),
+                hasCondition = conditionIds.contains(id)
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyMap()
+    )
+
     fun addPerson(person: Person) {
         viewModelScope.launch {
             try {
                 repository.insertPerson(person)
-            } catch (e: SQLiteConstraintException) {
+            } catch (_: SQLiteConstraintException) {
                 _errorFlow.value = "この利用者は既に登録されています。"
             }
         }
@@ -64,7 +111,7 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
         viewModelScope.launch {
             try {
                 repository.updatePerson(person)
-            } catch (e: SQLiteConstraintException) {
+            } catch (_: SQLiteConstraintException) {
                 _errorFlow.value = "変更後の内容は既に他の利用者として登録されています。"
             }
         }
@@ -79,12 +126,6 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
     fun restorePerson(person: Person) {
         viewModelScope.launch {
             repository.restorePerson(person.id)
-        }
-    }
-
-    fun deletePerson(person: Person) {
-        viewModelScope.launch {
-            repository.deletePerson(person)
         }
     }
 
@@ -108,7 +149,7 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
         viewModelScope.launch {
             try {
                 val backup = repository.getBackupData()
-                val jsonString = Json { prettyPrint = true }.encodeToString(backup)
+                val jsonString = json.encodeToString(backup)
                 context.contentResolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
                 _infoFlow.value = "データのエクスポートが完了しました。"
             } catch (e: Exception) {
@@ -122,7 +163,7 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
             try {
                 val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 if (jsonString != null) {
-                    val backup = Json.decodeFromString<CareMemoBackup>(jsonString)
+                    val backup = json.decodeFromString<CareMemoBackup>(jsonString)
                     repository.replaceAllData(backup)
                     _infoFlow.value = "データの復元が完了しました。"
                 }
@@ -196,11 +237,14 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
         }
     }
 
-    class Factory(private val repository: CareMemoRepository) : ViewModelProvider.Factory {
+    class Factory(
+        private val repository: CareMemoRepository,
+        private val userSettingsRepository: UserSettingsRepository
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonListViewModel::class.java)) {
-                return PersonListViewModel(repository) as T
+                return PersonListViewModel(repository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
