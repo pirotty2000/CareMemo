@@ -1,7 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,7 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.focus.FocusRequester
@@ -52,11 +49,9 @@ import java.util.Locale
 fun MainScreen(
     viewModel: PersonListViewModel,
     onNavigateToDetail: (Int, Category) -> Unit,
-    onNavigateToRestore: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val userList by viewModel.userList.collectAsState()
-    val endedUserList by viewModel.deletedUserList.collectAsState()
     val categorySummaries by viewModel.categorySummaries.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -70,69 +65,15 @@ fun MainScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var editingPerson by remember { mutableStateOf<Person?>(null) }
 
-    // 確認用ダイアログ
-    var showImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var showLegacyFolderUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var showEraseConfirm by remember { mutableStateOf(false) }
-    var showDevClearConfirm by remember { mutableStateOf(false) }
-
-    val errorMsg by viewModel.errorFlow.collectAsState()
-    val infoMsg by viewModel.infoFlow.collectAsState()
-
-    val context = LocalContext.current
-
     LaunchedEffect(Unit) {
         viewModel.snackbarFlow.collect { message ->
             snackbarHostState.showSnackbar(message)
         }
     }
 
-    // ファイル・フォルダ選択ランチャー
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> uri?.let { viewModel.exportData(context, it) } }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let { showImportUri = it } }
-
-    val legacyFolderLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> uri?.let { showLegacyFolderUri = it } }
-
-    if (errorMsg != null) {
-        AlertDialog(onDismissRequest = { viewModel.clearError() }, title = { Text("エラー") }, text = { Text(errorMsg!!) }, confirmButton = { TextButton(onClick = { viewModel.clearError() }) { Text("OK") } })
-    }
-    if (infoMsg != null) {
-        AlertDialog(onDismissRequest = { viewModel.clearInfo() }, title = { Text("通知") }, text = { Text(infoMsg!!) }, confirmButton = { TextButton(onClick = { viewModel.clearInfo() }) { Text("OK") } })
-    }
-
-    if (showImportUri != null) {
-        AlertDialog(onDismissRequest = { showImportUri = null }, title = { Text("データの復元") }, text = { Text("現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？") }, confirmButton = { Button(onClick = { viewModel.importData(context, showImportUri!!); showImportUri = null }) { Text("復元を実行") } }, dismissButton = { TextButton(onClick = { showImportUri = null }) { Text("キャンセル") } })
-    }
-
-    if (showLegacyFolderUri != null) {
-        AlertDialog(onDismissRequest = { showLegacyFolderUri = null }, title = { Text("旧アプリデータの引き継ぎ", color = MaterialTheme.colorScheme.error) }, text = { Text("現在のデータはすべて削除され、選択したフォルダ内の旧アプリ用JSONデータで初期化されます。一度きりの移行処理として実行してください。", color = MaterialTheme.colorScheme.error) }, confirmButton = { Button(onClick = { viewModel.importLegacyDataFromFolder(context, showLegacyFolderUri!!); showLegacyFolderUri = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("削除して引き継ぐ") } }, dismissButton = { TextButton(onClick = { showLegacyFolderUri = null }) { Text("キャンセル") } })
-    }
-
-    if (showEraseConfirm) {
-        AlertDialog(
-            onDismissRequest = { showEraseConfirm = false },
-            title = { Text("個人情報の完全抹消", color = MaterialTheme.colorScheme.error) },
-            text = { Text("現在「利用終了」となっている ${endedUserList.size} 名分のデータを完全に抹消します。この操作を行うと記録は二度と復旧できません。よろしいですか？", color = MaterialTheme.colorScheme.error) },
-            confirmButton = { Button(onClick = { viewModel.deleteEndedPersons(); showEraseConfirm = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("対象者 (${endedUserList.size}名) を抹消する") } },
-            dismissButton = { TextButton(onClick = { showEraseConfirm = false }) { Text("キャンセル") } }
-        )
-    }
-
-    if (showDevClearConfirm) {
-        AlertDialog(onDismissRequest = { showDevClearConfirm = false }, title = { Text("(開発用) 全データ消去", color = MaterialTheme.colorScheme.error) }, text = { Text("データベース内のすべてのデータを物理削除します。この操作は取り消せません。", color = MaterialTheme.colorScheme.error) }, confirmButton = { Button(onClick = { viewModel.clearAllData(); showDevClearConfirm = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("実行する") } }, dismissButton = { TextButton(onClick = { showDevClearConfirm = false }) { Text("キャンセル") } })
-    }
-
     MainScreenContent(
         userList = userList,
         categorySummaries = categorySummaries,
-        isDatabaseEmpty = userList.isEmpty() && endedUserList.isEmpty(),
         isNameMaskingEnabled = isNameMaskingEnabled,
         snackbarHostState = snackbarHostState,
         lazyListState = lazyListState,
@@ -147,14 +88,7 @@ fun MainScreen(
                 if (result == SnackbarResult.ActionPerformed) { viewModel.restorePerson(person); scope.launch { lazyListState.animateScrollToItem(0) } }
             }
         },
-        onNavigateToRestore = onNavigateToRestore,
-        onNavigateToSettings = onNavigateToSettings,
-        onExportClick = { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.json") },
-        onImportClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream")) },
-        onLegacyFolderClick = { legacyFolderLauncher.launch(null) },
-        onDevAssetsClick = { viewModel.importLegacyDataFromAssets(context) },
-        onDevClearClick = { showDevClearConfirm = true },
-        onEraseClick = { showEraseConfirm = true }
+        onNavigateToSettings = onNavigateToSettings
     )
 
     if (showSheet && selectedPerson != null) {
@@ -173,7 +107,6 @@ fun MainScreen(
 fun MainScreenContent(
     userList: List<Person>,
     categorySummaries: Map<Int, PersonCategorySummary>,
-    isDatabaseEmpty: Boolean,
     isNameMaskingEnabled: Boolean,
     snackbarHostState: SnackbarHostState,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
@@ -181,18 +114,21 @@ fun MainScreenContent(
     onEditUser: (Person) -> Unit,
     onAddClick: () -> Unit,
     onEndUser: (Person) -> Unit,
-    onNavigateToRestore: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onExportClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onLegacyFolderClick: () -> Unit,
-    onDevAssetsClick: () -> Unit,
-    onDevClearClick: () -> Unit,
-    onEraseClick: () -> Unit,
 ) {
     var searchText by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var showVersionDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+
+    if (showVersionDialog) {
+        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.0.0\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+    }
+
+    if (showHelpDialog) {
+        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text("ヘルプ") }, text = { Text("・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「設定」内の「利用者管理」から復帰できます。") }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text("閉じる") } })
+    }
 
     val kanaGroups = listOf("全", "あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他")
     val kanaMap = mapOf(
@@ -235,22 +171,8 @@ fun MainScreenContent(
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(text = { Text("設定") }, onClick = { showMenu = false; onNavigateToSettings() })
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("利用終了者の復帰") }, onClick = { showMenu = false; onNavigateToRestore() })
-                        DropdownMenuItem(text = { Text("利用終了者のデータを完全に抹消") }, onClick = { showMenu = false; onEraseClick() })
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("データのバックアップ (保存)") }, onClick = { showMenu = false; onExportClick() })
-                        DropdownMenuItem(text = { Text("データの復元 (読込)") }, onClick = { showMenu = false; onImportClick() })
-
-                        // データベースが空の時のみ表示
-                        if (isDatabaseEmpty) {
-                            HorizontalDivider()
-                            DropdownMenuItem(text = { Text("初期データの読込 (旧アプリ移行)") }, onClick = { showMenu = false; onLegacyFolderClick() })
-                        }
-
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("(開発用) assets読込") }, onClick = { showMenu = false; onDevAssetsClick() })
-                        DropdownMenuItem(text = { Text("(開発用) データクリア") }, onClick = { showMenu = false; onDevClearClick() })
+                        DropdownMenuItem(text = { Text("ヘルプ") }, onClick = { showMenu = false; showHelpDialog = true })
+                        DropdownMenuItem(text = { Text("バージョン情報") }, onClick = { showMenu = false; showVersionDialog = true })
                     }
                 }
             )
@@ -454,7 +376,7 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
 @Composable
 fun MainScreenPreview() {
     val mockUserList = listOf(Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()))
-    CareMemoTheme { MainScreenContent(userList = mockUserList, categorySummaries = emptyMap(), isDatabaseEmpty = false, isNameMaskingEnabled = false, snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(), onUserClick = { }, onEditUser = { }, onAddClick = { }, onEndUser = { }, onNavigateToRestore = { }, onNavigateToSettings = { }, onExportClick = { }, onImportClick = { }, onLegacyFolderClick = { }, onDevAssetsClick = { }, onDevClearClick = { }, onEraseClick = { }) }
+    CareMemoTheme { MainScreenContent(userList = mockUserList, categorySummaries = emptyMap(), isNameMaskingEnabled = false, snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(), onUserClick = { }, onEditUser = { }, onAddClick = { }, onEndUser = { }, onNavigateToSettings = { }) }
 }
 
 fun calculateAge(birthday: Instant): Int {

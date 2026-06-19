@@ -37,6 +37,13 @@ class PersonDetailViewModel(
             initialValue = false
         )
 
+    val defaultRecorderName: StateFlow<String> = userSettingsRepository.defaultRecorderName
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ""
+        )
+
     private val _currentRecordState = MutableStateFlow<Any?>(null)
     val currentRecordState: StateFlow<Any?> = _currentRecordState.asStateFlow()
 

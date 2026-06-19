@@ -151,6 +151,7 @@ fun UnifiedRecordScreen(
     val records by viewModel.records.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -299,6 +300,7 @@ fun UnifiedRecordScreen(
                     recordData = currentRecord,
                     personId = personId,
                     records = records, // 履歴データを渡す
+                    defaultRecorderName = defaultRecorderName,
                     onSave = { viewModel.saveRecord(it) },
                     onClear = { viewModel.clearCurrentRecord() },
                     snackbarHostState = snackbarHostState
@@ -485,6 +487,7 @@ fun UnifiedRecordScreen(
             memo = null,
             personId = personId,
             isEditMode = true,
+            defaultRecorderName = defaultRecorderName,
             onEditClick = {},
             onDismiss = { showMemoCreateDialog = false },
             onSave = { viewModel.saveRecord(it); showMemoCreateDialog = false }
@@ -496,6 +499,7 @@ fun UnifiedRecordScreen(
             memo = showMemoDialog,
             personId = personId,
             isEditMode = isMemoEditMode,
+            defaultRecorderName = defaultRecorderName,
             onEditClick = { isMemoEditMode = true },
             onDismiss = { showMemoDialog = null; isMemoEditMode = false },
             onSave = { viewModel.saveRecord(it); showMemoDialog = null; isMemoEditMode = false }
@@ -509,6 +513,7 @@ fun InputForm(
     recordData: Any?,
     personId: Int,
     records: List<Any>,
+    defaultRecorderName: String,
     onSave: (Any?) -> Unit,
     onClear: () -> Unit,
     snackbarHostState: SnackbarHostState
@@ -609,6 +614,9 @@ fun InputForm(
             hba1cText = ""
             titleText = ""
             authorText = ""
+            if (categoryType == Category.CONDITION_AT_VISIT) {
+                authorText = defaultRecorderName
+            }
             conditionText = ""
 
             if (isUserModifiedTime) {
@@ -1837,13 +1845,14 @@ fun MemoEditDialog(
     memo: ConditionAtVisit?,
     personId: Int,
     isEditMode: Boolean,
+    defaultRecorderName: String,
     onEditClick: () -> Unit,
     onDismiss: () -> Unit,
     onSave: (ConditionAtVisit) -> Unit
 ) {
     var title by remember { mutableStateOf(memo?.title ?: "") }
     var condition by remember { mutableStateOf(memo?.condition ?: "") }
-    var author by remember { mutableStateOf(memo?.author ?: "") }
+    var author by remember { mutableStateOf(memo?.author ?: defaultRecorderName) }
     
     val initialTime = memo?.recordTime ?: Instant.now()
     val zonedDateTime = initialTime.atZone(ZoneId.systemDefault())

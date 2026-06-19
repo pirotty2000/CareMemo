@@ -48,9 +48,22 @@ class PersonListViewModel(
             initialValue = false
         )
 
+    val defaultRecorderName: StateFlow<String> = userSettingsRepository.defaultRecorderName
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ""
+        )
+
     fun setNameMaskingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSettingsRepository.setNameMaskingEnabled(enabled)
+        }
+    }
+
+    fun setDefaultRecorderName(name: String) {
+        viewModelScope.launch {
+            userSettingsRepository.setDefaultRecorderName(name)
         }
     }
 

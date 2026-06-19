@@ -52,9 +52,6 @@ fun CareMemoApp() {
                 onNavigateToDetail = { personId, category ->
                     navController.navigate("detail/$personId/${category.name}")
                 },
-                onNavigateToRestore = {
-                    navController.navigate("restore")
-                },
                 onNavigateToSettings = {
                     navController.navigate("settings")
                 }
@@ -75,6 +72,9 @@ fun CareMemoApp() {
             )
             SettingsScreen(
                 viewModel = listViewModel,
+                onNavigateToRestore = {
+                    navController.navigate("restore")
+                },
                 onBack = { navController.popBackStack() }
             )
         }
