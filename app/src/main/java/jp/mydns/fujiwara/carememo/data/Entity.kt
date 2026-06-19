@@ -142,3 +142,16 @@ data class ConditionAtVisit(
     @ColumnInfo(name = "record_time") val recordTime: Instant,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
+
+/**
+ * アプリ全体のバックアップデータを保持するクラス
+ */
+@Serializable
+data class CareMemoBackup(
+    val version: Int = 1,
+    val persons: List<Person>,
+    val heightAndWeights: List<HeightAndWeight>,
+    val bpAndPulses: List<BpAndPulse>,
+    val glucoseAndHbA1cs: List<GlucoseAndHbA1c>,
+    val conditionAtVisits: List<ConditionAtVisit>
+)

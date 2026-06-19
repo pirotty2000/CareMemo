@@ -28,6 +28,19 @@ interface PersonDao {
 
     @Delete
     suspend fun delete(person: Person)
+
+    @Query("DELETE FROM person_db WHERE deleted_at IS NOT NULL")
+    suspend fun deleteEndedPersons()
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM person_db")
+    suspend fun getAllRaw(): List<Person>
+
+    @Query("DELETE FROM person_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<Person>)
 }
 
 @Dao
@@ -49,6 +62,16 @@ interface HeightAndWeightDao {
 
     @Delete
     suspend fun delete(item: HeightAndWeight)
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM height_and_weight_db")
+    suspend fun getAllRaw(): List<HeightAndWeight>
+
+    @Query("DELETE FROM height_and_weight_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<HeightAndWeight>)
 }
 
 @Dao
@@ -70,6 +93,16 @@ interface BpAndPulseDao {
 
     @Delete
     suspend fun delete(item: BpAndPulse)
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM bp_and_pulse_db")
+    suspend fun getAllRaw(): List<BpAndPulse>
+
+    @Query("DELETE FROM bp_and_pulse_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<BpAndPulse>)
 }
 
 @Dao
@@ -91,6 +124,16 @@ interface GlucoseAndHbA1cDao {
 
     @Delete
     suspend fun delete(item: GlucoseAndHbA1c)
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM glucose_and_hba1c_db")
+    suspend fun getAllRaw(): List<GlucoseAndHbA1c>
+
+    @Query("DELETE FROM glucose_and_hba1c_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<GlucoseAndHbA1c>)
 }
 
 @Dao
@@ -112,4 +155,14 @@ interface ConditionAtVisitDao {
 
     @Delete
     suspend fun delete(item: ConditionAtVisit)
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM condition_at_visit_db")
+    suspend fun getAllRaw(): List<ConditionAtVisit>
+
+    @Query("DELETE FROM condition_at_visit_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<ConditionAtVisit>)
 }

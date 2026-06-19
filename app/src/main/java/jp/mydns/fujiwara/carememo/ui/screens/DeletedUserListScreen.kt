@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,31 +19,31 @@ fun DeletedUserListScreen(
     viewModel: PersonListViewModel,
     onBack: () -> Unit
 ) {
-    val deletedUsers by viewModel.deletedUserList.collectAsState()
+    val endedUsers by viewModel.deletedUserList.collectAsState()
     val selectedUserIds = remember { mutableStateListOf<Int>() }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("削除データの復旧", fontWeight = FontWeight.Bold) },
+                title = { Text("利用終了者の復帰", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
                 },
                 actions = {
-                    if (deletedUsers.isNotEmpty()) {
+                    if (endedUsers.isNotEmpty()) {
                         TextButton(
                             onClick = {
-                                if (selectedUserIds.size == deletedUsers.size) {
+                                if (selectedUserIds.size == endedUsers.size) {
                                     selectedUserIds.clear()
                                 } else {
                                     selectedUserIds.clear()
-                                    selectedUserIds.addAll(deletedUsers.map { it.id })
+                                    selectedUserIds.addAll(endedUsers.map { it.id })
                                 }
                             }
                         ) {
-                            Text(if (selectedUserIds.size == deletedUsers.size) "全解除" else "全選択")
+                            Text(if (selectedUserIds.size == endedUsers.size) "全解除" else "全選択")
                         }
                     }
                 }
@@ -56,7 +55,7 @@ fun DeletedUserListScreen(
                     Button(
                         onClick = {
                             selectedUserIds.forEach { id ->
-                                deletedUsers.find { it.id == id }?.let { 
+                                endedUsers.find { it.id == id }?.let { 
                                     viewModel.restorePerson(it)
                                 }
                             }
@@ -65,24 +64,24 @@ fun DeletedUserListScreen(
                         },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                     ) {
-                        Text("選択した利用者を復元する (${selectedUserIds.size}名)")
+                        Text("選択した利用者 (${selectedUserIds.size}名) を復帰させる")
                     }
                 }
             }
         }
     ) { paddingValues ->
-        if (deletedUsers.isEmpty()) {
+        if (endedUsers.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("削除された利用者はいません", style = MaterialTheme.typography.bodyLarge)
+                Text("利用終了した利用者はいません", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(paddingValues)
             ) {
-                items(deletedUsers, key = { it.id }) { user ->
+                items(endedUsers, key = { it.id }) { user ->
                     ListItem(
                         headlineContent = { Text("${user.lastName}\u3000${user.firstName}") },
                         supportingContent = { Text("${user.lastNameFurigana}\u3000${user.firstNameFurigana}") },

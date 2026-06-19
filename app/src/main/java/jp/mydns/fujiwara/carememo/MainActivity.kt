@@ -79,11 +79,6 @@ fun CareMemoApp() {
                 factory = PersonDetailViewModel.Factory(repository)
             )
             
-            // 画面遷移確認用のサンプルデータをロード
-            LaunchedEffect(category) {
-                detailViewModel.loadSampleData(category)
-            }
-
             UnifiedRecordScreen(
                 viewModel = detailViewModel,
                 initialCategoryType = category,

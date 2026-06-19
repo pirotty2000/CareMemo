@@ -11,6 +11,7 @@ class CareMemoApplication : Application() {
     // リポジトリのインスタンス取得
     val repository: CareMemoRepository by lazy { 
         CareMemoRepository(
+            database,
             database.personDao(),
             database.heightAndWeightDao(),
             database.bpAndPulseDao(),

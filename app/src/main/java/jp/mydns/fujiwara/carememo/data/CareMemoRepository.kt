@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
  * データベース操作を管理するリポジトリ
  */
 class CareMemoRepository(
+    private val database: AppDatabase,
     private val personDao: PersonDao,
     private val heightAndWeightDao: HeightAndWeightDao,
     private val bpAndPulseDao: BpAndPulseDao,
@@ -45,6 +46,14 @@ class CareMemoRepository(
         bpAndPulseDao.restoreByPersonId(personId)
         glucoseAndHbA1cDao.restoreByPersonId(personId)
         conditionAtVisitDao.restoreByPersonId(personId)
+    }
+
+    /**
+     * 利用終了者（論理削除された利用者）と、そのすべての記録を物理削除します。
+     * 外部キーの CASCADE 設定により、子データも自動で抹消されます。
+     */
+    suspend fun deleteEndedPersons() {
+        personDao.deleteEndedPersons()
     }
 
     /**
@@ -91,4 +100,41 @@ class CareMemoRepository(
     suspend fun updateConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.update(item)
     
     suspend fun deleteConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.delete(item)
+
+    // --- バックアップ・インポート ---
+    suspend fun getBackupData(): CareMemoBackup {
+        return CareMemoBackup(
+            persons = personDao.getAllRaw(),
+            heightAndWeights = heightAndWeightDao.getAllRaw(),
+            bpAndPulses = bpAndPulseDao.getAllRaw(),
+            glucoseAndHbA1cs = glucoseAndHbA1cDao.getAllRaw(),
+            conditionAtVisits = conditionAtVisitDao.getAllRaw()
+        )
+    }
+
+    suspend fun replaceAllData(backup: CareMemoBackup) {
+        database.withTransaction {
+            clearAllData()
+
+            // データの挿入
+            personDao.insertAll(backup.persons)
+            heightAndWeightDao.insertAll(backup.heightAndWeights)
+            bpAndPulseDao.insertAll(backup.bpAndPulses)
+            glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
+            conditionAtVisitDao.insertAll(backup.conditionAtVisits)
+        }
+    }
+
+    /**
+     * すべてのテーブルのデータを物理削除します。
+     */
+    suspend fun clearAllData() {
+        database.withTransaction {
+            conditionAtVisitDao.deleteAll()
+            glucoseAndHbA1cDao.deleteAll()
+            bpAndPulseDao.deleteAll()
+            heightAndWeightDao.deleteAll()
+            personDao.deleteAll()
+        }
+    }
 }

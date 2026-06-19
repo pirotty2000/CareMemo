@@ -14,17 +14,28 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
+import android.net.Uri
+import android.provider.DocumentsContract
+import jp.mydns.fujiwara.carememo.data.CareMemoBackup
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class PersonListViewModel(private val repository: CareMemoRepository) : ViewModel() {
 
     private val _errorFlow = MutableStateFlow<String?>(null)
     val errorFlow: StateFlow<String?> = _errorFlow.asStateFlow()
 
+    private val _infoFlow = MutableStateFlow<String?>(null)
+    val infoFlow: StateFlow<String?> = _infoFlow.asStateFlow()
+
     fun clearError() {
         _errorFlow.value = null
     }
+
+    fun clearInfo() {
+        _infoFlow.value = null
+    }
     
-    // データベースから全利用者をリアルタイムで取得（StateFlowとして保持）
     val userList: StateFlow<List<Person>> = repository.getAllPersons()
         .stateIn(
             scope = viewModelScope,
@@ -32,7 +43,6 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
             initialValue = emptyList()
         )
 
-    // 削除済みの利用者をリアルタイムで取得
     val deletedUserList: StateFlow<List<Person>> = repository.getDeletedPersons()
         .stateIn(
             scope = viewModelScope,
@@ -40,57 +50,152 @@ class PersonListViewModel(private val repository: CareMemoRepository) : ViewMode
             initialValue = emptyList()
         )
 
-    // デバッグ用：初期データのロード
-    fun loadInitialData(context: Context) {
-        viewModelScope.launch {
-            InitialDataLoader(context, repository).loadInitialData()
-        }
-    }
-
-    // 新規登録
     fun addPerson(person: Person) {
         viewModelScope.launch {
             try {
                 repository.insertPerson(person)
             } catch (e: SQLiteConstraintException) {
-                _errorFlow.value = "この利用者は既に登録されています。同姓同名・同生年月日の場合は「識別用メモ」を入力して区別してください。"
+                _errorFlow.value = "この利用者は既に登録されています。"
             }
         }
     }
 
-    // 更新
     fun updatePerson(person: Person) {
         viewModelScope.launch {
             try {
                 repository.updatePerson(person)
             } catch (e: SQLiteConstraintException) {
-                _errorFlow.value = "変更後の内容は既に他の利用者として登録されています。「識別用メモ」などを調整してください。"
+                _errorFlow.value = "変更後の内容は既に他の利用者として登録されています。"
             }
         }
     }
 
-    // 論理削除
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
             repository.logicalDeletePerson(person.id)
         }
     }
 
-    // 復元
     fun restorePerson(person: Person) {
         viewModelScope.launch {
             repository.restorePerson(person.id)
         }
     }
 
-    // 物理削除
     fun deletePerson(person: Person) {
         viewModelScope.launch {
             repository.deletePerson(person)
         }
     }
 
-    // ViewModelFactory の定義
+    /**
+     * 利用終了となっているすべての利用者のデータを完全に抹消します。
+     */
+    fun deleteEndedPersons() {
+        viewModelScope.launch {
+            try {
+                repository.deleteEndedPersons()
+                _infoFlow.value = "利用終了者のデータを完全に抹消しました。"
+            } catch (e: Exception) {
+                _errorFlow.value = "データの抹消に失敗しました: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    // --- 新形式データのバックアップ・復元 ---
+
+    fun exportData(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val backup = repository.getBackupData()
+                val jsonString = Json { prettyPrint = true }.encodeToString(backup)
+                context.contentResolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
+                _infoFlow.value = "データのエクスポートが完了しました。"
+            } catch (e: Exception) {
+                _errorFlow.value = "エクスポートに失敗しました: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun importData(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                if (jsonString != null) {
+                    val backup = Json.decodeFromString<CareMemoBackup>(jsonString)
+                    repository.replaceAllData(backup)
+                    _infoFlow.value = "データの復元が完了しました。"
+                }
+            } catch (e: Exception) {
+                _errorFlow.value = "復元に失敗しました: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    // --- 旧アプリデータの移行 (初期データの読込) ---
+
+    fun importLegacyDataFromAssets(context: Context) {
+        viewModelScope.launch {
+            try {
+                val loader = InitialDataLoader(context, repository)
+                loader.clearAllData()
+                loader.loadInitialDataFromAssets()
+                _infoFlow.value = "Assetsからの初期データ読込が完了しました。"
+            } catch (e: Exception) {
+                _errorFlow.value = "読込に失敗しました: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    /**
+     * データベース内のすべてのデータを物理削除します（開発用）。
+     */
+    fun clearAllData() {
+        viewModelScope.launch {
+            try {
+                repository.clearAllData()
+                _infoFlow.value = "全てのデータを削除しました。"
+            } catch (e: Exception) {
+                _errorFlow.value = "データの削除に失敗しました: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun importLegacyDataFromFolder(context: Context, treeUri: Uri) {
+        viewModelScope.launch {
+            try {
+                val loader = InitialDataLoader(context, repository)
+                loader.clearAllData()
+
+                val resolver = context.contentResolver
+                val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                    treeUri, DocumentsContract.getTreeDocumentId(treeUri)
+                )
+
+                val fileMap = mutableMapOf<String, Uri>()
+                resolver.query(childrenUri, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)?.use { cursor ->
+                    val nameIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                    val idIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                    while (cursor.moveToNext()) {
+                        val name = cursor.getString(nameIdx)
+                        val id = cursor.getString(idIdx)
+                        fileMap[name] = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
+                    }
+                }
+
+                fileMap["person_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadPersons(s) } }
+                fileMap["height_and_weight_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadHeightAndWeight(s) } }
+                fileMap["bp_and_pulse_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadBpAndPulse(s) } }
+                fileMap["glucose_and_hba1c_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadGlucoseAndHbA1c(s) } }
+                fileMap["condition_at_visit_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadConditionAtVisit(s) } }
+
+                _infoFlow.value = "旧アプリデータの引き継ぎが完了しました。"
+            } catch (e: Exception) {
+                _errorFlow.value = "引き継ぎに失敗しました: ${e.localizedMessage}"
+            }
+        }
+    }
+
     class Factory(private val repository: CareMemoRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
