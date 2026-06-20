@@ -38,6 +38,7 @@ class PersonListViewModel(
         data class ShowSnackbar(val message: String) : UiEvent
         data class ShowInfoDialog(val title: String, val message: String) : UiEvent
         data class ShowErrorDialog(val title: String, val message: String) : UiEvent
+        object SaveSuccess : UiEvent
     }
 
     private val _uiEventFlow = MutableSharedFlow<UiEvent>()
@@ -107,9 +108,10 @@ class PersonListViewModel(
         viewModelScope.launch {
             try {
                 repository.insertPerson(person)
+                _uiEventFlow.emit(UiEvent.SaveSuccess)
                 _uiEventFlow.emit(UiEvent.ShowSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを登録しました"))
             } catch (_: SQLiteConstraintException) {
-                _uiEventFlow.emit(UiEvent.ShowErrorDialog("登録エラー", "この利用者は既に登録されています。"))
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("登録エラー", "この利用者は既に登録されています。同姓同名・同生年月日の場合は、識別用メモを入力してください。"))
             }
         }
     }
@@ -118,6 +120,7 @@ class PersonListViewModel(
         viewModelScope.launch {
             try {
                 repository.updatePerson(person)
+                _uiEventFlow.emit(UiEvent.SaveSuccess)
                 _uiEventFlow.emit(UiEvent.ShowSnackbar("利用者情報を更新しました"))
             } catch (_: SQLiteConstraintException) {
                 _uiEventFlow.emit(UiEvent.ShowErrorDialog("更新エラー", "変更後の内容は既に他の利用者として登録されています。"))

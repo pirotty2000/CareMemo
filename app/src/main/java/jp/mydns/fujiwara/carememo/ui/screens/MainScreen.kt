@@ -86,6 +86,9 @@ fun MainScreen(
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
+                is PersonListViewModel.UiEvent.SaveSuccess -> {
+                    showEditDialog = false
+                }
             }
         }
     }
@@ -149,7 +152,7 @@ fun MainScreen(
             onDismiss = { showEditDialog = false }, 
             onSave = { person -> 
                 if (editingPerson == null) viewModel.addPerson(person) else viewModel.updatePerson(person)
-                showEditDialog = false 
+                // ここで showEditDialog = false にしない（ViewModelからの成功通知を待つ）
             }
         )
     }
