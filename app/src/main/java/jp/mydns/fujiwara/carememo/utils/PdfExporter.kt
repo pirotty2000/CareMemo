@@ -58,8 +58,8 @@ object PdfExporter {
         val document = PdfDocument()
         var pageNumber = 1
         val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create()
-        var currentPage = document.startPage(pageInfo)
-        var canvas = currentPage.canvas
+        val currentPage = document.startPage(pageInfo)
+        val canvas = currentPage.canvas
         
         var currentY = drawHeader(canvas, person, true, category, pageNumber)
 
@@ -67,9 +67,35 @@ object PdfExporter {
             Category.HEIGHT_AND_WEIGHT -> {
                 val castedRecords = filteredRecords.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    currentY = drawSingleGraph(canvas, "体重(kg) 推移", listOf(castedRecords.map { it.recordTime.toEpochMilli() to (it.weight ?: 0.0) } to Color.rgb(0, 100, 200)), currentY, SINGLE_GRAPH_HEIGHT, 10.0, emptyList(), emptyList(), false)
+                    currentY = drawSingleGraph(
+                        canvas = canvas,
+                        title = "体重(kg) 推移",
+                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to (it.weight ?: 0.0) } to Color.rgb(0, 100, 200)),
+                        startY = currentY,
+                        height = SINGLE_GRAPH_HEIGHT,
+                        yStep = 10.0,
+                        ranges = emptyList(),
+                        limitLines = emptyList(),
+                        isInteger = false
+                    )
                     currentY += 25f
-                    currentY = drawSingleGraph(canvas, "BMI 推移", listOf(castedRecords.map { it.recordTime.toEpochMilli() to it.calculateBMI() } to Color.rgb(200, 50, 50)), currentY, SINGLE_GRAPH_HEIGHT, 2.0, listOf((0.0 to HealthThresholds.BMI_NORMAL_LOW) to 0xFFF0F0F0.toInt(), (HealthThresholds.BMI_NORMAL_HIGH to 100.0) to 0xFFD8D8D8.toInt()), emptyList(), false)
+                    currentY = drawSingleGraph(
+                        canvas = canvas,
+                        title = "BMI 推移",
+                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to it.calculateBMI() } to Color.rgb(200, 50, 50)),
+                        startY = currentY,
+                        height = SINGLE_GRAPH_HEIGHT,
+                        yStep = 2.0,
+                        ranges = listOf((0.0 to HealthThresholds.BMI_NORMAL_LOW) to 0xFFF0F0F0.toInt(), (HealthThresholds.BMI_NORMAL_HIGH to 100.0) to 0xFFD8D8D8.toInt()),
+                        limitLines = emptyList(),
+                        isInteger = false,
+                        subtitles = listOf(
+                            "【判定基準(WHO)】",
+                            "・${HealthThresholds.BMI_NORMAL_LOW}未満：低体重",
+                            "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：普通体重",
+                            "・${HealthThresholds.BMI_NORMAL_HIGH}以上：肥満"
+                        )
+                    )
                     currentY += 40f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
@@ -81,11 +107,6 @@ object PdfExporter {
             Category.BP_AND_PULSE -> {
                 val castedRecords = filteredRecords.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    val textPaint = Paint().apply { color = Color.DKGRAY; textSize = 8f; isAntiAlias = true }
-                    canvas.drawText("高血圧の目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上", MARGIN, currentY + 10f, textPaint)
-                    canvas.drawText("低血圧の目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満", MARGIN, currentY + 22f, textPaint)
-                    currentY += 25f
-
                     val highDash = DashPathEffect(floatArrayOf(8f, 4f), 0f)
                     val lowDash = DashPathEffect(floatArrayOf(2f, 2f), 0f)
 
@@ -106,7 +127,11 @@ object PdfExporter {
                             Triple(HealthThresholds.BP_LOW_SYSTOLIC, lowDash, "低血圧目安"),
                             Triple(HealthThresholds.BP_LOW_DIASTOLIC, lowDash, "")
                         ),
-                        isInteger = true
+                        isInteger = true,
+                        subtitles = listOf(
+                            "高血圧目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
+                            "低血圧目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
+                        )
                     )
                     currentY += 25f
                     currentY = drawSingleGraph(
@@ -121,7 +146,10 @@ object PdfExporter {
                             (HealthThresholds.PULSE_HIGH to 200.0) to 0xFFD8D8D8.toInt()
                         ),
                         limitLines = emptyList(),
-                        isInteger = true
+                        isInteger = true,
+                        subtitles = listOf(
+                            "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (正常範囲)"
+                        )
                     )
                     currentY += 40f
                 }
@@ -134,9 +162,6 @@ object PdfExporter {
             Category.GLUCOSE_AND_HBA1C -> {
                 val castedRecords = filteredRecords.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    val textPaint = Paint().apply { color = Color.DKGRAY; textSize = 8f; isAntiAlias = true }
-                    canvas.drawText("血糖値の目安：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL (空腹時など)", MARGIN, currentY + 10f, textPaint)
-                    currentY += 12f
                     currentY = drawSingleGraph(
                         canvas = canvas,
                         title = "血糖値 (mg/dL) 推移",
@@ -148,11 +173,12 @@ object PdfExporter {
                             (0.0 to HealthThresholds.GLUCOSE_NORMAL_LOW) to 0xFFF0F0F0.toInt(),
                             (HealthThresholds.GLUCOSE_NORMAL_HIGH to 500.0) to 0xFFD8D8D8.toInt()
                         ),
-                        isInteger = true
+                        isInteger = true,
+                        subtitles = listOf(
+                            "血糖値の目安：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL (空腹時など)"
+                        )
                     )
                     currentY += 25f
-                    canvas.drawText("HbA1c目安：良好(5.5%以下) / 予備軍(6.0-6.4%) / 疑い(6.5%以上)", MARGIN, currentY + 10f, textPaint)
-                    currentY += 12f
                     currentY = drawSingleGraph(
                         canvas = canvas,
                         title = "HbA1c (%) 推移",
@@ -164,7 +190,10 @@ object PdfExporter {
                             (HealthThresholds.HBA1C_PREDIABETES to 6.4) to 0xFFF0F0F0.toInt(),
                             (HealthThresholds.HBA1C_DIABETES to 20.0) to 0xFFD8D8D8.toInt()
                         ),
-                        isInteger = false
+                        isInteger = false,
+                        subtitles = listOf(
+                            "HbA1c目安：良好(${HealthThresholds.HBA1C_GOOD}%以下) / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}-6.4%) / 疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
+                        )
                     )
                     currentY += 40f
                 }
@@ -333,13 +362,29 @@ object PdfExporter {
         yStep: Double,
         ranges: List<Pair<Pair<Double, Double>, Int>> = emptyList(),
         limitLines: List<Triple<Double, DashPathEffect, String>> = emptyList(),
-        isInteger: Boolean = false
+        isInteger: Boolean = false,
+        subtitles: List<String> = emptyList()
     ): Float {
         val paint = Paint().apply { isAntiAlias = true }
-        val graphArea = RectF(MARGIN + 35f, startY + 20f, PAGE_WIDTH - MARGIN - 10f, startY + height)
+        
+        // 1. タイトルの描画
         paint.color = Color.BLACK; paint.textSize = 10f; paint.isFakeBoldText = true
         canvas.drawText(title, MARGIN, startY + 10f, paint)
+        
+        // 2. サブタイトル（目安・ヒント）の描画
+        var currentSubY = startY + 22f
         paint.isFakeBoldText = false
+        paint.textSize = 8f
+        paint.color = Color.DKGRAY
+        subtitles.forEach { line ->
+            canvas.drawText(line, MARGIN, currentSubY, paint)
+            currentSubY += 12f
+        }
+        
+        // 3. グラフエリアの計算 (目安などの有無に合わせて位置を調整)
+        val graphTop = if (subtitles.isEmpty()) startY + 20f else currentSubY + 5f
+        val graphArea = RectF(MARGIN + 35f, graphTop, PAGE_WIDTH - MARGIN - 10f, graphTop + height - 20f)
+
         paint.color = Color.rgb(248, 248, 248); paint.style = Paint.Style.FILL
         canvas.drawRect(graphArea, paint)
 
