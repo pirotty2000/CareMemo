@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
@@ -171,6 +172,7 @@ fun MainScreenContent(
     var showMenu by remember { mutableStateOf(false) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showVersionDialog by remember { mutableStateOf(false) }
+    var showHistoryDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
 
     if (showVersionDialog) {
@@ -180,7 +182,7 @@ fun MainScreenContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("CareMemo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text("バージョン: 1.0.0")
+                    Text("バージョン: 1.0.1")
                     HorizontalDivider()
                     Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text("Android 15 (API 35)")
@@ -190,6 +192,51 @@ fun MainScreenContent(
                 }
             },
             confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } }
+        )
+    }
+
+    if (showHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showHistoryDialog = false },
+            title = { Text("バージョン履歴") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column {
+                        Text("Ver. 1.0.1 (2025/02/11)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("【詳細データ画面】", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 4.dp))
+                        Text("・利用者名の表示形式を改善（ふりがな・メモの表示追加）\n" +
+                             "・数値入力欄をコンパクト化し、画面の有効活用を促進\n" +
+                             "・入力時、キーボードの「次へ」で項目間移動を可能に改善\n" +
+                             "・記録件数の表示位置を履歴リスト最上部に移動\n" +
+                             "・グラフを「全件表示」に変更し、推移を確認しやすく改善\n" +
+                             "・グラフの余白を詰め、描画エリアを拡大\n" +
+                             "・体重・BMI・血糖値グラフのY軸レンジをデータに合わせて自動調整")
+                        
+                        Text("【所見メモ】", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 4.dp))
+                        Text("・音声入力時に句点の自動補完と改行の自動挿入を実装\n" +
+                             "・追記がよりスムーズに行えるよう改善")
+                        
+                        Text("【設定画面】", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 4.dp))
+                        Text("・「記録者の名前」入力時のカーソル飛びバグを修正")
+                        
+                        Text("【PDF出力】", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 4.dp))
+                        Text("・グラフタイトルの直下に「目安」と「ヒント」を表示するようレイアウトを刷新")
+                    }
+                    
+                    HorizontalDivider()
+                    
+                    Column {
+                        Text("Ver. 1.0.0 (2025/02/10)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("・初回リリース")
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showHistoryDialog = false }) { Text("閉じる") } }
         )
     }
 
@@ -239,6 +286,7 @@ fun MainScreenContent(
                         DropdownMenuItem(text = { Text("設定") }, onClick = { showMenu = false; onNavigateToSettings() })
                         DropdownMenuItem(text = { Text("ヘルプ") }, onClick = { showMenu = false; showHelpDialog = true })
                         DropdownMenuItem(text = { Text("バージョン情報") }, onClick = { showMenu = false; showVersionDialog = true })
+                        DropdownMenuItem(text = { Text("バージョン履歴") }, onClick = { showMenu = false; showHistoryDialog = true })
                     }
                 }
             )

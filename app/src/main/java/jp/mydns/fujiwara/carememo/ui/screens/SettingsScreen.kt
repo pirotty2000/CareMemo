@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,11 +32,21 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
+    val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
 
     val context = LocalContext.current
+
+    // 入力バグ対策用のローカル状態
+    var localRecorderName by remember { mutableStateOf(persistedRecorderName) }
+
+    // ViewModel側の値が外部から変わった場合のみ同期
+    LaunchedEffect(persistedRecorderName) {
+        if (localRecorderName != persistedRecorderName) {
+            localRecorderName = persistedRecorderName
+        }
+    }
 
     // ダイアログ管理用状態
     var showImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -120,7 +127,7 @@ fun SettingsScreen(
     }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.0.0\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.0.1\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
     }
 
     if (showHelpDialog) {
@@ -160,8 +167,11 @@ fun SettingsScreen(
                     }
                 )
                 OutlinedTextField(
-                    value = defaultRecorderName,
-                    onValueChange = { viewModel.setDefaultRecorderName(it) },
+                    value = localRecorderName,
+                    onValueChange = {
+                        localRecorderName = it
+                        viewModel.setDefaultRecorderName(it)
+                    },
                     label = { Text("記録者の名前(デフォルト)") },
                     placeholder = { Text("例: 山田") },
                     supportingText = { Text("所見メモ作成時に自動的に入力されます") },

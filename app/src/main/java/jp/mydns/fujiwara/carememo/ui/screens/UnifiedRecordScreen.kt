@@ -3,7 +3,6 @@ package jp.mydns.fujiwara.carememo.ui.screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -28,7 +27,6 @@ import androidx.compose.material.icons.outlined.Info
 import android.speech.RecognizerIntent
 import android.content.Intent
 import android.app.Activity
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -150,21 +148,26 @@ fun UnifiedRecordScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { 
-                        Column {
-                            Text(
-                                text = "利用者記録",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            currentPerson?.let { person ->
+                    title = {
+                        currentPerson?.let { person ->
+                            Column {
                                 Text(
-                                    text = "${person.getMaskedName(isNameMaskingEnabled)}さん（${age}歳）",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    text = person.getMaskedFurigana(isNameMaskingEnabled),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Text(
+                                    text = buildString {
+                                        append(person.getMaskedName(isNameMaskingEnabled))
+                                        append(" さん")
+                                        if (age != null) append(" (${age}歳)")
+                                        if (person.note.isNotBlank()) append(" [${person.note}]")
+                                    },
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
                                 )
                             }
-                        }
+                        } ?: Text("利用者記録", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -268,13 +271,6 @@ fun UnifiedRecordScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "${currentCategory.displayName}の記録: ${records.size}件",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-
             if (currentCategory != Category.CONDITION_AT_VISIT) {
                 InputForm(
                     categoryType = currentCategory,
@@ -338,6 +334,14 @@ fun UnifiedRecordScreen(
                         )
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            item {
+                                Text(
+                                    text = "${currentCategory.displayName}の記録: ${records.size}件",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                                )
+                            }
                             items(records.size, key = { index ->
                                 when (val r = records[index]) {
                                     is HeightAndWeight -> r.id
@@ -816,8 +820,9 @@ fun InputForm(
                             }
                         },
                         modifier = Modifier.weight(1.8f).focusRequester(yearFocusRequester),
-                        onFocusChanged = { if (it.isFocused) yearText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        onFocusChanged = { state -> if (state.isFocused) yearText = "" },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() }),
                         isError = isYearError,
                         suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
                     )
@@ -833,7 +838,8 @@ fun InputForm(
                         },
                         modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester),
                         onFocusChanged = { if (it.isFocused) monthText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() }),
                         isError = isMonthError,
                         suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
                     )
@@ -849,7 +855,8 @@ fun InputForm(
                         },
                         modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester),
                         onFocusChanged = { if (it.isFocused) dayText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() }),
                         isError = isDayError,
                         suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
                     )
@@ -865,7 +872,8 @@ fun InputForm(
                         },
                         modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester),
                         onFocusChanged = { if (it.isFocused) hourText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() }),
                         isError = isHourError,
                         suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
                     )
@@ -893,76 +901,78 @@ fun InputForm(
                 when (categoryType) {
                     Category.HEIGHT_AND_WEIGHT -> {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = heightText,
                                 onValueChange = { heightText = filterDecimal(it) },
-                                label = { Text("身長") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) heightText = "" }.focusRequester(categoryFirstFocusRequester),
+                                modifier = Modifier.weight(1f).focusRequester(categoryFirstFocusRequester),
+                                onFocusChanged = { if (it.isFocused) heightText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                                singleLine = true
+                                label = { Text("身長") },
+                                suffix = { Text("cm", style = MaterialTheme.typography.labelSmall) }
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = weightText,
                                 onValueChange = { weightText = filterDecimal(it) },
-                                label = { Text("体重") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) weightText = "" }.focusRequester(dataField2Requester),
+                                modifier = Modifier.weight(1f).focusRequester(dataField2Requester),
+                                onFocusChanged = { if (it.isFocused) weightText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                                singleLine = true
+                                label = { Text("体重") },
+                                suffix = { Text("kg", style = MaterialTheme.typography.labelSmall) }
                             )
                         }
                     }
                     Category.BP_AND_PULSE -> {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = bpSystolicText,
                                 onValueChange = { bpSystolicText = filterInteger(it) },
-                                label = { Text("血圧(上)") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) bpSystolicText = "" }.focusRequester(categoryFirstFocusRequester),
+                                modifier = Modifier.weight(1f).focusRequester(categoryFirstFocusRequester),
+                                onFocusChanged = { if (it.isFocused) bpSystolicText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                                singleLine = true
+                                label = { Text("血圧(上)") }
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = bpDiastolicText,
                                 onValueChange = { bpDiastolicText = filterInteger(it) },
-                                label = { Text("血圧(下)") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) bpDiastolicText = "" }.focusRequester(dataField2Requester),
+                                modifier = Modifier.weight(1f).focusRequester(dataField2Requester),
+                                onFocusChanged = { if (it.isFocused) bpDiastolicText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() }),
-                                singleLine = true
+                                label = { Text("血圧(下)") }
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = pulseText,
                                 onValueChange = { pulseText = filterInteger(it) },
-                                label = { Text("脈拍") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) pulseText = "" }.focusRequester(dataField3Requester),
+                                modifier = Modifier.weight(1f).focusRequester(dataField3Requester),
+                                onFocusChanged = { if (it.isFocused) pulseText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                                singleLine = true
+                                label = { Text("脈拍") }
                             )
                         }
                     }
                     Category.GLUCOSE_AND_HBA1C -> {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = glucoseText,
                                 onValueChange = { glucoseText = filterInteger(it) },
-                                label = { Text("血糖値") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) glucoseText = "" }.focusRequester(categoryFirstFocusRequester),
+                                modifier = Modifier.weight(1f).focusRequester(categoryFirstFocusRequester),
+                                onFocusChanged = { if (it.isFocused) glucoseText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                                singleLine = true
+                                label = { Text("血糖値") }
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = hba1cText,
                                 onValueChange = { hba1cText = filterDecimal(it) },
-                                label = { Text("HbA1c") },
-                                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) hba1cText = "" }.focusRequester(dataField2Requester),
+                                modifier = Modifier.weight(1f).focusRequester(dataField2Requester),
+                                onFocusChanged = { if (it.isFocused) hba1cText = "" },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                                singleLine = true
+                                label = { Text("HbA1c") }
                             )
                         }
                     }
@@ -1014,19 +1024,19 @@ fun InputForm(
 fun GraphView(records: List<Any>, categoryType: Category) {
     var showHelpDialog by remember { mutableStateOf<String?>(null) }
     if (showHelpDialog != null) { AlertDialog(onDismissRequest = { showHelpDialog = null }, title = { Text("数値の目安") }, text = { Text(showHelpDialog!!) }, confirmButton = { TextButton(onClick = { showHelpDialog = null }) { Text("閉じる") } }) }
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         when (categoryType) {
             Category.BP_AND_PULSE -> {
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("血圧", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.Gray) } }
-                Box(modifier = Modifier.height(220.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("血圧", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val chartDataList = listOf(ChartLineData("血圧(上)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpSystolic?.toDouble() ?: 0.0) }, Color.Red), ChartLineData("血圧(下)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpDiastolic?.toDouble() ?: 0.0) }, Color.Blue))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9)))
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("脈拍", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.Gray) } }
-                Box(modifier = Modifier.height(220.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("脈拍", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val chartDataList = listOf(ChartLineData("脈拍", data.map { it.recordTime.toEpochMilli().toDouble() to (it.pulse?.toDouble() ?: 0.0) }, Color(0xFF4CAF50)))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, Color(0xFFE8F5E9)))
@@ -1034,36 +1044,94 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 }
             }
             Category.GLUCOSE_AND_HBA1C -> {
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("血糖値", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.GLUCOSE_EXPLANATION }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.Gray) } }
-                Box(modifier = Modifier.height(220.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("血糖値", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.GLUCOSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
+                    val glucoses = data.mapNotNull { it.glucose?.toDouble() }
                     val chartDataList = listOf(ChartLineData("血糖値", data.map { it.recordTime.toEpochMilli().toDouble() to (it.glucose?.toDouble() ?: 0.0) }, Color.Magenta))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, Color(0xFFE8F5E9)))
-                    if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 20.0, ranges = ranges, minYConstraint = 60.0, maxYConstraint = 110.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    
+                    if (chartDataList.any { it.points.isNotEmpty() } && glucoses.isNotEmpty()) {
+                        val minG = glucoses.minOrNull() ?: 70.0
+                        val maxG = glucoses.maxOrNull() ?: 110.0
+                        LineChart(
+                            dataList = chartDataList, 
+                            stepY = 10.0,
+                            ranges = ranges, 
+                            minYConstraint = minG - 10.0, 
+                            maxYConstraint = maxG + 10.0
+                        )
+                    } else {
+                        Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("HbA1c", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.HBA1C_EXPLANATION }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.Gray) } }
-                Box(modifier = Modifier.height(220.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("HbA1c", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.HBA1C_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
+                    val hba1cs = data.mapNotNull { it.hba1c }
                     val chartDataList = listOf(ChartLineData("HbA1c", data.map { it.recordTime.toEpochMilli().toDouble() to (it.hba1c ?: 0.0) }, Color.Red))
                     val ranges = listOf(ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, 6.4, Color(0xFFFFFDE7)), ChartRangeHighlight(HealthThresholds.HBA1C_DIABETES, 100.0, Color(0xFFFFEBEE)))
-                    if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 0.5, ranges = ranges, minYConstraint = 3.0, maxYConstraint = 7.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    
+                    if (chartDataList.any { it.points.isNotEmpty() } && hba1cs.isNotEmpty()) {
+                        val minH = hba1cs.minOrNull() ?: 5.0
+                        val maxH = hba1cs.maxOrNull() ?: 6.0
+                        LineChart(
+                            dataList = chartDataList, 
+                            stepY = 0.2, 
+                            ranges = ranges, 
+                            minYConstraint = minH - 0.5, 
+                            maxYConstraint = maxH + 0.5, 
+                            showDecimal = true
+                        )
+                    } else {
+                        Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    }
                 }
             }
             Category.HEIGHT_AND_WEIGHT -> {
-                Text("体重", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
-                Box(modifier = Modifier.height(220.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                Text("体重", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 2.dp))
+                Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
+                    val weights = data.mapNotNull { it.weight }
                     val chartDataList = listOf(ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue))
-                    if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, minYConstraint = 40.0, showDecimal = true) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    
+                    if (chartDataList.any { it.points.isNotEmpty() } && weights.isNotEmpty()) {
+                        val minW = weights.minOrNull() ?: 40.0
+                        val maxW = weights.maxOrNull() ?: 80.0
+                        LineChart(
+                            dataList = chartDataList, 
+                            stepY = 1.0,
+                            minYConstraint = minW - 2.0, 
+                            maxYConstraint = maxW + 2.0,
+                            showDecimal = true
+                        )
+                    } else {
+                        Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("BMI", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BMI_EXPLANATION }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.Gray) } }
-                Box(modifier = Modifier.height(220.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("BMI", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BMI_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
+                    val bmis = data.map { it.calculateBMI() }.filter { it > 0.0 }
                     val chartDataList = listOf(ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to it.calculateBMI() }, Color.Red))
                     val ranges = listOf(ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)), ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE)))
-                    if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 1.0, ranges = ranges, minYConstraint = 10.0, maxYConstraint = 35.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    
+                    if (chartDataList.any { it.points.isNotEmpty() } && bmis.isNotEmpty()) {
+                        val minB = bmis.minOrNull() ?: 20.0
+                        val maxB = bmis.maxOrNull() ?: 25.0
+                        LineChart(
+                            dataList = chartDataList, 
+                            stepY = 0.5,
+                            ranges = ranges, 
+                            minYConstraint = minB - 1.0, 
+                            maxYConstraint = maxB + 1.0,
+                            showDecimal = true
+                        )
+                    } else {
+                        Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                    }
                 }
             }
             else -> {}
@@ -1092,69 +1160,93 @@ fun LineChart(dataList: List<ChartLineData>, stepY: Double = 5.0, limits: List<C
     val minY = floor(minYInput / stepY) * stepY; val maxY = ceil(maxYInput / stepY) * stepY
     val yRange = if (maxY - minY == 0.0) stepY else maxY - minY
     val yStepsCount = (yRange / stepY).toInt()
-    val density = LocalDensity.current; val paddingLeft = 50.dp; val paddingTop = 40.dp; val paddingBottom = 40.dp
+    val density = LocalDensity.current
+    val paddingLeft = 40.dp
+    val paddingTop = 20.dp
+    val paddingBottom = 20.dp
     LaunchedEffect(allPoints.size) { scrollState.scrollTo(scrollState.maxValue) }
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                dataList.forEach { lineData ->
-                    Row(verticalAlignment = Alignment.CenterVertically) { Canvas(modifier = Modifier.size(8.dp)) { drawCircle(lineData.color) }; Spacer(modifier = Modifier.width(4.dp)); Text(lineData.label, style = legendStyle.copy(fontSize = 11.sp)) }
+        // データが2系列以上ある場合のみ凡例を表示
+        if (dataList.size > 1) {
+            Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    dataList.forEach { lineData ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Canvas(modifier = Modifier.size(8.dp)) { drawCircle(lineData.color) }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(lineData.label, style = legendStyle.copy(fontSize = 11.sp))
+                        }
+                    }
                 }
             }
         }
         Row(modifier = Modifier.weight(1f)) {
             Canvas(modifier = Modifier.width(paddingLeft).fillMaxHeight()) {
-                val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx(); val topPx = paddingTop.toPx()
+                val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
+                val topPx = paddingTop.toPx()
                 for (i in 0..yStepsCount) {
-                    val yVal = minY + stepY * i; val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
+                    val yVal = minY + stepY * i
+                    val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
                     val label = if (showDecimal || stepY <= 1.0) "%.1f".format(yVal) else yVal.toInt().toString()
-                    val textLayout = textMeasurer.measure(label, labelStyle); drawText(textLayout, topLeft = Offset(size.width - textLayout.size.width - 8.dp.toPx(), py - textLayout.size.height / 2))
+                    val textLayout = textMeasurer.measure(label, labelStyle)
+                    // 右側の余白を 8.dp -> 4.dp に詰める
+                    drawText(textLayout, topLeft = Offset(size.width - textLayout.size.width - 4.dp.toPx(), py - textLayout.size.height / 2))
                 }
             }
-            BoxWithConstraints(modifier = Modifier.weight(1f)) {
-                val leftBufferPx = with(density) { 32.dp.toPx() }; val rightBufferPx = with(density) { 8.dp.toPx() }
-                val availableWidthPx = with(density) { maxWidth.toPx() } - rightBufferPx; val oneYearMillis = 365.0 * 24 * 60 * 60 * 1000.0
-                val totalDuration = maxOf(maxX - minX, oneYearMillis); val graphContentWidthPx = (totalDuration / oneYearMillis) * availableWidthPx + leftBufferPx + rightBufferPx
-                Box(modifier = Modifier.fillMaxSize().horizontalScroll(scrollState)) {
-                    val graphWidthDp = with(density) { graphContentWidthPx.toFloat().toDp() }
-                    Canvas(modifier = Modifier.width(graphWidthDp).fillMaxHeight()) {
-                        val chartWidth = size.width - leftBufferPx - rightBufferPx; val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx(); val topPx = paddingTop.toPx(); val startX = leftBufferPx
-                        ranges.forEach { range ->
-                            val pyStart = topPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight; val pyEnd = topPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
-                            val top = pyEnd.coerceIn(topPx, topPx + chartHeight); val bottom = pyStart.coerceIn(topPx, topPx + chartHeight)
-                            if (bottom > top) drawRect(color = range.color, topLeft = Offset(startX, top), size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top))
-                        }
-                        for (i in 0..yStepsCount) { val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight; drawLine(color = Color.LightGray.copy(alpha = 0.5f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx()) }
-                        val quarterMillis = oneYearMillis / 4.0; var currentX = minX
-                        while (currentX <= maxX || currentX <= minX + totalDuration) {
-                            val px = startX + ((currentX - minX) / totalDuration).toFloat() * chartWidth
-                            if (px <= startX + chartWidth) {
-                                drawLine(color = Color.LightGray.copy(alpha = 0.3f), start = Offset(px, topPx), end = Offset(px, topPx + chartHeight), strokeWidth = 1.dp.toPx())
-                                val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd").withLocale(Locale.JAPAN).format(Instant.ofEpochMilli(currentX.toLong()).atZone(ZoneId.systemDefault()))
-                                val textLayout = textMeasurer.measure(dateStr, labelStyle); drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, topPx + chartHeight + 4.dp.toPx()))
-                            }
-                            currentX += quarterMillis; if (quarterMillis == 0.0) break
-                        }
-                        limits.forEach { limit ->
-                            val py = topPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
-                            if (py in topPx..(topPx + chartHeight)) {
-                                drawLine(color = limit.color.copy(alpha = 0.6f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
-                                val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color)); drawText(labelLayout, topLeft = Offset(startX + 4.dp.toPx(), if (limit.isLabelAbove) py - labelLayout.size.height - 2.dp.toPx() else py + 2.dp.toPx()))
-                            }
-                        }
-                        dataList.forEach { lineData ->
-                            val path = Path(); val sortedPoints = lineData.points.sortedBy { it.first }
-                            sortedPoints.forEachIndexed { index, (x, y) ->
-                                val px = startX + ((x - minX) / totalDuration).toFloat() * chartWidth; val py = topPx + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
-                                if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
-                                drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
-                                val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
-                                val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color)); drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
-                            }
-                            drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
-                        }
-                        drawLine(Color.Gray, Offset(startX, topPx), Offset(startX, topPx + chartHeight), strokeWidth = 1.5.dp.toPx()); drawLine(Color.Gray, Offset(startX, topPx + chartHeight), Offset(startX + chartWidth, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+            Box(modifier = Modifier.weight(1f)) {
+                // 左右のバッファを 32.dp/8.dp -> 4.dp/4.dp に大幅に詰める
+                val leftBufferPx = with(density) { 4.dp.toPx() }
+                val rightBufferPx = with(density) { 4.dp.toPx() }
+                
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val chartWidth = size.width - leftBufferPx - rightBufferPx
+                    val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
+                    val topPx = paddingTop.toPx()
+                    val startX = leftBufferPx
+
+                    // X軸の範囲をデータの期間に合わせる
+                    val duration = if (maxX - minX == 0.0) 1.0 else maxX - minX
+
+                    ranges.forEach { range ->
+                        val pyStart = topPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
+                        val pyEnd = topPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
+                        val top = pyEnd.coerceIn(topPx, topPx + chartHeight)
+                        val bottom = pyStart.coerceIn(topPx, topPx + chartHeight)
+                        if (bottom > top) drawRect(color = range.color, topLeft = Offset(startX, top), size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top))
                     }
+                    for (i in 0..yStepsCount) { val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight; drawLine(color = Color.LightGray.copy(alpha = 0.5f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx()) }
+                    
+                    // グリッドとラベル（全件表示に合わせて等間隔に4つ程度）
+                    val labelCount = 4
+                    for (i in 0 until labelCount) {
+                        val currentX = minX + (duration * i / (labelCount - 1))
+                        val px = startX + ((currentX - minX) / duration).toFloat() * chartWidth
+                        
+                        drawLine(color = Color.LightGray.copy(alpha = 0.3f), start = Offset(px, topPx), end = Offset(px, topPx + chartHeight), strokeWidth = 1.dp.toPx())
+                        val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd").withLocale(Locale.JAPAN).format(Instant.ofEpochMilli(currentX.toLong()).atZone(ZoneId.systemDefault()))
+                        val textLayout = textMeasurer.measure(dateStr, labelStyle)
+                        drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, topPx + chartHeight + 4.dp.toPx()))
+                    }
+
+                    limits.forEach { limit ->
+                        val py = topPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
+                        if (py in topPx..(topPx + chartHeight)) {
+                            drawLine(color = limit.color.copy(alpha = 0.6f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
+                            val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color)); drawText(labelLayout, topLeft = Offset(startX + 4.dp.toPx(), if (limit.isLabelAbove) py - labelLayout.size.height - 2.dp.toPx() else py + 2.dp.toPx()))
+                        }
+                    }
+                    dataList.forEach { lineData ->
+                        val path = Path(); val sortedPoints = lineData.points.sortedBy { it.first }
+                        sortedPoints.forEachIndexed { index, (x, y) ->
+                            val px = startX + ((x - minX) / duration).toFloat() * chartWidth; val py = topPx + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
+                            if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                            drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
+                            val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
+                            val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color)); drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
+                        }
+                        drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
+                    }
+                    drawLine(Color.Gray, Offset(startX, topPx), Offset(startX, topPx + chartHeight), strokeWidth = 1.5.dp.toPx()); drawLine(Color.Gray, Offset(startX, topPx + chartHeight), Offset(startX + chartWidth, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                 }
             }
         }
@@ -1188,11 +1280,56 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompactTextField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier, isError: Boolean = false, suffix: @Composable (() -> Unit)? = null, keyboardOptions: KeyboardOptions = KeyboardOptions.Default, keyboardActions: KeyboardActions = KeyboardActions.Default, onFocusChanged: (FocusState) -> Unit = {}) {
+fun CompactTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    suffix: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    onFocusChanged: (FocusState) -> Unit = {}
+) {
     val interactionSource = remember { MutableInteractionSource() }
-    BasicTextField(value = value, onValueChange = onValueChange, modifier = modifier.onFocusChanged(onFocusChanged), interactionSource = interactionSource, enabled = true, singleLine = true, keyboardOptions = keyboardOptions, keyboardActions = keyboardActions, textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center), decorationBox = { innerTextField ->
-        OutlinedTextFieldDefaults.DecorationBox(value = value, innerTextField = innerTextField, enabled = true, singleLine = true, visualTransformation = VisualTransformation.None, interactionSource = interactionSource, isError = isError, suffix = suffix, colors = OutlinedTextFieldDefaults.colors(), contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp), container = { OutlinedTextFieldDefaults.Container(enabled = true, isError = isError, interactionSource = interactionSource, colors = OutlinedTextFieldDefaults.colors(), shape = OutlinedTextFieldDefaults.shape) })
-    })
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.onFocusChanged(onFocusChanged),
+        interactionSource = interactionSource,
+        enabled = true,
+        singleLine = true,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        ),
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = innerTextField,
+                enabled = true,
+                singleLine = true,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interactionSource,
+                isError = isError,
+                label = label,
+                suffix = suffix,
+                colors = OutlinedTextFieldDefaults.colors(),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                container = {
+                    OutlinedTextFieldDefaults.Container(
+                        enabled = true,
+                        isError = isError,
+                        interactionSource = interactionSource,
+                        colors = OutlinedTextFieldDefaults.colors(),
+                        shape = OutlinedTextFieldDefaults.shape,
+                    )
+                }
+            )
+        }
+    )
 }
 
 fun formatRecordTime(instant: Instant): String {
@@ -1238,7 +1375,31 @@ fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, 
     val initialTime = memo?.recordTime ?: Instant.now(); val zonedDateTime = initialTime.atZone(ZoneId.systemDefault())
     var year by remember { mutableStateOf(zonedDateTime.year.toString()) }; var month by remember { mutableStateOf(zonedDateTime.monthValue.toString()) }; var day by remember { mutableStateOf(zonedDateTime.dayOfMonth.toString()) }; var hour by remember { mutableStateOf("%02d".format(zonedDateTime.hour)) }; var minute by remember { mutableStateOf("%02d".format(zonedDateTime.minute)) }
     val monthFocusRequester = remember { FocusRequester() }; val dayFocusRequester = remember { FocusRequester() }; val hourFocusRequester = remember { FocusRequester() }; val minuteFocusRequester = remember { FocusRequester() }
-    val speechLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result -> if (result.resultCode == Activity.RESULT_OK) { val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0); if (spokenText != null) condition = if (condition.isBlank()) spokenText else "$condition\n$spokenText" } }
+    val speechLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
+            if (spokenText != null) {
+                // 句読点の自動補完と改行の挿入
+                val formattedText = buildString {
+                    append(spokenText.trim())
+                    // 末尾が句読点等でなければ「。」を付与
+                    if (!spokenText.trim().any { it in "。、？！?.!" }) {
+                        append("。")
+                    }
+                    append("\n")
+                }
+                
+                // 既存の文章があれば末尾に追加
+                condition = if (condition.isBlank()) {
+                    formattedText
+                } else {
+                    // 既存の末尾が改行でなければ改行を挟んでから追加
+                    val separator = if (condition.endsWith("\n")) "" else "\n"
+                    condition + separator + formattedText
+                }
+            }
+        }
+    }
     AlertDialog(onDismissRequest = onDismiss, confirmButton = { if (isEditMode) { Button(onClick = { val recordTime = try { java.time.LocalDateTime.of(year.toInt(), month.toInt(), day.toInt(), hour.toInt(), minute.toInt()).atZone(ZoneId.systemDefault()).toInstant() } catch (e: Exception) { initialTime }; onSave(ConditionAtVisit(id = memo?.id ?: 0, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)) }, enabled = author.isNotBlank() && condition.isNotBlank()) { Text("保存") } } else { Button(onClick = onEditClick) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("記録を修正") } } }, dismissButton = { TextButton(onClick = onDismiss) { Text(if (isEditMode) "キャンセル" else "閉じる") } }, title = { Text(if (memo == null) "新規記録" else if (isEditMode) "記録の編集" else "記録の参照") }, text = {
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isEditMode) {
