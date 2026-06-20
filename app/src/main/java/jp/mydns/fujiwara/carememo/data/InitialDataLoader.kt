@@ -54,13 +54,19 @@ class InitialDataLoader(private val context: Context, private val repository: Ca
                 val lastNameFurigana = furiganaParts.getOrElse(0) { "" }
                 val firstNameFurigana = furiganaParts.getOrElse(1) { "" }
 
+                // 生年月日の時刻を 00:00:00 に正規化（重複判定を確実にするため）
+                val normalizedBirthday = dto.birthday.atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate()
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+
                 val person = Person(
                     id = dto.id, // 旧アプリのIDを維持
                     lastName = lastName,
                     firstName = firstName,
                     lastNameFurigana = lastNameFurigana,
                     firstNameFurigana = firstNameFurigana,
-                    birthday = dto.birthday,
+                    birthday = normalizedBirthday,
                     note = dto.note
                 )
                 repository.insertPerson(person)

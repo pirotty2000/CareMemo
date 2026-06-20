@@ -808,7 +808,7 @@ fun InputForm(
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = "記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     CompactTextField(
                         value = yearText,
                         onValueChange = { 
@@ -819,7 +819,7 @@ fun InputForm(
                                 if (filtered.length == 4) monthFocusRequester.requestFocus()
                             }
                         },
-                        modifier = Modifier.weight(1.8f).focusRequester(yearFocusRequester),
+                        modifier = Modifier.weight(1.5f).focusRequester(yearFocusRequester),
                         onFocusChanged = { state -> if (state.isFocused) yearText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() }),
@@ -836,7 +836,7 @@ fun InputForm(
                                 if (filtered.length == 2) dayFocusRequester.requestFocus()
                             }
                         },
-                        modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester),
+                        modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
                         onFocusChanged = { if (it.isFocused) monthText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() }),
@@ -853,13 +853,15 @@ fun InputForm(
                                 if (filtered.length == 2) hourFocusRequester.requestFocus()
                             }
                         },
-                        modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester),
+                        modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
                         onFocusChanged = { if (it.isFocused) dayText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() }),
                         isError = isDayError,
-                        suffix = { Text("日", style = MaterialTheme.typography.labelSmall) }
+                        suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
                     )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     CompactTextField(
                         value = hourText,
                         onValueChange = { 
@@ -870,12 +872,12 @@ fun InputForm(
                                 if (filtered.length == 2) minuteFocusRequester.requestFocus()
                             }
                         },
-                        modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester),
+                        modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
                         onFocusChanged = { if (it.isFocused) hourText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() }),
                         isError = isHourError,
-                        suffix = { Text(":", style = MaterialTheme.typography.bodySmall) }
+                        suffix = { Text("時", style = MaterialTheme.typography.bodySmall) }
                     )
                     CompactTextField(
                         value = minuteText,
@@ -887,11 +889,13 @@ fun InputForm(
                                 if (filtered.length == 2) focusManager.clearFocus()
                             }
                         },
-                        modifier = Modifier.weight(1.1f).focusRequester(minuteFocusRequester),
+                        modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
                         onFocusChanged = { if (it.isFocused) minuteText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        isError = isMinuteError
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                        isError = isMinuteError,
+                        suffix = { Text("分", style = MaterialTheme.typography.bodySmall) }
                     )
+                    Spacer(modifier = Modifier.weight(1.5f))
                 }
             }
 
@@ -1071,7 +1075,11 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val hba1cs = data.mapNotNull { it.hba1c }
                     val chartDataList = listOf(ChartLineData("HbA1c", data.map { it.recordTime.toEpochMilli().toDouble() to (it.hba1c ?: 0.0) }, Color.Red))
-                    val ranges = listOf(ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, 6.4, Color(0xFFFFFDE7)), ChartRangeHighlight(HealthThresholds.HBA1C_DIABETES, 100.0, Color(0xFFFFEBEE)))
+                    val ranges = listOf(
+                        ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)),
+                        ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, HealthThresholds.HBA1C_DIABETES, Color(0xFFFFFDE7)),
+                        ChartRangeHighlight(HealthThresholds.HBA1C_DIABETES, 100.0, Color(0xFFFFEBEE))
+                    )
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && hba1cs.isNotEmpty()) {
                         val minH = hba1cs.minOrNull() ?: 5.0
@@ -1404,12 +1412,15 @@ fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, 
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isEditMode) {
                 Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = year, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 4) { year = filtered; if (filtered.length == 4) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.8f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), suffix = { Text("年", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = month, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { month = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.2f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), suffix = { Text("月", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = day, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { day = filtered; if (filtered.length == 2) hourFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.2f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), suffix = { Text("日", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = hour, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { hour = filtered; if (filtered.length == 2) minuteFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.1f).focusRequester(hourFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), suffix = { Text(":", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = minute, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) minute = filtered }, modifier = Modifier.weight(1.1f).focusRequester(minuteFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CompactTextField(value = year, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 4) { year = filtered; if (filtered.length == 4) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.5f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("年", style = MaterialTheme.typography.bodySmall) })
+                    CompactTextField(value = month, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { month = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("月", style = MaterialTheme.typography.bodySmall) })
+                    CompactTextField(value = day, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { day = filtered; if (filtered.length == 2) hourFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("日", style = MaterialTheme.typography.bodySmall) })
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CompactTextField(value = hour, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { hour = filtered; if (filtered.length == 2) minuteFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(hourFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("時", style = MaterialTheme.typography.bodySmall) })
+                    CompactTextField(value = minute, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) minute = filtered }, modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done))
+                    Spacer(modifier = Modifier.weight(1.5f)) // バランス調整用
                 }
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("タイトル (任意)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth())

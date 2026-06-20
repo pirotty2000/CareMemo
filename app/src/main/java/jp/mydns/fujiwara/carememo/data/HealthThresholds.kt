@@ -48,7 +48,7 @@ object HealthThresholds {
     val HBA1C_EXPLANATION = """
         HbA1cグラフの見方：
         ・薄い緑色（$HBA1C_GOOD％以下）：良好
-        ・薄い黄色（$HBA1C_PREDIABETES％〜6.4％）：糖尿病予備軍
+        ・薄い黄色（$HBA1C_PREDIABETES％〜${HBA1C_DIABETES}％未満）：糖尿病予備軍
         ・薄い赤色（$HBA1C_DIABETES％以上）：糖尿病が強く疑われる値
     """.trimIndent()
 

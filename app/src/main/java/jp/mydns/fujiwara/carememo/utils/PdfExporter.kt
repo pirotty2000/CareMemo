@@ -67,36 +67,47 @@ object PdfExporter {
             Category.HEIGHT_AND_WEIGHT -> {
                 val castedRecords = filteredRecords.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    currentY = drawSingleGraph(
-                        canvas = canvas,
-                        title = "体重(kg) 推移",
-                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to (it.weight ?: 0.0) } to Color.rgb(0, 100, 200)),
-                        startY = currentY,
-                        height = SINGLE_GRAPH_HEIGHT,
-                        yStep = 10.0,
-                        ranges = emptyList(),
-                        limitLines = emptyList(),
-                        isInteger = false
-                    )
-                    currentY += 25f
-                    currentY = drawSingleGraph(
-                        canvas = canvas,
-                        title = "BMI 推移",
-                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to it.calculateBMI() } to Color.rgb(200, 50, 50)),
-                        startY = currentY,
-                        height = SINGLE_GRAPH_HEIGHT,
-                        yStep = 2.0,
-                        ranges = listOf((0.0 to HealthThresholds.BMI_NORMAL_LOW) to 0xFFF0F0F0.toInt(), (HealthThresholds.BMI_NORMAL_HIGH to 100.0) to 0xFFD8D8D8.toInt()),
-                        limitLines = emptyList(),
-                        isInteger = false,
-                        subtitles = listOf(
-                            "【判定基準(WHO)】",
-                            "・${HealthThresholds.BMI_NORMAL_LOW}未満：低体重",
-                            "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：普通体重",
-                            "・${HealthThresholds.BMI_NORMAL_HIGH}以上：肥満"
+                    // 体重データがある場合のみ描画
+                    val weightData = castedRecords.filter { it.weight != null }.map { it.recordTime.toEpochMilli() to it.weight!! }
+                    if (weightData.isNotEmpty()) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "体重(kg) 推移",
+                            lineDataList = listOf(weightData to Color.rgb(0, 100, 200)),
+                            startY = currentY,
+                            height = SINGLE_GRAPH_HEIGHT,
+                            yStep = 10.0,
+                            ranges = emptyList(),
+                            limitLines = emptyList(),
+                            isInteger = false
                         )
-                    )
-                    currentY += 40f
+                        currentY += 25f
+                    }
+
+                    // BMI計算可能なデータ（身長と体重が両方ある）がある場合のみ描画
+                    val bmiData = castedRecords.filter { it.height != null && it.weight != null }
+                        .map { it.recordTime.toEpochMilli() to it.calculateBMI() }
+                    
+                    if (bmiData.isNotEmpty()) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "BMI 推移",
+                            lineDataList = listOf(bmiData to Color.rgb(200, 50, 50)),
+                            startY = currentY,
+                            height = SINGLE_GRAPH_HEIGHT,
+                            yStep = 2.0,
+                            ranges = listOf((0.0 to HealthThresholds.BMI_NORMAL_LOW) to 0xFFF0F0F0.toInt(), (HealthThresholds.BMI_NORMAL_HIGH to 100.0) to 0xFFD8D8D8.toInt()),
+                            limitLines = emptyList(),
+                            isInteger = false,
+                            subtitles = listOf(
+                                "【判定基準(WHO)】",
+                                "・${HealthThresholds.BMI_NORMAL_LOW}未満：低体重",
+                                "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：普通体重",
+                                "・${HealthThresholds.BMI_NORMAL_HIGH}以上：肥満"
+                            )
+                        )
+                        currentY += 40f
+                    }
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
                 drawHeightAndWeightTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
@@ -110,48 +121,59 @@ object PdfExporter {
                     val highDash = DashPathEffect(floatArrayOf(8f, 4f), 0f)
                     val lowDash = DashPathEffect(floatArrayOf(2f, 2f), 0f)
 
-                    currentY = drawSingleGraph(
-                        canvas = canvas,
-                        title = "血圧 (mmHg) 推移",
-                        lineDataList = listOf(
-                            castedRecords.map { it.recordTime.toEpochMilli() to (it.bpSystolic?.toDouble() ?: 0.0) } to Color.rgb(200, 50, 50),
-                            castedRecords.map { it.recordTime.toEpochMilli() to (it.bpDiastolic?.toDouble() ?: 0.0) } to Color.rgb(0, 100, 200)
-                        ),
-                        startY = currentY,
-                        height = 180f,
-                        yStep = 20.0,
-                        ranges = emptyList(),
-                        limitLines = listOf(
-                            Triple(HealthThresholds.BP_HIGH_SYSTOLIC, highDash, "高血圧目安"),
-                            Triple(HealthThresholds.BP_HIGH_DIASTOLIC, highDash, ""),
-                            Triple(HealthThresholds.BP_LOW_SYSTOLIC, lowDash, "低血圧目安"),
-                            Triple(HealthThresholds.BP_LOW_DIASTOLIC, lowDash, "")
-                        ),
-                        isInteger = true,
-                        subtitles = listOf(
-                            "高血圧目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
-                            "低血圧目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
+                    // 血圧データ（上または下）がある場合のみ描画
+                    val bpData = mutableListOf<Pair<List<Pair<Long, Double>>, Int>>()
+                    val sysData = castedRecords.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli() to it.bpSystolic!!.toDouble() }
+                    val diaData = castedRecords.filter { it.bpDiastolic != null }.map { it.recordTime.toEpochMilli() to it.bpDiastolic!!.toDouble() }
+                    if (sysData.isNotEmpty()) bpData.add(sysData to Color.rgb(200, 50, 50))
+                    if (diaData.isNotEmpty()) bpData.add(diaData to Color.rgb(0, 100, 200))
+
+                    if (bpData.isNotEmpty()) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "血圧 (mmHg) 推移",
+                            lineDataList = bpData,
+                            startY = currentY,
+                            height = 180f,
+                            yStep = 20.0,
+                            ranges = emptyList(),
+                            limitLines = listOf(
+                                Triple(HealthThresholds.BP_HIGH_SYSTOLIC, highDash, "高血圧目安"),
+                                Triple(HealthThresholds.BP_HIGH_DIASTOLIC, highDash, ""),
+                                Triple(HealthThresholds.BP_LOW_SYSTOLIC, lowDash, "低血圧目安"),
+                                Triple(HealthThresholds.BP_LOW_DIASTOLIC, lowDash, "")
+                            ),
+                            isInteger = true,
+                            subtitles = listOf(
+                                "高血圧目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
+                                "低血圧目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
+                            )
                         )
-                    )
-                    currentY += 25f
-                    currentY = drawSingleGraph(
-                        canvas = canvas,
-                        title = "脈拍 (bpm) 推移",
-                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to (it.pulse?.toDouble() ?: 0.0) } to Color.rgb(50, 150, 50)),
-                        startY = currentY,
-                        height = 120f,
-                        yStep = 20.0,
-                        ranges = listOf(
-                            (0.0 to HealthThresholds.PULSE_LOW) to 0xFFF0F0F0.toInt(),
-                            (HealthThresholds.PULSE_HIGH to 200.0) to 0xFFD8D8D8.toInt()
-                        ),
-                        limitLines = emptyList(),
-                        isInteger = true,
-                        subtitles = listOf(
-                            "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (正常範囲)"
+                        currentY += 25f
+                    }
+
+                    // 脈拍データがある場合のみ描画
+                    val pulseData = castedRecords.filter { it.pulse != null }.map { it.recordTime.toEpochMilli() to it.pulse!!.toDouble() }
+                    if (pulseData.isNotEmpty()) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "脈拍 (bpm) 推移",
+                            lineDataList = listOf(pulseData to Color.rgb(50, 150, 50)),
+                            startY = currentY,
+                            height = 120f,
+                            yStep = 20.0,
+                            ranges = listOf(
+                                (0.0 to HealthThresholds.PULSE_LOW) to 0xFFF0F0F0.toInt(),
+                                (HealthThresholds.PULSE_HIGH to 200.0) to 0xFFD8D8D8.toInt()
+                            ),
+                            limitLines = emptyList(),
+                            isInteger = true,
+                            subtitles = listOf(
+                                "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (正常範囲)"
+                            )
                         )
-                    )
-                    currentY += 40f
+                        currentY += 40f
+                    }
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
                 drawBpAndPulseTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
@@ -162,40 +184,49 @@ object PdfExporter {
             Category.GLUCOSE_AND_HBA1C -> {
                 val castedRecords = filteredRecords.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    currentY = drawSingleGraph(
-                        canvas = canvas,
-                        title = "血糖値 (mg/dL) 推移",
-                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to (it.glucose?.toDouble() ?: 0.0) } to Color.rgb(150, 0, 150)),
-                        startY = currentY,
-                        height = SINGLE_GRAPH_HEIGHT,
-                        yStep = 20.0,
-                        ranges = listOf(
-                            (0.0 to HealthThresholds.GLUCOSE_NORMAL_LOW) to 0xFFF0F0F0.toInt(),
-                            (HealthThresholds.GLUCOSE_NORMAL_HIGH to 500.0) to 0xFFD8D8D8.toInt()
-                        ),
-                        isInteger = true,
-                        subtitles = listOf(
-                            "血糖値の目安：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL (空腹時など)"
+                    // 血糖値データがある場合のみ描画
+                    val glucoseData = castedRecords.filter { it.glucose != null }.map { it.recordTime.toEpochMilli() to it.glucose!!.toDouble() }
+                    if (glucoseData.isNotEmpty()) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "血糖値 (mg/dL) 推移",
+                            lineDataList = listOf(glucoseData to Color.rgb(150, 0, 150)),
+                            startY = currentY,
+                            height = SINGLE_GRAPH_HEIGHT,
+                            yStep = 20.0,
+                            ranges = listOf(
+                                (0.0 to HealthThresholds.GLUCOSE_NORMAL_LOW) to 0xFFF0F0F0.toInt(),
+                                (HealthThresholds.GLUCOSE_NORMAL_HIGH to 500.0) to 0xFFD8D8D8.toInt()
+                            ),
+                            isInteger = true,
+                            subtitles = listOf(
+                                "血糖値の目安：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL (空腹時など)"
+                            )
                         )
-                    )
-                    currentY += 25f
-                    currentY = drawSingleGraph(
-                        canvas = canvas,
-                        title = "HbA1c (%) 推移",
-                        lineDataList = listOf(castedRecords.map { it.recordTime.toEpochMilli() to (it.hba1c ?: 0.0) } to Color.rgb(200, 50, 50)),
-                        startY = currentY,
-                        height = SINGLE_GRAPH_HEIGHT,
-                        yStep = 1.0,
-                        ranges = listOf(
-                            (HealthThresholds.HBA1C_PREDIABETES to 6.4) to 0xFFF0F0F0.toInt(),
-                            (HealthThresholds.HBA1C_DIABETES to 20.0) to 0xFFD8D8D8.toInt()
-                        ),
-                        isInteger = false,
-                        subtitles = listOf(
-                            "HbA1c目安：良好(${HealthThresholds.HBA1C_GOOD}%以下) / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}-6.4%) / 疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
+                        currentY += 25f
+                    }
+
+                    // HbA1cデータがある場合のみ描画
+                    val hba1cData = castedRecords.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli() to it.hba1c!! }
+                    if (hba1cData.isNotEmpty()) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "HbA1c (%) 推移",
+                            lineDataList = listOf(hba1cData to Color.rgb(200, 50, 50)),
+                            startY = currentY,
+                            height = SINGLE_GRAPH_HEIGHT,
+                            yStep = 1.0,
+                            ranges = listOf(
+                                (HealthThresholds.HBA1C_PREDIABETES to HealthThresholds.HBA1C_DIABETES) to 0xFFF0F0F0.toInt(),
+                                (HealthThresholds.HBA1C_DIABETES to 20.0) to 0xFFD8D8D8.toInt()
+                            ),
+                            isInteger = false,
+                            subtitles = listOf(
+                                "HbA1c目安：良好(${HealthThresholds.HBA1C_GOOD}%以下) / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}-${HealthThresholds.HBA1C_DIABETES}%) / 疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
+                            )
                         )
-                    )
-                    currentY += 40f
+                        currentY += 40f
+                    }
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
                 drawGlucoseAndHbA1cTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->

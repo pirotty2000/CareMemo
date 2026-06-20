@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -431,24 +432,61 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("姓") }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("名") }, modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text("姓") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text("名") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = lastNameFurigana, onValueChange = { lastNameFurigana = it }, label = { Text("せい") }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(value = firstNameFurigana, onValueChange = { firstNameFurigana = it }, label = { Text("めい") }, modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(
+                        value = lastNameFurigana,
+                        onValueChange = { lastNameFurigana = it },
+                        label = { Text("せい") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = firstNameFurigana,
+                        onValueChange = { firstNameFurigana = it },
+                        label = { Text("めい") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
                 }
-                OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("同姓同名識別用メモ") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("同姓同名識別用メモ") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("生年月日", style = MaterialTheme.typography.labelMedium)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ExposedDropdownMenuBox(expanded = eraExpanded, onExpandedChange = { eraExpanded = !eraExpanded }, modifier = Modifier.weight(2.0f)) {
-                        OutlinedTextField(value = selectedEra.displayName, onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable), singleLine = true, textStyle = MaterialTheme.typography.bodySmall)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ExposedDropdownMenuBox(expanded = eraExpanded, onExpandedChange = { eraExpanded = !eraExpanded }, modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(value = selectedEra.displayName, onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable), singleLine = true, textStyle = MaterialTheme.typography.bodyMedium)
                         ExposedDropdownMenu(expanded = eraExpanded, onDismissRequest = { eraExpanded = false }) { BirthEra.entries.forEach { era -> DropdownMenuItem(text = { Text(era.displayName, style = MaterialTheme.typography.bodyMedium) }, onClick = { selectedEra = era; eraExpanded = false }) } }
                     }
-                    CompactTextField(value = yearText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; val maxLength = if (selectedEra == BirthEra.AD) 4 else 2; if (filtered.length <= maxLength) { yearText = filtered; if (filtered.length == maxLength) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.2f).focusRequester(yearFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = isYearError, suffix = { Text("年", style = MaterialTheme.typography.labelSmall) })
-                    CompactTextField(value = monthText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) { monthText = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(0.9f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = isMonthError, suffix = { Text("月", style = MaterialTheme.typography.labelSmall) })
-                    CompactTextField(value = dayText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) dayText = filtered }, modifier = Modifier.weight(0.9f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = isDayError, suffix = { Text("日", style = MaterialTheme.typography.labelSmall) })
+                    CompactTextField(value = yearText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; val maxLength = if (selectedEra == BirthEra.AD) 4 else 2; if (filtered.length <= maxLength) { yearText = filtered; if (filtered.length == maxLength) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(yearFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isYearError, suffix = { Text("年", style = MaterialTheme.typography.labelSmall) })
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CompactTextField(value = monthText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) { monthText = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isMonthError, suffix = { Text("月", style = MaterialTheme.typography.labelSmall) })
+                    CompactTextField(value = dayText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) dayText = filtered }, modifier = Modifier.weight(1f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isDayError, suffix = { Text("日", style = MaterialTheme.typography.labelSmall) })
                 }
             }
         },

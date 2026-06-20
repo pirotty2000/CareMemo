@@ -50,6 +50,13 @@ class PersonListViewModel(
             initialValue = false
         )
 
+    val isBiometricEnabled: StateFlow<Boolean> = userSettingsRepository.isBiometricEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
     val defaultRecorderName: StateFlow<String> = userSettingsRepository.defaultRecorderName
         .stateIn(
             scope = viewModelScope,
@@ -60,6 +67,12 @@ class PersonListViewModel(
     fun setNameMaskingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSettingsRepository.setNameMaskingEnabled(enabled)
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userSettingsRepository.setBiometricEnabled(enabled)
         }
     }
 

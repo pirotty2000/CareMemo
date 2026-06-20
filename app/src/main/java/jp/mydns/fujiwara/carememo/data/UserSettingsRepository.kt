@@ -16,11 +16,17 @@ class UserSettingsRepository(private val context: Context) {
     companion object {
         private val IS_NAME_MASKING_ENABLED = booleanPreferencesKey("is_name_masking_enabled")
         private val DEFAULT_RECORDER_NAME = stringPreferencesKey("default_recorder_name")
+        private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
     }
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[IS_NAME_MASKING_ENABLED] ?: false
+        }
+
+    val isBiometricEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[IS_BIOMETRIC_ENABLED] ?: false
         }
 
     val defaultRecorderName: Flow<String> = context.dataStore.data
@@ -31,6 +37,12 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setNameMaskingEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_NAME_MASKING_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IS_BIOMETRIC_ENABLED] = enabled
         }
     }
 

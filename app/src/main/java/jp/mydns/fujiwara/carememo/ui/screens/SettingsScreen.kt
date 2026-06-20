@@ -32,6 +32,7 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
     val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
@@ -163,6 +164,16 @@ fun SettingsScreen(
                         Switch(
                             checked = isMaskingEnabled,
                             onCheckedChange = { viewModel.setNameMaskingEnabled(it) }
+                        )
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text("生体認証を使用する") },
+                    supportingContent = { Text("アプリ起動時に指紋や顔認証を要求します") },
+                    trailingContent = {
+                        Switch(
+                            checked = isBiometricEnabled,
+                            onCheckedChange = { viewModel.setBiometricEnabled(it) }
                         )
                     }
                 )
