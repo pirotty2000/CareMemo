@@ -20,13 +20,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 class PersonDetailViewModel(
     private val repository: CareMemoRepository,
     private val userSettingsRepository: UserSettingsRepository,
 ) : ViewModel() {
+
+    sealed interface UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent
+        data class ShowErrorDialog(val title: String, val message: String) : UiEvent
+    }
+
+    private val _uiEventFlow = MutableSharedFlow<UiEvent>()
+    val uiEventFlow = _uiEventFlow.asSharedFlow()
+
     private val _currentPerson = MutableStateFlow<Person?>(null)
     val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
 
@@ -49,9 +56,6 @@ class PersonDetailViewModel(
 
     private val _records = MutableStateFlow<List<Any>>(emptyList())
     val records: StateFlow<List<Any>> = _records.asStateFlow()
-
-    private val _snackbarFlow = MutableSharedFlow<String>()
-    val snackbarFlow = _snackbarFlow.asSharedFlow()
 
     fun loadPerson(personId: Int) {
         viewModelScope.launch {
@@ -86,35 +90,43 @@ class PersonDetailViewModel(
 
     fun saveRecord(record: Any?) {
         viewModelScope.launch {
-            val isUpdate = when (record) {
-                is HeightAndWeight -> record.id != 0
-                is BpAndPulse -> record.id != 0
-                is GlucoseAndHbA1c -> record.id != 0
-                is ConditionAtVisit -> record.id != 0
-                else -> false
-            }
+            try {
+                val isUpdate = when (record) {
+                    is HeightAndWeight -> record.id != 0
+                    is BpAndPulse -> record.id != 0
+                    is GlucoseAndHbA1c -> record.id != 0
+                    is ConditionAtVisit -> record.id != 0
+                    else -> false
+                }
 
-            when (record) {
-                is HeightAndWeight -> repository.insertHeightAndWeight(record)
-                is BpAndPulse -> repository.insertBpAndPulse(record)
-                is GlucoseAndHbA1c -> repository.insertGlucoseAndHbA1c(record)
-                is ConditionAtVisit -> repository.insertConditionAtVisit(record)
+                when (record) {
+                    is HeightAndWeight -> repository.insertHeightAndWeight(record)
+                    is BpAndPulse -> repository.insertBpAndPulse(record)
+                    is GlucoseAndHbA1c -> repository.insertGlucoseAndHbA1c(record)
+                    is ConditionAtVisit -> repository.insertConditionAtVisit(record)
+                }
+                
+                _uiEventFlow.emit(UiEvent.ShowSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました"))
+                _currentRecordState.value = null
+            } catch (e: Exception) {
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}"))
             }
-            
-            _snackbarFlow.emit(if (isUpdate) "記録を更新しました" else "記録を保存しました")
-            _currentRecordState.value = null
         }
     }
 
     fun deleteRecord(record: Any) {
         viewModelScope.launch {
-            when (record) {
-                is HeightAndWeight -> repository.deleteHeightAndWeight(record)
-                is BpAndPulse -> repository.deleteBpAndPulse(record)
-                is GlucoseAndHbA1c -> repository.deleteGlucoseAndHbA1c(record)
-                is ConditionAtVisit -> repository.deleteConditionAtVisit(record)
+            try {
+                when (record) {
+                    is HeightAndWeight -> repository.deleteHeightAndWeight(record)
+                    is BpAndPulse -> repository.deleteBpAndPulse(record)
+                    is GlucoseAndHbA1c -> repository.deleteGlucoseAndHbA1c(record)
+                    is ConditionAtVisit -> repository.deleteConditionAtVisit(record)
+                }
+                _uiEventFlow.emit(UiEvent.ShowSnackbar("記録を削除しました"))
+            } catch (e: Exception) {
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("削除エラー", "データの削除に失敗しました: ${e.localizedMessage}"))
             }
-            _snackbarFlow.emit("記録を削除しました")
         }
     }
 

@@ -65,9 +65,26 @@ fun MainScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var editingPerson by remember { mutableStateOf<Person?>(null) }
 
+    // ダイアログ表示用の状態
+    var dialogTitle by remember { mutableStateOf<String?>(null) }
+    var dialogMessage by remember { mutableStateOf<String?>(null) }
+
+    // ViewModelからのイベントを監視
     LaunchedEffect(Unit) {
-        viewModel.snackbarFlow.collect { message ->
-            snackbarHostState.showSnackbar(message)
+        viewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is PersonListViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is PersonListViewModel.UiEvent.ShowInfoDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is PersonListViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+            }
         }
     }
 
@@ -84,21 +101,55 @@ fun MainScreen(
             viewModel.logicalDeletePerson(person)
             scope.launch {
                 val fullName = person.getMaskedName(isNameMaskingEnabled)
-                val result = snackbarHostState.showSnackbar(message = "$fullName さんの利用を終了しました", actionLabel = "元に戻す", duration = SnackbarDuration.Short)
-                if (result == SnackbarResult.ActionPerformed) { viewModel.restorePerson(person); scope.launch { lazyListState.animateScrollToItem(0) } }
+                val result = snackbarHostState.showSnackbar(
+                    message = "$fullName さんの利用を終了しました", 
+                    actionLabel = "元に戻す", 
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) { 
+                    viewModel.restorePerson(person)
+                    lazyListState.animateScrollToItem(0) 
+                }
             }
         },
         onNavigateToSettings = onNavigateToSettings
     )
 
+    // 通知ダイアログの表示
+    if (dialogMessage != null) {
+        AlertDialog(
+            onDismissRequest = { dialogMessage = null; dialogTitle = null },
+            title = { dialogTitle?.let { Text(it) } },
+            text = { Text(dialogMessage!!) },
+            confirmButton = {
+                TextButton(onClick = { dialogMessage = null; dialogTitle = null }) {
+                    Text("閉じる")
+                }
+            }
+        )
+    }
+
     if (showSheet && selectedPerson != null) {
         ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
-            CategorySelectionSheet(personName = selectedPerson!!.getMaskedName(isNameMaskingEnabled), onCategorySelect = { category -> showSheet = false; onNavigateToDetail(selectedPerson!!.id, category) })
+            CategorySelectionSheet(
+                personName = selectedPerson!!.getMaskedName(isNameMaskingEnabled), 
+                onCategorySelect = { category -> 
+                    showSheet = false
+                    onNavigateToDetail(selectedPerson!!.id, category) 
+                }
+            )
         }
     }
 
     if (showEditDialog) {
-        UserEditDialog(person = editingPerson, onDismiss = { showEditDialog = false }, onSave = { person -> if (editingPerson == null) viewModel.addPerson(person) else viewModel.updatePerson(person); showEditDialog = false })
+        UserEditDialog(
+            person = editingPerson, 
+            onDismiss = { showEditDialog = false }, 
+            onSave = { person -> 
+                if (editingPerson == null) viewModel.addPerson(person) else viewModel.updatePerson(person)
+                showEditDialog = false 
+            }
+        )
     }
 }
 
@@ -123,7 +174,23 @@ fun MainScreenContent(
     var showHelpDialog by remember { mutableStateOf(false) }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.0.0\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        AlertDialog(
+            onDismissRequest = { showVersionDialog = false },
+            title = { Text("バージョン情報") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("CareMemo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text("バージョン: 1.0.0")
+                    HorizontalDivider()
+                    Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Android 15 (API 35)")
+                    Text("KYOCERA TORQUE G06 最適化済")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("(C) 2025 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } }
+        )
     }
 
     if (showHelpDialog) {
@@ -144,10 +211,9 @@ fun MainScreenContent(
         "わ" to "わをん"
     )
 
-    // 50音タブに基づいたフィルタリング処理 (検索テキストは将来機能のため現在は無視)
+    // 50音タブに基づいたフィルタリング処理
     val filteredList = remember(userList, selectedTabIndex) {
         userList.filter { user ->
-            // 50音タブによる絞り込み
             val group = kanaGroups[selectedTabIndex]
             when (group) {
                 "全" -> true
@@ -273,7 +339,6 @@ fun MainScreenContent(
 
 @Composable
 fun CategorySelectionSheet(personName: String, onCategorySelect: (Category) -> Unit) {
-    // 利用者をクリックした際に表示される、記録カテゴリー選択用のボトムシート
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "$personName さんの記録を選択", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
         Category.entries.forEach { category ->
@@ -403,5 +468,27 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CompactTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false,
+    suffix: @Composable (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        keyboardOptions = keyboardOptions,
+        isError = isError,
+        suffix = suffix,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyMedium
     )
 }

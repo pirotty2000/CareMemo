@@ -21,7 +21,6 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -32,14 +31,17 @@ class PersonListViewModel(
 
     private val json = Json { prettyPrint = true }
 
-    private val _errorFlow = MutableStateFlow<String?>(null)
-    val errorFlow: StateFlow<String?> = _errorFlow.asStateFlow()
+    /**
+     * UIに対する一回限りのイベントを定義します
+     */
+    sealed interface UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent
+        data class ShowInfoDialog(val title: String, val message: String) : UiEvent
+        data class ShowErrorDialog(val title: String, val message: String) : UiEvent
+    }
 
-    private val _infoFlow = MutableStateFlow<String?>(null)
-    val infoFlow: StateFlow<String?> = _infoFlow.asStateFlow()
-
-    private val _snackbarFlow = MutableSharedFlow<String>()
-    val snackbarFlow = _snackbarFlow.asSharedFlow()
+    private val _uiEventFlow = MutableSharedFlow<UiEvent>()
+    val uiEventFlow = _uiEventFlow.asSharedFlow()
 
     val isNameMaskingEnabled: StateFlow<Boolean> = userSettingsRepository.isNameMaskingEnabled
         .stateIn(
@@ -66,14 +68,6 @@ class PersonListViewModel(
             userSettingsRepository.setDefaultRecorderName(name)
         }
     }
-
-    fun clearError() {
-        _errorFlow.value = null
-    }
-
-    fun clearInfo() {
-        _infoFlow.value = null
-    }
     
     val userList: StateFlow<List<Person>> = repository.getAllPersons()
         .stateIn(
@@ -89,39 +83,20 @@ class PersonListViewModel(
             initialValue = emptyList()
         )
 
-    /**
-     * 各カテゴリーのデータ有無を監視し、バッジ表示用のMapに統合するロジック。
-     * いずれかのカテゴリーでデータが更新されると、自動的に再計算されてUIに通知されます。
-     */
-    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = combine(
-        repository.getPersonIdsWithHeightWeight(),
-        repository.getPersonIdsWithPulse(),
-        repository.getPersonIdsWithBp(),
-        repository.getPersonIdsWithGlucose(),
-        repository.getPersonIdsWithCondition()
-    ) { hwIds, pulseIds, bpIds, glucoseIds, conditionIds ->
-        val allIds = (hwIds + pulseIds + bpIds + glucoseIds + conditionIds).distinct()
-        allIds.associateWith { id ->
-            PersonCategorySummary(
-                hasHeightWeight = hwIds.contains(id),
-                hasBpAndPulse = pulseIds.contains(id) || bpIds.contains(id),
-                hasGlucoseAndHbA1c = glucoseIds.contains(id),
-                hasCondition = conditionIds.contains(id)
-            )
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyMap()
-    )
+    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = repository.getPersonCategorySummaries()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
 
     fun addPerson(person: Person) {
         viewModelScope.launch {
             try {
                 repository.insertPerson(person)
-                _snackbarFlow.emit("${person.getMaskedName(isNameMaskingEnabled.value)} さんを登録しました")
+                _uiEventFlow.emit(UiEvent.ShowSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを登録しました"))
             } catch (_: SQLiteConstraintException) {
-                _errorFlow.value = "この利用者は既に登録されています。"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("登録エラー", "この利用者は既に登録されています。"))
             }
         }
     }
@@ -130,9 +105,9 @@ class PersonListViewModel(
         viewModelScope.launch {
             try {
                 repository.updatePerson(person)
-                _snackbarFlow.emit("利用者情報を更新しました")
+                _uiEventFlow.emit(UiEvent.ShowSnackbar("利用者情報を更新しました"))
             } catch (_: SQLiteConstraintException) {
-                _errorFlow.value = "変更後の内容は既に他の利用者として登録されています。"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("更新エラー", "変更後の内容は既に他の利用者として登録されています。"))
             }
         }
     }
@@ -140,31 +115,29 @@ class PersonListViewModel(
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
             repository.logicalDeletePerson(person.id)
+            _uiEventFlow.emit(UiEvent.ShowSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんをアーカイブに移動しました"))
         }
     }
 
     fun restorePerson(person: Person) {
         viewModelScope.launch {
             repository.restorePerson(person.id)
-            _snackbarFlow.emit("${person.getMaskedName(isNameMaskingEnabled.value)} さんを一覧に戻しました")
+            _uiEventFlow.emit(UiEvent.ShowSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを一覧に戻しました"))
         }
     }
 
-    /**
-     * 利用終了となっているすべての利用者のデータを完全に抹消します。
-     */
     fun deleteEndedPersons() {
         viewModelScope.launch {
             try {
                 repository.deleteEndedPersons()
-                _infoFlow.value = "利用終了者のデータを完全に抹消しました。"
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "利用終了者のデータを完全に抹消しました。"))
             } catch (e: Exception) {
-                _errorFlow.value = "データの抹消に失敗しました: ${e.localizedMessage}"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "データの抹消に失敗しました: ${e.localizedMessage}"))
             }
         }
     }
 
-    // --- 新形式データのバックアップ・復元 ---
+    // --- バックアップ・復元 ---
 
     fun exportData(context: Context, uri: Uri) {
         viewModelScope.launch {
@@ -172,9 +145,9 @@ class PersonListViewModel(
                 val backup = repository.getBackupData()
                 val jsonString = json.encodeToString(backup)
                 context.contentResolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
-                _infoFlow.value = "データのエクスポートが完了しました。"
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("エクスポート完了", "データのエクスポートが完了しました。"))
             } catch (e: Exception) {
-                _errorFlow.value = "エクスポートに失敗しました: ${e.localizedMessage}"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "エクスポートに失敗しました: ${e.localizedMessage}"))
             }
         }
     }
@@ -186,15 +159,15 @@ class PersonListViewModel(
                 if (jsonString != null) {
                     val backup = json.decodeFromString<CareMemoBackup>(jsonString)
                     repository.replaceAllData(backup)
-                    _infoFlow.value = "データの復元が完了しました。"
+                    _uiEventFlow.emit(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました。"))
                 }
             } catch (e: Exception) {
-                _errorFlow.value = "復元に失敗しました: ${e.localizedMessage}"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "復元に失敗しました: ${e.localizedMessage}"))
             }
         }
     }
 
-    // --- 旧アプリデータの移行 (初期データの読込) ---
+    // --- 旧アプリデータの移行 ---
 
     fun importLegacyDataFromAssets(context: Context) {
         viewModelScope.launch {
@@ -202,23 +175,20 @@ class PersonListViewModel(
                 val loader = InitialDataLoader(context, repository)
                 loader.clearAllData()
                 loader.loadInitialDataFromAssets()
-                _infoFlow.value = "Assetsからの初期データ読込が完了しました。"
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "Assetsからの初期データ読込が完了しました。"))
             } catch (e: Exception) {
-                _errorFlow.value = "読込に失敗しました: ${e.localizedMessage}"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "読込に失敗しました: ${e.localizedMessage}"))
             }
         }
     }
 
-    /**
-     * データベース内のすべてのデータを物理削除します（開発用）。
-     */
     fun clearAllData() {
         viewModelScope.launch {
             try {
                 repository.clearAllData()
-                _infoFlow.value = "全てのデータを削除しました。"
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "全てのデータを削除しました。"))
             } catch (e: Exception) {
-                _errorFlow.value = "データの削除に失敗しました: ${e.localizedMessage}"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "データの削除に失敗しました: ${e.localizedMessage}"))
             }
         }
     }
@@ -251,9 +221,9 @@ class PersonListViewModel(
                 fileMap["glucose_and_hba1c_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadGlucoseAndHbA1c(s) } }
                 fileMap["condition_at_visit_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadConditionAtVisit(s) } }
 
-                _infoFlow.value = "旧アプリデータの引き継ぎが完了しました。"
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "旧アプリデータの引き継ぎが完了しました。"))
             } catch (e: Exception) {
-                _errorFlow.value = "引き継ぎに失敗しました: ${e.localizedMessage}"
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "引き継ぎに失敗しました: ${e.localizedMessage}"))
             }
         }
     }

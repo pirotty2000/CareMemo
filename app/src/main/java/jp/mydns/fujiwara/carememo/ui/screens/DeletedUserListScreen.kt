@@ -22,8 +22,23 @@ fun DeletedUserListScreen(
     val endedUsers by viewModel.deletedUserList.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val selectedUserIds = remember { mutableStateListOf<Int>() }
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // ViewModelからのイベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is PersonListViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                else -> { /* ダイアログ等は必要に応じて */ }
+            }
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("利用終了者の復帰", fontWeight = FontWeight.Bold) },
@@ -61,6 +76,7 @@ fun DeletedUserListScreen(
                                 }
                             }
                             selectedUserIds.clear()
+                            // 複数の復帰時は一覧に戻るのが自然
                             onBack()
                         },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)

@@ -38,8 +38,6 @@ fun SettingsScreen(
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
-    val errorMsg by viewModel.errorFlow.collectAsState()
-    val infoMsg by viewModel.infoFlow.collectAsState()
 
     val context = LocalContext.current
 
@@ -50,6 +48,31 @@ fun SettingsScreen(
     var showDevClearConfirm by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
+
+    // 通知ダイアログ用の共通状態
+    var dialogTitle by remember { mutableStateOf<String?>(null) }
+    var dialogMessage by remember { mutableStateOf<String?>(null) }
+
+    // ViewModelからのイベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is PersonListViewModel.UiEvent.ShowInfoDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is PersonListViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is PersonListViewModel.UiEvent.ShowSnackbar -> {
+                    // 設定画面ではスナックバーのホストがないため、必要なら追加するかダイアログで代用
+                    dialogTitle = "通知"
+                    dialogMessage = event.message
+                }
+            }
+        }
+    }
 
     // ファイル・フォルダ選択ランチャー
     val exportLauncher = rememberLauncherForActivityResult(
@@ -65,11 +88,13 @@ fun SettingsScreen(
     ) { uri -> uri?.let { showLegacyFolderUri = it } }
 
     // 各種ダイアログ表示
-    if (errorMsg != null) {
-        AlertDialog(onDismissRequest = { viewModel.clearError() }, title = { Text("エラー") }, text = { Text(errorMsg!!) }, confirmButton = { TextButton(onClick = { viewModel.clearError() }) { Text("OK") } })
-    }
-    if (infoMsg != null) {
-        AlertDialog(onDismissRequest = { viewModel.clearInfo() }, title = { Text("通知") }, text = { Text(infoMsg!!) }, confirmButton = { TextButton(onClick = { viewModel.clearInfo() }) { Text("OK") } })
+    if (dialogMessage != null) {
+        AlertDialog(
+            onDismissRequest = { dialogMessage = null; dialogTitle = null },
+            title = { dialogTitle?.let { Text(it) } },
+            text = { Text(dialogMessage!!) },
+            confirmButton = { TextButton(onClick = { dialogMessage = null; dialogTitle = null }) { Text("OK") } }
+        )
     }
 
     if (showImportUri != null) {

@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.data
 
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 /**
  * データベース操作を管理するリポジトリ
@@ -27,26 +28,31 @@ class CareMemoRepository(
 
     /**
      * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
-     * Roomの標準機能では論理削除の連動が難しいため、手動でタイムスタンプを一括更新しています。
+     * トランザクション内で実行し、データの整合性を保証します。
      */
     suspend fun logicalDeletePerson(personId: Int) {
-        val timestamp = System.currentTimeMillis()
-        personDao.logicalDelete(personId, timestamp)
-        heightAndWeightDao.logicalDeleteByPersonId(personId, timestamp)
-        bpAndPulseDao.logicalDeleteByPersonId(personId, timestamp)
-        glucoseAndHbA1cDao.logicalDeleteByPersonId(personId, timestamp)
-        conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
+        database.withTransaction {
+            val timestamp = System.currentTimeMillis()
+            personDao.logicalDelete(personId, timestamp)
+            heightAndWeightDao.logicalDeleteByPersonId(personId, timestamp)
+            bpAndPulseDao.logicalDeleteByPersonId(personId, timestamp)
+            glucoseAndHbA1cDao.logicalDeleteByPersonId(personId, timestamp)
+            conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
+        }
     }
 
     /**
      * 論理削除された利用者と、紐づくすべての記録を復元します。
+     * トランザクション内で実行し、データの整合性を保証します。
      */
     suspend fun restorePerson(personId: Int) {
-        personDao.restore(personId)
-        heightAndWeightDao.restoreByPersonId(personId)
-        bpAndPulseDao.restoreByPersonId(personId)
-        glucoseAndHbA1cDao.restoreByPersonId(personId)
-        conditionAtVisitDao.restoreByPersonId(personId)
+        database.withTransaction {
+            personDao.restore(personId)
+            heightAndWeightDao.restoreByPersonId(personId)
+            bpAndPulseDao.restoreByPersonId(personId)
+            glucoseAndHbA1cDao.restoreByPersonId(personId)
+            conditionAtVisitDao.restoreByPersonId(personId)
+        }
     }
 
     /**
@@ -62,7 +68,7 @@ class CareMemoRepository(
      */
     suspend fun deletePerson(person: Person) = personDao.delete(person)
 
-    // --- HeightAndWeight ---
+    // --- 各種記録操作 ---
     fun getHeightAndWeightByPersonId(personId: Int): Flow<List<HeightAndWeight>> = 
         heightAndWeightDao.getByPersonId(personId)
     
@@ -70,7 +76,6 @@ class CareMemoRepository(
     
     suspend fun deleteHeightAndWeight(item: HeightAndWeight) = heightAndWeightDao.delete(item)
 
-    // --- BpAndPulse ---
     fun getBpAndPulseByPersonId(personId: Int): Flow<List<BpAndPulse>> = 
         bpAndPulseDao.getByPersonId(personId)
     
@@ -78,7 +83,6 @@ class CareMemoRepository(
     
     suspend fun deleteBpAndPulse(item: BpAndPulse) = bpAndPulseDao.delete(item)
 
-    // --- GlucoseAndHbA1c ---
     fun getGlucoseAndHbA1cByPersonId(personId: Int): Flow<List<GlucoseAndHbA1c>> = 
         glucoseAndHbA1cDao.getByPersonId(personId)
     
@@ -86,7 +90,6 @@ class CareMemoRepository(
     
     suspend fun deleteGlucoseAndHbA1c(item: GlucoseAndHbA1c) = glucoseAndHbA1cDao.delete(item)
 
-    // --- ConditionAtVisit ---
     fun getConditionAtVisitByPersonId(personId: Int): Flow<List<ConditionAtVisit>> = 
         conditionAtVisitDao.getByPersonId(personId)
     
@@ -108,8 +111,6 @@ class CareMemoRepository(
     suspend fun replaceAllData(backup: CareMemoBackup) {
         database.withTransaction {
             clearAllData()
-
-            // データの挿入
             personDao.insertAll(backup.persons)
             heightAndWeightDao.insertAll(backup.heightAndWeights)
             bpAndPulseDao.insertAll(backup.bpAndPulses)
@@ -118,10 +119,6 @@ class CareMemoRepository(
         }
     }
 
-    /**
-     * すべてのテーブルのデータを物理削除します。
-     * データベースの初期化や旧アプリデータの引き継ぎ時に使用します。
-     */
     suspend fun clearAllData() {
         database.withTransaction {
             conditionAtVisitDao.deleteAll()
@@ -132,10 +129,27 @@ class CareMemoRepository(
         }
     }
 
-    // --- existence check ---
-    fun getPersonIdsWithHeightWeight(): Flow<List<Int>> = heightAndWeightDao.getPersonIdsWithHeightWeight()
-    fun getPersonIdsWithPulse(): Flow<List<Int>> = bpAndPulseDao.getPersonIdsWithPulse()
-    fun getPersonIdsWithBp(): Flow<List<Int>> = bpAndPulseDao.getPersonIdsWithBp()
-    fun getPersonIdsWithGlucose(): Flow<List<Int>> = glucoseAndHbA1cDao.getPersonIdsWithGlucose()
-    fun getPersonIdsWithCondition(): Flow<List<Int>> = conditionAtVisitDao.getPersonIdsWithCondition()
+    /**
+     * 全利用者の各カテゴリー記録の有無を統合したMapを返します。
+     * メイン画面などのインジケーター表示に利用します。
+     */
+    fun getPersonCategorySummaries(): Flow<Map<Int, PersonCategorySummary>> {
+        return combine(
+            heightAndWeightDao.getPersonIdsWithHeightWeight(),
+            bpAndPulseDao.getPersonIdsWithBp(),
+            bpAndPulseDao.getPersonIdsWithPulse(),
+            glucoseAndHbA1cDao.getPersonIdsWithGlucose(),
+            conditionAtVisitDao.getPersonIdsWithCondition()
+        ) { hw, bp, pulse, glucose, condition ->
+            val allIds = (hw + bp + pulse + glucose + condition).distinct()
+            allIds.associateWith { id ->
+                PersonCategorySummary(
+                    hasHeightWeight = hw.contains(id),
+                    hasBpAndPulse = bp.contains(id) || pulse.contains(id),
+                    hasGlucoseAndHbA1c = glucose.contains(id),
+                    hasCondition = condition.contains(id)
+                )
+            }
+        }
+    }
 }
