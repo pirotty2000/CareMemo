@@ -186,7 +186,7 @@ fun MainScreenContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("CareMemo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text("バージョン: 1.0.1")
+                    Text("バージョン: 1.0.2")
                     HorizontalDivider()
                     Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text("Android 15 (API 35)")
@@ -210,6 +210,17 @@ fun MainScreenContent(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Column {
+                        Text("Ver. 1.0.2 (2025/06/21)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("・指紋・顔認証による起動ロック機能を搭載（設定から有効化可能）\n" +
+                             "・同姓同名・同生年月日の利用者の重複登録チェックを強化\n" +
+                             "・日時入力欄を2段化し、文字の見切れを解消\n" +
+                             "・PDF出力時、データがない指標のグラフを出力から除外するよう改善\n" +
+                             "・キーボードの「次へ」ボタンで各入力欄をスムーズに移動可能に改善")
+                    }
+                    
+                    HorizontalDivider()
+
                     Column {
                         Text("Ver. 1.0.1 (2025/02/11)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Text("【詳細データ画面】", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 4.dp))
