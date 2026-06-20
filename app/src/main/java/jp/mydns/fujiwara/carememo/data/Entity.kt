@@ -199,3 +199,75 @@ data class PersonCategorySummary(
     val hasGlucoseAndHbA1c: Boolean = false,
     val hasCondition: Boolean = false
 )
+
+// --- 計算・判定用拡張関数 ---
+
+fun HeightAndWeight.calculateBMI(): Double {
+    val h = height ?: 0.0
+    val w = weight ?: 0.0
+    val heightM = h / 100.0
+    if (heightM <= 0.0) return 0.0
+    return w / (heightM * heightM)
+}
+
+fun Double.evaluateBMI(): String {
+    return when {
+        this <= 0.0 -> "-"
+        this < HealthThresholds.BMI_NORMAL_LOW -> "低体重"
+        this < HealthThresholds.BMI_NORMAL_HIGH -> "普通体重"
+        this < HealthThresholds.BMI_OBESITY_1 -> "肥満(１度)"
+        this < HealthThresholds.BMI_OBESITY_2 -> "肥満(２度)"
+        this < HealthThresholds.BMI_OBESITY_3 -> "肥満(３度)"
+        else -> "肥満(４度)"
+    }
+}
+
+fun BpAndPulse.checkStatus(): String {
+    val systolic = bpSystolic ?: 120
+    val diastolic = bpDiastolic ?: 80
+    val pulseVal = pulse ?: 70
+
+    val isHighBp = systolic >= HealthThresholds.BP_HIGH_SYSTOLIC || diastolic >= HealthThresholds.BP_HIGH_DIASTOLIC
+    val isLowBp = systolic < HealthThresholds.BP_LOW_SYSTOLIC || diastolic < HealthThresholds.BP_LOW_DIASTOLIC
+    val isBradycardia = pulseVal <= HealthThresholds.PULSE_LOW
+    val isTachycardia = pulseVal >= HealthThresholds.PULSE_HIGH
+
+    return when {
+        isHighBp && isTachycardia -> "高・頻"
+        isHighBp && isBradycardia -> "高・徐"
+        isLowBp && isTachycardia -> "低・頻"
+        isLowBp && isBradycardia -> "低・徐"
+        isHighBp -> "高血圧"
+        isLowBp -> "低血圧"
+        isTachycardia -> "頻脈"
+        isBradycardia -> "徐脈"
+        else -> "正常"
+    }
+}
+
+fun GlucoseAndHbA1c.checkStatus(): String {
+    val g = glucose
+    val h = hba1c
+
+    val gStatus = when {
+        g == null -> null
+        g < HealthThresholds.GLUCOSE_NORMAL_LOW -> "低血糖"
+        g <= HealthThresholds.GLUCOSE_NORMAL_HIGH -> "正常値"
+        else -> "高血糖"
+    }
+
+    val hStatus = when {
+        h == null -> null
+        h <= HealthThresholds.HBA1C_GOOD -> "良好"
+        h < HealthThresholds.HBA1C_PREDIABETES -> "軽度異常"
+        h < HealthThresholds.HBA1C_DIABETES -> "予備軍"
+        else -> "強い疑い"
+    }
+
+    return when {
+        gStatus != null && hStatus != null -> "$gStatus・$hStatus"
+        gStatus != null -> gStatus
+        hStatus != null -> hStatus
+        else -> "---"
+    }
+}

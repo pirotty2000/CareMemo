@@ -19,12 +19,17 @@ import jp.mydns.fujiwara.carememo.ui.screens.MainScreen
 import jp.mydns.fujiwara.carememo.ui.screens.SettingsScreen
 import jp.mydns.fujiwara.carememo.ui.screens.UnifiedRecordScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // アプリ起動時に古いPDFキャッシュを掃除
+        PdfExporter.clearOldExports(this)
+
         enableEdgeToEdge()
         setContent {
             CareMemoTheme {
