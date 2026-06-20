@@ -206,6 +206,17 @@ class PersonListViewModel(
         }
     }
 
+    fun normalizeAllPersonBirthdays() {
+        viewModelScope.launch {
+            try {
+                repository.normalizeAllPersonBirthdays()
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "全利用者の生年月日を正規化（時刻を00:00に設定）しました。"))
+            } catch (e: Exception) {
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "正規化に失敗しました。重複する利用者が既に存在している可能性があります: ${e.localizedMessage}"))
+            }
+        }
+    }
+
     fun importLegacyDataFromFolder(context: Context, treeUri: Uri) {
         viewModelScope.launch {
             try {

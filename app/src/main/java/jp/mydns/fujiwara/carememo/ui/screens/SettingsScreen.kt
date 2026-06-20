@@ -248,6 +248,10 @@ fun SettingsScreen(
             // --- 5. 開発者向け ---
             SettingsSection(title = "開発者オプション") {
                 ListItem(
+                    headlineContent = { Text("(開発用) 生年月日の時分クリア") },
+                    modifier = Modifier.clickable { viewModel.normalizeAllPersonBirthdays() }
+                )
+                ListItem(
                     headlineContent = { Text("(開発用) assetsから初期データを読込") },
                     modifier = Modifier.clickable { viewModel.importLegacyDataFromAssets(context) }
                 )
