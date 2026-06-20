@@ -78,6 +78,9 @@ fun SettingsScreen(
                     dialogTitle = "通知"
                     dialogMessage = event.message
                 }
+                PersonListViewModel.UiEvent.SaveSuccess -> {
+                    // 設定画面では特に何もしない
+                }
             }
         }
     }
