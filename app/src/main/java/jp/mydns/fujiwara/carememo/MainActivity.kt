@@ -20,15 +20,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.ui.screens.DeletedUserListScreen
-import jp.mydns.fujiwara.carememo.ui.screens.MainScreen
-import jp.mydns.fujiwara.carememo.ui.screens.SettingsScreen
-import jp.mydns.fujiwara.carememo.ui.screens.UnifiedRecordScreen
+import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
+import jp.mydns.fujiwara.carememo.ui.screens.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -148,6 +150,64 @@ fun CareMemoApp(activity: FragmentActivity) {
                 viewModel = detailViewModel,
                 initialCategoryType = category,
                 personId = personId,
+                onBack = { navController.popBackStack() },
+                onNavigateToConditionDetail = { conditionId ->
+                    navController.navigate("conditionDetail/$conditionId")
+                }
+            )
+        }
+        composable(
+            route = "conditionDetail/{conditionId}",
+            arguments = listOf(navArgument("conditionId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
+            val detailViewModel: PersonDetailViewModel = viewModel(
+                factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
+            )
+            ConditionDetailScreen(
+                viewModel = detailViewModel,
+                conditionId = conditionId,
+                onBack = { navController.popBackStack() },
+                onNavigateToPhotoPreview = { uri, pId, cId ->
+                    val encodedUri = Uri.encode(uri.toString())
+                    navController.navigate("photoPreview/$encodedUri/$pId/$cId")
+                },
+                onNavigateToFullScreen = { fileName ->
+                    navController.navigate("photoFull/$fileName")
+                },
+                onEditMemo = { /* 現時点ではポップアップで対応可能だが、将来的に画面遷移にしても良い */ }
+            )
+        }
+        composable(
+            route = "photoPreview/{uri}/{personId}/{conditionId}",
+            arguments = listOf(
+                navArgument("uri") { type = NavType.StringType },
+                navArgument("personId") { type = NavType.IntType },
+                navArgument("conditionId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
+            val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+            val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
+            val detailViewModel: PersonDetailViewModel = viewModel(
+                factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
+            )
+            ConditionPhotoPreviewScreen(
+                viewModel = detailViewModel,
+                uri = uri,
+                personId = personId,
+                conditionId = conditionId,
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "photoFull/{fileName}",
+            arguments = listOf(navArgument("fileName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
+            ConditionPhotoFullScreen(
+                fileName = fileName,
                 onBack = { navController.popBackStack() }
             )
         }

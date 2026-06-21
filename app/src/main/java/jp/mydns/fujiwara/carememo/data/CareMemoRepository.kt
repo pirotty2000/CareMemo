@@ -14,6 +14,7 @@ class CareMemoRepository(
     private val bpAndPulseDao: BpAndPulseDao,
     private val glucoseAndHbA1cDao: GlucoseAndHbA1cDao,
     private val conditionAtVisitDao: ConditionAtVisitDao,
+    private val conditionPhotoDao: ConditionPhotoDao
 ) {
     // --- Person ---
     fun getAllPersons(): Flow<List<Person>> = personDao.getAllPersons()
@@ -38,6 +39,7 @@ class CareMemoRepository(
             bpAndPulseDao.logicalDeleteByPersonId(personId, timestamp)
             glucoseAndHbA1cDao.logicalDeleteByPersonId(personId, timestamp)
             conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
+            conditionPhotoDao.logicalDeleteByPersonId(personId, timestamp)
         }
     }
 
@@ -97,6 +99,16 @@ class CareMemoRepository(
     
     suspend fun deleteConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.delete(item)
 
+    // --- ConditionPhoto ---
+    fun getConditionPhotosByConditionId(conditionId: Int): Flow<List<ConditionPhoto>> = 
+        conditionPhotoDao.getByConditionId(conditionId)
+
+    suspend fun insertConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.insert(item)
+
+    suspend fun deleteConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.delete(item)
+    
+    suspend fun getAllPhotosByPersonId(personId: Int) = conditionPhotoDao.getAllByPersonId(personId)
+
     // --- バックアップ・インポート ---
     suspend fun getBackupData(): CareMemoBackup {
         return CareMemoBackup(
@@ -104,7 +116,8 @@ class CareMemoRepository(
             heightAndWeights = heightAndWeightDao.getAllRaw(),
             bpAndPulses = bpAndPulseDao.getAllRaw(),
             glucoseAndHbA1cs = glucoseAndHbA1cDao.getAllRaw(),
-            conditionAtVisits = conditionAtVisitDao.getAllRaw()
+            conditionAtVisits = conditionAtVisitDao.getAllRaw(),
+            conditionPhotos = conditionPhotoDao.getAllRaw()
         )
     }
 
@@ -116,11 +129,13 @@ class CareMemoRepository(
             bpAndPulseDao.insertAll(backup.bpAndPulses)
             glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
             conditionAtVisitDao.insertAll(backup.conditionAtVisits)
+            conditionPhotoDao.insertAll(backup.conditionPhotos)
         }
     }
 
     suspend fun clearAllData() {
         database.withTransaction {
+            conditionPhotoDao.deleteAll()
             conditionAtVisitDao.deleteAll()
             glucoseAndHbA1cDao.deleteAll()
             bpAndPulseDao.deleteAll()

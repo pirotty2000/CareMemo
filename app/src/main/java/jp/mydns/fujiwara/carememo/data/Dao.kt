@@ -169,3 +169,40 @@ interface ConditionAtVisitDao {
     @Query("SELECT DISTINCT person_id FROM condition_at_visit_db WHERE deleted_at IS NULL")
     fun getPersonIdsWithCondition(): Flow<List<Int>>
 }
+
+@Dao
+interface ConditionPhotoDao {
+    @Query("SELECT * FROM condition_photo_db WHERE condition_id = :conditionId AND deleted_at IS NULL ORDER BY captured_at ASC")
+    fun getByConditionId(conditionId: Int): Flow<List<ConditionPhoto>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(item: ConditionPhoto)
+
+    @Update
+    suspend fun update(item: ConditionPhoto)
+
+    @Delete
+    suspend fun delete(item: ConditionPhoto)
+
+    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE id = :id")
+    suspend fun logicalDelete(id: Int, timestamp: Long)
+
+    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE condition_id = :conditionId")
+    suspend fun logicalDeleteByConditionId(conditionId: Int, timestamp: Long)
+
+    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE person_id = :personId")
+    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+
+    @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId")
+    suspend fun getAllByPersonId(personId: Int): List<ConditionPhoto>
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM condition_photo_db")
+    suspend fun getAllRaw(): List<ConditionPhoto>
+
+    @Query("DELETE FROM condition_photo_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<ConditionPhoto>)
+}

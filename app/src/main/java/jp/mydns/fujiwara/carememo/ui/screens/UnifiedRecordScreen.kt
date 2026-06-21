@@ -84,6 +84,7 @@ fun UnifiedRecordScreen(
     initialCategoryType: Category,
     personId: Int,
     onBack: () -> Unit,
+    onNavigateToConditionDetail: (Int) -> Unit
 ) {
     var currentCategory by remember { mutableStateOf(initialCategoryType) }
     
@@ -320,8 +321,7 @@ fun UnifiedRecordScreen(
                         MemoHistoryList(
                             records = memos,
                             onItemClick = { memo ->
-                                showMemoDialog = memo
-                                isMemoEditMode = false
+                                onNavigateToConditionDetail(memo.id)
                             },
                             onDeleteClick = { recordToDelete = it }
                         )

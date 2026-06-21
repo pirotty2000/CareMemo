@@ -176,17 +176,46 @@ data class ConditionAtVisit(
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
+@Serializable
+@Entity(
+    tableName = "condition_photo_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = ConditionAtVisit::class,
+            parentColumns = ["id"],
+            childColumns = ["condition_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["condition_id"]),
+        Index(value = ["person_id"])
+    ]
+)
+data class ConditionPhoto(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "condition_id") val conditionId: Int,
+    @ColumnInfo(name = "person_id") val personId: Int,
+    @ColumnInfo(name = "photo_file_name") val photoFileName: String,      // リサイズ済み画像
+    @ColumnInfo(name = "thumbnail_file_name") val thumbnailFileName: String, // サムネイル画像
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "captured_at") val capturedAt: Instant,           // 撮影日時
+    @ColumnInfo(name = "caption") val caption: String = "",              // キャプション
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+)
+
 /**
  * アプリ全体のバックアップデータを保持するクラス
  */
 @Serializable
 data class CareMemoBackup(
-    val version: Int = 1,
+    val version: Int = 2,
     val persons: List<Person>,
     val heightAndWeights: List<HeightAndWeight>,
     val bpAndPulses: List<BpAndPulse>,
     val glucoseAndHbA1cs: List<GlucoseAndHbA1c>,
-    val conditionAtVisits: List<ConditionAtVisit>
+    val conditionAtVisits: List<ConditionAtVisit>,
+    val conditionPhotos: List<ConditionPhoto> = emptyList()
 )
 
 /**

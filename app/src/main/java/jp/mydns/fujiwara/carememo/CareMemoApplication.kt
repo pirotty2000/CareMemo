@@ -22,7 +22,8 @@ class CareMemoApplication : Application() {
             database.heightAndWeightDao(),
             database.bpAndPulseDao(),
             database.glucoseAndHbA1cDao(),
-            database.conditionAtVisitDao()
+            database.conditionAtVisitDao(),
+            database.conditionPhotoDao()
         ) 
     }
 }

@@ -6,11 +6,15 @@ import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
+import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import android.content.Context
+import android.net.Uri
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,8 +22,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 class PersonDetailViewModel(
     private val repository: CareMemoRepository,
@@ -56,6 +62,19 @@ class PersonDetailViewModel(
 
     private val _records = MutableStateFlow<List<Any>>(emptyList())
     val records: StateFlow<List<Any>> = _records.asStateFlow()
+
+    private val _selectedConditionId = MutableStateFlow<Int?>(null)
+    
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val currentConditionPhotos: StateFlow<List<ConditionPhoto>> = _selectedConditionId
+        .flatMapLatest { id ->
+            if (id != null) repository.getConditionPhotosByConditionId(id)
+            else kotlinx.coroutines.flow.flowOf(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _isProcessing = MutableStateFlow(false)
+    val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
     fun loadPerson(personId: Int) {
         viewModelScope.launch {
@@ -132,6 +151,84 @@ class PersonDetailViewModel(
 
     fun selectRecord(record: Any) {
         _currentRecordState.value = record
+        if (record is ConditionAtVisit) {
+            _selectedConditionId.value = record.id
+        } else {
+            _selectedConditionId.value = null
+        }
+    }
+
+    fun setSelectedConditionId(id: Int?) {
+        _selectedConditionId.value = id
+    }
+
+    /**
+     * 画像を処理して保存する
+     */
+    fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int) {
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                // 画像処理と物理保存
+                val fileNames = ImageUtils.processAndSaveImage(context, uri)
+                if (fileNames != null) {
+                    val (photoName, thumbName) = fileNames
+                    val photo = ConditionPhoto(
+                        conditionId = conditionId,
+                        personId = personId,
+                        photoFileName = photoName,
+                        thumbnailFileName = thumbName,
+                        capturedAt = Instant.now()
+                    )
+                    repository.insertConditionPhoto(photo)
+                    _uiEventFlow.emit(UiEvent.ShowSnackbar("写真を保存しました"))
+                } else {
+                    _uiEventFlow.emit(UiEvent.ShowErrorDialog("保存エラー", "画像の処理に失敗しました。空き容量を確認してください。"))
+                }
+            } catch (e: Exception) {
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("保存エラー", "写真の保存中にエラーが発生しました"))
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 写真を削除する（DBと物理ファイル）
+     */
+    fun deletePhoto(context: Context, photo: ConditionPhoto) {
+        viewModelScope.launch {
+            try {
+                // DBから削除
+                repository.deleteConditionPhoto(photo)
+                // 物理ファイルを削除
+                ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+                _uiEventFlow.emit(UiEvent.ShowSnackbar("写真を削除しました"))
+            } catch (e: Exception) {
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("削除エラー", "写真の削除に失敗しました"))
+            }
+        }
+    }
+
+    /**
+     * 所見メモを削除する際、関連する写真ファイルもすべて削除する
+     */
+    fun deleteConditionWithPhotos(context: Context, condition: ConditionAtVisit) {
+        viewModelScope.launch {
+            try {
+                // 紐づく写真の物理ファイルを先にリストアップして削除
+                repository.getConditionPhotosByConditionId(condition.id).collectLatest { photos ->
+                    photos.forEach { photo ->
+                        ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+                    }
+                    // その後、所見メモを削除（CASCADE設定によりDB内のConditionPhotoも削除される）
+                    repository.deleteConditionAtVisit(condition)
+                }
+                _uiEventFlow.emit(UiEvent.ShowSnackbar("記録を削除しました"))
+            } catch (e: Exception) {
+                _uiEventFlow.emit(UiEvent.ShowErrorDialog("削除エラー", "記録の削除に失敗しました"))
+            }
+        }
     }
 
     class Factory(

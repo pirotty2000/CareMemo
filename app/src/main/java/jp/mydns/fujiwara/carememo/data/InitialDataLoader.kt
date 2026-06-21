@@ -36,6 +36,13 @@ class InitialDataLoader(private val context: Context, private val repository: Ca
         loadBpAndPulse(context.assets.open("bp_and_pulse_db.json"))
         loadGlucoseAndHbA1c(context.assets.open("glucose_and_hba1c_db.json"))
         loadConditionAtVisit(context.assets.open("condition_at_visit_db.json"))
+        
+        // 写真データがあれば読み込む（任意）
+        try {
+            loadConditionPhotos(context.assets.open("condition_photo_db.json"))
+        } catch (e: Exception) {
+            // ファイルがなくても無視
+        }
     }
 
     /**
@@ -54,14 +61,14 @@ class InitialDataLoader(private val context: Context, private val repository: Ca
                 val lastNameFurigana = furiganaParts.getOrElse(0) { "" }
                 val firstNameFurigana = furiganaParts.getOrElse(1) { "" }
 
-                // 生年月日の時刻を 00:00:00 に正規化（重複判定を確実にするため）
+                // 生年月日の時刻を 00:00:00 に厳密に正規化
                 val normalizedBirthday = dto.birthday.atZone(java.time.ZoneId.systemDefault())
                     .toLocalDate()
                     .atStartOfDay(java.time.ZoneId.systemDefault())
                     .toInstant()
 
                 val person = Person(
-                    id = dto.id, // 旧アプリのIDを維持
+                    id = dto.id,
                     lastName = lastName,
                     firstName = firstName,
                     lastNameFurigana = lastNameFurigana,
@@ -118,6 +125,17 @@ class InitialDataLoader(private val context: Context, private val repository: Ca
             data.forEach { 
                 val trimmed = it.copy(recordTime = it.recordTime.truncatedTo(ChronoUnit.MINUTES))
                 repository.insertConditionAtVisit(trimmed) 
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun loadConditionPhotos(inputStream: InputStream) {
+        try {
+            val data = json.decodeFromString<List<ConditionPhoto>>(inputStream.bufferedReader().use { it.readText() })
+            data.forEach { 
+                repository.insertConditionPhoto(it)
             }
         } catch (e: Exception) {
             e.printStackTrace()

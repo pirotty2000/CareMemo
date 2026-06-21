@@ -12,9 +12,10 @@ import androidx.room.TypeConverters
         HeightAndWeight::class,
         BpAndPulse::class,
         GlucoseAndHbA1c::class,
-        ConditionAtVisit::class
+        ConditionAtVisit::class,
+        ConditionPhoto::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bpAndPulseDao(): BpAndPulseDao
     abstract fun glucoseAndHbA1cDao(): GlucoseAndHbA1cDao
     abstract fun conditionAtVisitDao(): ConditionAtVisitDao
+    abstract fun conditionPhotoDao(): ConditionPhotoDao
 
     companion object {
         @Volatile
