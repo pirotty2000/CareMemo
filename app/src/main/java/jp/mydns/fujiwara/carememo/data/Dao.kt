@@ -72,6 +72,9 @@ interface HeightAndWeightDao {
 
     @Query("SELECT DISTINCT person_id FROM height_and_weight_db WHERE (height IS NOT NULL OR weight IS NOT NULL) AND deleted_at IS NULL")
     fun getPersonIdsWithHeightWeight(): Flow<List<Int>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL)")
+    fun hasDataForPerson(personId: Int): Flow<Boolean>
 }
 
 @Dao
@@ -106,6 +109,9 @@ interface BpAndPulseDao {
 
     @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE (bp_systolic IS NOT NULL OR bp_diastolic IS NOT NULL) AND deleted_at IS NULL")
     fun getPersonIdsWithBp(): Flow<List<Int>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL)")
+    fun hasDataForPerson(personId: Int): Flow<Boolean>
 }
 
 @Dao
@@ -137,6 +143,9 @@ interface GlucoseAndHbA1cDao {
 
     @Query("SELECT DISTINCT person_id FROM glucose_and_hba1c_db WHERE (glucose IS NOT NULL OR hba1c IS NOT NULL) AND deleted_at IS NULL")
     fun getPersonIdsWithGlucose(): Flow<List<Int>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL)")
+    fun hasDataForPerson(personId: Int): Flow<Boolean>
 }
 
 @Dao
@@ -175,6 +184,9 @@ interface ConditionAtVisitDao {
         AND (title LIKE '%' || :query || '%' OR condition LIKE '%' || :query || '%')
     """)
     fun getPersonIdsByConditionKeyword(query: String): Flow<List<Int>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM condition_at_visit_db WHERE person_id = :personId AND deleted_at IS NULL)")
+    fun hasDataForPerson(personId: Int): Flow<Boolean>
 }
 
 @Dao

@@ -193,4 +193,23 @@ class CareMemoRepository(
             }
         }
     }
+
+    /**
+     * 特定の利用者の各カテゴリー記録の有無サマリーを返します。
+     */
+    fun getPersonCategorySummaryById(personId: Int): Flow<PersonCategorySummary> {
+        return combine(
+            heightAndWeightDao.hasDataForPerson(personId),
+            bpAndPulseDao.hasDataForPerson(personId),
+            glucoseAndHbA1cDao.hasDataForPerson(personId),
+            conditionAtVisitDao.hasDataForPerson(personId)
+        ) { hw, bp, glucose, condition ->
+            PersonCategorySummary(
+                hasHeightWeight = hw,
+                hasBpAndPulse = bp,
+                hasGlucoseAndHbA1c = glucose,
+                hasCondition = condition
+            )
+        }
+    }
 }

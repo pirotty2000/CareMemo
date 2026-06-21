@@ -11,6 +11,7 @@ import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import android.content.Context
@@ -43,6 +44,18 @@ class PersonDetailViewModel(
 
     private val _currentPerson = MutableStateFlow<Person?>(null)
     val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
+        .flatMapLatest { person ->
+            if (person != null) repository.getPersonCategorySummaryById(person.id)
+            else kotlinx.coroutines.flow.flowOf(null)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     val isNameMaskingEnabled: StateFlow<Boolean> = userSettingsRepository.isNameMaskingEnabled
         .stateIn(

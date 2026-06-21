@@ -3,13 +3,13 @@ package jp.mydns.fujiwara.carememo.ui.screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,13 +36,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusState
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
@@ -50,7 +49,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
@@ -98,6 +97,7 @@ fun UnifiedRecordScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val conditionPhotoMap by viewModel.conditionPhotoMap.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
+    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
 
@@ -217,6 +217,13 @@ fun UnifiedRecordScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     itemsIndexed(Category.entries) { _, category ->
+                        val hasData = when (category) {
+                            Category.HEIGHT_AND_WEIGHT -> personCategorySummary?.hasHeightWeight == true
+                            Category.BP_AND_PULSE -> personCategorySummary?.hasBpAndPulse == true
+                            Category.GLUCOSE_AND_HBA1C -> personCategorySummary?.hasGlucoseAndHbA1c == true
+                            Category.CONDITION_AT_VISIT -> personCategorySummary?.hasCondition == true
+                        }
+
                         FilterChip(
                             selected = currentCategory == category,
                             onClick = { currentCategory = category },
@@ -229,7 +236,14 @@ fun UnifiedRecordScreen(
                                         modifier = Modifier.size(FilterChipDefaults.IconSize)
                                     )
                                 }
-                            } else null
+                            } else null,
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = currentCategory == category,
+                                borderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                borderWidth = if (hasData) 1.5.dp else 1.0.dp,
+                                selectedBorderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
                         )
                     }
                 }
@@ -1198,29 +1212,48 @@ data class ChartLimitLine(val label: String, val value: Double, val color: Color
 data class ChartRangeHighlight(val startValue: Double, val endValue: Double, val color: Color)
 
 @Composable
-fun LineChart(dataList: List<ChartLineData>, stepY: Double = 5.0, limits: List<ChartLimitLine> = emptyList(), ranges: List<ChartRangeHighlight> = emptyList(), minYConstraint: Double? = null, maxYConstraint: Double? = null, showDecimal: Boolean = false) {
+fun LineChart(
+    dataList: List<ChartLineData>,
+    stepY: Double = 5.0,
+    limits: List<ChartLimitLine> = emptyList(),
+    ranges: List<ChartRangeHighlight> = emptyList(),
+    minYConstraint: Double? = null,
+    maxYConstraint: Double? = null,
+    showDecimal: Boolean = false
+) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = Color.Gray)
     val valueLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold)
     val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
     val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    val scrollState = rememberScrollState()
+    
+    // ズームと移動の状態管理
+    var scaleX by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+
     val allPoints = dataList.flatMap { it.points }
     if (allPoints.isEmpty()) return
-    val minX = allPoints.minOf { it.first }; val maxX = allPoints.maxOf { it.first }
+    
+    val minX = allPoints.minOf { it.first }
+    val maxX = allPoints.maxOf { it.first }
+    val duration = if (maxX - minX == 0.0) 1.0 else maxX - minX
+    
     val allYValues = allPoints.map { it.second } + limits.map { it.value }
-    var minYInput = allYValues.minOf { it }; var maxYInput = allYValues.maxOf { it }
-    minYConstraint?.let { minYInput = minOf(minYInput, it) }; maxYConstraint?.let { maxYInput = maxOf(maxYInput, it) }
-    val minY = floor(minYInput / stepY) * stepY; val maxY = ceil(maxYInput / stepY) * stepY
+    var minYInput = allYValues.minOf { it }
+    var maxYInput = allYValues.maxOf { it }
+    minYConstraint?.let { minYInput = minOf(minYInput, it) }
+    maxYConstraint?.let { maxYInput = maxOf(maxYInput, it) }
+    val minY = floor(minYInput / stepY) * stepY
+    val maxY = ceil(maxYInput / stepY) * stepY
     val yRange = if (maxY - minY == 0.0) stepY else maxY - minY
     val yStepsCount = (yRange / stepY).toInt()
+    
     val density = LocalDensity.current
     val paddingLeft = 40.dp
     val paddingTop = 20.dp
     val paddingBottom = 20.dp
-    LaunchedEffect(allPoints.size) { scrollState.scrollTo(scrollState.maxValue) }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        // データが2系列以上ある場合のみ凡例を表示
         if (dataList.size > 1) {
             Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1235,6 +1268,7 @@ fun LineChart(dataList: List<ChartLineData>, stepY: Double = 5.0, limits: List<C
             }
         }
         Row(modifier = Modifier.weight(1f)) {
+            // Y軸ラベル（固定）
             Canvas(modifier = Modifier.width(paddingLeft).fillMaxHeight()) {
                 val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
                 val topPx = paddingTop.toPx()
@@ -1243,64 +1277,130 @@ fun LineChart(dataList: List<ChartLineData>, stepY: Double = 5.0, limits: List<C
                     val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
                     val label = if (showDecimal || stepY <= 1.0) "%.1f".format(yVal) else yVal.toInt().toString()
                     val textLayout = textMeasurer.measure(label, labelStyle)
-                    // 右側の余白を 8.dp -> 4.dp に詰める
                     drawText(textLayout, topLeft = Offset(size.width - textLayout.size.width - 4.dp.toPx(), py - textLayout.size.height / 2))
                 }
             }
-            Box(modifier = Modifier.weight(1f)) {
-                // 左右のバッファを 32.dp/8.dp -> 4.dp/4.dp に大幅に詰める
+            // グラフ本体（ズーム・パン対応）
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scaleX = (scaleX * zoom).coerceAtLeast(1f)
+                            // パンの制限（データの範囲内に収める）
+                            val maxOffsetX = 0f
+                            val minOffsetX = -(size.width * (scaleX - 1f))
+                            offsetX = (offsetX + pan.x).coerceIn(minOffsetX, maxOffsetX)
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(onDoubleTap = {
+                            scaleX = 1f
+                            offsetX = 0f
+                        })
+                    }
+            ) {
                 val leftBufferPx = with(density) { 4.dp.toPx() }
                 val rightBufferPx = with(density) { 4.dp.toPx() }
                 
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val chartWidth = size.width - leftBufferPx - rightBufferPx
+                    val chartWidth = (size.width - leftBufferPx - rightBufferPx) * scaleX
                     val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
                     val topPx = paddingTop.toPx()
-                    val startX = leftBufferPx
+                    val startX = leftBufferPx + offsetX
 
-                    // X軸の範囲をデータの期間に合わせる
-                    val duration = if (maxX - minX == 0.0) 1.0 else maxX - minX
+                    // グラフエリアのみにクリッピング
+                    clipRect(left = leftBufferPx, top = 0f, right = size.width - rightBufferPx, bottom = size.height) {
+                        // 1. 範囲ハイライト
+                        ranges.forEach { range ->
+                            val pyStart = topPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
+                            val pyEnd = topPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
+                            val top = pyEnd.coerceIn(topPx, topPx + chartHeight)
+                            val bottom = pyStart.coerceIn(topPx, topPx + chartHeight)
+                            if (bottom > top) {
+                                drawRect(
+                                    color = range.color,
+                                    topLeft = Offset(startX, top),
+                                    size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top)
+                                )
+                            }
+                        }
 
-                    ranges.forEach { range ->
-                        val pyStart = topPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
-                        val pyEnd = topPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
-                        val top = pyEnd.coerceIn(topPx, topPx + chartHeight)
-                        val bottom = pyStart.coerceIn(topPx, topPx + chartHeight)
-                        if (bottom > top) drawRect(color = range.color, topLeft = Offset(startX, top), size = androidx.compose.ui.geometry.Size(chartWidth, bottom - top))
-                    }
-                    for (i in 0..yStepsCount) { val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight; drawLine(color = Color.LightGray.copy(alpha = 0.5f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx()) }
-                    
-                    // グリッドとラベル（全件表示に合わせて等間隔に4つ程度）
-                    val labelCount = 4
-                    for (i in 0 until labelCount) {
-                        val currentX = minX + (duration * i / (labelCount - 1))
-                        val px = startX + ((currentX - minX) / duration).toFloat() * chartWidth
+                        // 2. Y軸グリッド線
+                        for (i in 0..yStepsCount) {
+                            val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
+                            drawLine(
+                                color = Color.LightGray.copy(alpha = 0.5f),
+                                start = Offset(leftBufferPx, py),
+                                end = Offset(size.width - rightBufferPx, py),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
                         
-                        drawLine(color = Color.LightGray.copy(alpha = 0.3f), start = Offset(px, topPx), end = Offset(px, topPx + chartHeight), strokeWidth = 1.dp.toPx())
-                        val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd").withLocale(Locale.JAPAN).format(Instant.ofEpochMilli(currentX.toLong()).atZone(ZoneId.systemDefault()))
-                        val textLayout = textMeasurer.measure(dateStr, labelStyle)
-                        drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, topPx + chartHeight + 4.dp.toPx()))
-                    }
+                        // 3. X軸グリッドとラベル（ズーム率に応じて密度を調整）
+                        val baseLabelCount = 4
+                        val labelCount = (baseLabelCount * scaleX).toInt().coerceAtMost(20)
+                        for (i in 0 until labelCount) {
+                            val currentX = minX + (duration * i / (labelCount - 1))
+                            val px = startX + ((currentX - minX) / duration).toFloat() * chartWidth
+                            
+                            // 画面内にある程度近いラベルのみ描画
+                            if (px in (leftBufferPx - 100f)..(size.width - rightBufferPx + 100f)) {
+                                drawLine(
+                                    color = Color.LightGray.copy(alpha = 0.3f),
+                                    start = Offset(px, topPx),
+                                    end = Offset(px, topPx + chartHeight),
+                                    strokeWidth = 1.dp.toPx()
+                                )
+                                val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd")
+                                    .withLocale(Locale.JAPAN)
+                                    .format(Instant.ofEpochMilli(currentX.toLong()).atZone(ZoneId.systemDefault()))
+                                val textLayout = textMeasurer.measure(dateStr, labelStyle)
+                                drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, topPx + chartHeight + 4.dp.toPx()))
+                            }
+                        }
 
-                    limits.forEach { limit ->
-                        val py = topPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
-                        if (py in topPx..(topPx + chartHeight)) {
-                            drawLine(color = limit.color.copy(alpha = 0.6f), start = Offset(startX, py), end = Offset(startX + chartWidth, py), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
-                            val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color)); drawText(labelLayout, topLeft = Offset(startX + 4.dp.toPx(), if (limit.isLabelAbove) py - labelLayout.size.height - 2.dp.toPx() else py + 2.dp.toPx()))
+                        // 4. 限界線
+                        limits.forEach { limit ->
+                            val py = topPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
+                            if (py in topPx..(topPx + chartHeight)) {
+                                drawLine(
+                                    color = limit.color.copy(alpha = 0.6f),
+                                    start = Offset(startX, py),
+                                    end = Offset(startX + chartWidth, py),
+                                    strokeWidth = 1.dp.toPx(),
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                                )
+                                val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color))
+                                drawText(labelLayout, topLeft = Offset(startX + 4.dp.toPx(), if (limit.isLabelAbove) py - labelLayout.size.height - 2.dp.toPx() else py + 2.dp.toPx()))
+                            }
+                        }
+
+                        // 5. データ折れ線
+                        dataList.forEach { lineData ->
+                            val path = Path()
+                            val sortedPoints = lineData.points.sortedBy { it.first }
+                            sortedPoints.forEachIndexed { index, (x, y) ->
+                                val px = startX + ((x - minX) / duration).toFloat() * chartWidth
+                                val py = topPx + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
+                                
+                                if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+                                
+                                // 点を描画（クリッピングエリア内のみ）
+                                if (px in leftBufferPx..(size.width - rightBufferPx)) {
+                                    drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
+                                    val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
+                                    val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color))
+                                    drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
+                                }
+                            }
+                            drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
                         }
                     }
-                    dataList.forEach { lineData ->
-                        val path = Path(); val sortedPoints = lineData.points.sortedBy { it.first }
-                        sortedPoints.forEachIndexed { index, (x, y) ->
-                            val px = startX + ((x - minX) / duration).toFloat() * chartWidth; val py = topPx + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
-                            if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
-                            drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
-                            val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
-                            val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color)); drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
-                        }
-                        drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))
-                    }
-                    drawLine(Color.Gray, Offset(startX, topPx), Offset(startX, topPx + chartHeight), strokeWidth = 1.5.dp.toPx()); drawLine(Color.Gray, Offset(startX, topPx + chartHeight), Offset(startX + chartWidth, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+                    
+                    // 枠線
+                    drawLine(Color.Gray, Offset(leftBufferPx, topPx), Offset(leftBufferPx, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+                    drawLine(Color.Gray, Offset(leftBufferPx, topPx + chartHeight), Offset(size.width - rightBufferPx, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                 }
             }
         }
