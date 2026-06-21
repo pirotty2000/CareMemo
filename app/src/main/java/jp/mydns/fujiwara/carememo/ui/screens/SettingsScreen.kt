@@ -131,7 +131,7 @@ fun SettingsScreen(
     }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.3.0\n\n(C) 2025-2026 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.2.0\n\n(C) 2025-2026 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
     }
 
     if (showHelpDialog) {

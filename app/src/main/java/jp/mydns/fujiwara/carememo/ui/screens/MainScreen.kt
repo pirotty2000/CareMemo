@@ -197,7 +197,7 @@ fun MainScreenContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("CareMemo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text("バージョン: 1.3.0")
+                    Text("バージョン: 1.2.0")
                     HorizontalDivider()
                     Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text("Android 15 (API 35)")
