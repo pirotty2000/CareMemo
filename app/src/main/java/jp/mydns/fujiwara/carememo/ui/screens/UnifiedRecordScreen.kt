@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Description
@@ -84,12 +85,13 @@ fun UnifiedRecordScreen(
     initialCategoryType: Category,
     personId: Int,
     onBack: () -> Unit,
-    onNavigateToConditionDetail: (Int) -> Unit
+    onNavigateToConditionDetail: (Int, Int) -> Unit
 ) {
     var currentCategory by remember { mutableStateOf(initialCategoryType) }
     
     val currentRecord by viewModel.currentRecordState.collectAsState()
     val records by viewModel.records.collectAsState()
+    val conditionPhotoMap by viewModel.conditionPhotoMap.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
@@ -230,7 +232,7 @@ fun UnifiedRecordScreen(
         },
         floatingActionButton = {
             if (currentCategory == Category.CONDITION_AT_VISIT) {
-                FloatingActionButton(onClick = { showMemoCreateDialog = true }) {
+                FloatingActionButton(onClick = { onNavigateToConditionDetail(personId, 0) }) {
                     Icon(Icons.Default.Add, contentDescription = "所見追加")
                 }
             }
@@ -320,8 +322,9 @@ fun UnifiedRecordScreen(
                     } else {
                         MemoHistoryList(
                             records = memos,
+                            conditionPhotoMap = conditionPhotoMap,
                             onItemClick = { memo ->
-                                onNavigateToConditionDetail(memo.id)
+                                onNavigateToConditionDetail(personId, memo.id)
                             },
                             onDeleteClick = { recordToDelete = it }
                         )
@@ -1351,7 +1354,12 @@ fun formatRecordTime(instant: Instant): String {
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun MemoHistoryList(records: List<ConditionAtVisit>, onItemClick: (ConditionAtVisit) -> Unit, onDeleteClick: (ConditionAtVisit) -> Unit) {
+fun MemoHistoryList(
+    records: List<ConditionAtVisit>,
+    conditionPhotoMap: Map<Int, Boolean>,
+    onItemClick: (ConditionAtVisit) -> Unit,
+    onDeleteClick: (ConditionAtVisit) -> Unit
+) {
     val groupedRecords = remember(records) { records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }.toSortedMap(compareByDescending { it }) }
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
         groupedRecords.forEach { (date, memos) ->
@@ -1363,7 +1371,23 @@ fun MemoHistoryList(records: List<ConditionAtVisit>, onItemClick: (ConditionAtVi
                         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) { Text(text = formatTime(memo.recordTime), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary); Spacer(modifier = Modifier.width(8.dp)); if (!memo.title.isNullOrBlank()) Text(text = memo.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                             Spacer(modifier = Modifier.height(4.dp)); Text(text = memo.condition ?: "", style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            Spacer(modifier = Modifier.height(4.dp)); Text(text = "記録者: ${memo.author}", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.align(Alignment.End))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (conditionPhotoMap[memo.id] == true) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "写真あり",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(text = "記録者: ${memo.author}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            }
                         }
                     }
                 }

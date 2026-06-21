@@ -151,21 +151,26 @@ fun CareMemoApp(activity: FragmentActivity) {
                 initialCategoryType = category,
                 personId = personId,
                 onBack = { navController.popBackStack() },
-                onNavigateToConditionDetail = { conditionId ->
-                    navController.navigate("conditionDetail/$conditionId")
+                onNavigateToConditionDetail = { pId, cId ->
+                    navController.navigate("conditionDetail/$pId/$cId")
                 }
             )
         }
         composable(
-            route = "conditionDetail/{conditionId}",
-            arguments = listOf(navArgument("conditionId") { type = NavType.IntType })
+            route = "conditionDetail/{personId}/{conditionId}",
+            arguments = listOf(
+                navArgument("personId") { type = NavType.IntType },
+                navArgument("conditionId") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
+            val personId = backStackEntry.arguments?.getInt("personId") ?: 0
             val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             ConditionDetailScreen(
                 viewModel = detailViewModel,
+                personId = personId,
                 conditionId = conditionId,
                 onBack = { navController.popBackStack() },
                 onNavigateToPhotoPreview = { uri, pId, cId ->
@@ -174,8 +179,7 @@ fun CareMemoApp(activity: FragmentActivity) {
                 },
                 onNavigateToFullScreen = { fileName ->
                     navController.navigate("photoFull/$fileName")
-                },
-                onEditMemo = { /* 現時点ではポップアップで対応可能だが、将来的に画面遷移にしても良い */ }
+                }
             )
         }
         composable(

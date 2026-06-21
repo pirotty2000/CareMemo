@@ -73,6 +73,12 @@ class PersonDetailViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /**
+     * 各所見メモ ID に対する写真の有無を保持する Map
+     */
+    private val _conditionPhotoMap = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    val conditionPhotoMap: StateFlow<Map<Int, Boolean>> = _conditionPhotoMap.asStateFlow()
+
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
@@ -97,7 +103,15 @@ class PersonDetailViewModel(
                     repository.getGlucoseAndHbA1cByPersonId(personId).collectLatest { _records.value = it }
                 }
                 Category.CONDITION_AT_VISIT -> {
-                    repository.getConditionAtVisitByPersonId(personId).collectLatest { _records.value = it }
+                    repository.getConditionAtVisitByPersonId(personId).collectLatest { memos ->
+                        _records.value = memos
+                        // 写真の有無をロードしてマップを更新
+                        val photos = repository.getAllPhotosByPersonId(personId)
+                        val map = memos.associate { memo ->
+                            memo.id to photos.any { it.conditionId == memo.id }
+                        }
+                        _conditionPhotoMap.value = map
+                    }
                 }
             }
         }
@@ -165,7 +179,7 @@ class PersonDetailViewModel(
     /**
      * 画像を処理して保存する
      */
-    fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int) {
+    fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int, caption: String) {
         viewModelScope.launch {
             _isProcessing.value = true
             try {
@@ -178,7 +192,8 @@ class PersonDetailViewModel(
                         personId = personId,
                         photoFileName = photoName,
                         thumbnailFileName = thumbName,
-                        capturedAt = Instant.now()
+                        capturedAt = Instant.now(),
+                        caption = caption
                     )
                     repository.insertConditionPhoto(photo)
                     _uiEventFlow.emit(UiEvent.ShowSnackbar("写真を保存しました"))
@@ -199,8 +214,8 @@ class PersonDetailViewModel(
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
         viewModelScope.launch {
             try {
-                // DBから削除
-                repository.deleteConditionPhoto(photo)
+                // DBから物理削除
+                repository.deleteConditionPhotoById(photo.id)
                 // 物理ファイルを削除
                 ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
                 _uiEventFlow.emit(UiEvent.ShowSnackbar("写真を削除しました"))

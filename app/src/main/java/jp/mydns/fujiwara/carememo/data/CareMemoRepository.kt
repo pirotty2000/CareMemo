@@ -106,6 +106,8 @@ class CareMemoRepository(
     suspend fun insertConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.insert(item)
 
     suspend fun deleteConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.delete(item)
+
+    suspend fun deleteConditionPhotoById(id: Int) = conditionPhotoDao.deleteById(id)
     
     suspend fun getAllPhotosByPersonId(personId: Int) = conditionPhotoDao.getAllByPersonId(personId)
 

@@ -11,6 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +27,11 @@ fun ConditionPhotoPreviewScreen(
     val context = LocalContext.current
     val isProcessing by viewModel.isProcessing.collectAsState()
 
+    // キャプションの初期値を現在の日時に設定
+    var caption by remember { 
+        mutableStateOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"))) 
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("写真の確認") })
@@ -33,16 +40,28 @@ fun ConditionPhotoPreviewScreen(
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AsyncImage(
-                model = uri,
+                model = coil.request.ImageRequest.Builder(context)
+                    .data(uri)
+                    .crossfade(true)
+                    .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                    .diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                    .build(),
                 contentDescription = "プレビュー",
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentScale = ContentScale.Fit
             )
             
-            Spacer(modifier = Modifier.height(24.dp))
+            OutlinedTextField(
+                value = caption,
+                onValueChange = { caption = it },
+                label = { Text("キャプション") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = !isProcessing
+            )
 
             if (isProcessing) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -64,7 +83,7 @@ fun ConditionPhotoPreviewScreen(
                     }
                     Button(
                         onClick = {
-                            viewModel.processAndSavePhoto(context, uri, personId, conditionId)
+                            viewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
                             onSaved()
                         },
                         modifier = Modifier.weight(1f),

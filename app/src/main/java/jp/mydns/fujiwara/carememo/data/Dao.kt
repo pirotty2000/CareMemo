@@ -184,6 +184,9 @@ interface ConditionPhotoDao {
     @Delete
     suspend fun delete(item: ConditionPhoto)
 
+    @Query("DELETE FROM condition_photo_db WHERE id = :id")
+    suspend fun deleteById(id: Int)
+
     @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE id = :id")
     suspend fun logicalDelete(id: Int, timestamp: Long)
 
