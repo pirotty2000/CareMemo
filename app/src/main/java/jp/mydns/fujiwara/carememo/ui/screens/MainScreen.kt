@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -35,6 +36,7 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.CategoryBadges
+import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import java.time.Instant
@@ -56,6 +58,9 @@ fun MainScreen(
     val userList by viewModel.userList.collectAsState()
     val categorySummaries by viewModel.categorySummaries.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val selectedSection by viewModel.selectedSection.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
@@ -97,6 +102,10 @@ fun MainScreen(
         userList = userList,
         categorySummaries = categorySummaries,
         isNameMaskingEnabled = isNameMaskingEnabled,
+        searchQuery = searchQuery,
+        selectedSection = selectedSection,
+        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+        onSectionSelect = { viewModel.setSelectedSection(it) },
         snackbarHostState = snackbarHostState,
         lazyListState = lazyListState,
         onUserClick = { person -> selectedPerson = person; showSheet = true },
@@ -164,6 +173,10 @@ fun MainScreenContent(
     userList: List<Person>,
     categorySummaries: Map<Int, PersonCategorySummary>,
     isNameMaskingEnabled: Boolean,
+    searchQuery: String,
+    selectedSection: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSectionSelect: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
     onUserClick: (Person) -> Unit,
@@ -172,9 +185,7 @@ fun MainScreenContent(
     onEndUser: (Person) -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
-    var searchText by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showVersionDialog by remember { mutableStateOf(false) }
     var showHistoryDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
@@ -186,13 +197,13 @@ fun MainScreenContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("CareMemo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text("バージョン: 1.0.2")
+                    Text("バージョン: 1.3.0")
                     HorizontalDivider()
                     Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text("Android 15 (API 35)")
                     Text("KYOCERA TORQUE G06 最適化済")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("(C) 2025 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
+                    Text("(C) 2025-2026 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } }
@@ -260,36 +271,6 @@ fun MainScreenContent(
     }
 
     val kanaGroups = listOf("全", "あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他")
-    val kanaMap = mapOf(
-        "あ" to "あいうえお",
-        "か" to "かきくけこがぎぐげご",
-        "さ" to "さしすせそざじずぜぞ",
-        "た" to "たちつてとだぢづでど",
-        "な" to "なにぬねの",
-        "は" to "はひふへほばびぶべぼぱぴぷぺぽ",
-        "ま" to "まみむめも",
-        "や" to "やゆよ",
-        "ら" to "らりるれろ",
-        "わ" to "わをん"
-    )
-
-    // 50音タブに基づいたフィルタリング処理
-    val filteredList = remember(userList, selectedTabIndex) {
-        userList.filter { user ->
-            val group = kanaGroups[selectedTabIndex]
-            when (group) {
-                "全" -> true
-                "他" -> {
-                    val firstChar = user.lastNameFurigana.firstOrNull()
-                    firstChar == null || firstChar !in '\u3041'..'\u3096'
-                }
-                else -> {
-                    val firstChar = user.lastNameFurigana.firstOrNull()
-                    firstChar != null && kanaMap[group]?.contains(firstChar) == true
-                }
-            }
-        }.sortedWith(compareBy({ it.lastNameFurigana }, { it.firstNameFurigana }))
-    }
 
     Scaffold(
         topBar = {
@@ -310,7 +291,7 @@ fun MainScreenContent(
         floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Default.Add, contentDescription = "利用者登録") } }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SearchBar(query = searchText, onQueryChange = { searchText = it })
+            SearchBar(query = searchQuery, onQueryChange = onSearchQueryChange)
 
             Row(
                 modifier = Modifier
@@ -318,12 +299,12 @@ fun MainScreenContent(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.Start
             ) {
-                kanaGroups.forEachIndexed { index, title ->
+                kanaGroups.forEach { title ->
                     Box(
                         modifier = Modifier
                             .width(40.dp)
                             .height(48.dp)
-                            .clickable { selectedTabIndex = index },
+                            .clickable { onSectionSelect(title) },
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -334,9 +315,9 @@ fun MainScreenContent(
                             Text(
                                 text = title,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (selectedSection == title) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            if (selectedTabIndex == index) {
+                            if (selectedSection == title) {
                                 Box(
                                     modifier = Modifier
                                         .padding(top = 4.dp)
@@ -352,7 +333,7 @@ fun MainScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(modifier = Modifier.fillMaxSize(), state = lazyListState, contentPadding = PaddingValues(bottom = 80.dp)) {
-                items(filteredList, key = { it.id }) { user ->
+                items(userList, key = { it.id }) { user ->
                     val age = calculateAge(user.birthday)
                     val birthdayStr = formatToJapaneseEra(user.birthday)
                     var showItemMenu by remember { mutableStateOf(false) }
@@ -537,12 +518,6 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
     )
 }
 
-@Preview(showBackground = true)
-@Composable
-fun MainScreenPreview() {
-    val mockUserList = listOf(Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()))
-    CareMemoTheme { MainScreenContent(userList = mockUserList, categorySummaries = emptyMap(), isNameMaskingEnabled = false, snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(), onUserClick = { }, onEditUser = { }, onAddClick = { }, onEndUser = { }, onNavigateToSettings = { }) }
-}
 
 fun calculateAge(birthday: Instant): Int {
     val birthDate = birthday.atZone(ZoneId.systemDefault()).toLocalDate()
@@ -562,33 +537,42 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = { onQueryChange(it) },
-        label = { Text("所見メモ検索(仮)") },
-        placeholder = { Text("特定のキーワードを含む利用者を検索（将来機能）", style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
+        label = { Text("所見メモ検索") },
+        placeholder = { Text("特定の症状や出来事を入力...", style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Default.Close, contentDescription = "クリア")
+                }
+            }
+        },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
 @Composable
-fun CompactTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    isError: Boolean = false,
-    suffix: @Composable (() -> Unit)? = null
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        keyboardOptions = keyboardOptions,
-        isError = isError,
-        suffix = suffix,
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium
-    )
+fun MainScreenPreview() {
+    val mockUserList = listOf(Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()))
+    CareMemoTheme { 
+        MainScreenContent(
+            userList = mockUserList, 
+            categorySummaries = emptyMap(), 
+            isNameMaskingEnabled = false, 
+            searchQuery = "",
+            selectedSection = "全",
+            onSearchQueryChange = {},
+            onSectionSelect = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState(), 
+            onUserClick = { }, 
+            onEditUser = { }, 
+            onAddClick = { }, 
+            onEndUser = { }, 
+            onNavigateToSettings = { }
+        ) 
+    }
 }

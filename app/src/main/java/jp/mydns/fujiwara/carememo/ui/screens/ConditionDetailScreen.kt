@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -33,7 +35,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import coil.compose.AsyncImage
+import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
@@ -58,6 +67,12 @@ fun ConditionDetailScreen(
     val isProcessing by viewModel.isProcessing.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
 
+    val focusManager = LocalFocusManager.current
+    val monthFocusRequester = remember { FocusRequester() }
+    val dayFocusRequester = remember { FocusRequester() }
+    val hourFocusRequester = remember { FocusRequester() }
+    val minuteFocusRequester = remember { FocusRequester() }
+
     // 編集モードの状態
     var isEditing by remember { mutableStateOf(conditionId == 0) }
     
@@ -78,7 +93,7 @@ fun ConditionDetailScreen(
     }
 
     // 初期値セット
-    LaunchedEffect(memo, isEditing) {
+    LaunchedEffect(memo) {
         if (memo != null && title.isEmpty() && condition.isEmpty()) {
             title = memo.title ?: ""
             condition = memo.condition ?: ""
@@ -90,14 +105,25 @@ fun ConditionDetailScreen(
             day = zdt.dayOfMonth.toString()
             hour = "%02d".format(zdt.hour)
             minute = "%02d".format(zdt.minute)
-        } else if (conditionId == 0 && author.isEmpty()) {
-            author = defaultRecorderName
+        } else if (conditionId == 0 && year.isEmpty()) {
+            // 新規作成時：日付は今日、時刻は 00:00 をセット
             val now = java.time.LocalDateTime.now()
             year = now.year.toString()
             month = now.monthValue.toString()
             day = now.dayOfMonth.toString()
-            hour = "%02d".format(now.hour)
-            minute = "%02d".format(now.minute)
+            hour = "00"
+            minute = "00"
+            
+            if (author.isEmpty() && defaultRecorderName.isNotEmpty()) {
+                author = defaultRecorderName
+            }
+        }
+    }
+
+    // デフォルト記録者が後から読み込まれた場合の考慮
+    LaunchedEffect(defaultRecorderName) {
+        if (conditionId == 0 && author.isEmpty() && defaultRecorderName.isNotEmpty()) {
+            author = defaultRecorderName
         }
     }
 
@@ -125,7 +151,24 @@ fun ConditionDetailScreen(
         if (result.resultCode == Activity.RESULT_OK) {
             val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
             if (spokenText != null) {
-                condition += (if (condition.isEmpty()) "" else "\n") + spokenText + "。"
+                // 句読点の自動補完と改行の挿入
+                val formattedText = buildString {
+                    append(spokenText.trim())
+                    // 末尾が句読点等でなければ「。」を付与
+                    if (!spokenText.trim().any { it in "。、？！?.!" }) {
+                        append("。")
+                    }
+                    append("\n")
+                }
+                
+                // 既存の文章があれば末尾に追加
+                condition = if (condition.isBlank()) {
+                    formattedText
+                } else {
+                    // 既存の末尾が改行でなければ改行を挟んでから追加
+                    val separator = if (condition.endsWith("\n")) "" else "\n"
+                    condition + separator + formattedText
+                }
             }
         }
     }
@@ -203,47 +246,130 @@ fun ConditionDetailScreen(
         ) {
             if (isEditing) {
                 // 編集モード
-                Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = year, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 4) year = filtered }, modifier = Modifier.weight(1.5f), suffix = { Text("年", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = month, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) month = filtered }, modifier = Modifier.weight(1f), suffix = { Text("月", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = day, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) day = filtered }, modifier = Modifier.weight(1f), suffix = { Text("日", style = MaterialTheme.typography.bodySmall) })
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = hour, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) hour = filtered }, modifier = Modifier.weight(1f), suffix = { Text("時", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = minute, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) minute = filtered }, modifier = Modifier.weight(1f), suffix = { Text("分", style = MaterialTheme.typography.bodySmall) })
-                    Spacer(modifier = Modifier.weight(1.5f))
-                }
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("タイトル (任意)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = author,
-                    onValueChange = { author = it },
-                    label = { Text("記録者") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = condition,
-                    onValueChange = { condition = it },
-                    label = { Text("所見メモ") },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString())
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CompactTextField(
+                                    value = year,
+                                    onValueChange = { 
+                                        val filtered = it.filter { c -> c.isDigit() }
+                                        if (filtered.length <= 4) {
+                                            year = filtered
+                                            if (filtered.length == 4) monthFocusRequester.requestFocus()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1.3f),
+                                    onFocusChanged = { if (it.isFocused) year = "" },
+                                    suffix = { Text("年", style = MaterialTheme.typography.bodySmall) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                    keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() })
+                                )
+                                CompactTextField(
+                                    value = month,
+                                    onValueChange = { 
+                                        val filtered = it.filter { c -> c.isDigit() }
+                                        if (filtered.length <= 2) {
+                                            month = filtered
+                                            if (filtered.length == 2) dayFocusRequester.requestFocus()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
+                                    onFocusChanged = { if (it.isFocused) month = "" },
+                                    suffix = { Text("月", style = MaterialTheme.typography.bodySmall) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                    keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() })
+                                )
+                                CompactTextField(
+                                    value = day,
+                                    onValueChange = { 
+                                        val filtered = it.filter { c -> c.isDigit() }
+                                        if (filtered.length <= 2) {
+                                            day = filtered
+                                            if (filtered.length == 2) hourFocusRequester.requestFocus()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
+                                    onFocusChanged = { if (it.isFocused) day = "" },
+                                    suffix = { Text("日", style = MaterialTheme.typography.bodySmall) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                    keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() })
+                                )
+                                CompactTextField(
+                                    value = hour,
+                                    onValueChange = { 
+                                        val filtered = it.filter { c -> c.isDigit() }
+                                        if (filtered.length <= 2) {
+                                            hour = filtered
+                                            if (filtered.length == 2) minuteFocusRequester.requestFocus()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
+                                    onFocusChanged = { if (it.isFocused) hour = "" },
+                                    suffix = { Text("時", style = MaterialTheme.typography.bodySmall) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                    keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() })
+                                )
+                                CompactTextField(
+                                    value = minute,
+                                    onValueChange = { 
+                                        val filtered = it.filter { c -> c.isDigit() }
+                                        if (filtered.length <= 2) minute = filtered
+                                    },
+                                    modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
+                                    onFocusChanged = { if (it.isFocused) minute = "" },
+                                    suffix = { Text("分", style = MaterialTheme.typography.bodySmall) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                                )
                             }
-                            speechLauncher.launch(intent)
-                        }) {
-                            Icon(Icons.Default.Mic, contentDescription = "音声入力")
+                        }
+
+                        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = title,
+                                onValueChange = { title = it },
+                                label = { Text("タイトル (任意)") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = author,
+                                onValueChange = { author = it },
+                                label = { Text("記録者") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = condition,
+                                onValueChange = { condition = it },
+                                label = { Text("所見メモ") },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString())
+                                        }
+                                        speechLauncher.launch(intent)
+                                    }) {
+                                        Icon(Icons.Default.Mic, contentDescription = "音声入力")
+                                    }
+                                }
+                            )
                         }
                     }
-                )
+                }
             } else {
                 // 参照モード
                 Card(
@@ -301,10 +427,12 @@ fun ConditionDetailScreen(
                         Text("撮影")
                     }
                 } else if (isEditing && conditionId == 0) {
+                    Spacer(modifier = Modifier.width(16.dp)) // 少し右にずらすためのスペース
                     Text(
                         text = "※所見メモの記録には、後から写真を撮影して残すこともできます",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -403,53 +531,3 @@ fun PhotoGrid(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CompactTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    label: @Composable (() -> Unit)? = null,
-    isError: Boolean = false,
-    suffix: @Composable (() -> Unit)? = null,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        interactionSource = interactionSource,
-        enabled = true,
-        singleLine = true,
-        keyboardOptions = keyboardOptions,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        ),
-        decorationBox = { innerTextField ->
-            OutlinedTextFieldDefaults.DecorationBox(
-                value = value,
-                innerTextField = innerTextField,
-                enabled = true,
-                singleLine = true,
-                visualTransformation = VisualTransformation.None,
-                interactionSource = interactionSource,
-                isError = isError,
-                label = label,
-                suffix = suffix,
-                colors = OutlinedTextFieldDefaults.colors(),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                container = {
-                    OutlinedTextFieldDefaults.Container(
-                        enabled = true,
-                        isError = isError,
-                        interactionSource = interactionSource,
-                        colors = OutlinedTextFieldDefaults.colors(),
-                        shape = OutlinedTextFieldDefaults.shape,
-                    )
-                }
-            )
-        }
-    )
-}

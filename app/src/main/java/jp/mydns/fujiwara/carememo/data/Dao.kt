@@ -168,6 +168,13 @@ interface ConditionAtVisitDao {
 
     @Query("SELECT DISTINCT person_id FROM condition_at_visit_db WHERE deleted_at IS NULL")
     fun getPersonIdsWithCondition(): Flow<List<Int>>
+
+    @Query("""
+        SELECT DISTINCT person_id FROM condition_at_visit_db 
+        WHERE deleted_at IS NULL 
+        AND (title LIKE '%' || :query || '%' OR condition LIKE '%' || :query || '%')
+    """)
+    fun getPersonIdsByConditionKeyword(query: String): Flow<List<Int>>
 }
 
 @Dao

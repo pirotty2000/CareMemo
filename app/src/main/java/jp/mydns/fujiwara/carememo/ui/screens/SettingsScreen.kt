@@ -131,7 +131,7 @@ fun SettingsScreen(
     }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.1.0\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.3.0\n\n(C) 2025-2026 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
     }
 
     if (showHelpDialog) {
@@ -250,14 +250,6 @@ fun SettingsScreen(
 
             // --- 5. 開発者向け ---
             SettingsSection(title = "開発者オプション") {
-                ListItem(
-                    headlineContent = { Text("(開発用) 生年月日の時分クリア") },
-                    modifier = Modifier.clickable { viewModel.normalizeAllPersonBirthdays() }
-                )
-                ListItem(
-                    headlineContent = { Text("(開発用) assetsから初期データを読込") },
-                    modifier = Modifier.clickable { viewModel.importLegacyDataFromAssets(context) }
-                )
                 ListItem(
                     headlineContent = { Text("(開発用) データベースの全消去", color = MaterialTheme.colorScheme.error) },
                     modifier = Modifier.clickable { showDevClearConfirm = true }

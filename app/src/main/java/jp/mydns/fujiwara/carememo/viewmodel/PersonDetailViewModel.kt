@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -62,6 +63,33 @@ class PersonDetailViewModel(
 
     private val _records = MutableStateFlow<List<Any>>(emptyList())
     val records: StateFlow<List<Any>> = _records.asStateFlow()
+    
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /**
+     * フィルタリングされた記録リスト
+     */
+    val filteredRecords: StateFlow<List<Any>> = combine(_records, _searchQuery) { records, query ->
+        if (query.isBlank()) {
+            records
+        } else {
+            records.filter { record ->
+                if (record is ConditionAtVisit) {
+                    val titleMatch = record.title?.contains(query, ignoreCase = true) == true
+                    val conditionMatch = record.condition?.contains(query, ignoreCase = true) == true
+                    titleMatch || conditionMatch
+                } else {
+                    // 所見メモ以外は検索対象外とするか、必要なら追加
+                    true
+                }
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
     
@@ -119,6 +147,10 @@ class PersonDetailViewModel(
 
     fun clearCurrentRecord() {
         _currentRecordState.value = null
+    }
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun saveRecord(record: Any?) {

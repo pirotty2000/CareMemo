@@ -111,6 +111,9 @@ class CareMemoRepository(
     
     suspend fun getAllPhotosByPersonId(personId: Int) = conditionPhotoDao.getAllByPersonId(personId)
 
+    fun getPersonIdsByConditionKeyword(query: String): Flow<List<Int>> =
+        conditionAtVisitDao.getPersonIdsByConditionKeyword(query)
+
     // --- バックアップ・インポート ---
     suspend fun getBackupData(): CareMemoBackup {
         return CareMemoBackup(

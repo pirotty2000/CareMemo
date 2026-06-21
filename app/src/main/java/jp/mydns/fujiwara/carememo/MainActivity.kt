@@ -103,7 +103,9 @@ fun CareMemoApp(activity: FragmentActivity) {
             MainScreen(
                 viewModel = listViewModel,
                 onNavigateToDetail = { personId, category ->
-                    navController.navigate("detail/$personId/${category.name}")
+                    val query = listViewModel.searchQuery.value
+                    val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
+                    navController.navigate("detail/$personId/${category.name}?query=$encodedQuery")
                 },
                 onNavigateToSettings = {
                     navController.navigate("settings")
@@ -132,20 +134,35 @@ fun CareMemoApp(activity: FragmentActivity) {
             )
         }
         composable(
-            route = "detail/{personId}/{categoryName}",
+            route = "detail/{personId}/{categoryName}?query={query}",
             arguments = listOf(
                 navArgument("personId") { type = NavType.IntType },
-                navArgument("categoryName") { type = NavType.StringType }
+                navArgument("categoryName") { type = NavType.StringType },
+                navArgument("query") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = ""
+                }
             )
         ) { backStackEntry ->
             val personId = backStackEntry.arguments?.getInt("personId") ?: 0
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.CONDITION_AT_VISIT.name
             val category = Category.valueOf(categoryName)
+            val initialQuery = backStackEntry.arguments?.getString("query")?.let { 
+                if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else ""
+            } ?: ""
             
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             
+            // 検索キーワードの初期セット
+            LaunchedEffect(initialQuery) {
+                if (initialQuery.isNotBlank()) {
+                    detailViewModel.updateSearchQuery(initialQuery)
+                }
+            }
+
             UnifiedRecordScreen(
                 viewModel = detailViewModel,
                 initialCategoryType = category,

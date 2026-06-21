@@ -63,8 +63,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Timeline
+import androidx.compose.runtime.saveable.rememberSaveable
+import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -87,10 +91,11 @@ fun UnifiedRecordScreen(
     onBack: () -> Unit,
     onNavigateToConditionDetail: (Int, Int) -> Unit
 ) {
-    var currentCategory by remember { mutableStateOf(initialCategoryType) }
+    var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     
     val currentRecord by viewModel.currentRecordState.collectAsState()
-    val records by viewModel.records.collectAsState()
+    val records by viewModel.filteredRecords.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val conditionPhotoMap by viewModel.conditionPhotoMap.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -274,7 +279,25 @@ fun UnifiedRecordScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            if (currentCategory != Category.CONDITION_AT_VISIT) {
+            if (currentCategory == Category.CONDITION_AT_VISIT) {
+                // 所見メモ用の検索バー
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.updateSearchQuery(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("所見メモを検索...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "クリア")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
+                )
+            } else {
                 InputForm(
                     categoryType = currentCategory,
                     recordData = currentRecord,
@@ -830,7 +853,11 @@ fun InputForm(
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = "記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     CompactTextField(
                         value = yearText,
                         onValueChange = { 
@@ -841,7 +868,7 @@ fun InputForm(
                                 if (filtered.length == 4) monthFocusRequester.requestFocus()
                             }
                         },
-                        modifier = Modifier.weight(1.5f).focusRequester(yearFocusRequester),
+                        modifier = Modifier.weight(1.3f).focusRequester(yearFocusRequester),
                         onFocusChanged = { state -> if (state.isFocused) yearText = "" },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() }),
@@ -882,8 +909,6 @@ fun InputForm(
                         isError = isDayError,
                         suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
                     )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     CompactTextField(
                         value = hourText,
                         onValueChange = { 
@@ -917,7 +942,6 @@ fun InputForm(
                         isError = isMinuteError,
                         suffix = { Text("分", style = MaterialTheme.typography.bodySmall) }
                     )
-                    Spacer(modifier = Modifier.weight(1.5f))
                 }
             }
 
@@ -1308,60 +1332,6 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CompactTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    label: @Composable (() -> Unit)? = null,
-    isError: Boolean = false,
-    suffix: @Composable (() -> Unit)? = null,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    onFocusChanged: (FocusState) -> Unit = {}
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.onFocusChanged(onFocusChanged),
-        interactionSource = interactionSource,
-        enabled = true,
-        singleLine = true,
-        keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        ),
-        decorationBox = { innerTextField ->
-            OutlinedTextFieldDefaults.DecorationBox(
-                value = value,
-                innerTextField = innerTextField,
-                enabled = true,
-                singleLine = true,
-                visualTransformation = VisualTransformation.None,
-                interactionSource = interactionSource,
-                isError = isError,
-                label = label,
-                suffix = suffix,
-                colors = OutlinedTextFieldDefaults.colors(),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                container = {
-                    OutlinedTextFieldDefaults.Container(
-                        enabled = true,
-                        isError = isError,
-                        interactionSource = interactionSource,
-                        colors = OutlinedTextFieldDefaults.colors(),
-                        shape = OutlinedTextFieldDefaults.shape,
-                    )
-                }
-            )
-        }
-    )
-}
-
 fun formatRecordTime(instant: Instant): String {
     val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
     val eraDate = JapaneseDate.from(localDate)
@@ -1422,9 +1392,18 @@ fun formatTime(instant: Instant): String { return DateTimeFormatter.ofPattern("H
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, defaultRecorderName: String, onEditClick: () -> Unit, onDismiss: () -> Unit, onSave: (ConditionAtVisit) -> Unit) {
+    val focusManager = LocalFocusManager.current
     var title by remember { mutableStateOf(memo?.title ?: "") }; var condition by remember { mutableStateOf(memo?.condition ?: "") }; var author by remember { mutableStateOf(memo?.author ?: defaultRecorderName) }
+    
     val initialTime = memo?.recordTime ?: Instant.now(); val zonedDateTime = initialTime.atZone(ZoneId.systemDefault())
-    var year by remember { mutableStateOf(zonedDateTime.year.toString()) }; var month by remember { mutableStateOf(zonedDateTime.monthValue.toString()) }; var day by remember { mutableStateOf(zonedDateTime.dayOfMonth.toString()) }; var hour by remember { mutableStateOf("%02d".format(zonedDateTime.hour)) }; var minute by remember { mutableStateOf("%02d".format(zonedDateTime.minute)) }
+    
+    var year by remember { mutableStateOf(zonedDateTime.year.toString()) }
+    var month by remember { mutableStateOf(zonedDateTime.monthValue.toString()) }
+    var day by remember { mutableStateOf(zonedDateTime.dayOfMonth.toString()) }
+    // 新規作成時は 00:00、編集時は既存の値をセット
+    var hour by remember { mutableStateOf(if (memo == null) "00" else "%02d".format(zonedDateTime.hour)) }
+    var minute by remember { mutableStateOf(if (memo == null) "00" else "%02d".format(zonedDateTime.minute)) }
+
     val monthFocusRequester = remember { FocusRequester() }; val dayFocusRequester = remember { FocusRequester() }; val hourFocusRequester = remember { FocusRequester() }; val minuteFocusRequester = remember { FocusRequester() }
     val speechLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -1454,16 +1433,92 @@ fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, 
     AlertDialog(onDismissRequest = onDismiss, confirmButton = { if (isEditMode) { Button(onClick = { val recordTime = try { java.time.LocalDateTime.of(year.toInt(), month.toInt(), day.toInt(), hour.toInt(), minute.toInt()).atZone(ZoneId.systemDefault()).toInstant() } catch (e: Exception) { initialTime }; onSave(ConditionAtVisit(id = memo?.id ?: 0, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)) }, enabled = author.isNotBlank() && condition.isNotBlank()) { Text("保存") } } else { Button(onClick = onEditClick) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("記録を修正") } } }, dismissButton = { TextButton(onClick = onDismiss) { Text(if (isEditMode) "キャンセル" else "閉じる") } }, title = { Text(if (memo == null) "新規記録" else if (isEditMode) "記録の編集" else "記録の参照") }, text = {
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isEditMode) {
-                Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = year, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 4) { year = filtered; if (filtered.length == 4) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1.5f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("年", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = month, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { month = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("月", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = day, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { day = filtered; if (filtered.length == 2) hourFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("日", style = MaterialTheme.typography.bodySmall) })
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = hour, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) { hour = filtered; if (filtered.length == 2) minuteFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(hourFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next), suffix = { Text("時", style = MaterialTheme.typography.bodySmall) })
-                    CompactTextField(value = minute, onValueChange = { val filtered = it.filter { c -> c.isDigit() }; if (filtered.length <= 2) minute = filtered }, modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done))
-                    Spacer(modifier = Modifier.weight(1.5f)) // バランス調整用
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CompactTextField(
+                                value = year,
+                                onValueChange = { 
+                                    val filtered = it.filter { c -> c.isDigit() }
+                                    if (filtered.length <= 4) {
+                                        year = filtered
+                                        if (filtered.length == 4) monthFocusRequester.requestFocus()
+                                    }
+                                },
+                                modifier = Modifier.weight(1.3f),
+                                onFocusChanged = { if (it.isFocused) year = "" },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() }),
+                                suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
+                            )
+                            CompactTextField(
+                                value = month,
+                                onValueChange = { 
+                                    val filtered = it.filter { c -> c.isDigit() }
+                                    if (filtered.length <= 2) {
+                                        month = filtered
+                                        if (filtered.length == 2) dayFocusRequester.requestFocus()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
+                                onFocusChanged = { if (it.isFocused) month = "" },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() }),
+                                suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
+                            )
+                            CompactTextField(
+                                value = day,
+                                onValueChange = { 
+                                    val filtered = it.filter { c -> c.isDigit() }
+                                    if (filtered.length <= 2) {
+                                        day = filtered
+                                        if (filtered.length == 2) hourFocusRequester.requestFocus()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
+                                onFocusChanged = { if (it.isFocused) day = "" },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() }),
+                                suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
+                            )
+                            CompactTextField(
+                                value = hour,
+                                onValueChange = { 
+                                    val filtered = it.filter { c -> c.isDigit() }
+                                    if (filtered.length <= 2) {
+                                        hour = filtered
+                                        if (filtered.length == 2) minuteFocusRequester.requestFocus()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
+                                onFocusChanged = { if (it.isFocused) hour = "" },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() }),
+                                suffix = { Text("時", style = MaterialTheme.typography.bodySmall) }
+                            )
+                            CompactTextField(
+                                value = minute,
+                                onValueChange = { 
+                                    val filtered = it.filter { c -> c.isDigit() }
+                                    if (filtered.length <= 2) minute = filtered
+                                },
+                                modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
+                                onFocusChanged = { if (it.isFocused) minute = "" },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                            )
+                        }
+                    }
                 }
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("タイトル (任意)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth())
