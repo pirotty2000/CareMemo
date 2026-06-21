@@ -246,6 +246,13 @@ class PersonDetailViewModel(
         }
     }
 
+    /**
+     * 特定の利用者の全写真を取得する（PDF出力用）
+     */
+    suspend fun getAllPhotosForPerson(personId: Int): List<ConditionPhoto> {
+        return repository.getAllPhotosByPersonId(personId)
+    }
+
     class Factory(
         private val repository: CareMemoRepository,
         private val userSettingsRepository: UserSettingsRepository

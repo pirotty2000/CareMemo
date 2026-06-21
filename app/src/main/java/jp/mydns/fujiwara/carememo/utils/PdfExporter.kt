@@ -2,11 +2,14 @@ package jp.mydns.fujiwara.carememo.utils
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
@@ -41,6 +44,7 @@ object PdfExporter {
         @Suppress("UNUSED_PARAMETER") isNameMaskingEnabled: Boolean,
         category: Category,
         records: List<Any>,
+        allPhotos: List<ConditionPhoto> = emptyList(), // 写真データを追加
         range: ExportRange = ExportRange.ALL,
         order: ExportOrder = ExportOrder.NEWEST_FIRST,
         customStartDate: Instant? = null,
@@ -242,7 +246,7 @@ object PdfExporter {
                     } else {
                         castedRecords.sortedBy { it.recordTime }
                     }
-                    drawConditionAtVisitContent(document, currentPage, sortedRecords, currentY, { newCanvas, newPageNum ->
+                    drawConditionAtVisitContent(context, document, currentPage, sortedRecords, allPhotos, currentY, { newCanvas, newPageNum ->
                         pageNumber = newPageNum
                         drawHeader(newCanvas, person, true, category, pageNumber)
                     })
@@ -316,9 +320,11 @@ object PdfExporter {
     }
 
     private fun drawConditionAtVisitContent(
+        context: Context,
         document: PdfDocument,
         initialPage: PdfDocument.Page,
         records: List<ConditionAtVisit>,
+        allPhotos: List<ConditionPhoto>,
         startY: Float,
         onNewPage: (Canvas, Int) -> Float
     ) {
@@ -329,39 +335,97 @@ object PdfExporter {
 
         val attrPaint = Paint().apply { color = Color.BLACK; textSize = 10f; isFakeBoldText = true; isAntiAlias = true }
         val bodyPaint = Paint().apply { color = Color.BLACK; textSize = 10f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
+        val captionPaint = Paint().apply { color = Color.DKGRAY; textSize = 7f; isAntiAlias = true; textAlign = Paint.Align.CENTER }
         val bgPaint = Paint().apply { color = Color.rgb(245, 245, 245); style = Paint.Style.FILL }
         
         val contentWidth = PAGE_WIDTH - (MARGIN * 2)
+        val photoSize = (contentWidth - 20f) / 3f // 写真の最大幅（余白込）
 
         records.forEach { record ->
-            val dateStr = formatRecordTime(record.recordTime)
-            val attrText = "$dateStr (${record.author}) : ${record.title ?: ""}"
+            val photos = allPhotos.filter { it.conditionId == record.id }.take(3)
+            val memoLines = splitTextIntoLines(record.condition ?: "", bodyPaint, contentWidth - 10f)
             
-            // 属性行の描画（背景付）
-            if (currentY + 40f > PAGE_HEIGHT - MARGIN) {
+            // 1レコード分の高さを計算（ページ跨ぎ判定用）
+            var recordHeight = 25f + (memoLines.size * 15f)
+            if (photos.isNotEmpty()) {
+                recordHeight += photoSize + 25f // 写真＋キャプションの高さ
+            }
+            recordHeight += 15f // 下部のマージン
+
+            // ページ内に収まらない場合は改ページ
+            if (currentY + recordHeight > PAGE_HEIGHT - MARGIN) {
                 document.finishPage(currentPage); pageNum++; val pi = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create(); currentPage = document.startPage(pi); canvas = currentPage.canvas
                 currentY = onNewPage(canvas, pageNum)
             }
-            
+
+            // 属性行
             canvas.drawRect(MARGIN, currentY - 12f, PAGE_WIDTH - MARGIN, currentY + 4f, bgPaint)
+            val dateStr = formatRecordTime(record.recordTime)
+            val attrText = "$dateStr (${record.author}) : ${record.title ?: ""}"
             canvas.drawText(attrText, MARGIN + 5f, currentY, attrPaint)
             currentY += 20f
 
-            // 本文の描画（自動折り返し）
-            val memo = record.condition ?: ""
-            val lines = splitTextIntoLines(memo, bodyPaint, contentWidth - 10f)
-            
-            lines.forEach { line ->
-                if (currentY > PAGE_HEIGHT - MARGIN) {
-                    document.finishPage(currentPage); pageNum++; val pi = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create(); currentPage = document.startPage(pi); canvas = currentPage.canvas
-                    currentY = onNewPage(canvas, pageNum)
-                }
+            // 本文
+            memoLines.forEach { line ->
                 canvas.drawText(line, MARGIN + 10f, currentY, bodyPaint)
                 currentY += 15f
             }
-            currentY += 15f // メモ間の余白
+
+            // 写真
+            if (photos.isNotEmpty()) {
+                currentY += 10f
+                var currentX = MARGIN + 5f
+                photos.forEach { photo ->
+                    val photoFile = ImageUtils.getPhotoFile(context, photo.photoFileName)
+                    if (photoFile.exists()) {
+                        val bitmap = loadOptimizedBitmap(photoFile.absolutePath, photoSize.toInt())
+                        if (bitmap != null) {
+                            // 正方形枠内に Center Inside で描画
+                            val rect = RectF(currentX, currentY, currentX + photoSize - 5f, currentY + photoSize - 5f)
+                            drawBitmapCenterInside(canvas, bitmap, rect)
+                            
+                            // キャプション
+                            val captionY = currentY + photoSize + 5f
+                            canvas.drawText(photo.caption, currentX + (photoSize / 2f), captionY, captionPaint)
+                            
+                            bitmap.recycle()
+                        }
+                    }
+                    currentX += photoSize
+                }
+                currentY += photoSize + 15f
+            }
+
+            currentY += 15f // メモ間の最終余白
         }
         document.finishPage(currentPage)
+    }
+
+    private fun loadOptimizedBitmap(path: String, maxSize: Int): Bitmap? {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, options)
+        
+        var inSampleSize = 1
+        if (options.outHeight > maxSize || options.outWidth > maxSize) {
+            val halfHeight = options.outHeight / 2
+            val halfWidth = options.outWidth / 2
+            while (halfHeight / inSampleSize >= maxSize && halfWidth / inSampleSize >= maxSize) {
+                inSampleSize *= 2
+            }
+        }
+        
+        options.inJustDecodeBounds = false
+        options.inSampleSize = inSampleSize
+        return BitmapFactory.decodeFile(path, options)
+    }
+
+    private fun drawBitmapCenterInside(canvas: Canvas, bitmap: Bitmap, rect: RectF) {
+        val scale = minOf(rect.width() / bitmap.width, rect.height() / bitmap.height)
+        val w = bitmap.width * scale
+        val h = bitmap.height * scale
+        val left = rect.left + (rect.width() - w) / 2f
+        val top = rect.top + (rect.height() - h) / 2f
+        canvas.drawBitmap(bitmap, null, RectF(left, top, left + w, top + h), Paint(Paint.FILTER_BITMAP_FLAG))
     }
 
     private fun splitTextIntoLines(text: String, paint: Paint, maxWidth: Float): List<String> {

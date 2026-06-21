@@ -478,22 +478,27 @@ fun UnifiedRecordScreen(
         PdfSettingsDialog(
             category = currentCategory,
             onDismiss = { showPdfSettingsDialog = false },
-            onExport = { range, order, startDate, endDate ->
+            onExport = { range, order, startDate, endDate, includePhotos ->
                 showPdfSettingsDialog = false
-                currentPerson?.let { person ->
-                    val success = PdfExporter.exportAndShare(
-                        context = context,
-                        person = person,
-                        isNameMaskingEnabled = isNameMaskingEnabled,
-                        category = currentCategory,
-                        records = records,
-                        range = range,
-                        order = order,
-                        customStartDate = startDate,
-                        customEndDate = endDate
-                    )
-                    if (!success) {
-                        scope.launch {
+                scope.launch {
+                    val allPhotos: List<ConditionPhoto> = if (currentCategory == Category.CONDITION_AT_VISIT && includePhotos) {
+                        viewModel.getAllPhotosForPerson(personId)
+                    } else emptyList()
+
+                    currentPerson?.let { person ->
+                        val success = PdfExporter.exportAndShare(
+                            context = context,
+                            person = person,
+                            isNameMaskingEnabled = isNameMaskingEnabled,
+                            category = currentCategory,
+                            records = records,
+                            allPhotos = allPhotos,
+                            range = range,
+                            order = order,
+                            customStartDate = startDate,
+                            customEndDate = endDate
+                        )
+                        if (!success) {
                             snackbarHostState.showSnackbar("指定された期間のデータがありません")
                         }
                     }
@@ -522,10 +527,11 @@ enum class ExportOrder(val displayName: String) {
 fun PdfSettingsDialog(
     category: Category,
     onDismiss: () -> Unit,
-    onExport: (ExportRange, ExportOrder, Instant?, Instant?) -> Unit
+    onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean) -> Unit // Booleanを追加
 ) {
     var selectedRange by remember { mutableStateOf(ExportRange.ALL) }
     var selectedOrder by remember { mutableStateOf(ExportOrder.NEWEST_FIRST) }
+    var includePhotos by remember { mutableStateOf(true) } // 写真印刷オプション（デフォルトOn）
     
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
@@ -609,6 +615,18 @@ fun PdfSettingsDialog(
                     }
                 }
                 
+                if (category == Category.CONDITION_AT_VISIT) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { includePhotos = !includePhotos }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("写真を印刷に含める", style = MaterialTheme.typography.bodyLarge)
+                        Switch(checked = includePhotos, onCheckedChange = { includePhotos = it })
+                    }
+                }
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 Column {
@@ -638,7 +656,8 @@ fun PdfSettingsDialog(
                         selectedRange, 
                         selectedOrder, 
                         startDate?.let { Instant.ofEpochMilli(it) }, 
-                        endDate?.let { Instant.ofEpochMilli(it) }
+                        endDate?.let { Instant.ofEpochMilli(it) },
+                        includePhotos
                     ) 
                 },
                 enabled = if (selectedRange == ExportRange.CUSTOM) startDate != null || endDate != null else true

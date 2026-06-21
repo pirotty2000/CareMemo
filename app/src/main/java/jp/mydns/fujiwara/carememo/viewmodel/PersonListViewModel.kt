@@ -19,10 +19,15 @@ import android.provider.DocumentsContract
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.OutputStream
+import java.io.InputStream
 
 class PersonListViewModel(
     private val repository: CareMemoRepository,
@@ -160,9 +165,40 @@ class PersonListViewModel(
             try {
                 val backup = repository.getBackupData()
                 val jsonString = json.encodeToString(backup)
-                context.contentResolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
-                _uiEventFlow.emit(UiEvent.ShowInfoDialog("エクスポート完了", "データのエクスポートが完了しました。"))
+                
+                // 一時ディレクトリにJSONと写真をまとめる
+                val tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
+                tempDir.mkdirs()
+                
+                val jsonFile = File(tempDir, "backup.json")
+                jsonFile.writeText(jsonString)
+                
+                val photosDir = ImageUtils.getPhotosDir(context)
+                
+                val filesToZip = mutableListOf<File>()
+                filesToZip.add(jsonFile)
+                if (photosDir.exists() && photosDir.list()?.isNotEmpty() == true) {
+                    filesToZip.add(photosDir)
+                }
+                
+                val tempZipFile = File(context.cacheDir, "temp_backup.zip")
+                ZipUtils.zip(filesToZip, tempZipFile)
+                
+                // 結果を書き出す
+                context.contentResolver.openOutputStream(uri)?.use { output: OutputStream ->
+                    tempZipFile.inputStream().use { input: InputStream ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                // 一時ファイルの削除
+                jsonFile.delete()
+                tempDir.delete()
+                tempZipFile.delete()
+                
+                _uiEventFlow.emit(UiEvent.ShowInfoDialog("エクスポート完了", "データと写真のエクスポートが完了しました。"))
             } catch (e: Exception) {
+                e.printStackTrace()
                 _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "エクスポートに失敗しました: ${e.localizedMessage}"))
             }
         }
@@ -171,13 +207,60 @@ class PersonListViewModel(
     fun importData(context: Context, uri: Uri) {
         viewModelScope.launch {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                if (jsonString != null) {
+                val isZip = context.contentResolver.openInputStream(uri)?.use { input ->
+                    val header = ByteArray(4)
+                    val read = input.read(header)
+                    read == 4 && header[0] == 0x50.toByte() && header[1] == 0x4B.toByte() && header[2] == 0x03.toByte() && header[3] == 0x04.toByte()
+                } ?: false
+
+                if (isZip) {
+                    // --- Zip 形式のインポート (データ + 写真) ---
+                    val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
+                    tempDir.mkdirs()
+                    
+                    val tempZipFile = File(tempDir, "temp_import.zip")
+                    context.contentResolver.openInputStream(uri)?.use { input: InputStream ->
+                        tempZipFile.outputStream().use { output: OutputStream ->
+                            input.copyTo(output)
+                        }
+                    }
+                    
+                    ZipUtils.unzip(tempZipFile, tempDir)
+                    
+                    val jsonFile = File(tempDir, "backup.json")
+                    if (!jsonFile.exists()) {
+                        throw Exception("バックアップファイル (backup.json) が見つかりません。")
+                    }
+                    
+                    val jsonString = jsonFile.readText()
                     val backup = json.decodeFromString<CareMemoBackup>(jsonString)
+                    
+                    // DB復元
                     repository.replaceAllData(backup)
-                    _uiEventFlow.emit(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました。"))
+                    
+                    // 写真の復元
+                    ImageUtils.clearPhotosDir(context)
+                    val extractedPhotosDir = File(tempDir, "photos")
+                    if (extractedPhotosDir.exists() && extractedPhotosDir.isDirectory) {
+                        val appPhotosDir = ImageUtils.getPhotosDir(context)
+                        extractedPhotosDir.listFiles()?.forEach { file: File ->
+                            file.copyTo(File(appPhotosDir, file.name), overwrite = true)
+                        }
+                    }
+                    
+                    tempDir.deleteRecursively()
+                    _uiEventFlow.emit(UiEvent.ShowInfoDialog("復元完了", "データと写真の復元が完了しました。"))
+                } else {
+                    // --- 旧 JSON 形式のインポート (データのみ) ---
+                    val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    if (jsonString != null) {
+                        val backup = json.decodeFromString<CareMemoBackup>(jsonString)
+                        repository.replaceAllData(backup)
+                        _uiEventFlow.emit(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました（写真は含まれません）。"))
+                    }
                 }
             } catch (e: Exception) {
+                e.printStackTrace()
                 _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "復元に失敗しました: ${e.localizedMessage}"))
             }
         }

@@ -87,7 +87,7 @@ fun SettingsScreen(
 
     // ファイル・フォルダ選択ランチャー
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/zip")
     ) { uri -> uri?.let { viewModel.exportData(context, it) } }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -131,7 +131,7 @@ fun SettingsScreen(
     }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.0.2\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.1.0\n\n(C) 2025 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
     }
 
     if (showHelpDialog) {
@@ -217,13 +217,13 @@ fun SettingsScreen(
             SettingsSection(title = "データ管理") {
                 ListItem(
                     headlineContent = { Text("データのバックアップ (保存)") },
-                    supportingContent = { Text("現在の全データをJSONファイルとして書き出します") },
-                    modifier = Modifier.clickable { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.json") }
+                    supportingContent = { Text("現在の全データと写真をZipファイルとして書き出します") },
+                    modifier = Modifier.clickable { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }
                 )
                 ListItem(
                     headlineContent = { Text("データの復元 (読込)") },
-                    supportingContent = { Text("バックアップファイルからデータを読み込みます（現在のデータは消去されます）") },
-                    modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/json", "application/octet-stream")) }
+                    supportingContent = { Text("バックアップファイル(ZipまたはJSON)からデータを読み込みます") },
+                    modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }
                 )
                 
                 // データベースが空の時のみ表示（旧アプリ移行）

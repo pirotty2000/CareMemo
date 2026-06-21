@@ -144,6 +144,25 @@ object ImageUtils {
     }
 
     /**
+     * 写真保存ディレクトリを取得する
+     */
+    fun getPhotosDir(context: Context): File {
+        val dir = File(context.filesDir, PHOTOS_DIR)
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    /**
+     * 全ての写真ファイルを物理削除する
+     */
+    fun clearPhotosDir(context: Context) {
+        val dir = File(context.filesDir, PHOTOS_DIR)
+        if (dir.exists()) {
+            dir.listFiles()?.forEach { it.delete() }
+        }
+    }
+
+    /**
      * 保存されている写真のフルパスを取得する
      */
     fun getPhotoFile(context: Context, fileName: String): File {
