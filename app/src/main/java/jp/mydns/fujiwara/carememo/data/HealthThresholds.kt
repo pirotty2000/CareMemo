@@ -42,14 +42,17 @@ object HealthThresholds {
 
     val GLUCOSE_EXPLANATION = """
         血糖値グラフの見方：
-        ・線が薄い緑色の範囲（${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()}）にあれば正常範囲（空腹時などの目安）です。
+        ・良好：${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()} mg/dL
+        
+        ※ 範囲より上にあれば「高血糖」、下にあれば「低血糖」の目安となります。
     """.trimIndent()
 
     val HBA1C_EXPLANATION = """
         HbA1cグラフの見方：
-        ・薄い緑色（$HBA1C_GOOD％以下）：良好
-        ・薄い黄色（$HBA1C_PREDIABETES％〜${HBA1C_DIABETES}％未満）：糖尿病予備軍
-        ・薄い赤色（$HBA1C_DIABETES％以上）：糖尿病が強く疑われる値
+        ・正常値：$HBA1C_GOOD％以下
+        ・正常高値：$HBA1C_GOOD％超〜$HBA1C_PREDIABETES％未満
+        ・予備軍：$HBA1C_PREDIABETES％以上〜$HBA1C_DIABETES％未満
+        ・強い疑い：$HBA1C_DIABETES％以上
     """.trimIndent()
 
     val BMI_EXPLANATION = """

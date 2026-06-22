@@ -60,6 +60,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Search
@@ -457,6 +459,31 @@ fun UnifiedRecordScreen(
                                 val maxOffset = viewportHeight - barHeight
                                 val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
                                 
+                                // 垂直ドットインジケーター（スクロールバーの左隣）
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 14.dp), // スクロールバーのすぐ左
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    // スクロール位置が半分を超えたら下のドットを強調
+                                    val isBottomSelected = scrollState.value > (scrollState.maxValue / 2)
+                                    
+                                    repeat(2) { index ->
+                                        val isSelected = if (index == 0) !isBottomSelected else isBottomSelected
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.primary 
+                                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                                )
+                                        )
+                                    }
+                                }
+
                                 Box(
                                     modifier = Modifier
                                         .width(4.dp)
@@ -1094,7 +1121,9 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 Row(verticalAlignment = Alignment.CenterVertically) { Text("血圧", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
-                    val chartDataList = listOf(ChartLineData("血圧(上)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpSystolic?.toDouble() ?: 0.0) }, Color.Red), ChartLineData("血圧(下)", data.map { it.recordTime.toEpochMilli().toDouble() to (it.bpDiastolic?.toDouble() ?: 0.0) }, Color.Blue))
+                    val sysPoints = data.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpSystolic!!.toDouble() }
+                    val diaPoints = data.filter { it.bpDiastolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpDiastolic!!.toDouble() }
+                    val chartDataList = listOf(ChartLineData("血圧(上)", sysPoints, Color.Red), ChartLineData("血圧(下)", diaPoints, Color.Blue))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9)))
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
@@ -1102,7 +1131,8 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 Row(verticalAlignment = Alignment.CenterVertically) { Text("脈拍", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
-                    val chartDataList = listOf(ChartLineData("脈拍", data.map { it.recordTime.toEpochMilli().toDouble() to (it.pulse?.toDouble() ?: 0.0) }, Color(0xFF4CAF50)))
+                    val pulsePoints = data.filter { it.pulse != null }.map { it.recordTime.toEpochMilli().toDouble() to it.pulse!!.toDouble() }
+                    val chartDataList = listOf(ChartLineData("脈拍", pulsePoints, Color(0xFF4CAF50)))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, Color(0xFFE8F5E9)))
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 40.0, maxYConstraint = 110.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
@@ -1112,7 +1142,8 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val glucoses = data.mapNotNull { it.glucose?.toDouble() }
-                    val chartDataList = listOf(ChartLineData("血糖値", data.map { it.recordTime.toEpochMilli().toDouble() to (it.glucose?.toDouble() ?: 0.0) }, Color.Magenta))
+                    val glucosePoints = data.filter { it.glucose != null }.map { it.recordTime.toEpochMilli().toDouble() to it.glucose!!.toDouble() }
+                    val chartDataList = listOf(ChartLineData("血糖値", glucosePoints, Color.Magenta))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, Color(0xFFE8F5E9)))
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && glucoses.isNotEmpty()) {
@@ -1120,7 +1151,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                         val maxG = glucoses.maxOrNull() ?: 110.0
                         LineChart(
                             dataList = chartDataList, 
-                            stepY = 10.0,
+                            stepY = 50.0,
                             ranges = ranges, 
                             minYConstraint = minG - 10.0, 
                             maxYConstraint = maxG + 10.0
@@ -1134,7 +1165,8 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val hba1cs = data.mapNotNull { it.hba1c }
-                    val chartDataList = listOf(ChartLineData("HbA1c", data.map { it.recordTime.toEpochMilli().toDouble() to (it.hba1c ?: 0.0) }, Color.Red))
+                    val hba1cPoints = data.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli().toDouble() to it.hba1c!! }
+                    val chartDataList = listOf(ChartLineData("HbA1c", hba1cPoints, Color.Red))
                     val ranges = listOf(
                         ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)),
                         ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, HealthThresholds.HBA1C_DIABETES, Color(0xFFFFFDE7)),
@@ -1146,7 +1178,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                         val maxH = hba1cs.maxOrNull() ?: 6.0
                         LineChart(
                             dataList = chartDataList, 
-                            stepY = 0.2, 
+                            stepY = 0.5, 
                             ranges = ranges, 
                             minYConstraint = minH - 0.5, 
                             maxYConstraint = maxH + 0.5, 
@@ -1162,14 +1194,15 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                     val weights = data.mapNotNull { it.weight }
-                    val chartDataList = listOf(ChartLineData("体重", data.map { it.recordTime.toEpochMilli().toDouble() to (it.weight ?: 0.0) }, Color.Blue))
+                    val weightPoints = data.filter { it.weight != null }.map { it.recordTime.toEpochMilli().toDouble() to it.weight!! }
+                    val chartDataList = listOf(ChartLineData("体重", weightPoints, Color.Blue))
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && weights.isNotEmpty()) {
                         val minW = weights.minOrNull() ?: 40.0
                         val maxW = weights.maxOrNull() ?: 80.0
                         LineChart(
                             dataList = chartDataList, 
-                            stepY = 1.0,
+                            stepY = 5.0,
                             minYConstraint = minW - 2.0, 
                             maxYConstraint = maxW + 2.0,
                             showDecimal = true
@@ -1183,7 +1216,8 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                     val bmis = data.map { it.calculateBMI() }.filter { it > 0.0 }
-                    val chartDataList = listOf(ChartLineData("BMI", data.map { it.recordTime.toEpochMilli().toDouble() to it.calculateBMI() }, Color.Red))
+                    val bmiPoints = data.map { it.recordTime.toEpochMilli().toDouble() to it.calculateBMI() }.filter { it.second > 0.0 }
+                    val chartDataList = listOf(ChartLineData("BMI", bmiPoints, Color.Red))
                     val ranges = listOf(ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)), ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE)))
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && bmis.isNotEmpty()) {
@@ -1191,7 +1225,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                         val maxB = bmis.maxOrNull() ?: 25.0
                         LineChart(
                             dataList = chartDataList, 
-                            stepY = 0.5,
+                            stepY = 2.0,
                             ranges = ranges, 
                             minYConstraint = minB - 1.0, 
                             maxYConstraint = maxB + 1.0,
@@ -1300,14 +1334,18 @@ fun LineChart(
                         })
                     }
             ) {
-                val leftBufferPx = with(density) { 4.dp.toPx() }
-                val rightBufferPx = with(density) { 4.dp.toPx() }
+                val leftBufferPx = with(density) { 8.dp.toPx() } // 外側余白を戻す
+                val rightBufferPx = with(density) { 8.dp.toPx() } // 外側余白を戻す
+                val horizontalPaddingPx = with(density) { 20.dp.toPx() } // 枠内の遊びを追加
                 
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val chartWidth = (size.width - leftBufferPx - rightBufferPx) * scaleX
                     val chartHeight = size.height - paddingTop.toPx() - paddingBottom.toPx()
                     val topPx = paddingTop.toPx()
                     val startX = leftBufferPx + offsetX
+                    
+                    // 枠内の有効な描画幅
+                    val effectiveWidth = chartWidth - (horizontalPaddingPx * 2)
 
                     // グラフエリアのみにクリッピング
                     clipRect(left = leftBufferPx, top = 0f, right = size.width - rightBufferPx, bottom = size.height) {
@@ -1337,14 +1375,13 @@ fun LineChart(
                             )
                         }
                         
-                        // 3. X軸グリッドとラベル（ズーム率に応じて密度を調整）
+                        // 3. X軸グリッドとラベル
                         val baseLabelCount = 4
                         val labelCount = (baseLabelCount * scaleX).toInt().coerceAtMost(20)
                         for (i in 0 until labelCount) {
                             val currentX = minX + (duration * i / (labelCount - 1))
-                            val px = startX + ((currentX - minX) / duration).toFloat() * chartWidth
+                            val px = startX + horizontalPaddingPx + ((currentX - minX) / duration).toFloat() * effectiveWidth
                             
-                            // 画面内にある程度近いラベルのみ描画
                             if (px in (leftBufferPx - 100f)..(size.width - rightBufferPx + 100f)) {
                                 drawLine(
                                     color = Color.LightGray.copy(alpha = 0.3f),
@@ -1381,12 +1418,11 @@ fun LineChart(
                             val path = Path()
                             val sortedPoints = lineData.points.sortedBy { it.first }
                             sortedPoints.forEachIndexed { index, (x, y) ->
-                                val px = startX + ((x - minX) / duration).toFloat() * chartWidth
+                                val px = startX + horizontalPaddingPx + ((x - minX) / duration).toFloat() * effectiveWidth
                                 val py = topPx + chartHeight - ((y - minY) / yRange).toFloat() * chartHeight
                                 
                                 if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
                                 
-                                // 点を描画（クリッピングエリア内のみ）
                                 if (px in leftBufferPx..(size.width - rightBufferPx)) {
                                     drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
                                     val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(y) else y.toInt().toString()
@@ -1418,14 +1454,20 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
             when (categoryType) {
                 Category.HEIGHT_AND_WEIGHT -> if (record is HeightAndWeight) { 
                     val bmi = record.calculateBMI()
-                    // 身長・体重は情報量が多いため、日時と同じ labelMedium フォントサイズを採用
-                    Text(
-                        text = "身長: ${record.height?.let { "${it}cm" } ?: "---"}, 体重: ${record.weight?.let { "${it}kg" } ?: "---"}, BMI: ${if (bmi > 0) "%.1f".format(bmi) else "---"} (${if (bmi > 0) bmi.evaluateBMI() else "---"})", 
-                        style = MaterialTheme.typography.labelMedium 
-                    ) 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Straighten, contentDescription = "身長", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(Icons.Default.MonitorWeight, contentDescription = "体重", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = "BMI: ${if (bmi > 0) "%.1f".format(bmi) else "---"} (${if (bmi > 0) bmi.evaluateBMI() else "---"})", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
                 Category.BP_AND_PULSE -> if (record is BpAndPulse) { Text(text = "血圧: ${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg, 脈拍: ${record.pulse ?: "---"} bpm (${record.checkStatus()})", style = MaterialTheme.typography.bodyMedium) }
-                Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) { Text(text = "血糖値: ${record.glucose?.let { "$it mg/dL" } ?: "---"}, HbA1c: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.bodyMedium) }
+                Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) { Text(text = "血糖値: ${record.glucose?.let { "$it mg/dL" } ?: "---"}, HbA1c: ${record.hba1c?.let { "$it%" } ?: "---"} (${record.checkStatus()})", style = MaterialTheme.typography.bodyMedium) }
                 Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) { Text(text = "タイトル: ${record.title ?: "---"}, 記録者: ${record.author.ifBlank { "---" }}", style = MaterialTheme.typography.bodyMedium) }
             }
         }
@@ -1449,7 +1491,11 @@ fun MemoHistoryList(
     onItemClick: (ConditionAtVisit) -> Unit,
     onDeleteClick: (ConditionAtVisit) -> Unit
 ) {
-    val groupedRecords = remember(records) { records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }.toSortedMap(compareByDescending { it }) }
+    val groupedRecords = remember(records) { 
+        records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }
+            .mapValues { entry -> entry.value.sortedBy { it.recordTime } } // 同一日は時刻昇順
+            .toSortedMap(compareByDescending { it }) // 日付は降順
+    }
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
         groupedRecords.forEach { (date, memos) ->
             stickyHeader { Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant) { Text(text = formatDateHeader(date), modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
@@ -1486,7 +1532,12 @@ fun MemoHistoryList(
     }
 }
 
-fun formatDateHeader(date: LocalDate): String { val eraDate = JapaneseDate.from(date); return eraDate.format(DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)) }
+fun formatDateHeader(date: LocalDate): String { 
+    val eraDate = JapaneseDate.from(date)
+    val eraName = eraDate.format(DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN))
+    val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
+    return "%d(%s%d)年%d月%d日".format(date.year, eraName, eraYear, date.monthValue, date.dayOfMonth)
+}
 fun formatTime(instant: Instant): String { return DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(instant) }
 
 @OptIn(ExperimentalMaterial3Api::class)

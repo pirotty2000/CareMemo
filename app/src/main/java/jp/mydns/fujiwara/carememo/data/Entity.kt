@@ -274,24 +274,28 @@ fun BpAndPulse.checkStatus(): String {
     }
 }
 
-fun GlucoseAndHbA1c.checkStatus(): String {
-    val g = glucose
-    val h = hba1c
-
-    val gStatus = when {
-        g == null -> null
+fun GlucoseAndHbA1c.evaluateGlucose(): String? {
+    val g = glucose ?: return null
+    return when {
         g < HealthThresholds.GLUCOSE_NORMAL_LOW -> "低血糖"
-        g <= HealthThresholds.GLUCOSE_NORMAL_HIGH -> "正常値"
+        g <= HealthThresholds.GLUCOSE_NORMAL_HIGH -> "良好"
         else -> "高血糖"
     }
+}
 
-    val hStatus = when {
-        h == null -> null
-        h <= HealthThresholds.HBA1C_GOOD -> "良好"
-        h < HealthThresholds.HBA1C_PREDIABETES -> "軽度異常"
-        h < HealthThresholds.HBA1C_DIABETES -> "予備軍"
-        else -> "強い疑い"
+fun GlucoseAndHbA1c.evaluateHbA1c(): String? {
+    val h = hba1c ?: return null
+    return when {
+        h >= HealthThresholds.HBA1C_DIABETES -> "強い疑い"
+        h >= HealthThresholds.HBA1C_PREDIABETES -> "予備軍"
+        h > HealthThresholds.HBA1C_GOOD -> "正常高値"
+        else -> "正常値"
     }
+}
+
+fun GlucoseAndHbA1c.checkStatus(): String {
+    val gStatus = evaluateGlucose()
+    val hStatus = evaluateHbA1c()
 
     return when {
         gStatus != null && hStatus != null -> "$gStatus・$hStatus"

@@ -203,7 +203,7 @@ object PdfExporter {
                             ),
                             isInteger = true,
                             subtitles = listOf(
-                                "血糖値の目安：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL (空腹時など)"
+                                "血糖値（良好）：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL"
                             )
                         )
                         currentY += 25f
@@ -225,7 +225,7 @@ object PdfExporter {
                             ),
                             isInteger = false,
                             subtitles = listOf(
-                                "HbA1c目安：良好(${HealthThresholds.HBA1C_GOOD}%以下) / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}-${HealthThresholds.HBA1C_DIABETES}%) / 疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
+                                "HbA1c判定：正常値(${HealthThresholds.HBA1C_GOOD}%以下) / 正常高値 / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}%以上) / 強い疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
                             )
                         )
                         currentY += 40f

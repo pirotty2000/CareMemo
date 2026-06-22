@@ -15,8 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -176,44 +174,7 @@ fun ConditionDetailScreen(
                     }
                 },
                 actions = {
-                    if (isEditing) {
-                        IconButton(onClick = {
-                            if (conditionId == 0) onBack() else isEditing = false
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "キャンセル")
-                        }
-                        IconButton(
-                            onClick = {
-                                val recordTime = try {
-                                    java.time.LocalDateTime.of(
-                                        year.toInt(), month.toInt(), day.toInt(),
-                                        hour.toInt(), minute.toInt()
-                                    ).atZone(java.time.ZoneId.systemDefault()).toInstant()
-                                } catch (e: Exception) {
-                                    memo?.recordTime ?: Instant.now()
-                                }
-
-                                val newMemo = ConditionAtVisit(
-                                    id = conditionId,
-                                    personId = personId,
-                                    title = title,
-                                    condition = condition,
-                                    author = author,
-                                    recordTime = recordTime
-                                )
-                                viewModel.saveRecord(newMemo)
-                                if (conditionId == 0) {
-                                    // 新規作成時は保存後に一覧へ戻る
-                                    onBack()
-                                } else {
-                                    isEditing = false
-                                }
-                            },
-                            enabled = author.isNotBlank() && condition.isNotBlank()
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = "保存")
-                        }
-                    } else {
+                    if (!isEditing) {
                         IconButton(onClick = { isEditing = true }) {
                             Icon(Icons.Default.Edit, contentDescription = "編集")
                         }
@@ -360,6 +321,45 @@ fun ConditionDetailScreen(
                                     }
                                 }
                             )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { if (conditionId == 0) onBack() else isEditing = false },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("キャンセル")
+                                }
+                                Button(
+                                    onClick = {
+                                        val recordTime = try {
+                                            java.time.LocalDateTime.of(
+                                                year.toInt(), month.toInt(), day.toInt(),
+                                                hour.toInt(), minute.toInt()
+                                            ).atZone(java.time.ZoneId.systemDefault()).toInstant()
+                                        } catch (e: Exception) {
+                                            memo?.recordTime ?: Instant.now()
+                                        }
+
+                                        val newMemo = ConditionAtVisit(
+                                            id = conditionId,
+                                            personId = personId,
+                                            title = title,
+                                            condition = condition,
+                                            author = author,
+                                            recordTime = recordTime
+                                        )
+                                        viewModel.saveRecord(newMemo)
+                                        if (conditionId == 0) onBack() else isEditing = false
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = author.isNotBlank() && condition.isNotBlank()
+                                ) {
+                                    Text("保存")
+                                }
+                            }
                         }
                     }
                 }
