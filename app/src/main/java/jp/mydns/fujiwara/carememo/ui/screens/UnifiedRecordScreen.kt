@@ -410,7 +410,16 @@ fun UnifiedRecordScreen(
                                 val density = LocalDensity.current
                                 val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
                                 val maxOffset = viewportHeight - barHeight
-                                val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
+
+                                // スクロール位置に基づく計算を derivedStateOf で最適化（再描画の抑制）
+                                val scrollFraction by remember {
+                                    derivedStateOf {
+                                        if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f
+                                    }
+                                }
+                                val isBottomSelected by remember {
+                                    derivedStateOf { scrollState.value > (scrollState.maxValue / 2) }
+                                }
                                 
                                 // 垂直ドットインジケーター（スクロールバーの左隣）
                                 Column(
@@ -420,9 +429,6 @@ fun UnifiedRecordScreen(
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    // スクロール位置が半分を超えたら下のドットを強調
-                                    val isBottomSelected = scrollState.value > (scrollState.maxValue / 2)
-                                    
                                     repeat(2) { index ->
                                         val isSelected = if (index == 0) !isBottomSelected else isBottomSelected
                                         Box(
