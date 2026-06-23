@@ -264,7 +264,7 @@ fun ConditionDetailScreen(
                                                 year.toInt(), month.toInt(), day.toInt(),
                                                 hour.toInt(), minute.toInt()
                                             ).atZone(java.time.ZoneId.systemDefault()).toInstant()
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             memo?.recordTime ?: Instant.now()
                                         }
 
