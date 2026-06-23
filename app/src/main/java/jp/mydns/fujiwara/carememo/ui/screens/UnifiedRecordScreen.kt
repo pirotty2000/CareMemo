@@ -312,7 +312,8 @@ fun UnifiedRecordScreen(
                             onItemClick = { memo ->
                                 onNavigateToConditionDetail(personId, memo.id)
                             },
-                            onDeleteClick = { recordToDelete = it }
+                            onDeleteClick = { recordToDelete = it },
+                            isAnyDialogOpen = recordToDelete != null
                         )
                     }
                 } else if (showHistory) {
@@ -342,13 +343,20 @@ fun UnifiedRecordScreen(
                             }) { index ->
                                 val record = records[index]
                                 val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = {
-                                        if (it == SwipeToDismissBoxValue.EndToStart) {
-                                            recordToDelete = record
-                                            false
-                                        } else false
-                                    }
+                                    confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart }
                                 )
+
+                                LaunchedEffect(dismissState.currentValue) {
+                                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                                        recordToDelete = record
+                                    }
+                                }
+
+                                LaunchedEffect(recordToDelete) {
+                                    if (recordToDelete == null && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                                    }
+                                }
 
                                 SwipeToDismissBox(
                                     state = dismissState,
@@ -734,7 +742,8 @@ fun MemoHistoryList(
     records: List<ConditionAtVisit>,
     conditionPhotoMap: Map<Int, Boolean>,
     onItemClick: (ConditionAtVisit) -> Unit,
-    onDeleteClick: (ConditionAtVisit) -> Unit
+    onDeleteClick: (ConditionAtVisit) -> Unit,
+    isAnyDialogOpen: Boolean
 ) {
     val groupedRecords = remember(records) { 
         records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }
@@ -745,7 +754,23 @@ fun MemoHistoryList(
         groupedRecords.forEach { (date, memos) ->
             stickyHeader { Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant) { Text(text = formatDateHeader(date), modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
             items(memos.size, key = { index -> memos[index].id }) { index ->
-                val memo = memos[index]; val dismissState = rememberSwipeToDismissBoxState(confirmValueChange = { if (it == SwipeToDismissBoxValue.EndToStart) { onDeleteClick(memo); false } else false })
+                val memo = memos[index]
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart }
+                )
+
+                LaunchedEffect(dismissState.currentValue) {
+                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                        onDeleteClick(memo)
+                    }
+                }
+
+                LaunchedEffect(isAnyDialogOpen) {
+                    if (!isAnyDialogOpen && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                    }
+                }
+
                 SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
                     Card(modifier = Modifier.fillMaxWidth().clickable { onItemClick(memo) }.padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
