@@ -169,6 +169,9 @@ fun CareMemoApp(activity: FragmentActivity) {
                 onBack = { navController.popBackStack() },
                 onNavigateToConditionDetail = { pId, cId ->
                     navController.navigate("conditionDetail/$pId/$cId")
+                },
+                onNavigateToHealthRecordDetail = { pId, cat, rId ->
+                    navController.navigate("healthRecordDetail/$pId/${cat.name}/$rId")
                 }
             )
         }
@@ -196,6 +199,29 @@ fun CareMemoApp(activity: FragmentActivity) {
                 onNavigateToFullScreen = { fileName ->
                     navController.navigate("photoFull/$fileName")
                 }
+            )
+        }
+        composable(
+            route = "healthRecordDetail/{personId}/{categoryName}/{recordId}",
+            arguments = listOf(
+                navArgument("personId") { type = NavType.IntType },
+                navArgument("categoryName") { type = NavType.StringType },
+                navArgument("recordId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
+            val category = Category.valueOf(categoryName)
+            val recordId = backStackEntry.arguments?.getInt("recordId") ?: 0
+            val detailViewModel: PersonDetailViewModel = viewModel(
+                factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
+            )
+            HealthRecordDetailScreen(
+                viewModel = detailViewModel,
+                personId = personId,
+                category = category,
+                recordId = recordId,
+                onBack = { navController.popBackStack() }
             )
         }
         composable(

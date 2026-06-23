@@ -328,20 +328,20 @@ class PersonListViewModel(
         }
     }
 
-    // --- 旧アプリデータの移行 ---
-
-    fun importLegacyDataFromAssets(context: Context) {
-        viewModelScope.launch {
-            try {
-                val loader = InitialDataLoader(context, repository)
-                loader.clearAllData()
-                loader.loadInitialDataFromAssets()
-                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "Assetsからの初期データ読込が完了しました。"))
-            } catch (e: Exception) {
-                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "読込に失敗しました: ${e.localizedMessage}"))
-            }
-        }
-    }
+//    // --- 旧アプリデータの移行 ---
+//
+//    fun importLegacyDataFromAssets(context: Context) {
+//        viewModelScope.launch {
+//            try {
+//                val loader = InitialDataLoader(context, repository)
+//                loader.clearAllData()
+//                loader.loadInitialDataFromAssets()
+//                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "Assetsからの初期データ読込が完了しました。"))
+//            } catch (e: Exception) {
+//                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "読込に失敗しました: ${e.localizedMessage}"))
+//            }
+//        }
+//    }
 
     fun clearAllData() {
         viewModelScope.launch {
@@ -354,16 +354,16 @@ class PersonListViewModel(
         }
     }
 
-    fun normalizeAllPersonBirthdays() {
-        viewModelScope.launch {
-            try {
-                repository.normalizeAllPersonBirthdays()
-                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "全利用者の生年月日を正規化（時刻を00:00に設定）しました。"))
-            } catch (e: Exception) {
-                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "正規化に失敗しました。重複する利用者が既に存在している可能性があります: ${e.localizedMessage}"))
-            }
-        }
-    }
+//    fun normalizeAllPersonBirthdays() {
+//        viewModelScope.launch {
+//            try {
+//                repository.normalizeAllPersonBirthdays()
+//                _uiEventFlow.emit(UiEvent.ShowInfoDialog("完了", "全利用者の生年月日を正規化（時刻を00:00に設定）しました。"))
+//            } catch (e: Exception) {
+//                _uiEventFlow.emit(UiEvent.ShowErrorDialog("エラー", "正規化に失敗しました。重複する利用者が既に存在している可能性があります: ${e.localizedMessage}"))
+//            }
+//        }
+//    }
 
     fun importLegacyDataFromFolder(context: Context, treeUri: Uri) {
         viewModelScope.launch {

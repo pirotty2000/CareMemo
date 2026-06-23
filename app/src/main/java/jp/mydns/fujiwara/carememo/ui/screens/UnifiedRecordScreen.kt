@@ -10,12 +10,9 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PictureAsPdf
@@ -32,11 +29,6 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
-import android.speech.RecognizerIntent
-import android.content.Intent
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,20 +47,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.saveable.rememberSaveable
-import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -89,18 +74,17 @@ fun UnifiedRecordScreen(
     initialCategoryType: Category,
     personId: Int,
     onBack: () -> Unit,
-    onNavigateToConditionDetail: (Int, Int) -> Unit
+    onNavigateToConditionDetail: (Int, Int) -> Unit,
+    onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit
 ) {
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     
-    val currentRecord by viewModel.currentRecordState.collectAsState()
     val records by viewModel.filteredRecords.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val conditionPhotoMap by viewModel.conditionPhotoMap.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -128,14 +112,10 @@ fun UnifiedRecordScreen(
     }
 
     val categoryListState = rememberLazyListState()
-    var showMemoDialog by remember { mutableStateOf<ConditionAtVisit?>(null) }
-    var isMemoEditMode by remember { mutableStateOf(false) }
-    var showMemoCreateDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentCategory, personId) {
         viewModel.loadPerson(personId)
         viewModel.loadRecords(personId, currentCategory)
-        viewModel.clearCurrentRecord()
         
         val index = Category.entries.indexOf(currentCategory)
         if (index >= 0) {
@@ -241,10 +221,14 @@ fun UnifiedRecordScreen(
             }
         },
         floatingActionButton = {
-            if (currentCategory == Category.CONDITION_AT_VISIT) {
-                FloatingActionButton(onClick = { onNavigateToConditionDetail(personId, 0) }) {
-                    Icon(Icons.Rounded.Add, contentDescription = "所見追加")
+            FloatingActionButton(onClick = {
+                if (currentCategory == Category.CONDITION_AT_VISIT) {
+                    onNavigateToConditionDetail(personId, 0)
+                } else {
+                    onNavigateToHealthRecordDetail(personId, currentCategory, 0)
                 }
+            }) {
+                Icon(Icons.Rounded.Add, contentDescription = "新規追加")
             }
         }
     ) { paddingValues ->
@@ -301,17 +285,6 @@ fun UnifiedRecordScreen(
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
-                )
-            } else {
-                InputForm(
-                    categoryType = currentCategory,
-                    recordData = currentRecord,
-                    personId = personId,
-                    records = records,
-                    defaultRecorderName = defaultRecorderName,
-                    onSave = { viewModel.saveRecord(it) },
-                    onClear = { viewModel.clearCurrentRecord() },
-                    snackbarHostState = snackbarHostState
                 )
             }
 
@@ -412,11 +385,17 @@ fun UnifiedRecordScreen(
                                         }
                                     }
                                 ) {
+                                    val id = when (record) {
+                                        is HeightAndWeight -> record.id
+                                        is BpAndPulse -> record.id
+                                        is GlucoseAndHbA1c -> record.id
+                                        else -> 0
+                                    }
                                     RecordListItem(
                                         categoryType = currentCategory,
                                         record = record,
-                                        onClick = { viewModel.selectRecord(record) },
-                                        isEditable = currentRecord == record
+                                        onClick = { onNavigateToHealthRecordDetail(personId, currentCategory, id) },
+                                        isEditable = false
                                     )
                                 }
                             }
@@ -500,30 +479,6 @@ fun UnifiedRecordScreen(
                     Text("閉じる")
                 }
             }
-        )
-    }
-
-    if (showMemoCreateDialog) {
-        MemoEditDialog(
-            memo = null,
-            personId = personId,
-            isEditMode = true,
-            defaultRecorderName = defaultRecorderName,
-            onEditClick = {},
-            onDismiss = { showMemoCreateDialog = false },
-            onSave = { viewModel.saveRecord(it); showMemoCreateDialog = false }
-        )
-    }
-
-    if (showMemoDialog != null) {
-        MemoEditDialog(
-            memo = showMemoDialog,
-            personId = personId,
-            isEditMode = isMemoEditMode,
-            defaultRecorderName = defaultRecorderName,
-            onEditClick = { isMemoEditMode = true },
-            onDismiss = { showMemoDialog = null; isMemoEditMode = false },
-            onSave = { viewModel.saveRecord(it); showMemoDialog = null; isMemoEditMode = false }
         )
     }
 
@@ -724,379 +679,6 @@ fun PdfSettingsDialog(
             }
         }
     )
-}
-
-@Composable
-fun InputForm(
-    categoryType: Category,
-    recordData: Any?,
-    personId: Int,
-    records: List<Any>,
-    defaultRecorderName: String,
-    onSave: (Any?) -> Unit,
-    onClear: () -> Unit,
-    snackbarHostState: SnackbarHostState
-) {
-    val isEditMode = recordData != null
-    val scope = rememberCoroutineScope()
-
-    var yearText by remember { mutableStateOf("") }
-    var monthText by remember { mutableStateOf("") }
-    var dayText by remember { mutableStateOf("") }
-    var hourText by remember { mutableStateOf("") }
-    var minuteText by remember { mutableStateOf("") }
-
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val yearFocusRequester = remember { FocusRequester() }
-    val monthFocusRequester = remember { FocusRequester() }
-    val dayFocusRequester = remember { FocusRequester() }
-    val hourFocusRequester = remember { FocusRequester() }
-    val minuteFocusRequester = remember { FocusRequester() }
-    val categoryFirstFocusRequester = remember { FocusRequester() }
-
-    val dataField2Requester = remember { FocusRequester() }
-    val dataField3Requester = remember { FocusRequester() }
-
-    var heightText by remember { mutableStateOf("") }
-    var weightText by remember { mutableStateOf("") }
-    var bpSystolicText by remember { mutableStateOf("") }
-    var bpDiastolicText by remember { mutableStateOf("") }
-    var pulseText by remember { mutableStateOf("") }
-    var glucoseText by remember { mutableStateOf("") }
-    var hba1cText by remember { mutableStateOf("") }
-    var titleText by remember { mutableStateOf("") }
-    var authorText by remember { mutableStateOf("") }
-    var conditionText by remember { mutableStateOf("") }
-
-    var isUserModifiedTime by remember { mutableStateOf(false) }
-
-    LaunchedEffect(recordData) {
-        if (recordData != null) {
-            val recordTime = when (recordData) {
-                is HeightAndWeight -> recordData.recordTime
-                is BpAndPulse -> recordData.recordTime
-                is GlucoseAndHbA1c -> recordData.recordTime
-                is ConditionAtVisit -> recordData.recordTime
-                else -> Instant.now()
-            }
-            val zonedDateTime = recordTime.atZone(ZoneId.systemDefault())
-            yearText = zonedDateTime.year.toString()
-            monthText = zonedDateTime.monthValue.toString()
-            dayText = zonedDateTime.dayOfMonth.toString()
-            hourText = "%02d".format(zonedDateTime.hour)
-            minuteText = "%02d".format(zonedDateTime.minute)
-            isUserModifiedTime = true
-
-            when (recordData) {
-                is HeightAndWeight -> {
-                    heightText = recordData.height?.toString() ?: ""
-                    weightText = recordData.weight.toString()
-                }
-                is BpAndPulse -> {
-                    bpSystolicText = recordData.bpSystolic?.toString() ?: ""
-                    bpDiastolicText = recordData.bpDiastolic?.toString() ?: ""
-                    pulseText = recordData.pulse?.toString() ?: ""
-                }
-                is GlucoseAndHbA1c -> {
-                    glucoseText = recordData.glucose?.toString() ?: ""
-                    hba1cText = recordData.hba1c?.toString() ?: ""
-                }
-                is ConditionAtVisit -> {
-                    titleText = recordData.title ?: ""
-                    authorText = recordData.author
-                    conditionText = recordData.condition ?: ""
-                }
-            }
-        } else {
-            if (!isUserModifiedTime) {
-                val now = Instant.now().atZone(ZoneId.systemDefault())
-                yearText = now.year.toString()
-                monthText = now.monthValue.toString()
-                dayText = now.dayOfMonth.toString()
-                hourText = "00"
-                minuteText = "00"
-            }
-            heightText = if (categoryType == Category.HEIGHT_AND_WEIGHT) {
-                val latestHeight = records.filterIsInstance<HeightAndWeight>()
-                    .maxByOrNull { it.recordTime }?.height
-                latestHeight?.toString() ?: ""
-            } else ""
-            
-            weightText = ""
-            bpSystolicText = ""
-            bpDiastolicText = ""
-            pulseText = ""
-            glucoseText = ""
-            hba1cText = ""
-            titleText = ""
-            authorText = if (categoryType == Category.CONDITION_AT_VISIT) defaultRecorderName else ""
-            conditionText = ""
-
-            if (isUserModifiedTime) {
-                if (categoryType == Category.CONDITION_AT_VISIT) {
-                    categoryFirstFocusRequester.requestFocus()
-                } else {
-                    yearFocusRequester.requestFocus()
-                }
-            }
-        }
-    }
-
-    fun filterInteger(text: String): String = text.filter { it.isDigit() }
-
-    fun filterDecimal(text: String): String {
-        val filtered = text.filter { it.isDigit() || it == '.' }
-        val parts = filtered.split('.')
-        return when {
-            parts.size > 2 -> parts[0] + "." + parts[1]
-            parts.size == 2 -> parts[0] + "." + parts[1].take(1)
-            else -> filtered
-        }
-    }
-
-    val y = yearText.toIntOrNull()
-    val m = monthText.toIntOrNull()
-    val d = dayText.toIntOrNull()
-    val hh = hourText.toIntOrNull() ?: 0
-    val mm = minuteText.toIntOrNull() ?: 0
-
-    val isYearError = y == null || (y < 1900 || y > 2100)
-    val isMonthError = m == null || m < 1 || m > 12
-    val isDayError = try {
-        if (y != null && m != null && d != null) {
-            d < 1 || d > java.time.YearMonth.of(y, m).lengthOfMonth()
-        } else true
-    } catch (_: Exception) { true }
-    val isHourError = hh !in 0..23
-    val isMinuteError = mm !in 0..59
-
-    val isDateTimeValid = !isYearError && !isMonthError && !isDayError && !isHourError && !isMinuteError
-
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CompactTextField(
-                        value = yearText,
-                        onValueChange = { 
-                            val filtered = filterInteger(it)
-                            if (filtered.length <= 4) {
-                                yearText = filtered
-                                isUserModifiedTime = true
-                                if (filtered.length == 4) monthFocusRequester.requestFocus()
-                            }
-                        },
-                        modifier = Modifier.weight(1.3f).focusRequester(yearFocusRequester),
-                        onFocusChanged = { state -> if (state.isFocused) yearText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() }),
-                        isError = isYearError,
-                        suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    CompactTextField(
-                        value = monthText,
-                        onValueChange = { 
-                            val filtered = filterInteger(it)
-                            if (filtered.length <= 2) {
-                                monthText = filtered
-                                isUserModifiedTime = true
-                                if (filtered.length == 2) dayFocusRequester.requestFocus()
-                            }
-                        },
-                        modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
-                        onFocusChanged = { if (it.isFocused) monthText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() }),
-                        isError = isMonthError,
-                        suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    CompactTextField(
-                        value = dayText,
-                        onValueChange = { 
-                            val filtered = filterInteger(it)
-                            if (filtered.length <= 2) {
-                                dayText = filtered
-                                isUserModifiedTime = true
-                                if (filtered.length == 2) hourFocusRequester.requestFocus()
-                            }
-                        },
-                        modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
-                        onFocusChanged = { if (it.isFocused) dayText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() }),
-                        isError = isDayError,
-                        suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    CompactTextField(
-                        value = hourText,
-                        onValueChange = { 
-                            val filtered = filterInteger(it)
-                            if (filtered.length <= 2) {
-                                hourText = filtered
-                                isUserModifiedTime = true
-                                if (filtered.length == 2) minuteFocusRequester.requestFocus()
-                            }
-                        },
-                        modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
-                        onFocusChanged = { if (it.isFocused) hourText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() }),
-                        isError = isHourError,
-                        suffix = { Text("時", style = MaterialTheme.typography.bodySmall) }
-                    )
-                    CompactTextField(
-                        value = minuteText,
-                        onValueChange = { 
-                            val filtered = filterInteger(it)
-                            if (filtered.length <= 2) {
-                                minuteText = filtered
-                                isUserModifiedTime = true
-                                if (filtered.length == 2) focusManager.clearFocus()
-                            }
-                        },
-                        modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
-                        onFocusChanged = { if (it.isFocused) minuteText = "" },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                        isError = isMinuteError,
-                        suffix = { Text("分", style = MaterialTheme.typography.bodySmall) }
-                    )
-                }
-            }
-
-            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (categoryType) {
-                    Category.HEIGHT_AND_WEIGHT -> {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
-                                value = heightText,
-                                onValueChange = { heightText = filterDecimal(it) },
-                                modifier = Modifier.weight(1f).focusRequester(categoryFirstFocusRequester),
-                                onFocusChanged = { if (it.isFocused) heightText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                                label = { Text("身長") },
-                                suffix = { Text("cm", style = MaterialTheme.typography.labelSmall) }
-                            )
-                            CompactTextField(
-                                value = weightText,
-                                onValueChange = { weightText = filterDecimal(it) },
-                                modifier = Modifier.weight(1f).focusRequester(dataField2Requester),
-                                onFocusChanged = { if (it.isFocused) weightText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                                label = { Text("体重") },
-                                suffix = { Text("kg", style = MaterialTheme.typography.labelSmall) }
-                            )
-                        }
-                    }
-                    Category.BP_AND_PULSE -> {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
-                                value = bpSystolicText,
-                                onValueChange = { bpSystolicText = filterInteger(it) },
-                                modifier = Modifier.weight(1f).focusRequester(categoryFirstFocusRequester),
-                                onFocusChanged = { if (it.isFocused) bpSystolicText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                                label = { Text("血圧(上)") }
-                            )
-                            CompactTextField(
-                                value = bpDiastolicText,
-                                onValueChange = { bpDiastolicText = filterInteger(it) },
-                                modifier = Modifier.weight(1f).focusRequester(dataField2Requester),
-                                onFocusChanged = { if (it.isFocused) bpDiastolicText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() }),
-                                label = { Text("血圧(下)") }
-                            )
-                            CompactTextField(
-                                value = pulseText,
-                                onValueChange = { pulseText = filterInteger(it) },
-                                modifier = Modifier.weight(1f).focusRequester(dataField3Requester),
-                                onFocusChanged = { if (it.isFocused) pulseText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                                label = { Text("脈拍") }
-                            )
-                        }
-                    }
-                    Category.GLUCOSE_AND_HBA1C -> {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
-                                value = glucoseText,
-                                onValueChange = { glucoseText = filterInteger(it) },
-                                modifier = Modifier.weight(1f).focusRequester(categoryFirstFocusRequester),
-                                onFocusChanged = { if (it.isFocused) glucoseText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }),
-                                label = { Text("血糖値") }
-                            )
-                            CompactTextField(
-                                value = hba1cText,
-                                onValueChange = { hba1cText = filterDecimal(it) },
-                                modifier = Modifier.weight(1f).focusRequester(dataField2Requester),
-                                onFocusChanged = { if (it.isFocused) hba1cText = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                                label = { Text("HbA1c") }
-                            )
-                        }
-                    }
-                    Category.CONDITION_AT_VISIT -> {
-                        OutlinedTextField(value = titleText, onValueChange = { titleText = it }, label = { Text("タイトル") }, modifier = Modifier.fillMaxWidth().focusRequester(categoryFirstFocusRequester), keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next), keyboardActions = KeyboardActions(onNext = { dataField2Requester.requestFocus() }))
-                        OutlinedTextField(value = authorText, onValueChange = { authorText = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth().focusRequester(dataField2Requester), keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Next), keyboardActions = KeyboardActions(onNext = { dataField3Requester.requestFocus() }))
-                        TextField(value = conditionText, onValueChange = { conditionText = it }, label = { Text("所見メモ") }, modifier = Modifier.fillMaxWidth().focusRequester(dataField3Requester), keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done), keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }))
-                    }
-                }
-            }
-
-            val hasData = when (categoryType) {
-                Category.HEIGHT_AND_WEIGHT -> heightText.isNotBlank() || weightText.isNotBlank()
-                Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
-                Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
-                Category.CONDITION_AT_VISIT -> titleText.isNotBlank() || conditionText.isNotBlank()
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = {
-                        keyboardController?.hide()
-                        val recordTime = try {
-                            java.time.LocalDateTime.of(yearText.toInt(), monthText.toInt(), dayText.toInt(), hourText.toIntOrNull() ?: 0, minuteText.toIntOrNull() ?: 0, 0).atZone(ZoneId.systemDefault()).toInstant()
-                        } catch (_: Exception) { Instant.now() }
-
-                        if (!hasData) { scope.launch { snackbarHostState.showSnackbar("保存するデータがありません") }; return@Button }
-
-                        val newRecord = when (categoryType) {
-                            Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = (recordData as? HeightAndWeight)?.id ?: 0, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull() ?: 0.0, recordTime = recordTime)
-                            Category.BP_AND_PULSE -> BpAndPulse(id = (recordData as? BpAndPulse)?.id ?: 0, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), recordTime = recordTime)
-                            Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = (recordData as? GlucoseAndHbA1c)?.id ?: 0, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
-                            Category.CONDITION_AT_VISIT -> ConditionAtVisit(id = (recordData as? ConditionAtVisit)?.id ?: 0, personId = personId, title = titleText, condition = conditionText, author = authorText, recordTime = recordTime)
-                        }
-                        onSave(newRecord)
-                        if (!isEditMode) { heightText = ""; weightText = ""; bpSystolicText = ""; bpDiastolicText = ""; pulseText = ""; glucoseText = ""; hba1cText = ""; titleText = ""; conditionText = ""; focusManager.clearFocus() }
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = isDateTimeValid && hasData && when (categoryType) { Category.HEIGHT_AND_WEIGHT -> weightText.toDoubleOrNull() != null; Category.CONDITION_AT_VISIT -> authorText.isNotBlank(); else -> true }
-                ) { Text(if (isEditMode) "更新" else "保存") }
-                if (isEditMode) OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text("キャンセル") }
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1540,147 +1122,6 @@ fun formatDateHeader(date: LocalDate): String {
     return "%d(%s%d)年%d月%d日".format(date.year, eraName, eraYear, date.monthValue, date.dayOfMonth)
 }
 fun formatTime(instant: Instant): String { return DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(instant) }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, defaultRecorderName: String, onEditClick: () -> Unit, onDismiss: () -> Unit, onSave: (ConditionAtVisit) -> Unit) {
-    val focusManager = LocalFocusManager.current
-    var title by remember { mutableStateOf(memo?.title ?: "") }; var condition by remember { mutableStateOf(memo?.condition ?: "") }; var author by remember { mutableStateOf(memo?.author ?: defaultRecorderName) }
-    
-    val initialTime = memo?.recordTime ?: Instant.now(); val zonedDateTime = initialTime.atZone(ZoneId.systemDefault())
-    
-    var year by remember { mutableStateOf(zonedDateTime.year.toString()) }
-    var month by remember { mutableStateOf(zonedDateTime.monthValue.toString()) }
-    var day by remember { mutableStateOf(zonedDateTime.dayOfMonth.toString()) }
-    // 新規作成時は 00:00、編集時は既存の値をセット
-    var hour by remember { mutableStateOf(if (memo == null) "00" else "%02d".format(zonedDateTime.hour)) }
-    var minute by remember { mutableStateOf(if (memo == null) "00" else "%02d".format(zonedDateTime.minute)) }
-
-    val monthFocusRequester = remember { FocusRequester() }; val dayFocusRequester = remember { FocusRequester() }; val hourFocusRequester = remember { FocusRequester() }; val minuteFocusRequester = remember { FocusRequester() }
-    val speechLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
-            if (spokenText != null) {
-                // 句読点の自動補完と改行の挿入
-                val formattedText = buildString {
-                    append(spokenText.trim())
-                    // 末尾が句読点等でなければ「。」を付与
-                    if (!spokenText.trim().any { it in "。、？！?.!" }) {
-                        append("。")
-                    }
-                    append("\n")
-                }
-                
-                // 既存の文章があれば末尾に追加
-                condition = if (condition.isBlank()) {
-                    formattedText
-                } else {
-                    // 既存の末尾が改行でなければ改行を挟んでから追加
-                    val separator = if (condition.endsWith("\n")) "" else "\n"
-                    condition + separator + formattedText
-                }
-            }
-        }
-    }
-    AlertDialog(onDismissRequest = onDismiss, confirmButton = { if (isEditMode) { Button(onClick = { val recordTime = try { java.time.LocalDateTime.of(year.toInt(), month.toInt(), day.toInt(), hour.toInt(), minute.toInt()).atZone(ZoneId.systemDefault()).toInstant() } catch (e: Exception) { initialTime }; onSave(ConditionAtVisit(id = memo?.id ?: 0, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)) }, enabled = author.isNotBlank() && condition.isNotBlank()) { Text("保存") } } else { Button(onClick = onEditClick) { Icon(Icons.Rounded.EditNote, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("記録を修正") } } }, dismissButton = { TextButton(onClick = onDismiss) { Text(if (isEditMode) "キャンセル" else "閉じる") } }, title = { Text(if (memo == null) "新規記録" else if (isEditMode) "記録の編集" else "記録の参照") }, text = {
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (isEditMode) {
-                OutlinedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CompactTextField(
-                                value = year,
-                                onValueChange = { 
-                                    val filtered = it.filter { c -> c.isDigit() }
-                                    if (filtered.length <= 4) {
-                                        year = filtered
-                                        if (filtered.length == 4) monthFocusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.weight(1.3f),
-                                onFocusChanged = { if (it.isFocused) year = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() }),
-                                suffix = { Text("年", style = MaterialTheme.typography.bodySmall) }
-                            )
-                            CompactTextField(
-                                value = month,
-                                onValueChange = { 
-                                    val filtered = it.filter { c -> c.isDigit() }
-                                    if (filtered.length <= 2) {
-                                        month = filtered
-                                        if (filtered.length == 2) dayFocusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
-                                onFocusChanged = { if (it.isFocused) month = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() }),
-                                suffix = { Text("月", style = MaterialTheme.typography.bodySmall) }
-                            )
-                            CompactTextField(
-                                value = day,
-                                onValueChange = { 
-                                    val filtered = it.filter { c -> c.isDigit() }
-                                    if (filtered.length <= 2) {
-                                        day = filtered
-                                        if (filtered.length == 2) hourFocusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
-                                onFocusChanged = { if (it.isFocused) day = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() }),
-                                suffix = { Text("日", style = MaterialTheme.typography.bodySmall) }
-                            )
-                            CompactTextField(
-                                value = hour,
-                                onValueChange = { 
-                                    val filtered = it.filter { c -> c.isDigit() }
-                                    if (filtered.length <= 2) {
-                                        hour = filtered
-                                        if (filtered.length == 2) minuteFocusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
-                                onFocusChanged = { if (it.isFocused) hour = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() }),
-                                suffix = { Text("時", style = MaterialTheme.typography.bodySmall) }
-                            )
-                            CompactTextField(
-                                value = minute,
-                                onValueChange = { 
-                                    val filtered = it.filter { c -> c.isDigit() }
-                                    if (filtered.length <= 2) minute = filtered
-                                },
-                                modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
-                                onFocusChanged = { if (it.isFocused) minute = "" },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                            )
-                        }
-                    }
-                }
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("タイトル (任意)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth())
-                Box(modifier = Modifier.fillMaxWidth()) { OutlinedTextField(value = condition, onValueChange = { condition = it }, label = { Text("所見メモ") }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp), trailingIcon = { IconButton(onClick = { val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString()); putExtra(RecognizerIntent.EXTRA_PROMPT, "音声入力してください") }; speechLauncher.launch(intent) }) { Icon(Icons.Rounded.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }) }
-            } else {
-                Text(text = "日時: ${formatRecordTime(memo!!.recordTime)}", style = MaterialTheme.typography.labelLarge); Text(text = "記録者: ${memo.author}", style = MaterialTheme.typography.labelLarge); if (!memo.title.isNullOrBlank()) Text(text = "タイトル: ${memo.title}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); HorizontalDivider(); Text(text = memo.condition ?: "", style = MaterialTheme.typography.bodyLarge)
-            }
-        }
-    })
-}
 
 @Composable
 fun EmptyState(message: String, description: String? = null, icon: ImageVector) {

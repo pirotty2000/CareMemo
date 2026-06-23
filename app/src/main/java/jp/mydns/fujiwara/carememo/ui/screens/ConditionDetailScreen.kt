@@ -27,13 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import coil.compose.AsyncImage
-import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
@@ -97,13 +94,13 @@ fun ConditionDetailScreen(
             hour = "%02d".format(zdt.hour)
             minute = "%02d".format(zdt.minute)
         } else if (conditionId == 0 && year.isEmpty()) {
-            // 新規作成時：日付は今日、時刻は 00:00 をセット
+            // 新規作成時：現在の日時をセット
             val now = java.time.LocalDateTime.now()
             year = now.year.toString()
             month = now.monthValue.toString()
             day = now.dayOfMonth.toString()
-            hour = "00"
-            minute = "00"
+            hour = "%02d".format(now.hour)
+            minute = "%02d".format(now.minute)
             
             if (author.isEmpty() && defaultRecorderName.isNotEmpty()) {
                 author = defaultRecorderName
@@ -207,87 +204,17 @@ fun ConditionDetailScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("記録日時", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CompactTextField(
-                                    value = year,
-                                    onValueChange = { 
-                                        val filtered = it.filter { c -> c.isDigit() }
-                                        if (filtered.length <= 4) {
-                                            year = filtered
-                                            if (filtered.length == 4) monthFocusRequester.requestFocus()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1.3f),
-                                    onFocusChanged = { if (it.isFocused) year = "" },
-                                    suffix = { Text("年", style = MaterialTheme.typography.bodySmall) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() })
-                                )
-                                CompactTextField(
-                                    value = month,
-                                    onValueChange = { 
-                                        val filtered = it.filter { c -> c.isDigit() }
-                                        if (filtered.length <= 2) {
-                                            month = filtered
-                                            if (filtered.length == 2) dayFocusRequester.requestFocus()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
-                                    onFocusChanged = { if (it.isFocused) month = "" },
-                                    suffix = { Text("月", style = MaterialTheme.typography.bodySmall) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() })
-                                )
-                                CompactTextField(
-                                    value = day,
-                                    onValueChange = { 
-                                        val filtered = it.filter { c -> c.isDigit() }
-                                        if (filtered.length <= 2) {
-                                            day = filtered
-                                            if (filtered.length == 2) hourFocusRequester.requestFocus()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
-                                    onFocusChanged = { if (it.isFocused) day = "" },
-                                    suffix = { Text("日", style = MaterialTheme.typography.bodySmall) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() })
-                                )
-                                CompactTextField(
-                                    value = hour,
-                                    onValueChange = { 
-                                        val filtered = it.filter { c -> c.isDigit() }
-                                        if (filtered.length <= 2) {
-                                            hour = filtered
-                                            if (filtered.length == 2) minuteFocusRequester.requestFocus()
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
-                                    onFocusChanged = { if (it.isFocused) hour = "" },
-                                    suffix = { Text("時", style = MaterialTheme.typography.bodySmall) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() })
-                                )
-                                CompactTextField(
-                                    value = minute,
-                                    onValueChange = { 
-                                        val filtered = it.filter { c -> c.isDigit() }
-                                        if (filtered.length <= 2) minute = filtered
-                                    },
-                                    modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
-                                    onFocusChanged = { if (it.isFocused) minute = "" },
-                                    suffix = { Text("分", style = MaterialTheme.typography.bodySmall) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                                )
-                            }
-                        }
+                        DateTimeInputFields(
+                            year = year, onYearChange = { year = it },
+                            month = month, onMonthChange = { month = it },
+                            day = day, onDayChange = { day = it },
+                            hour = hour, onHourChange = { hour = it },
+                            minute = minute, onMinuteChange = { minute = it },
+                            monthFocusRequester = monthFocusRequester,
+                            dayFocusRequester = dayFocusRequester,
+                            hourFocusRequester = hourFocusRequester,
+                            minuteFocusRequester = minuteFocusRequester
+                        )
 
                         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
