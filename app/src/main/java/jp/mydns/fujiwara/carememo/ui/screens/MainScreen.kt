@@ -7,12 +7,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.PersonAddAlt1
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ModeEdit
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.automirrored.rounded.Help
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -220,17 +223,29 @@ fun MainScreenContent(
             TopAppBar(
                 title = { Text("CareMemo", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "メニュー") }
+                    IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(text = { Text("設定") }, onClick = { showMenu = false; onNavigateToSettings() })
-                        DropdownMenuItem(text = { Text("ヘルプ") }, onClick = { showMenu = false; showHelpDialog = true })
-                        DropdownMenuItem(text = { Text("バージョン情報") }, onClick = { showMenu = false; showVersionDialog = true })
+                        DropdownMenuItem(
+                            text = { Text("設定") },
+                            leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                            onClick = { showMenu = false; onNavigateToSettings() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ヘルプ") },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
+                            onClick = { showMenu = false; showHelpDialog = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("バージョン情報") },
+                            leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+                            onClick = { showMenu = false; showVersionDialog = true }
+                        )
                     }
                 }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Default.Add, contentDescription = "利用者登録") } }
+        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = "利用者登録") } }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SearchBar(query = searchQuery, onQueryChange = onSearchQueryChange)
@@ -306,10 +321,10 @@ fun MainScreenContent(
                             supportingContent = { Text(text = "${birthdayStr}生　${age}歳", style = MaterialTheme.typography.bodySmall) },
                             trailingContent = {
                                 Box {
-                                    IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "操作メニュー") }
+                                    IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
                                     DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
-                                        DropdownMenuItem(text = { Text("利用者情報を編集") }, leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
-                                        DropdownMenuItem(text = { Text("利用を終了する", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
+                                        DropdownMenuItem(text = { Text("利用者情報を編集") }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
+                                        DropdownMenuItem(text = { Text("利用を終了する", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
                                     }
                                 }
                             },
@@ -481,11 +496,11 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         onValueChange = { onQueryChange(it) },
         label = { Text("所見メモ検索") },
         placeholder = { Text("特定の症状や出来事を入力...", style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Close, contentDescription = "クリア")
+                    Icon(Icons.Rounded.Close, contentDescription = "クリア")
                 }
             }
         },

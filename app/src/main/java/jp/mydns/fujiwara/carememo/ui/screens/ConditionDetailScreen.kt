@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -169,14 +169,14 @@ fun ConditionDetailScreen(
             TopAppBar(
                 title = { Text(if (conditionId == 0) "新規記録" else if (isEditing) "記録の編集" else "所見詳細") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    IconButton(onClick = { if (isEditing && conditionId != 0) isEditing = false else onBack() }) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
                 actions = {
                     if (!isEditing) {
                         IconButton(onClick = { isEditing = true }) {
-                            Icon(Icons.Default.Edit, contentDescription = "編集")
+                            Icon(Icons.Rounded.EditNote, contentDescription = "編集")
                         }
                     }
                 }
@@ -317,7 +317,7 @@ fun ConditionDetailScreen(
                                         }
                                         speechLauncher.launch(intent)
                                     }) {
-                                        Icon(Icons.Default.Mic, contentDescription = "音声入力")
+                                        Icon(Icons.Rounded.Mic, contentDescription = "音声入力")
                                     }
                                 }
                             )
@@ -415,7 +415,7 @@ fun ConditionDetailScreen(
                         },
                         enabled = !isProcessing
                     ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null)
+                        Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("撮影")
                     }
@@ -504,7 +504,7 @@ fun PhotoGrid(
                             modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
                             colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f))
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
                         }
                     }
                 }

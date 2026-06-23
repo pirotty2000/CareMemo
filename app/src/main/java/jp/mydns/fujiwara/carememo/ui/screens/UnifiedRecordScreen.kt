@@ -13,16 +13,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Scale
+import androidx.compose.material.icons.rounded.Height
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
 import android.speech.RecognizerIntent
@@ -60,14 +67,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Straighten
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.data.*
@@ -106,7 +105,6 @@ fun UnifiedRecordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var showMenu by remember { mutableStateOf(false) }
 
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
@@ -181,31 +179,22 @@ fun UnifiedRecordScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                         }
                     },
                     actions = {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("PDF出力（共有）") },
-                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
-                                onClick = {
-                                    showMenu = false
-                                    if (records.isEmpty()) {
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("${currentCategory.displayName}の記録がないため出力できません")
-                                        }
-                                        return@DropdownMenuItem
+                        IconButton(
+                            onClick = {
+                                if (records.isEmpty()) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("${currentCategory.displayName}の記録がないため出力できません")
                                     }
-                                    showPdfSettingsDialog = true
+                                    return@IconButton
                                 }
-                            )
+                                showPdfSettingsDialog = true
+                            }
+                        ) {
+                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力（共有）")
                         }
                     }
                 )
@@ -233,7 +222,7 @@ fun UnifiedRecordScreen(
                             leadingIcon = if (currentCategory == category) {
                                 {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        imageVector = Icons.Rounded.Check,
                                         contentDescription = null,
                                         modifier = Modifier.size(FilterChipDefaults.IconSize)
                                     )
@@ -254,7 +243,7 @@ fun UnifiedRecordScreen(
         floatingActionButton = {
             if (currentCategory == Category.CONDITION_AT_VISIT) {
                 FloatingActionButton(onClick = { onNavigateToConditionDetail(personId, 0) }) {
-                    Icon(Icons.Default.Add, contentDescription = "所見追加")
+                    Icon(Icons.Rounded.Add, contentDescription = "所見追加")
                 }
             }
         }
@@ -302,11 +291,11 @@ fun UnifiedRecordScreen(
                     onValueChange = { viewModel.updateSearchQuery(it) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("所見メモを検索...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "クリア")
+                                Icon(Icons.Rounded.Clear, contentDescription = "クリア")
                             }
                         }
                     },
@@ -334,7 +323,7 @@ fun UnifiedRecordScreen(
                         selected = showHistory,
                         onClick = { showHistory = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { Icon(if (showHistory) Icons.Filled.History else Icons.Outlined.History, contentDescription = null) }
+                        icon = { Icon(Icons.Rounded.History, contentDescription = null) }
                     ) {
                         Text("履歴")
                     }
@@ -342,7 +331,7 @@ fun UnifiedRecordScreen(
                         selected = !showHistory,
                         onClick = { showHistory = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { Icon(if (!showHistory) Icons.Filled.Timeline else Icons.Outlined.Timeline, contentDescription = null) }
+                        icon = { Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null) }
                     ) {
                         Text("グラフ")
                     }
@@ -419,7 +408,7 @@ fun UnifiedRecordScreen(
                                                 .padding(horizontal = 16.dp),
                                             contentAlignment = Alignment.CenterEnd
                                         ) {
-                                            Icon(Icons.Default.Delete, contentDescription = "物理削除", tint = Color.White)
+                                            Icon(Icons.Rounded.Delete, contentDescription = "物理削除", tint = Color.White)
                                         }
                                     }
                                 ) {
@@ -1118,7 +1107,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         when (categoryType) {
             Category.BP_AND_PULSE -> {
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("血圧", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("血圧", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BP_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val sysPoints = data.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpSystolic!!.toDouble() }
@@ -1128,7 +1117,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("脈拍", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("脈拍", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.PULSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val pulsePoints = data.filter { it.pulse != null }.map { it.recordTime.toEpochMilli().toDouble() to it.pulse!!.toDouble() }
@@ -1138,7 +1127,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                 }
             }
             Category.GLUCOSE_AND_HBA1C -> {
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("血糖値", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.GLUCOSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("血糖値", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.GLUCOSE_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val glucoses = data.mapNotNull { it.glucose?.toDouble() }
@@ -1161,7 +1150,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("HbA1c", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.HBA1C_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("HbA1c", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.HBA1C_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val hba1cs = data.mapNotNull { it.hba1c }
@@ -1212,7 +1201,7 @@ fun GraphView(records: List<Any>, categoryType: Category) {
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("BMI", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BMI_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("BMI", style = MaterialTheme.typography.titleMedium); IconButton(onClick = { showHelpDialog = HealthThresholds.BMI_EXPLANATION }, modifier = Modifier.size(32.dp)) { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) } }
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                     val bmis = data.map { it.calculateBMI() }.filter { it > 0.0 }
@@ -1455,18 +1444,30 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                 Category.HEIGHT_AND_WEIGHT -> if (record is HeightAndWeight) { 
                     val bmi = record.calculateBMI()
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Straighten, contentDescription = "身長", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.Height, contentDescription = "身長", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Default.MonitorWeight, contentDescription = "体重", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.Scale, contentDescription = "体重", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(text = "BMI: ${if (bmi > 0) "%.1f".format(bmi) else "---"} (${if (bmi > 0) bmi.evaluateBMI() else "---"})", style = MaterialTheme.typography.labelMedium)
                     }
                 }
-                Category.BP_AND_PULSE -> if (record is BpAndPulse) { Text(text = "血圧: ${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg, 脈拍: ${record.pulse ?: "---"} bpm (${record.checkStatus()})", style = MaterialTheme.typography.bodyMedium) }
+                Category.BP_AND_PULSE -> if (record is BpAndPulse) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Favorite, contentDescription = "血圧", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(Icons.Rounded.MonitorHeart, contentDescription = "脈拍", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "${record.pulse ?: "---"} bpm", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = "(${record.checkStatus()})", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
                 Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) { Text(text = "血糖値: ${record.glucose?.let { "$it mg/dL" } ?: "---"}, HbA1c: ${record.hba1c?.let { "$it%" } ?: "---"} (${record.checkStatus()})", style = MaterialTheme.typography.bodyMedium) }
                 Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) { Text(text = "タイトル: ${record.title ?: "---"}, 記録者: ${record.author.ifBlank { "---" }}", style = MaterialTheme.typography.bodyMedium) }
             }
@@ -1501,7 +1502,7 @@ fun MemoHistoryList(
             stickyHeader { Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant) { Text(text = formatDateHeader(date), modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
             items(memos.size, key = { index -> memos[index].id }) { index ->
                 val memo = memos[index]; val dismissState = rememberSwipeToDismissBoxState(confirmValueChange = { if (it == SwipeToDismissBoxValue.EndToStart) { onDeleteClick(memo); false } else false })
-                SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White) } }) {
+                SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
                     Card(modifier = Modifier.fillMaxWidth().clickable { onItemClick(memo) }.padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) { Text(text = formatTime(memo.recordTime), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary); Spacer(modifier = Modifier.width(8.dp)); if (!memo.title.isNullOrBlank()) Text(text = memo.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
@@ -1514,7 +1515,7 @@ fun MemoHistoryList(
                             ) {
                                 if (conditionPhotoMap[memo.id] == true) {
                                     Icon(
-                                        imageVector = Icons.Default.CameraAlt,
+                                        imageVector = Icons.Rounded.AddAPhoto,
                                         contentDescription = "写真あり",
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
@@ -1581,7 +1582,7 @@ fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, 
             }
         }
     }
-    AlertDialog(onDismissRequest = onDismiss, confirmButton = { if (isEditMode) { Button(onClick = { val recordTime = try { java.time.LocalDateTime.of(year.toInt(), month.toInt(), day.toInt(), hour.toInt(), minute.toInt()).atZone(ZoneId.systemDefault()).toInstant() } catch (e: Exception) { initialTime }; onSave(ConditionAtVisit(id = memo?.id ?: 0, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)) }, enabled = author.isNotBlank() && condition.isNotBlank()) { Text("保存") } } else { Button(onClick = onEditClick) { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("記録を修正") } } }, dismissButton = { TextButton(onClick = onDismiss) { Text(if (isEditMode) "キャンセル" else "閉じる") } }, title = { Text(if (memo == null) "新規記録" else if (isEditMode) "記録の編集" else "記録の参照") }, text = {
+    AlertDialog(onDismissRequest = onDismiss, confirmButton = { if (isEditMode) { Button(onClick = { val recordTime = try { java.time.LocalDateTime.of(year.toInt(), month.toInt(), day.toInt(), hour.toInt(), minute.toInt()).atZone(ZoneId.systemDefault()).toInstant() } catch (e: Exception) { initialTime }; onSave(ConditionAtVisit(id = memo?.id ?: 0, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)) }, enabled = author.isNotBlank() && condition.isNotBlank()) { Text("保存") } } else { Button(onClick = onEditClick) { Icon(Icons.Rounded.EditNote, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("記録を修正") } } }, dismissButton = { TextButton(onClick = onDismiss) { Text(if (isEditMode) "キャンセル" else "閉じる") } }, title = { Text(if (memo == null) "新規記録" else if (isEditMode) "記録の編集" else "記録の参照") }, text = {
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isEditMode) {
                 OutlinedCard(
@@ -1673,7 +1674,7 @@ fun MemoEditDialog(memo: ConditionAtVisit?, personId: Int, isEditMode: Boolean, 
                 }
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("タイトル (任意)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth())
-                Box(modifier = Modifier.fillMaxWidth()) { OutlinedTextField(value = condition, onValueChange = { condition = it }, label = { Text("所見メモ") }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp), trailingIcon = { IconButton(onClick = { val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString()); putExtra(RecognizerIntent.EXTRA_PROMPT, "音声入力してください") }; speechLauncher.launch(intent) }) { Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }) }
+                Box(modifier = Modifier.fillMaxWidth()) { OutlinedTextField(value = condition, onValueChange = { condition = it }, label = { Text("所見メモ") }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp), trailingIcon = { IconButton(onClick = { val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString()); putExtra(RecognizerIntent.EXTRA_PROMPT, "音声入力してください") }; speechLauncher.launch(intent) }) { Icon(Icons.Rounded.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } }) }
             } else {
                 Text(text = "日時: ${formatRecordTime(memo!!.recordTime)}", style = MaterialTheme.typography.labelLarge); Text(text = "記録者: ${memo.author}", style = MaterialTheme.typography.labelLarge); if (!memo.title.isNullOrBlank()) Text(text = "タイトル: ${memo.title}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); HorizontalDivider(); Text(text = memo.condition ?: "", style = MaterialTheme.typography.bodyLarge)
             }

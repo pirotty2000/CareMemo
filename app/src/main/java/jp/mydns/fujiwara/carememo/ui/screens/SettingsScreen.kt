@@ -14,8 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Help
+import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Dangerous
+import androidx.compose.material.icons.rounded.Output
+import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -144,7 +150,7 @@ fun SettingsScreen(
                 title = { Text("設定・管理", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 }
             )
@@ -201,7 +207,7 @@ fun SettingsScreen(
                     supportingContent = { Text("現在 ${endedUserList.size} 名が利用終了となっています") },
                     trailingContent = {
                         IconButton(onClick = onNavigateToRestore) {
-                            Icon(Icons.Default.Restore, contentDescription = "復帰画面へ")
+                            Icon(Icons.Rounded.Restore, contentDescription = "復帰画面へ")
                         }
                     },
                     modifier = Modifier.clickable { onNavigateToRestore() }
@@ -209,6 +215,11 @@ fun SettingsScreen(
                 ListItem(
                     headlineContent = { Text("利用終了者のデータを完全抹消", color = MaterialTheme.colorScheme.error) },
                     supportingContent = { Text("「利用終了」となっている方のデータをDBから物理削除します") },
+                    trailingContent = {
+                        IconButton(onClick = { if (endedUserList.isNotEmpty()) showEraseConfirm = true }, enabled = endedUserList.isNotEmpty()) {
+                            Icon(Icons.Rounded.DeleteForever, contentDescription = "完全抹消", tint = if (endedUserList.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline)
+                        }
+                    },
                     modifier = Modifier.clickable(enabled = endedUserList.isNotEmpty()) { showEraseConfirm = true }
                 )
             }
@@ -218,11 +229,21 @@ fun SettingsScreen(
                 ListItem(
                     headlineContent = { Text("データのバックアップ (保存)") },
                     supportingContent = { Text("現在の全データと写真をZipファイルとして書き出します") },
+                    trailingContent = {
+                        IconButton(onClick = { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }) {
+                            Icon(Icons.Rounded.Output, contentDescription = "バックアップ")
+                        }
+                    },
                     modifier = Modifier.clickable { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }
                 )
                 ListItem(
                     headlineContent = { Text("データの復元 (読込)") },
                     supportingContent = { Text("バックアップファイル(ZipまたはJSON)からデータを読み込みます") },
+                    trailingContent = {
+                        IconButton(onClick = { importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }) {
+                            Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = "復元")
+                        }
+                    },
                     modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }
                 )
                 
@@ -240,10 +261,12 @@ fun SettingsScreen(
             SettingsSection(title = "その他") {
                 ListItem(
                     headlineContent = { Text("ヘルプ") },
+                    leadingContent = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
                     modifier = Modifier.clickable { showHelpDialog = true }
                 )
                 ListItem(
                     headlineContent = { Text("バージョン情報") },
+                    leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
                     modifier = Modifier.clickable { showVersionDialog = true }
                 )
             }
@@ -252,6 +275,7 @@ fun SettingsScreen(
             SettingsSection(title = "開発者オプション") {
                 ListItem(
                     headlineContent = { Text("(開発用) データベースの全消去", color = MaterialTheme.colorScheme.error) },
+                    leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                     modifier = Modifier.clickable { showDevClearConfirm = true }
                 )
             }
