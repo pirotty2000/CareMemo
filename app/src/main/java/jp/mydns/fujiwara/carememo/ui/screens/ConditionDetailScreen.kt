@@ -55,7 +55,6 @@ fun ConditionDetailScreen(
     val isProcessing by viewModel.isProcessing.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
 
-    val focusManager = LocalFocusManager.current
     val monthFocusRequester = remember { FocusRequester() }
     val dayFocusRequester = remember { FocusRequester() }
     val hourFocusRequester = remember { FocusRequester() }
