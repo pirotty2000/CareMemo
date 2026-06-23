@@ -47,6 +47,7 @@ fun LineChart(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = Color.Gray)
     val valueLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
     val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
     
     var scaleX by remember { mutableFloatStateOf(1f) }
@@ -185,7 +186,7 @@ fun LineChart(
                                     strokeWidth = 1.dp.toPx(),
                                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
                                 )
-                                val labelLayout = textMeasurer.measure(limit.label, TextStyle(fontSize = 9.sp, color = limit.color))
+                                val labelLayout = textMeasurer.measure(limit.label, limitLabelStyle.copy(color = limit.color))
                                 drawText(labelLayout, topLeft = Offset(startX + 4.dp.toPx(), if (limit.isLabelAbove) py - labelLayout.size.height - 2.dp.toPx() else py + 2.dp.toPx()))
                             }
                         }
