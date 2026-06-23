@@ -342,9 +342,7 @@ fun UnifiedRecordScreen(
                                 }
                             }) { index ->
                                 val record = records[index]
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart }
-                                )
+                                val dismissState = rememberSwipeToDismissBoxState()
 
                                 LaunchedEffect(dismissState.currentValue) {
                                     if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
@@ -755,9 +753,7 @@ fun MemoHistoryList(
             stickyHeader { Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant) { Text(text = formatDateHeader(date), modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
             items(memos.size, key = { index -> memos[index].id }) { index ->
                 val memo = memos[index]
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { it == SwipeToDismissBoxValue.EndToStart }
-                )
+                val dismissState = rememberSwipeToDismissBoxState()
 
                 LaunchedEffect(dismissState.currentValue) {
                     if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
