@@ -323,7 +323,10 @@ fun UnifiedRecordScreen(
                             icon = Icons.Outlined.Info
                         )
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 80.dp)
+                        ) {
                             item {
                                 Text(
                                     text = "${currentCategory.displayName}の記録: ${records.size}件",
@@ -408,7 +411,7 @@ fun UnifiedRecordScreen(
                                     .padding(end = 16.dp)
                             ) {
                                 HealthGraphView(records, currentCategory)
-                                Spacer(modifier = Modifier.height(32.dp))
+                                Spacer(modifier = Modifier.height(80.dp))
                             }
 
                             if (scrollState.maxValue > 0) {
@@ -718,7 +721,15 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                         Text(text = "(${record.checkStatus()})", style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) { Text(text = "血糖値: ${record.glucose?.let { "$it mg/dL" } ?: "---"}, HbA1c: ${record.hba1c?.let { "$it%" } ?: "---"} (${record.checkStatus()})", style = MaterialTheme.typography.bodyMedium) }
+                Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "血糖値: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = "HbA1c: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = "(${record.checkStatus()})", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
                 Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) { Text(text = "タイトル: ${record.title ?: "---"}, 記録者: ${record.author.ifBlank { "---" }}", style = MaterialTheme.typography.bodyMedium) }
             }
         }
