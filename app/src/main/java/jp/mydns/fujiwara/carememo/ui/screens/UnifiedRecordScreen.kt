@@ -705,15 +705,15 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                 Category.HEIGHT_AND_WEIGHT -> if (record is HeightAndWeight) { 
                     val bmi = record.calculateBMI()
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Height, contentDescription = "身長", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.Height, contentDescription = HealthThresholds.HEALTH_LABEL_HEIGHT, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Rounded.Scale, contentDescription = "体重", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.Scale, contentDescription = HealthThresholds.HEALTH_LABEL_WEIGHT, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = "BMI: ${if (bmi > 0) "%.1f".format(bmi) else "---"} (${if (bmi > 0) bmi.evaluateBMI() else "---"})", style = MaterialTheme.typography.labelMedium)
+                        Text(text = "${HealthThresholds.HEALTH_LABEL_BMI}: ${if (bmi > 0) "%.1f".format(bmi) else "---"} (${if (bmi > 0) bmi.evaluateBMI() else "---"})", style = MaterialTheme.typography.labelMedium)
                     }
                 }
                 Category.BP_AND_PULSE -> if (record is BpAndPulse) {
@@ -721,9 +721,9 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                 }
                 Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "血糖値: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
+                        Text(text = "${HealthThresholds.HEALTH_LABEL_GLUCOSE}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = "HbA1c: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
+                        Text(text = "${HealthThresholds.HEALTH_LABEL_HBA1C}: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(text = "(${record.checkStatus()})", style = MaterialTheme.typography.labelSmall)
                     }
@@ -821,19 +821,19 @@ fun VitalRecordItemContent(record: BpAndPulse) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // 2行目：数値情報
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Favorite, contentDescription = "血圧", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Rounded.Favorite, contentDescription = HealthThresholds.HEALTH_LABEL_BP, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg", style = MaterialTheme.typography.labelMedium)
             
             Spacer(modifier = Modifier.width(12.dp))
             
-            Icon(Icons.Rounded.MonitorHeart, contentDescription = "脈拍", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Rounded.MonitorHeart, contentDescription = HealthThresholds.HEALTH_LABEL_PULSE, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${record.pulse ?: "---"} bpm", style = MaterialTheme.typography.labelMedium)
             
             Spacer(modifier = Modifier.width(12.dp))
             
-            Icon(Icons.Rounded.Thermostat, contentDescription = "体温", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Rounded.Thermostat, contentDescription = HealthThresholds.HEALTH_LABEL_BODY_TEMP, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${record.bodyTemperature?.let { "%.1f".format(it) } ?: "---"} ℃", style = MaterialTheme.typography.labelMedium)
         }
@@ -844,12 +844,12 @@ fun VitalRecordItemContent(record: BpAndPulse) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            VitalStatusIndicator(label = "高血圧", isActive = status.isHighBp)
-            VitalStatusIndicator(label = "低血圧", isActive = status.isLowBp)
-            VitalStatusIndicator(label = "頻脈", isActive = status.isTachycardia)
-            VitalStatusIndicator(label = "徐脈", isActive = status.isBradycardia)
-            VitalStatusIndicator(label = "発熱", isActive = status.isFever)
-            VitalStatusIndicator(label = "低体温", isActive = status.isHypothermia)
+            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_HIGH_BP, isActive = status.isHighBp)
+            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_LOW_BP, isActive = status.isLowBp)
+            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_TACHYCARDIA, isActive = status.isTachycardia)
+            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_BRADYCARDIA, isActive = status.isBradycardia)
+            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_FEVER, isActive = status.isFever)
+            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_HYPOTHERMIA, isActive = status.isHypothermia)
         }
     }
 }

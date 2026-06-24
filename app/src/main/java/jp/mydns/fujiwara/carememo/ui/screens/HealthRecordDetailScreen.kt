@@ -282,7 +282,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = heightText,
                                 onValueChange = { onHeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text("身長") }, suffix = { Text("cm") },
+                                label = { Text(HealthThresholds.HEALTH_LABEL_HEIGHT) }, suffix = { Text("cm") },
                                 modifier = Modifier.weight(1f).focusRequester(firstFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { secondFieldFocusRequester.requestFocus() })
@@ -290,7 +290,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = weightText,
                                 onValueChange = { onWeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text("体重") }, suffix = { Text("kg") },
+                                label = { Text(HealthThresholds.HEALTH_LABEL_WEIGHT) }, suffix = { Text("kg") },
                                 modifier = Modifier.weight(1f).focusRequester(secondFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -302,7 +302,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = bpSystolicText,
                                 onValueChange = { onBpSystolicChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text("血圧(上)") },
+                                label = { Text(HealthThresholds.HEALTH_LABEL_BP_SYSTOLIC) },
                                 modifier = Modifier.weight(1f).focusRequester(firstFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { secondFieldFocusRequester.requestFocus() })
@@ -310,7 +310,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = bpDiastolicText,
                                 onValueChange = { onBpDiastolicChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text("血圧(下)") },
+                                label = { Text(HealthThresholds.HEALTH_LABEL_BP_DIASTOLIC) },
                                 modifier = Modifier.weight(1f).focusRequester(secondFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { thirdFieldFocusRequester.requestFocus() })
@@ -319,7 +319,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = pulseText,
                             onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text("脈拍") }, suffix = { Text("bpm") },
+                            label = { Text(HealthThresholds.HEALTH_LABEL_PULSE) }, suffix = { Text("bpm") },
                             modifier = Modifier.fillMaxWidth().focusRequester(thirdFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { fourthFieldFocusRequester.requestFocus() })
@@ -327,7 +327,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = bodyTemperatureText,
                             onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text("体温") }, suffix = { Text("℃") },
+                            label = { Text(HealthThresholds.HEALTH_LABEL_BODY_TEMP) }, suffix = { Text("℃") },
                             modifier = Modifier.fillMaxWidth().focusRequester(fourthFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -337,7 +337,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = glucoseText,
                             onValueChange = { onGlucoseChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text("血糖値") }, suffix = { Text("mg/dL") },
+                            label = { Text(HealthThresholds.HEALTH_LABEL_GLUCOSE) }, suffix = { Text("mg/dL") },
                             modifier = Modifier.fillMaxWidth().focusRequester(firstFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { secondFieldFocusRequester.requestFocus() })
@@ -345,7 +345,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = hba1cText,
                             onValueChange = { onHba1cChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text("HbA1c") }, suffix = { Text("%") },
+                            label = { Text(HealthThresholds.HEALTH_LABEL_HBA1C) }, suffix = { Text("%") },
                             modifier = Modifier.fillMaxWidth().focusRequester(secondFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -392,23 +392,23 @@ fun HealthRecordDisplayCard(record: Any) {
 
             when (record) {
                 is HeightAndWeight -> {
-                    DetailItem(label = "身長", value = record.height?.let { "${it} cm" } ?: "---")
-                    DetailItem(label = "体重", value = record.weight?.let { "${it} kg" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_HEIGHT, value = record.height?.let { "${it} cm" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_WEIGHT, value = record.weight?.let { "${it} kg" } ?: "---")
                     val bmi = record.calculateBMI()
                     if (bmi > 0) {
-                        DetailItem(label = "BMI", value = "%.1f (${bmi.evaluateBMI()})".format(bmi))
+                        DetailItem(label = HealthThresholds.HEALTH_LABEL_BMI, value = "%.1f (${bmi.evaluateBMI()})".format(bmi))
                     }
                 }
                 is BpAndPulse -> {
-                    DetailItem(label = "血圧", value = "${record.bpSystolic ?: "---"} / ${record.bpDiastolic ?: "---"} mmHg")
-                    DetailItem(label = "脈拍", value = record.pulse?.let { "$it bpm" } ?: "---")
-                    DetailItem(label = "体温", value = record.bodyTemperature?.let { "$it ℃" } ?: "---")
-                    DetailItem(label = "判定", value = record.checkStatus())
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_BP, value = "${record.bpSystolic ?: "---"} / ${record.bpDiastolic ?: "---"} mmHg")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_PULSE, value = record.pulse?.let { "$it bpm" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_BODY_TEMP, value = record.bodyTemperature?.let { "$it ℃" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = record.checkStatus())
                 }
                 is GlucoseAndHbA1c -> {
-                    DetailItem(label = "血糖値", value = record.glucose?.let { "$it mg/dL" } ?: "---")
-                    DetailItem(label = "HbA1c", value = record.hba1c?.let { "$it %" } ?: "---")
-                    DetailItem(label = "判定", value = record.checkStatus())
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_GLUCOSE, value = record.glucose?.let { "$it mg/dL" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_HBA1C, value = record.hba1c?.let { "$it %" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = record.checkStatus())
                 }
             }
         }

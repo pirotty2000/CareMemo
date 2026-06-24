@@ -87,7 +87,7 @@ object PdfExporter {
                     if (weightData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "体重(kg) 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_WEIGHT}(kg) 推移",
                             lineDataList = listOf(weightData to Color.rgb(0, 100, 200)),
                             startY = currentY,
                             height = SINGLE_GRAPH_HEIGHT,
@@ -108,7 +108,7 @@ object PdfExporter {
                     if (bmiData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "BMI 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_BMI} 推移",
                             lineDataList = listOf(bmiData to Color.rgb(200, 50, 50)),
                             startY = currentY,
                             height = SINGLE_GRAPH_HEIGHT,
@@ -118,8 +118,8 @@ object PdfExporter {
                             isInteger = false,
                             subtitles = listOf(
                                 "【判定基準(WHO)】",
-                                "・${HealthThresholds.BMI_NORMAL_LOW}未満：低体重",
-                                "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：普通体重",
+                                "・${HealthThresholds.BMI_NORMAL_LOW}未満：${HealthThresholds.BMI_LABEL_UNDERWEIGHT}",
+                                "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：${HealthThresholds.BMI_LABEL_NORMAL}",
                                 "・${HealthThresholds.BMI_NORMAL_HIGH}以上：肥満"
                             ),
                             fixedMinX = globalMinX,
@@ -150,7 +150,7 @@ object PdfExporter {
                     if (bpData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "血圧 (mmHg) 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_BP} (mmHg) 推移",
                             lineDataList = bpData,
                             startY = currentY,
                             height = 180f,
@@ -164,8 +164,8 @@ object PdfExporter {
                             ),
                             isInteger = true,
                             subtitles = listOf(
-                                "高血圧目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
-                                "低血圧目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
+                                "${HealthThresholds.VITAL_LABEL_HIGH_BP}目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
+                                "${HealthThresholds.VITAL_LABEL_LOW_BP}目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
                             ),
                             fixedMinX = globalMinX,
                             fixedMaxX = globalMaxX
@@ -178,7 +178,7 @@ object PdfExporter {
                     if (pulseData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "脈拍 (bpm) 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_PULSE} (bpm) 推移",
                             lineDataList = listOf(pulseData to Color.rgb(50, 150, 50)),
                             startY = currentY,
                             height = 120f,
@@ -190,7 +190,7 @@ object PdfExporter {
                             limitLines = emptyList(),
                             isInteger = true,
                             subtitles = listOf(
-                                "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (正常範囲)"
+                                "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (${HealthThresholds.VITAL_LABEL_NORMAL}範囲)"
                             ),
                             fixedMinX = globalMinX,
                             fixedMaxX = globalMaxX
@@ -203,7 +203,7 @@ object PdfExporter {
                     if (tempData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "体温 (℃) 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_BODY_TEMP} (℃) 推移",
                             lineDataList = listOf(tempData to Color.rgb(255, 152, 0)),
                             startY = currentY,
                             height = 120f,
@@ -237,7 +237,7 @@ object PdfExporter {
                     if (glucoseData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "血糖値 (mg/dL) 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_GLUCOSE} (mg/dL) 推移",
                             lineDataList = listOf(glucoseData to Color.rgb(150, 0, 150)),
                             startY = currentY,
                             height = SINGLE_GRAPH_HEIGHT,
@@ -248,7 +248,7 @@ object PdfExporter {
                             ),
                             isInteger = true,
                             subtitles = listOf(
-                                "血糖値（良好）：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL"
+                                "血糖値（${HealthThresholds.GLUCOSE_LABEL_NORMAL}）：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL"
                             ),
                             fixedMinX = globalMinX,
                             fixedMaxX = globalMaxX
@@ -259,20 +259,21 @@ object PdfExporter {
                     // HbA1cデータがある場合のみ描画
                     val hba1cData = castedRecords.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli() to it.hba1c!! }
                     if (hba1cData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
+                            currentY = drawSingleGraph(
                             canvas = canvas,
-                            title = "HbA1c (%) 推移",
+                            title = "${HealthThresholds.HEALTH_LABEL_HBA1C} (%) 推移",
                             lineDataList = listOf(hba1cData to Color.rgb(200, 50, 50)),
                             startY = currentY,
                             height = SINGLE_GRAPH_HEIGHT,
                             yStep = 1.0,
                             ranges = listOf(
-                                (HealthThresholds.HBA1C_PREDIABETES to HealthThresholds.HBA1C_DIABETES) to 0xFFF0F0F0.toInt(),
-                                (HealthThresholds.HBA1C_DIABETES to 20.0) to 0xFFD8D8D8.toInt()
+                                (0.0 to HealthThresholds.HBA1C_GOOD) to Color.rgb(232, 245, 233),
+                                (HealthThresholds.HBA1C_PREDIABETES to HealthThresholds.HBA1C_DIABETES) to Color.rgb(255, 253, 231),
+                                (HealthThresholds.HBA1C_DIABETES to 20.0) to Color.rgb(255, 235, 238)
                             ),
                             isInteger = false,
                             subtitles = listOf(
-                                "HbA1c判定：正常値(${HealthThresholds.HBA1C_GOOD}%以下) / 正常高値 / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}%以上) / 強い疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
+                                "HbA1c判定：${HealthThresholds.HBA1C_LABEL_NORMAL}(${HealthThresholds.HBA1C_GOOD}%以下) / ${HealthThresholds.HBA1C_LABEL_NORMAL_HIGH} / ${HealthThresholds.HBA1C_LABEL_PREDIABETES}(${HealthThresholds.HBA1C_PREDIABETES}%以上) / ${HealthThresholds.HBA1C_LABEL_DIABETES}(${HealthThresholds.HBA1C_DIABETES}%以上)"
                             ),
                             fixedMinX = globalMinX,
                             fixedMaxX = globalMaxX
@@ -611,7 +612,7 @@ object PdfExporter {
         val paint = Paint().apply { color = Color.BLACK; textSize = 9.5f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
         val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 11f; isAntiAlias = true }
         val fp = Paint().apply { style = Paint.Style.FILL }
-        val cw = floatArrayOf(160f, 70f, 75f, 60f, 130f); val hd = arrayOf("日付", "身長(cm)", "体重(kg)", "BMI", "判定")
+        val cw = floatArrayOf(160f, 70f, 75f, 60f, 130f); val hd = arrayOf("日付", "${HealthThresholds.HEALTH_LABEL_HEIGHT}(cm)", "${HealthThresholds.HEALTH_LABEL_WEIGHT}(kg)", HealthThresholds.HEALTH_LABEL_BMI, HealthThresholds.HEALTH_LABEL_STATUS)
         fun dh(c: Canvas, y: Float): Float {
             var cx = MARGIN; hd.forEachIndexed { i, s -> c.drawText(s, cx, y, hp); cx += cw[i] }
             val ly = y + 5f; c.drawLine(MARGIN, ly, PAGE_WIDTH - MARGIN, ly, paint); return ly + 20f
@@ -639,7 +640,7 @@ object PdfExporter {
         val paint = Paint().apply { color = Color.BLACK; textSize = 9.5f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
         val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 11f; isAntiAlias = true }
         val fp = Paint().apply { style = Paint.Style.FILL }
-        val cw = floatArrayOf(150f, 55f, 55f, 50f, 55f, 130f); val hd = arrayOf("日付", "上", "下", "脈", "体温", "判定")
+        val cw = floatArrayOf(150f, 55f, 55f, 50f, 55f, 130f); val hd = arrayOf("日付", HealthThresholds.HEALTH_LABEL_SYSTOLIC_SHORT, HealthThresholds.HEALTH_LABEL_DIASTOLIC_SHORT, HealthThresholds.HEALTH_LABEL_PULSE_SHORT, HealthThresholds.HEALTH_LABEL_BODY_TEMP, HealthThresholds.HEALTH_LABEL_STATUS)
         fun dh(c: Canvas, y: Float): Float {
             var cx = MARGIN; hd.forEachIndexed { i, s -> c.drawText(s, cx, y, hp); cx += cw[i] }
             val ly = y + 5f; c.drawLine(MARGIN, ly, PAGE_WIDTH - MARGIN, ly, paint); return ly + 20f
@@ -666,7 +667,7 @@ object PdfExporter {
         val paint = Paint().apply { color = Color.BLACK; textSize = 9.5f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
         val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 11f; isAntiAlias = true }
         val fp = Paint().apply { style = Paint.Style.FILL }
-        val cw = floatArrayOf(155f, 95f, 95f, 150f); val hd = arrayOf("日付", "血糖値(mg/dL)", "HbA1c(%)", "判定(血糖値・HbA1c)")
+        val cw = floatArrayOf(155f, 95f, 95f, 150f); val hd = arrayOf("日付", "${HealthThresholds.HEALTH_LABEL_GLUCOSE}(mg/dL)", "${HealthThresholds.HEALTH_LABEL_HBA1C}(%)", "${HealthThresholds.HEALTH_LABEL_STATUS}(${HealthThresholds.HEALTH_LABEL_GLUCOSE}・${HealthThresholds.HEALTH_LABEL_HBA1C})")
         fun dh(c: Canvas, y: Float): Float {
             var cx = MARGIN; hd.forEachIndexed { i, s -> c.drawText(s, cx, y, hp); cx += cw[i] }
             val ly = y + 5f; c.drawLine(MARGIN, ly, PAGE_WIDTH - MARGIN, ly, paint); return ly + 20f

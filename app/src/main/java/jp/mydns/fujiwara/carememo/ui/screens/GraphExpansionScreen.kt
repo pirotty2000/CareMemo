@@ -158,11 +158,11 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
             Category.BP_AND_PULSE -> {
                 when (index) {
                     0 -> {
-                        Text("血圧", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_BP, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                         val sysPoints = data.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpSystolic!!.toDouble() }
                         val diaPoints = data.filter { it.bpDiastolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpDiastolic!!.toDouble() }
-                        val chartDataList = listOf(ChartLineData("血圧(上)", sysPoints, Color.Red), ChartLineData("血圧(下)", diaPoints, Color.Blue))
+                        val chartDataList = listOf(ChartLineData("${HealthThresholds.HEALTH_LABEL_BP}(上)", sysPoints, Color.Red), ChartLineData("${HealthThresholds.HEALTH_LABEL_BP}(下)", diaPoints, Color.Blue))
                         if (chartDataList.any { it.points.isNotEmpty() }) {
                             val ranges = listOf(ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9)))
                             LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0, fixedMinX = globalMinX, fixedMaxX = globalMaxX)
@@ -171,7 +171,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                         }
                     }
                     1 -> {
-                        Text("脈拍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_PULSE, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                         val pulsePoints = data.filter { it.pulse != null }.map { it.recordTime.toEpochMilli().toDouble() to it.pulse!!.toDouble() }
                         val chartDataList = listOf(ChartLineData("脈拍", pulsePoints, Color(0xFF4CAF50)))
@@ -183,7 +183,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                         }
                     }
                     2 -> {
-                        Text("体温", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_BODY_TEMP, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                         val tempPoints = data.filter { it.bodyTemperature != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bodyTemperature!! }
                         val chartDataList = listOf(ChartLineData("体温", tempPoints, Color(0xFFFF9800)))
@@ -199,7 +199,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
             Category.GLUCOSE_AND_HBA1C -> {
                 when (index) {
                     0 -> {
-                        Text("血糖値", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_GLUCOSE, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                         val glucoses = data.mapNotNull { it.glucose?.toDouble() }
                         val glucosePoints = data.filter { it.glucose != null }.map { it.recordTime.toEpochMilli().toDouble() to it.glucose!!.toDouble() }
@@ -214,7 +214,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                         }
                     }
                     1 -> {
-                        Text("HbA1c", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_HBA1C, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                         val hba1cs = data.mapNotNull { it.hba1c }
                         val hba1cPoints = data.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli().toDouble() to it.hba1c!! }
@@ -237,7 +237,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
             Category.HEIGHT_AND_WEIGHT -> {
                 when (index) {
                     0 -> {
-                        Text("体重", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_WEIGHT, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                         val weights = data.mapNotNull { it.weight }
                         val weightPoints = data.filter { it.weight != null }.map { it.recordTime.toEpochMilli().toDouble() to it.weight!! }
@@ -251,7 +251,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                         }
                     }
                     1 -> {
-                        Text("BMI", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(HealthThresholds.HEALTH_LABEL_BMI, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                         val bmis = data.map { it.calculateBMI() }.filter { it > 0.0 }
                         val bmiPoints = data.map { it.recordTime.toEpochMilli().toDouble() to it.calculateBMI() }.filter { it.second > 0.0 }

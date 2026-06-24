@@ -243,12 +243,12 @@ fun HeightAndWeight.calculateBMI(): Double {
 fun Double.evaluateBMI(): String {
     return when {
         this <= 0.0 -> "-"
-        this < HealthThresholds.BMI_NORMAL_LOW -> "低体重"
-        this < HealthThresholds.BMI_NORMAL_HIGH -> "普通体重"
-        this < HealthThresholds.BMI_OBESITY_1 -> "肥満(１度)"
-        this < HealthThresholds.BMI_OBESITY_2 -> "肥満(２度)"
-        this < HealthThresholds.BMI_OBESITY_3 -> "肥満(３度)"
-        else -> "肥満(４度)"
+        this < HealthThresholds.BMI_NORMAL_LOW -> HealthThresholds.BMI_LABEL_UNDERWEIGHT
+        this < HealthThresholds.BMI_NORMAL_HIGH -> HealthThresholds.BMI_LABEL_NORMAL
+        this < HealthThresholds.BMI_OBESITY_1 -> HealthThresholds.BMI_LABEL_OBESITY_1
+        this < HealthThresholds.BMI_OBESITY_2 -> HealthThresholds.BMI_LABEL_OBESITY_2
+        this < HealthThresholds.BMI_OBESITY_3 -> HealthThresholds.BMI_LABEL_OBESITY_3
+        else -> HealthThresholds.BMI_LABEL_OBESITY_4
     }
 }
 
@@ -256,14 +256,14 @@ fun BpAndPulse.checkStatus(): String {
     val status = getVitalStatus()
     val labels = mutableListOf<String>()
     
-    if (status.isHighBp) labels.add("高血圧")
-    if (status.isLowBp) labels.add("低血圧")
-    if (status.isTachycardia) labels.add("頻脈")
-    if (status.isBradycardia) labels.add("徐脈")
-    if (status.isFever) labels.add("発熱")
-    if (status.isHypothermia) labels.add("低体温")
+    if (status.isHighBp) labels.add(HealthThresholds.VITAL_LABEL_HIGH_BP)
+    if (status.isLowBp) labels.add(HealthThresholds.VITAL_LABEL_LOW_BP)
+    if (status.isTachycardia) labels.add(HealthThresholds.VITAL_LABEL_TACHYCARDIA)
+    if (status.isBradycardia) labels.add(HealthThresholds.VITAL_LABEL_BRADYCARDIA)
+    if (status.isFever) labels.add(HealthThresholds.VITAL_LABEL_FEVER)
+    if (status.isHypothermia) labels.add(HealthThresholds.VITAL_LABEL_HYPOTHERMIA)
     
-    return if (labels.isEmpty()) "正常" else labels.joinToString("・")
+    return if (labels.isEmpty()) HealthThresholds.VITAL_LABEL_NORMAL else labels.joinToString("・")
 }
 
 /**
@@ -300,19 +300,19 @@ fun BpAndPulse.getVitalStatus(): VitalStatus {
 fun GlucoseAndHbA1c.evaluateGlucose(): String? {
     val g = glucose ?: return null
     return when {
-        g < HealthThresholds.GLUCOSE_NORMAL_LOW -> "低血糖"
-        g <= HealthThresholds.GLUCOSE_NORMAL_HIGH -> "良好"
-        else -> "高血糖"
+        g < HealthThresholds.GLUCOSE_NORMAL_LOW -> HealthThresholds.GLUCOSE_LABEL_LOW
+        g <= HealthThresholds.GLUCOSE_NORMAL_HIGH -> HealthThresholds.GLUCOSE_LABEL_NORMAL
+        else -> HealthThresholds.GLUCOSE_LABEL_HIGH
     }
 }
 
 fun GlucoseAndHbA1c.evaluateHbA1c(): String? {
     val h = hba1c ?: return null
     return when {
-        h >= HealthThresholds.HBA1C_DIABETES -> "強い疑い"
-        h >= HealthThresholds.HBA1C_PREDIABETES -> "予備軍"
-        h > HealthThresholds.HBA1C_GOOD -> "正常高値"
-        else -> "正常値"
+        h >= HealthThresholds.HBA1C_DIABETES -> HealthThresholds.HBA1C_LABEL_DIABETES
+        h >= HealthThresholds.HBA1C_PREDIABETES -> HealthThresholds.HBA1C_LABEL_PREDIABETES
+        h > HealthThresholds.HBA1C_GOOD -> HealthThresholds.HBA1C_LABEL_NORMAL_HIGH
+        else -> HealthThresholds.HBA1C_LABEL_NORMAL
     }
 }
 

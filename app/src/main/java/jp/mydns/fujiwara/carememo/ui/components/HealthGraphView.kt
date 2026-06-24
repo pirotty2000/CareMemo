@@ -54,41 +54,41 @@ fun HealthGraphView(
     ) {
         when (categoryType) {
             Category.BP_AND_PULSE -> {
-                GraphTitleWithHelp("血圧", HealthThresholds.BP_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(0) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_BP, HealthThresholds.BP_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(0) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val sysPoints = data.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpSystolic!!.toDouble() }
                     val diaPoints = data.filter { it.bpDiastolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpDiastolic!!.toDouble() }
-                    val chartDataList = listOf(ChartLineData("血圧(上)", sysPoints, Color.Red), ChartLineData("血圧(下)", diaPoints, Color.Blue))
+                    val chartDataList = listOf(ChartLineData("${HealthThresholds.HEALTH_LABEL_BP}(上)", sysPoints, Color.Red), ChartLineData("${HealthThresholds.HEALTH_LABEL_BP}(下)", diaPoints, Color.Blue))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9)))
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 70.0, maxYConstraint = 160.0, fixedMinX = globalMinX, fixedMaxX = globalMaxX) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                GraphTitleWithHelp("脈拍", HealthThresholds.PULSE_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(1) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_PULSE, HealthThresholds.PULSE_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(1) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val pulsePoints = data.filter { it.pulse != null }.map { it.recordTime.toEpochMilli().toDouble() to it.pulse!!.toDouble() }
-                    val chartDataList = listOf(ChartLineData("脈拍", pulsePoints, Color(0xFF4CAF50)))
+                    val chartDataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_PULSE, pulsePoints, Color(0xFF4CAF50)))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, Color(0xFFE8F5E9)))
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 10.0, ranges = ranges, minYConstraint = 40.0, maxYConstraint = 110.0, fixedMinX = globalMinX, fixedMaxX = globalMaxX) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                GraphTitleWithHelp("体温", HealthThresholds.TEMP_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(2) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_BODY_TEMP, HealthThresholds.TEMP_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(2) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                     val tempPoints = data.filter { it.bodyTemperature != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bodyTemperature!! }
-                    val chartDataList = listOf(ChartLineData("体温", tempPoints, Color(0xFFFF9800)))
+                    val chartDataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_BODY_TEMP, tempPoints, Color(0xFFFF9800)))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.TEMP_LOW, HealthThresholds.TEMP_HIGH, Color(0xFFE8F5E9)))
                     if (chartDataList.any { it.points.isNotEmpty() }) LineChart(chartDataList, stepY = 0.5, ranges = ranges, minYConstraint = 35.0, maxYConstraint = 39.0, showDecimal = true, fixedMinX = globalMinX, fixedMaxX = globalMaxX) else Text("データがありません", modifier = Modifier.align(Alignment.Center))
                 }
             }
             Category.GLUCOSE_AND_HBA1C -> {
-                GraphTitleWithHelp("血糖値", HealthThresholds.GLUCOSE_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(0) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_GLUCOSE, HealthThresholds.GLUCOSE_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(0) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val glucoses = data.mapNotNull { it.glucose?.toDouble() }
                     val glucosePoints = data.filter { it.glucose != null }.map { it.recordTime.toEpochMilli().toDouble() to it.glucose!!.toDouble() }
-                    val chartDataList = listOf(ChartLineData("血糖値", glucosePoints, Color.Magenta))
+                    val chartDataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_GLUCOSE, glucosePoints, Color.Magenta))
                     val ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, Color(0xFFE8F5E9)))
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && glucoses.isNotEmpty()) {
@@ -100,12 +100,12 @@ fun HealthGraphView(
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                GraphTitleWithHelp("HbA1c", HealthThresholds.HBA1C_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(1) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_HBA1C, HealthThresholds.HBA1C_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(1) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                     val hba1cs = data.mapNotNull { it.hba1c }
                     val hba1cPoints = data.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli().toDouble() to it.hba1c!! }
-                    val chartDataList = listOf(ChartLineData("HbA1c", hba1cPoints, Color.Red))
+                    val chartDataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_HBA1C, hba1cPoints, Color.Red))
                     val ranges = listOf(
                         ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)),
                         ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, HealthThresholds.HBA1C_DIABETES, Color(0xFFFFFDE7)),
@@ -122,12 +122,12 @@ fun HealthGraphView(
                 }
             }
             Category.HEIGHT_AND_WEIGHT -> {
-                GraphTitleWithHelp("体重", "", onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(0) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_WEIGHT, "", onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(0) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                     val weights = data.mapNotNull { it.weight }
                     val weightPoints = data.filter { it.weight != null }.map { it.recordTime.toEpochMilli().toDouble() to it.weight!! }
-                    val chartDataList = listOf(ChartLineData("体重", weightPoints, Color.Blue))
+                    val chartDataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_WEIGHT, weightPoints, Color.Blue))
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && weights.isNotEmpty()) {
                         val minW = weights.minOf { it }
@@ -138,12 +138,12 @@ fun HealthGraphView(
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                GraphTitleWithHelp("BMI", HealthThresholds.BMI_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(1) } })
+                GraphTitleWithHelp(HealthThresholds.HEALTH_LABEL_BMI, HealthThresholds.BMI_EXPLANATION, onShowHelp = { showHelpDialog = it }, onExpand = onExpandGraph?.let { { it(1) } })
                 Box(modifier = Modifier.height(180.dp).fillMaxWidth().padding(horizontal = 8.dp)) {
                     val data = records.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                     val bmis = data.map { it.calculateBMI() }.filter { it > 0.0 }
                     val bmiPoints = data.map { it.recordTime.toEpochMilli().toDouble() to it.calculateBMI() }.filter { it.second > 0.0 }
-                    val chartDataList = listOf(ChartLineData("BMI", bmiPoints, Color.Red))
+                    val chartDataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_BMI, bmiPoints, Color.Red))
                     val ranges = listOf(ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)), ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)), ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE)))
                     
                     if (chartDataList.any { it.points.isNotEmpty() } && bmis.isNotEmpty()) {
