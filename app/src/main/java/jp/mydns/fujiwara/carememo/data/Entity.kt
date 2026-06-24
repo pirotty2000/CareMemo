@@ -118,6 +118,7 @@ data class BpAndPulse(
     @ColumnInfo(name = "bp_systolic") val bpSystolic: Int? = null,
     @ColumnInfo(name = "bp_diastolic") val bpDiastolic: Int? = null,
     @ColumnInfo(name = "pulse") val pulse: Int? = null,
+    @ColumnInfo(name = "body_temperature") val bodyTemperature: Double? = null,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "record_time") val recordTime: Instant,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
@@ -252,26 +253,48 @@ fun Double.evaluateBMI(): String {
 }
 
 fun BpAndPulse.checkStatus(): String {
+    val status = getVitalStatus()
+    val labels = mutableListOf<String>()
+    
+    if (status.isHighBp) labels.add("高血圧")
+    if (status.isLowBp) labels.add("低血圧")
+    if (status.isTachycardia) labels.add("頻脈")
+    if (status.isBradycardia) labels.add("徐脈")
+    if (status.isFever) labels.add("発熱")
+    if (status.isHypothermia) labels.add("低体温")
+    
+    return if (labels.isEmpty()) "正常" else labels.joinToString("・")
+}
+
+/**
+ * 各指標の判定結果を保持するデータクラス
+ */
+data class VitalStatus(
+    val isHighBp: Boolean,
+    val isLowBp: Boolean,
+    val isTachycardia: Boolean,
+    val isBradycardia: Boolean,
+    val isFever: Boolean,
+    val isHypothermia: Boolean
+)
+
+/**
+ * 現在の値に基づいた判定フラグを返す
+ */
+fun BpAndPulse.getVitalStatus(): VitalStatus {
     val systolic = bpSystolic ?: 120
     val diastolic = bpDiastolic ?: 80
     val pulseVal = pulse ?: 70
+    val tempVal = bodyTemperature ?: 36.5
 
-    val isHighBp = systolic >= HealthThresholds.BP_HIGH_SYSTOLIC || diastolic >= HealthThresholds.BP_HIGH_DIASTOLIC
-    val isLowBp = systolic < HealthThresholds.BP_LOW_SYSTOLIC || diastolic < HealthThresholds.BP_LOW_DIASTOLIC
-    val isBradycardia = pulseVal <= HealthThresholds.PULSE_LOW
-    val isTachycardia = pulseVal >= HealthThresholds.PULSE_HIGH
-
-    return when {
-        isHighBp && isTachycardia -> "高・頻"
-        isHighBp && isBradycardia -> "高・徐"
-        isLowBp && isTachycardia -> "低・頻"
-        isLowBp && isBradycardia -> "低・徐"
-        isHighBp -> "高血圧"
-        isLowBp -> "低血圧"
-        isTachycardia -> "頻脈"
-        isBradycardia -> "徐脈"
-        else -> "正常"
-    }
+    return VitalStatus(
+        isHighBp = systolic >= HealthThresholds.BP_HIGH_SYSTOLIC || diastolic >= HealthThresholds.BP_HIGH_DIASTOLIC,
+        isLowBp = systolic < HealthThresholds.BP_LOW_SYSTOLIC || diastolic < HealthThresholds.BP_LOW_DIASTOLIC,
+        isTachycardia = pulseVal >= HealthThresholds.PULSE_HIGH,
+        isBradycardia = pulseVal <= HealthThresholds.PULSE_LOW,
+        isFever = tempVal >= HealthThresholds.TEMP_HIGH,
+        isHypothermia = tempVal < HealthThresholds.TEMP_LOW
+    )
 }
 
 fun GlucoseAndHbA1c.evaluateGlucose(): String? {

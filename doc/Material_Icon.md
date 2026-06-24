@@ -36,7 +36,7 @@
 - 身長：Height
 - 体重：Scale
 
-#### 血圧・脈拍
+#### バイタル
 
 - 血圧：Favorite
 - 脈拍：Monitor Heart

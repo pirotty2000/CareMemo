@@ -177,16 +177,15 @@ class CareMemoRepository(
     fun getPersonCategorySummaries(): Flow<Map<Int, PersonCategorySummary>> {
         return combine(
             heightAndWeightDao.getPersonIdsWithHeightWeight(),
-            bpAndPulseDao.getPersonIdsWithBp(),
-            bpAndPulseDao.getPersonIdsWithPulse(),
+            bpAndPulseDao.getPersonIdsWithVital(),
             glucoseAndHbA1cDao.getPersonIdsWithGlucose(),
             conditionAtVisitDao.getPersonIdsWithCondition()
-        ) { hw, bp, pulse, glucose, condition ->
-            val allIds = (hw + bp + pulse + glucose + condition).distinct()
+        ) { hw, vital, glucose, condition ->
+            val allIds = (hw + vital + glucose + condition).distinct()
             allIds.associateWith { id ->
                 PersonCategorySummary(
                     hasHeightWeight = hw.contains(id),
-                    hasBpAndPulse = bp.contains(id) || pulse.contains(id),
+                    hasBpAndPulse = vital.contains(id),
                     hasGlucoseAndHbA1c = glucose.contains(id),
                     hasCondition = condition.contains(id)
                 )

@@ -66,13 +66,25 @@ object PdfExporter {
         
         var currentY = drawHeader(canvas, person, true, category, pageNumber)
 
+        // カテゴリ内の全データを通じた共通のX軸（時間軸）の範囲を計算
+        val allTimes = filteredRecords.mapNotNull { 
+            when (it) {
+                is BpAndPulse -> it.recordTime.toEpochMilli().toDouble()
+                is GlucoseAndHbA1c -> it.recordTime.toEpochMilli().toDouble()
+                is HeightAndWeight -> it.recordTime.toEpochMilli().toDouble()
+                else -> null
+            }
+        }
+        val globalMinX = allTimes.minOrNull()
+        val globalMaxX = allTimes.maxOrNull()
+
         when (category) {
             Category.HEIGHT_AND_WEIGHT -> {
                 val castedRecords = filteredRecords.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
                     // 体重データがある場合のみ描画
                     val weightData = castedRecords.filter { it.weight != null }.map { it.recordTime.toEpochMilli() to it.weight!! }
-                    if (weightData.isNotEmpty()) {
+                    if (weightData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
                             title = "体重(kg) 推移",
@@ -82,7 +94,9 @@ object PdfExporter {
                             yStep = 10.0,
                             ranges = emptyList(),
                             limitLines = emptyList(),
-                            isInteger = false
+                            isInteger = false,
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
                         )
                         currentY += 25f
                     }
@@ -91,7 +105,7 @@ object PdfExporter {
                     val bmiData = castedRecords.filter { it.height != null && it.weight != null }
                         .map { it.recordTime.toEpochMilli() to it.calculateBMI() }
                     
-                    if (bmiData.isNotEmpty()) {
+                    if (bmiData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
                             title = "BMI 推移",
@@ -107,7 +121,9 @@ object PdfExporter {
                                 "・${HealthThresholds.BMI_NORMAL_LOW}未満：低体重",
                                 "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：普通体重",
                                 "・${HealthThresholds.BMI_NORMAL_HIGH}以上：肥満"
-                            )
+                            ),
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
                         )
                         currentY += 40f
                     }
@@ -131,7 +147,7 @@ object PdfExporter {
                     if (sysData.isNotEmpty()) bpData.add(sysData to Color.rgb(200, 50, 50))
                     if (diaData.isNotEmpty()) bpData.add(diaData to Color.rgb(0, 100, 200))
 
-                    if (bpData.isNotEmpty()) {
+                    if (bpData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
                             title = "血圧 (mmHg) 推移",
@@ -150,14 +166,16 @@ object PdfExporter {
                             subtitles = listOf(
                                 "高血圧目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
                                 "低血圧目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
-                            )
+                            ),
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
                         )
                         currentY += 25f
                     }
 
                     // 脈拍データがある場合のみ描画
                     val pulseData = castedRecords.filter { it.pulse != null }.map { it.recordTime.toEpochMilli() to it.pulse!!.toDouble() }
-                    if (pulseData.isNotEmpty()) {
+                    if (pulseData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
                             title = "脈拍 (bpm) 推移",
@@ -173,7 +191,34 @@ object PdfExporter {
                             isInteger = true,
                             subtitles = listOf(
                                 "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (正常範囲)"
-                            )
+                            ),
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
+                        )
+                        currentY += 25f
+                    }
+
+                    // 体温データがある場合のみ描画
+                    val tempData = castedRecords.filter { it.bodyTemperature != null }.map { it.recordTime.toEpochMilli() to it.bodyTemperature!! }
+                    if (tempData.isNotEmpty() || globalMinX != null) {
+                        currentY = drawSingleGraph(
+                            canvas = canvas,
+                            title = "体温 (℃) 推移",
+                            lineDataList = listOf(tempData to Color.rgb(255, 152, 0)),
+                            startY = currentY,
+                            height = 120f,
+                            yStep = 0.5,
+                            ranges = listOf(
+                                (0.0 to HealthThresholds.TEMP_LOW) to 0xFFF0F0F0.toInt(),
+                                (HealthThresholds.TEMP_HIGH to 45.0) to 0xFFD8D8D8.toInt()
+                            ),
+                            limitLines = emptyList(),
+                            isInteger = false,
+                            subtitles = listOf(
+                                "体温目安：${HealthThresholds.TEMP_LOW} 〜 ${HealthThresholds.TEMP_HIGH} ℃ (平熱範囲)"
+                            ),
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
                         )
                         currentY += 40f
                     }
@@ -189,7 +234,7 @@ object PdfExporter {
                 if (castedRecords.isNotEmpty()) {
                     // 血糖値データがある場合のみ描画
                     val glucoseData = castedRecords.filter { it.glucose != null }.map { it.recordTime.toEpochMilli() to it.glucose!!.toDouble() }
-                    if (glucoseData.isNotEmpty()) {
+                    if (glucoseData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
                             title = "血糖値 (mg/dL) 推移",
@@ -204,14 +249,16 @@ object PdfExporter {
                             isInteger = true,
                             subtitles = listOf(
                                 "血糖値（良好）：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL"
-                            )
+                            ),
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
                         )
                         currentY += 25f
                     }
 
                     // HbA1cデータがある場合のみ描画
                     val hba1cData = castedRecords.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli() to it.hba1c!! }
-                    if (hba1cData.isNotEmpty()) {
+                    if (hba1cData.isNotEmpty() || globalMinX != null) {
                         currentY = drawSingleGraph(
                             canvas = canvas,
                             title = "HbA1c (%) 推移",
@@ -226,7 +273,9 @@ object PdfExporter {
                             isInteger = false,
                             subtitles = listOf(
                                 "HbA1c判定：正常値(${HealthThresholds.HBA1C_GOOD}%以下) / 正常高値 / 予備軍(${HealthThresholds.HBA1C_PREDIABETES}%以上) / 強い疑い(${HealthThresholds.HBA1C_DIABETES}%以上)"
-                            )
+                            ),
+                            fixedMinX = globalMinX,
+                            fixedMaxX = globalMaxX
                         )
                         currentY += 40f
                     }
@@ -457,7 +506,9 @@ object PdfExporter {
         ranges: List<Pair<Pair<Double, Double>, Int>> = emptyList(),
         limitLines: List<Triple<Double, DashPathEffect, String>> = emptyList(),
         isInteger: Boolean = false,
-        subtitles: List<String> = emptyList()
+        subtitles: List<String> = emptyList(),
+        fixedMinX: Double? = null,
+        fixedMaxX: Double? = null
     ): Float {
         val paint = Paint().apply { isAntiAlias = true }
         
@@ -482,15 +533,15 @@ object PdfExporter {
         paint.color = Color.rgb(248, 248, 248); paint.style = Paint.Style.FILL
         canvas.drawRect(graphArea, paint)
 
-        if (lineDataList.all { it.first.isEmpty() }) {
+        if (lineDataList.all { it.first.isEmpty() } && (fixedMinX == null || fixedMaxX == null)) {
             paint.color = Color.LTGRAY; paint.style = Paint.Style.STROKE; paint.strokeWidth = 0.5f
             canvas.drawRect(graphArea, paint)
             return graphArea.bottom
         }
 
         val allValues = lineDataList.flatMap { it.first }.map { it.second } + limitLines.map { it.first }
-        val minYVal = floor((allValues.minOf { it } - (yStep / 2)) / yStep) * yStep
-        val maxYVal = ceil((allValues.maxOf { it } + (yStep / 2)) / yStep) * yStep
+        val minYVal = if (allValues.isEmpty()) 0.0 else floor((allValues.minOf { it } - (yStep / 2)) / yStep) * yStep
+        val maxYVal = if (allValues.isEmpty()) 100.0 else ceil((allValues.maxOf { it } + (yStep / 2)) / yStep) * yStep
         val yRange = if (maxYVal == minYVal) yStep else maxYVal - minYVal
 
         ranges.forEach { (range, color) ->
@@ -522,9 +573,11 @@ object PdfExporter {
         }
 
         paint.color = Color.LTGRAY; paint.style = Paint.Style.STROKE; paint.strokeWidth = 0.5f; canvas.drawRect(graphArea, paint)
-        val minX = lineDataList.flatMap { it.first }.minOf { it.first }.toDouble()
-        val maxX = lineDataList.flatMap { it.first }.maxOf { it.first }.toDouble()
+        
+        val minX = fixedMinX ?: (lineDataList.flatMap { it.first }.map { it.first }.minOrNull()?.toDouble() ?: 0.0)
+        val maxX = fixedMaxX ?: (lineDataList.flatMap { it.first }.map { it.first }.maxOrNull()?.toDouble() ?: 0.0)
         val xRange = if (maxX == minX) 1.0 else maxX - minX
+
         val xLabelPaint = Paint().apply { color = Color.DKGRAY; textSize = 7f; isAntiAlias = true; textAlign = Paint.Align.CENTER; typeface = Typeface.MONOSPACE }
         for (i in 0..3) {
             val xTime = minX + (xRange / 3.0) * i
@@ -586,7 +639,7 @@ object PdfExporter {
         val paint = Paint().apply { color = Color.BLACK; textSize = 9.5f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
         val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 11f; isAntiAlias = true }
         val fp = Paint().apply { style = Paint.Style.FILL }
-        val cw = floatArrayOf(160f, 65f, 65f, 65f, 139f); val hd = arrayOf("日付", "上(mmHg)", "下(mmHg)", "脈(bpm)", "判定")
+        val cw = floatArrayOf(150f, 55f, 55f, 50f, 55f, 130f); val hd = arrayOf("日付", "上", "下", "脈", "体温", "判定")
         fun dh(c: Canvas, y: Float): Float {
             var cx = MARGIN; hd.forEachIndexed { i, s -> c.drawText(s, cx, y, hp); cx += cw[i] }
             val ly = y + 5f; c.drawLine(MARGIN, ly, PAGE_WIDTH - MARGIN, ly, paint); return ly + 20f
@@ -602,6 +655,7 @@ object PdfExporter {
             canvas.drawText(record.bpSystolic?.toString() ?: "---", cx, currentY, paint); cx += cw[1]
             canvas.drawText(record.bpDiastolic?.toString() ?: "---", cx, currentY, paint); cx += cw[2]
             canvas.drawText(record.pulse?.toString() ?: "---", cx, currentY, paint); cx += cw[3]
+            canvas.drawText(record.bodyTemperature?.let { "%.1f".format(it) } ?: "---", cx, currentY, paint); cx += cw[4]
             canvas.drawText(status, cx, currentY, paint); currentY += 20f
         }
         document.finishPage(currentPage)

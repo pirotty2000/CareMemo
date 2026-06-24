@@ -53,6 +53,7 @@ fun HealthRecordDetailScreen(
     var bpSystolicText by remember { mutableStateOf("") }
     var bpDiastolicText by remember { mutableStateOf("") }
     var pulseText by remember { mutableStateOf("") }
+    var bodyTemperatureText by remember { mutableStateOf("") }
     var glucoseText by remember { mutableStateOf("") }
     var hba1cText by remember { mutableStateOf("") }
 
@@ -90,6 +91,7 @@ fun HealthRecordDetailScreen(
                     bpSystolicText = record.bpSystolic?.toString() ?: ""
                     bpDiastolicText = record.bpDiastolic?.toString() ?: ""
                     pulseText = record.pulse?.toString() ?: ""
+                    bodyTemperatureText = record.bodyTemperature?.toString() ?: ""
                 }
                 is GlucoseAndHbA1c -> {
                     glucoseText = record.glucose?.toString() ?: ""
@@ -137,6 +139,7 @@ fun HealthRecordDetailScreen(
     val firstFieldFocusRequester = remember { FocusRequester() }
     val secondFieldFocusRequester = remember { FocusRequester() }
     val thirdFieldFocusRequester = remember { FocusRequester() }
+    val fourthFieldFocusRequester = remember { FocusRequester() }
 
     Scaffold(
         topBar = {
@@ -185,6 +188,7 @@ fun HealthRecordDetailScreen(
                     bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
                     bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
                     pulseText = pulseText, onPulseChange = { pulseText = it },
+                    bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
                     glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
                     hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
                     monthFocusRequester = monthFocusRequester,
@@ -194,6 +198,7 @@ fun HealthRecordDetailScreen(
                     firstFieldFocusRequester = firstFieldFocusRequester,
                     secondFieldFocusRequester = secondFieldFocusRequester,
                     thirdFieldFocusRequester = thirdFieldFocusRequester,
+                    fourthFieldFocusRequester = fourthFieldFocusRequester,
                     onCancel = { if (recordId == 0) onBack() else isEditing = false },
                     onSave = {
                         val recordTime = try {
@@ -207,7 +212,7 @@ fun HealthRecordDetailScreen(
 
                         val newRecord: Any = when (category) {
                             Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
-                            Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), recordTime = recordTime)
+                            Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
                             Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
                             else -> throw IllegalStateException("Unknown category")
                         }
@@ -235,6 +240,7 @@ fun HealthRecordEditForm(
     bpSystolicText: String, onBpSystolicChange: (String) -> Unit,
     bpDiastolicText: String, onBpDiastolicChange: (String) -> Unit,
     pulseText: String, onPulseChange: (String) -> Unit,
+    bodyTemperatureText: String, onBodyTemperatureChange: (String) -> Unit,
     glucoseText: String, onGlucoseChange: (String) -> Unit,
     hba1cText: String, onHba1cChange: (String) -> Unit,
     monthFocusRequester: FocusRequester,
@@ -244,6 +250,7 @@ fun HealthRecordEditForm(
     firstFieldFocusRequester: FocusRequester,
     secondFieldFocusRequester: FocusRequester,
     thirdFieldFocusRequester: FocusRequester,
+    fourthFieldFocusRequester: FocusRequester,
     onCancel: () -> Unit,
     onSave: () -> Unit
 ) {
@@ -314,7 +321,15 @@ fun HealthRecordEditForm(
                             onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
                             label = { Text("脈拍") }, suffix = { Text("bpm") },
                             modifier = Modifier.fillMaxWidth().focusRequester(thirdFieldFocusRequester),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { fourthFieldFocusRequester.requestFocus() })
+                        )
+                        OutlinedTextField(
+                            value = bodyTemperatureText,
+                            onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                            label = { Text("体温") }, suffix = { Text("℃") },
+                            modifier = Modifier.fillMaxWidth().focusRequester(fourthFieldFocusRequester),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                         )
                     }
@@ -346,7 +361,7 @@ fun HealthRecordEditForm(
                         modifier = Modifier.weight(1f),
                         enabled = when (category) {
                             Category.HEIGHT_AND_WEIGHT -> weightText.isNotBlank()
-                            Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank()
+                            Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank() || bodyTemperatureText.isNotBlank()
                             Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
                             else -> true
                         }
@@ -387,6 +402,7 @@ fun HealthRecordDisplayCard(record: Any) {
                 is BpAndPulse -> {
                     DetailItem(label = "血圧", value = "${record.bpSystolic ?: "---"} / ${record.bpDiastolic ?: "---"} mmHg")
                     DetailItem(label = "脈拍", value = record.pulse?.let { "$it bpm" } ?: "---")
+                    DetailItem(label = "体温", value = record.bodyTemperature?.let { "$it ℃" } ?: "---")
                     DetailItem(label = "判定", value = record.checkStatus())
                 }
                 is GlucoseAndHbA1c -> {

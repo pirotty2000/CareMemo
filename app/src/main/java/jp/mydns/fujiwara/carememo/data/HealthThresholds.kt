@@ -10,6 +10,10 @@ object HealthThresholds {
     const val PULSE_HIGH = 100.0        // 頻脈
     const val PULSE_LOW = 50.0          // 徐脈
 
+    // 体温の判定基準
+    const val TEMP_HIGH = 37.5          // 発熱
+    const val TEMP_LOW = 35.5           // 低体温
+
     // 血糖値・HbA1cの判定基準
     const val GLUCOSE_NORMAL_HIGH = 99.0
     const val GLUCOSE_NORMAL_LOW = 70.0
@@ -38,6 +42,13 @@ object HealthThresholds {
         ・線が薄い緑色の範囲（${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()}）にあれば正常です。
         
         ※ 範囲より上にあれば「頻脈」、下にあれば「徐脈」の目安となります。
+    """.trimIndent()
+
+    val TEMP_EXPLANATION = """
+        体温グラフの見方：
+        ・線が薄い緑色の範囲（$TEMP_LOW〜$TEMP_HIGH）にあれば平熱の目安です。
+        
+        ※ 37.5℃以上は「発熱」、35.5℃未満は「低体温」の目安となります。
     """.trimIndent()
 
     val GLUCOSE_EXPLANATION = """

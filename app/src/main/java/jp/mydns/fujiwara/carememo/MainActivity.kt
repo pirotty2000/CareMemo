@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -56,7 +57,7 @@ fun CareMemoApp(activity: FragmentActivity) {
     val userSettingsRepository = application.userSettingsRepository
 
     val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = null)
-    var isAuthenticated by remember { mutableStateOf(false) }
+    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(isBiometricEnabled) {
         if (isBiometricEnabled == true && !isAuthenticated) {
@@ -172,6 +173,9 @@ fun CareMemoApp(activity: FragmentActivity) {
                 },
                 onNavigateToHealthRecordDetail = { pId, cat, rId ->
                     navController.navigate("healthRecordDetail/$pId/${cat.name}/$rId")
+                },
+                onNavigateToGraphExpansion = { pId, cat, index ->
+                    navController.navigate("graphExpansion/$pId/${cat.name}/$index")
                 }
             )
         }
@@ -221,6 +225,29 @@ fun CareMemoApp(activity: FragmentActivity) {
                 personId = personId,
                 category = category,
                 recordId = recordId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "graphExpansion/{personId}/{categoryName}/{initialIndex}",
+            arguments = listOf(
+                navArgument("personId") { type = NavType.IntType },
+                navArgument("categoryName") { type = NavType.StringType },
+                navArgument("initialIndex") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+            val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
+            val category = Category.valueOf(categoryName)
+            val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+            val detailViewModel: PersonDetailViewModel = viewModel(
+                factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
+            )
+            GraphExpansionScreen(
+                viewModel = detailViewModel,
+                personId = personId,
+                category = category,
+                initialGraphIndex = initialIndex,
                 onBack = { navController.popBackStack() }
             )
         }

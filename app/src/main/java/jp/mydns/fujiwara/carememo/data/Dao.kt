@@ -104,11 +104,8 @@ interface BpAndPulseDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<BpAndPulse>)
 
-    @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE pulse IS NOT NULL AND deleted_at IS NULL")
-    fun getPersonIdsWithPulse(): Flow<List<Int>>
-
-    @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE (bp_systolic IS NOT NULL OR bp_diastolic IS NOT NULL) AND deleted_at IS NULL")
-    fun getPersonIdsWithBp(): Flow<List<Int>>
+    @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE (bp_systolic IS NOT NULL OR bp_diastolic IS NOT NULL OR pulse IS NOT NULL OR body_temperature IS NOT NULL) AND deleted_at IS NULL")
+    fun getPersonIdsWithVital(): Flow<List<Int>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>

@@ -24,9 +24,9 @@ fun CategoryBadges(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            // 身 -> 身長・体重, 圧 -> 血圧・脈拍
+            // 身 -> 身長・体重, バ -> バイタル
             BadgeChar(text = "身", isActive = summary.hasHeightWeight, color = Color(0xFFE91E63))
-            BadgeChar(text = "圧", isActive = summary.hasBpAndPulse, color = Color(0xFF2196F3))
+            BadgeChar(text = "バ", isActive = summary.hasBpAndPulse, color = Color(0xFF2196F3))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             // 糖 -> 血糖・HbA1c, メ -> 所見メモ

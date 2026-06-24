@@ -42,6 +42,8 @@ fun LineChart(
     ranges: List<ChartRangeHighlight> = emptyList(),
     minYConstraint: Double? = null,
     maxYConstraint: Double? = null,
+    fixedMinX: Double? = null,
+    fixedMaxX: Double? = null,
     showDecimal: Boolean = false
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -54,15 +56,22 @@ fun LineChart(
     var offsetX by remember { mutableFloatStateOf(0f) }
 
     val allPoints = dataList.flatMap { it.points }
-    if (allPoints.isEmpty()) return
+    if (allPoints.isEmpty() && (fixedMinX == null || fixedMaxX == null)) return
     
-    val minX = allPoints.minOf { it.first }
-    val maxX = allPoints.maxOf { it.first }
+    val minX = fixedMinX ?: (allPoints.map { it.first }.minOrNull() ?: 0.0)
+    val maxX = fixedMaxX ?: (allPoints.map { it.first }.maxOrNull() ?: 0.0)
     val duration = if (maxX - minX == 0.0) 1.0 else maxX - minX
     
-    val allYValues = allPoints.map { it.second } + limits.map { it.value }
-    var minYInput = allYValues.minOf { it }
-    var maxYInput = allYValues.maxOf { it }
+    val allYValues = if (allPoints.isNotEmpty()) {
+        allPoints.map { it.second } + limits.map { it.value }
+    } else {
+        limits.map { it.value }
+    }
+
+    if (allYValues.isEmpty() && minYConstraint == null && maxYConstraint == null) return
+
+    var minYInput = allYValues.minOrNull() ?: minYConstraint ?: 0.0
+    var maxYInput = allYValues.maxOrNull() ?: maxYConstraint ?: 100.0
     minYConstraint?.let { minYInput = minOf(minYInput, it) }
     maxYConstraint?.let { maxYInput = maxOf(maxYInput, it) }
     val minY = floor(minYInput / stepY) * stepY

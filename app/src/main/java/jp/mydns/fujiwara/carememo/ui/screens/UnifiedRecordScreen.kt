@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.Scale
 import androidx.compose.material.icons.rounded.Height
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.outlined.Description
@@ -60,9 +61,11 @@ fun UnifiedRecordScreen(
     personId: Int,
     onBack: () -> Unit,
     onNavigateToConditionDetail: (Int, Int) -> Unit,
-    onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit
+    onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit,
+    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit
 ) {
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
+    var showHistory by rememberSaveable { mutableStateOf(true) }
     
     val records by viewModel.filteredRecords.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -217,7 +220,6 @@ fun UnifiedRecordScreen(
             }
         }
     ) { paddingValues ->
-        var showHistory by remember { mutableStateOf(true) }
         var recordToDelete by remember { mutableStateOf<Any?>(null) }
 
         if (recordToDelete != null) {
@@ -410,7 +412,13 @@ fun UnifiedRecordScreen(
                                     .verticalScroll(scrollState)
                                     .padding(end = 16.dp)
                             ) {
-                                HealthGraphView(records, currentCategory)
+                                HealthGraphView(
+                                    records = records,
+                                    categoryType = currentCategory,
+                                    onExpandGraph = { index ->
+                                        onNavigateToGraphExpansion(personId, currentCategory, index)
+                                    }
+                                )
                                 Spacer(modifier = Modifier.height(80.dp))
                             }
 
@@ -709,17 +717,7 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                     }
                 }
                 Category.BP_AND_PULSE -> if (record is BpAndPulse) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Favorite, contentDescription = "血圧", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Rounded.MonitorHeart, contentDescription = "脈拍", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "${record.pulse ?: "---"} bpm", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = "(${record.checkStatus()})", style = MaterialTheme.typography.labelSmall)
-                    }
+                    VitalRecordItemContent(record)
                 }
                 Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -816,6 +814,57 @@ fun formatDateHeader(date: LocalDate): String {
     return "%d(%s%d)年%d月%d日".format(date.year, eraName, eraYear, date.monthValue, date.dayOfMonth)
 }
 fun formatTime(instant: Instant): String { return DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(instant) }
+
+@Composable
+fun VitalRecordItemContent(record: BpAndPulse) {
+    val status = record.getVitalStatus()
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // 2行目：数値情報
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Favorite, contentDescription = "血圧", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg", style = MaterialTheme.typography.labelMedium)
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Icon(Icons.Rounded.MonitorHeart, contentDescription = "脈拍", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "${record.pulse ?: "---"} bpm", style = MaterialTheme.typography.labelMedium)
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Icon(Icons.Rounded.Thermostat, contentDescription = "体温", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "${record.bodyTemperature?.let { "%.1f".format(it) } ?: "---"} ℃", style = MaterialTheme.typography.labelMedium)
+        }
+        
+        // 3行目：判定インジケーター（固定幅・固定位置）
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VitalStatusIndicator(label = "高血圧", isActive = status.isHighBp)
+            VitalStatusIndicator(label = "低血圧", isActive = status.isLowBp)
+            VitalStatusIndicator(label = "頻脈", isActive = status.isTachycardia)
+            VitalStatusIndicator(label = "徐脈", isActive = status.isBradycardia)
+            VitalStatusIndicator(label = "発熱", isActive = status.isFever)
+            VitalStatusIndicator(label = "低体温", isActive = status.isHypothermia)
+        }
+    }
+}
+
+@Composable
+fun VitalStatusIndicator(label: String, isActive: Boolean) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal
+        ),
+        color = if (isActive) MaterialTheme.colorScheme.error else Color.LightGray.copy(alpha = 0.6f)
+    )
+}
 
 @Composable
 fun EmptyState(message: String, description: String? = null, icon: ImageVector) {
