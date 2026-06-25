@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.content.Context
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import android.database.sqlite.SQLiteConstraintException
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -64,6 +67,13 @@ class PersonListViewModel(
             initialValue = false
         )
 
+    val lockTimeoutMinutes: StateFlow<Int> = userSettingsRepository.lockTimeoutMinutes
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
     val defaultRecorderName: StateFlow<String> = userSettingsRepository.defaultRecorderName
         .stateIn(
             scope = viewModelScope,
@@ -77,9 +87,28 @@ class PersonListViewModel(
         }
     }
 
-    fun setBiometricEnabled(enabled: Boolean) {
+    fun setBiometricEnabled(context: Context, enabled: Boolean) {
         viewModelScope.launch {
-            userSettingsRepository.setBiometricEnabled(enabled)
+            if (enabled) {
+                val biometricManager = BiometricManager.from(context)
+                val canAuthenticate = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+                    userSettingsRepository.setBiometricEnabled(true)
+                } else {
+                    _uiEventFlow.emit(UiEvent.ShowErrorDialog(
+                        "設定できません",
+                        "このデバイスは生体認証または画面ロック設定に対応していないか、認証情報（指紋、顔、PIN、パターン等）が登録されていません。"
+                    ))
+                }
+            } else {
+                userSettingsRepository.setBiometricEnabled(false)
+            }
+        }
+    }
+
+    fun setLockTimeoutMinutes(minutes: Int) {
+        viewModelScope.launch {
+            userSettingsRepository.setLockTimeoutMinutes(minutes)
         }
     }
 

@@ -6,11 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,6 +41,7 @@ fun SettingsScreen(
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+    val lockTimeoutMinutes by viewModel.lockTimeoutMinutes.collectAsState()
     val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
@@ -62,6 +65,7 @@ fun SettingsScreen(
     var showDevClearConfirm by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
+    var showTimeoutDialog by remember { mutableStateOf(false) }
 
     // 通知ダイアログ用の共通状態
     var dialogTitle by remember { mutableStateOf<String?>(null) }
@@ -144,6 +148,47 @@ fun SettingsScreen(
         AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text("ヘルプ") }, text = { Text("・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「利用者管理」から復帰できます。\n・データは定期的にバックアップすることをお勧めします。") }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text("閉じる") } })
     }
 
+    if (showTimeoutDialog) {
+        val options = listOf(
+            0 to "即時",
+            1 to "1分",
+            5 to "5分",
+            10 to "10分",
+            30 to "30分",
+            -1 to "ロックしない"
+        )
+        AlertDialog(
+            onDismissRequest = { showTimeoutDialog = false },
+            title = { Text("再ロックまでの時間") },
+            text = {
+                Column {
+                    options.forEach { (minutes, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setLockTimeoutMinutes(minutes)
+                                    showTimeoutDialog = false
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = lockTimeoutMinutes == minutes,
+                                onClick = null // Rowのクリックで処理
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTimeoutDialog = false }) { Text("キャンセル") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -176,16 +221,6 @@ fun SettingsScreen(
                         )
                     }
                 )
-                ListItem(
-                    headlineContent = { Text("生体認証を使用する") },
-                    supportingContent = { Text("アプリ起動時に指紋や顔認証を要求します") },
-                    trailingContent = {
-                        Switch(
-                            checked = isBiometricEnabled,
-                            onCheckedChange = { viewModel.setBiometricEnabled(it) }
-                        )
-                    }
-                )
                 OutlinedTextField(
                     value = localRecorderName,
                     onValueChange = {
@@ -198,6 +233,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             // --- 2. 利用者管理 ---
@@ -224,7 +260,7 @@ fun SettingsScreen(
                 )
             }
 
-            // --- 3. データ管理（バックアップ） ---
+            // --- 3. データ管理 ---
             SettingsSection(title = "データ管理") {
                 ListItem(
                     headlineContent = { Text("データのバックアップ (保存)") },
@@ -257,7 +293,59 @@ fun SettingsScreen(
                 }
             }
 
-            // --- 4. その他 ---
+            // --- 4. セキュリティ ---
+            SettingsSection(title = "セキュリティ") {
+                ListItem(
+                    headlineContent = { Text("アプリのロック") },
+                    supportingContent = { Text("起動時・復帰時に認証を求めます") },
+                    trailingContent = {
+                        Switch(
+                            checked = isBiometricEnabled,
+                            onCheckedChange = { viewModel.setBiometricEnabled(context, it) }
+                        )
+                    }
+                )
+
+                val timeoutLabel = when (lockTimeoutMinutes) {
+                    0 -> "即時"
+                    -1 -> "ロックしない"
+                    else -> "${lockTimeoutMinutes}分"
+                }
+                val contentAlpha = if (isBiometricEnabled) 1.0f else 0.38f
+                CompositionLocalProvider(LocalContentColor provides LocalContentColor.current.copy(alpha = contentAlpha)) {
+                    ListItem(
+                        headlineContent = { 
+                            Text(
+                                "再ロックまでの時間",
+                                color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+                            ) 
+                        },
+                        supportingContent = { 
+                            Text(
+                                "アプリを閉じてから指定時間が経過するとロックがかかります",
+                                color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+                            ) 
+                        },
+                        trailingContent = {
+                            Text(
+                                text = timeoutLabel,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        },
+                        modifier = Modifier.clickable(enabled = isBiometricEnabled) { showTimeoutDialog = true }
+                    )
+                }
+                Text(
+                    text = "※端末の画面消灯設定を短くするとより安全です",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            // --- 5. その他 ---
             SettingsSection(title = "その他") {
                 ListItem(
                     headlineContent = { Text("ヘルプ") },

@@ -17,6 +17,8 @@ class UserSettingsRepository(private val context: Context) {
         private val IS_NAME_MASKING_ENABLED = booleanPreferencesKey("is_name_masking_enabled")
         private val DEFAULT_RECORDER_NAME = stringPreferencesKey("default_recorder_name")
         private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
+        private val LOCK_TIMEOUT_MINUTES = androidx.datastore.preferences.core.intPreferencesKey("lock_timeout_minutes")
+        private val LAST_ACTIVE_TIME = androidx.datastore.preferences.core.longPreferencesKey("last_active_time")
     }
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
@@ -27,6 +29,17 @@ class UserSettingsRepository(private val context: Context) {
     val isBiometricEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[IS_BIOMETRIC_ENABLED] ?: false
+        }
+
+    val lockTimeoutMinutes: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            // デフォルトは0分（即時）とする
+            preferences[LOCK_TIMEOUT_MINUTES] ?: 0
+        }
+
+    val lastActiveTime: Flow<Long> = context.dataStore.data
+        .map { preferences ->
+            preferences[LAST_ACTIVE_TIME] ?: 0L
         }
 
     val defaultRecorderName: Flow<String> = context.dataStore.data
@@ -43,6 +56,18 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setBiometricEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_BIOMETRIC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setLockTimeoutMinutes(minutes: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[LOCK_TIMEOUT_MINUTES] = minutes
+        }
+    }
+
+    suspend fun setLastActiveTime(timeMillis: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_ACTIVE_TIME] = timeMillis
         }
     }
 

@@ -1,20 +1,30 @@
 package jp.mydns.fujiwara.carememo
 
+import android.app.ActivityManager
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricPrompt
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -35,6 +45,27 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // セキュリティ保護: 履歴画面でのスクリーンショットや中身の表示を禁止
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        
+        // 履歴画面での識別性を向上させる（アプリ名と色を明示）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val taskDescription = ActivityManager.TaskDescription.Builder()
+                .setLabel(getString(R.string.app_name))
+                .setIcon(R.mipmap.ic_launcher)
+                .setPrimaryColor(0xFF6650A4.toInt())
+                .build()
+            setTaskDescription(taskDescription)
+        } else {
+            @Suppress("DEPRECATION")
+            val taskDescription = ActivityManager.TaskDescription(
+                getString(R.string.app_name),
+                R.mipmap.ic_launcher,
+                0xFF6650A4.toInt()
+            )
+            setTaskDescription(taskDescription)
+        }
+
         // アプリ起動時に古いPDFキャッシュを掃除
         PdfExporter.clearOldExports(this)
 
@@ -54,11 +85,47 @@ fun CareMemoApp(activity: FragmentActivity) {
     val application = context.applicationContext as CareMemoApplication
     val repository = application.repository
     val userSettingsRepository = application.userSettingsRepository
+    val scope = rememberCoroutineScope()
 
     val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = null)
+    val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 0)
+    val lastActiveTime by userSettingsRepository.lastActiveTime.collectAsState(initial = 0L)
+    
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(isBiometricEnabled) {
+    // ライフサイクル監視による自動ロック判定
+    DisposableEffect(activity) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    // アプリがバックグラウンドに回った時刻を保存
+                    scope.launch {
+                        userSettingsRepository.setLastActiveTime(System.currentTimeMillis())
+                    }
+                }
+                Lifecycle.Event.ON_START -> {
+                    // フォアグラウンドに戻った際にタイムアウト判定
+                    if (isBiometricEnabled == true && isAuthenticated) {
+                        if (lockTimeoutMinutes != -1) { // -1 は「ロックしない」
+                            val elapsedMillis = System.currentTimeMillis() - lastActiveTime
+                            val timeoutMillis = lockTimeoutMinutes * 60 * 1000L
+                            
+                            if (elapsedMillis > timeoutMillis) {
+                                isAuthenticated = false
+                            }
+                        }
+                    }
+                }
+                else -> {}
+            }
+        }
+        activity.lifecycle.addObserver(observer)
+        onDispose {
+            activity.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(isBiometricEnabled, isAuthenticated) {
         if (isBiometricEnabled == true && !isAuthenticated) {
             val executor = ContextCompat.getMainExecutor(activity)
             val biometricPrompt = BiometricPrompt(activity, executor,
@@ -71,19 +138,23 @@ fun CareMemoApp(activity: FragmentActivity) {
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                         super.onAuthenticationError(errorCode, errString)
                         // キャンセルされた場合やエラーの場合はアプリを終了する（セキュリティのため）
+                        // DEVICE_CREDENTIAL を含めている場合、ユーザーがシステム側でキャンセルするとここに来る
                         if (errorCode == BiometricPrompt.ERROR_USER_CANCELED || 
                             errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                             errorCode == BiometricPrompt.ERROR_LOCKOUT ||
-                            errorCode == BiometricPrompt.ERROR_LOCKOUT_PERMANENT) {
+                            errorCode == BiometricPrompt.ERROR_LOCKOUT_PERMANENT ||
+                            errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS ||
+                            errorCode == BiometricPrompt.ERROR_HW_NOT_PRESENT) {
                             activity.finish()
                         }
                     }
                 })
 
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("生体認証")
-                .setSubtitle("指紋または顔認証でロックを解除してください")
-                .setNegativeButtonText("終了")
+                .setTitle("アプリ・ロック")
+                .setSubtitle("認証情報を入力してロックを解除してください")
+                .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                // DEVICE_CREDENTIAL を許可する場合、NegativeButtonText は設定不可
                 .build()
 
             biometricPrompt.authenticate(promptInfo)
