@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
@@ -707,25 +708,74 @@ fun RecordListItem(categoryType: Category, record: Any, onClick: () -> Unit, isE
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Height, contentDescription = HealthThresholds.HEALTH_LABEL_HEIGHT, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelSmall)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.Rounded.Scale, contentDescription = HealthThresholds.HEALTH_LABEL_WEIGHT, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = "${HealthThresholds.HEALTH_LABEL_BMI}: ${if (bmi > 0) "%.1f".format(bmi) else "---"} (${if (bmi > 0) bmi.evaluateBMI() else "---"})", style = MaterialTheme.typography.labelMedium)
+                        Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelSmall)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "${HealthThresholds.HEALTH_LABEL_BMI}: ${if (bmi > 0) "%.1f".format(bmi) else "---"}", style = MaterialTheme.typography.labelSmall)
+                        if (bmi > 0) {
+                            val bmiLabel = bmi.evaluateBMI()
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "($bmiLabel)",
+                                fontSize = 10.sp,
+                                color = when (bmiLabel) {
+                                    HealthThresholds.BMI_LABEL_NORMAL -> Color.Blue
+                                    HealthThresholds.BMI_LABEL_UNDERWEIGHT -> Color(0xFF800080) // 紫
+                                    else -> Color.Red // 肥満各度
+                                }
+                            )
+                        }
                     }
                 }
                 Category.BP_AND_PULSE -> if (record is BpAndPulse) {
                     VitalRecordItemContent(record)
                 }
                 Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) {
+                    val gStatus = record.evaluateGlucose()
+                    val hStatus = record.evaluateHbA1c()
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "${HealthThresholds.HEALTH_LABEL_GLUCOSE}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = "${HealthThresholds.HEALTH_LABEL_HBA1C}: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelMedium)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = "(${record.checkStatus()})", style = MaterialTheme.typography.labelSmall)
+                        // 血糖値
+                        Text(
+                            text = "${HealthThresholds.HEALTH_LABEL_GLUCOSE}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        if (gStatus != null) {
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "($gStatus)",
+                                fontSize = 10.sp,
+                                color = when (gStatus) {
+                                    HealthThresholds.GLUCOSE_LABEL_NORMAL -> Color.Blue
+                                    else -> Color.Red
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // HbA1c
+                        Text(
+                            text = "${HealthThresholds.HEALTH_LABEL_HBA1C}: ${record.hba1c?.let { "$it%" } ?: "---"}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        if (hStatus != null) {
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "($hStatus)",
+                                fontSize = 10.sp,
+                                color = when (hStatus) {
+                                    HealthThresholds.HBA1C_LABEL_NORMAL -> Color.Blue
+                                    HealthThresholds.HBA1C_LABEL_NORMAL_HIGH -> Color(0xFFFFA500) // オレンジ
+                                    HealthThresholds.HBA1C_LABEL_PREDIABETES -> Color.Red
+                                    HealthThresholds.HBA1C_LABEL_DIABETES -> Color(0xFF800080) // 紫
+                                    else -> Color.Unspecified
+                                }
+                            )
+                        }
                     }
                 }
                 Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) { Text(text = "タイトル: ${record.title ?: "---"}, 記録者: ${record.author.ifBlank { "---" }}", style = MaterialTheme.typography.bodyMedium) }

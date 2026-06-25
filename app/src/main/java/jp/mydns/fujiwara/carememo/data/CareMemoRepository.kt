@@ -149,26 +149,26 @@ class CareMemoRepository(
         }
     }
 
-    /**
-     * 全利用者の生年月日の時分秒を 00:00:00 (JST) に正規化します。
-     * 重複登録防止の制約が正しく機能するようにするためのメンテナンス機能です。
-     */
-    suspend fun normalizeAllPersonBirthdays() {
-        database.withTransaction {
-            val persons = personDao.getAllRaw()
-            persons.forEach { person ->
-                val normalizedInstant = person.birthday
-                    .atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDate()
-                    .atStartOfDay(java.time.ZoneId.systemDefault())
-                    .toInstant()
-
-                if (person.birthday != normalizedInstant) {
-                    personDao.update(person.copy(birthday = normalizedInstant))
-                }
-            }
-        }
-    }
+//    /**
+//     * 全利用者の生年月日の時分秒を 00:00:00 (JST) に正規化します。
+//     * 重複登録防止の制約が正しく機能するようにするためのメンテナンス機能です。
+//     */
+//    suspend fun normalizeAllPersonBirthdays() {
+//        database.withTransaction {
+//            val persons = personDao.getAllRaw()
+//            persons.forEach { person ->
+//                val normalizedInstant = person.birthday
+//                    .atZone(java.time.ZoneId.systemDefault())
+//                    .toLocalDate()
+//                    .atStartOfDay(java.time.ZoneId.systemDefault())
+//                    .toInstant()
+//
+//                if (person.birthday != normalizedInstant) {
+//                    personDao.update(person.copy(birthday = normalizedInstant))
+//                }
+//            }
+//        }
+//    }
 
     /**
      * 全利用者の各カテゴリー記録の有無を統合したMapを返します。
