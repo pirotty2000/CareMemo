@@ -212,6 +212,9 @@ interface ConditionPhotoDao {
     @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
 
+    @Query("UPDATE condition_photo_db SET deleted_at = NULL WHERE person_id = :personId")
+    suspend fun restoreByPersonId(personId: Int)
+
     @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId")
     suspend fun getAllByPersonId(personId: Int): List<ConditionPhoto>
 

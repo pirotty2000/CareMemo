@@ -12,8 +12,12 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.ui.components.ChartRangeHighlight
+import jp.mydns.fujiwara.carememo.ui.components.HealthChartConfig
+import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.screens.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.screens.ExportRange
 import java.io.File
@@ -67,66 +71,21 @@ object PdfExporter {
         var currentY = drawHeader(canvas, person, true, category, pageNumber)
 
         // カテゴリ内の全データを通じた共通のX軸（時間軸）の範囲を計算
-        val allTimes = filteredRecords.mapNotNull { 
-            when (it) {
-                is BpAndPulse -> it.recordTime.toEpochMilli().toDouble()
-                is GlucoseAndHbA1c -> it.recordTime.toEpochMilli().toDouble()
-                is HeightAndWeight -> it.recordTime.toEpochMilli().toDouble()
-                else -> null
-            }
-        }
-        val globalMinX = allTimes.minOrNull()
-        val globalMaxX = allTimes.maxOrNull()
+        val (globalMinX, globalMaxX) = HealthChartHelper.calculateGlobalXRange(filteredRecords)
 
         when (category) {
             Category.HEIGHT_AND_WEIGHT -> {
                 val castedRecords = filteredRecords.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    // 体重データがある場合のみ描画
-                    val weightData = castedRecords.filter { it.weight != null }.map { it.recordTime.toEpochMilli() to it.weight!! }
-                    if (weightData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_WEIGHT}(kg) 推移",
-                            lineDataList = listOf(weightData to Color.rgb(0, 100, 200)),
-                            startY = currentY,
-                            height = SINGLE_GRAPH_HEIGHT,
-                            yStep = 10.0,
-                            ranges = emptyList(),
-                            limitLines = emptyList(),
-                            isInteger = false,
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 25f
+                    // グラフ描画
+                    repeat(HealthChartHelper.getGraphCount(category)) { index ->
+                        val config = HealthChartHelper.getChartConfig(category, index, filteredRecords)
+                        if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
+                            currentY = drawSingleGraphFromConfig(canvas, config, currentY, SINGLE_GRAPH_HEIGHT, globalMinX, globalMaxX)
+                            currentY += 25f
+                        }
                     }
-
-                    // BMI計算可能なデータ（身長と体重が両方ある）がある場合のみ描画
-                    val bmiData = castedRecords.filter { it.height != null && it.weight != null }
-                        .map { it.recordTime.toEpochMilli() to it.calculateBMI() }
-                    
-                    if (bmiData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_BMI} 推移",
-                            lineDataList = listOf(bmiData to Color.rgb(200, 50, 50)),
-                            startY = currentY,
-                            height = SINGLE_GRAPH_HEIGHT,
-                            yStep = 2.0,
-                            ranges = listOf((0.0 to HealthThresholds.BMI_NORMAL_LOW) to 0xFFF0F0F0.toInt(), (HealthThresholds.BMI_NORMAL_HIGH to 100.0) to 0xFFD8D8D8.toInt()),
-                            limitLines = emptyList(),
-                            isInteger = false,
-                            subtitles = listOf(
-                                "【判定基準(WHO)】",
-                                "・${HealthThresholds.BMI_NORMAL_LOW}未満：${HealthThresholds.BMI_LABEL_UNDERWEIGHT}",
-                                "・${HealthThresholds.BMI_NORMAL_LOW}〜${HealthThresholds.BMI_NORMAL_HIGH}未満：${HealthThresholds.BMI_LABEL_NORMAL}",
-                                "・${HealthThresholds.BMI_NORMAL_HIGH}以上：肥満"
-                            ),
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 40f
-                    }
+                    currentY += 15f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
                 drawHeightAndWeightTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
@@ -137,91 +96,16 @@ object PdfExporter {
             Category.BP_AND_PULSE -> {
                 val castedRecords = filteredRecords.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    val highDash = DashPathEffect(floatArrayOf(8f, 4f), 0f)
-                    val lowDash = DashPathEffect(floatArrayOf(2f, 2f), 0f)
-
-                    // 血圧データ（上または下）がある場合のみ描画
-                    val bpData = mutableListOf<Pair<List<Pair<Long, Double>>, Int>>()
-                    val sysData = castedRecords.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli() to it.bpSystolic!!.toDouble() }
-                    val diaData = castedRecords.filter { it.bpDiastolic != null }.map { it.recordTime.toEpochMilli() to it.bpDiastolic!!.toDouble() }
-                    if (sysData.isNotEmpty()) bpData.add(sysData to Color.rgb(200, 50, 50))
-                    if (diaData.isNotEmpty()) bpData.add(diaData to Color.rgb(0, 100, 200))
-
-                    if (bpData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_BP} (mmHg) 推移",
-                            lineDataList = bpData,
-                            startY = currentY,
-                            height = 180f,
-                            yStep = 20.0,
-                            ranges = emptyList(),
-                            limitLines = listOf(
-                                Triple(HealthThresholds.BP_HIGH_SYSTOLIC, highDash, "高血圧目安"),
-                                Triple(HealthThresholds.BP_HIGH_DIASTOLIC, highDash, ""),
-                                Triple(HealthThresholds.BP_LOW_SYSTOLIC, lowDash, "低血圧目安"),
-                                Triple(HealthThresholds.BP_LOW_DIASTOLIC, lowDash, "")
-                            ),
-                            isInteger = true,
-                            subtitles = listOf(
-                                "${HealthThresholds.VITAL_LABEL_HIGH_BP}目安：上 ${HealthThresholds.BP_HIGH_SYSTOLIC.toInt()}mmHg以上 / 下 ${HealthThresholds.BP_HIGH_DIASTOLIC.toInt()}mmHg以上",
-                                "${HealthThresholds.VITAL_LABEL_LOW_BP}目安：上 ${HealthThresholds.BP_LOW_SYSTOLIC.toInt()}mmHg未満 / 下 ${HealthThresholds.BP_LOW_DIASTOLIC.toInt()}mmHg未満"
-                            ),
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 25f
+                    // グラフ描画
+                    repeat(HealthChartHelper.getGraphCount(category)) { index ->
+                        val config = HealthChartHelper.getChartConfig(category, index, filteredRecords)
+                        if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
+                            val graphHeight = if (index == 0) 180f else 120f
+                            currentY = drawSingleGraphFromConfig(canvas, config, currentY, graphHeight, globalMinX, globalMaxX)
+                            currentY += 25f
+                        }
                     }
-
-                    // 脈拍データがある場合のみ描画
-                    val pulseData = castedRecords.filter { it.pulse != null }.map { it.recordTime.toEpochMilli() to it.pulse!!.toDouble() }
-                    if (pulseData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_PULSE} (bpm) 推移",
-                            lineDataList = listOf(pulseData to Color.rgb(50, 150, 50)),
-                            startY = currentY,
-                            height = 120f,
-                            yStep = 20.0,
-                            ranges = listOf(
-                                (0.0 to HealthThresholds.PULSE_LOW) to 0xFFF0F0F0.toInt(),
-                                (HealthThresholds.PULSE_HIGH to 200.0) to 0xFFD8D8D8.toInt()
-                            ),
-                            limitLines = emptyList(),
-                            isInteger = true,
-                            subtitles = listOf(
-                                "脈拍目安：${HealthThresholds.PULSE_LOW.toInt()} 〜 ${HealthThresholds.PULSE_HIGH.toInt()} bpm (${HealthThresholds.VITAL_LABEL_NORMAL}範囲)"
-                            ),
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 25f
-                    }
-
-                    // 体温データがある場合のみ描画
-                    val tempData = castedRecords.filter { it.bodyTemperature != null }.map { it.recordTime.toEpochMilli() to it.bodyTemperature!! }
-                    if (tempData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_BODY_TEMP} (℃) 推移",
-                            lineDataList = listOf(tempData to Color.rgb(255, 152, 0)),
-                            startY = currentY,
-                            height = 120f,
-                            yStep = 0.5,
-                            ranges = listOf(
-                                (0.0 to HealthThresholds.TEMP_LOW) to 0xFFF0F0F0.toInt(),
-                                (HealthThresholds.TEMP_HIGH to 45.0) to 0xFFD8D8D8.toInt()
-                            ),
-                            limitLines = emptyList(),
-                            isInteger = false,
-                            subtitles = listOf(
-                                "体温目安：${HealthThresholds.TEMP_LOW} 〜 ${HealthThresholds.TEMP_HIGH} ℃ (平熱範囲)"
-                            ),
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 40f
-                    }
+                    currentY += 15f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
                 drawBpAndPulseTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
@@ -232,54 +116,15 @@ object PdfExporter {
             Category.GLUCOSE_AND_HBA1C -> {
                 val castedRecords = filteredRecords.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
                 if (castedRecords.isNotEmpty()) {
-                    // 血糖値データがある場合のみ描画
-                    val glucoseData = castedRecords.filter { it.glucose != null }.map { it.recordTime.toEpochMilli() to it.glucose!!.toDouble() }
-                    if (glucoseData.isNotEmpty() || globalMinX != null) {
-                        currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_GLUCOSE} (mg/dL) 推移",
-                            lineDataList = listOf(glucoseData to Color.rgb(150, 0, 150)),
-                            startY = currentY,
-                            height = SINGLE_GRAPH_HEIGHT,
-                            yStep = 20.0,
-                            ranges = listOf(
-                                (0.0 to HealthThresholds.GLUCOSE_NORMAL_LOW) to 0xFFF0F0F0.toInt(),
-                                (HealthThresholds.GLUCOSE_NORMAL_HIGH to 500.0) to 0xFFD8D8D8.toInt()
-                            ),
-                            isInteger = true,
-                            subtitles = listOf(
-                                "血糖値（${HealthThresholds.GLUCOSE_LABEL_NORMAL}）：${HealthThresholds.GLUCOSE_NORMAL_LOW.toInt()} 〜 ${HealthThresholds.GLUCOSE_NORMAL_HIGH.toInt()} mg/dL"
-                            ),
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 25f
+                    // グラフ描画
+                    repeat(HealthChartHelper.getGraphCount(category)) { index ->
+                        val config = HealthChartHelper.getChartConfig(category, index, filteredRecords)
+                        if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
+                            currentY = drawSingleGraphFromConfig(canvas, config, currentY, SINGLE_GRAPH_HEIGHT, globalMinX, globalMaxX)
+                            currentY += 25f
+                        }
                     }
-
-                    // HbA1cデータがある場合のみ描画
-                    val hba1cData = castedRecords.filter { it.hba1c != null }.map { it.recordTime.toEpochMilli() to it.hba1c!! }
-                    if (hba1cData.isNotEmpty() || globalMinX != null) {
-                            currentY = drawSingleGraph(
-                            canvas = canvas,
-                            title = "${HealthThresholds.HEALTH_LABEL_HBA1C} (%) 推移",
-                            lineDataList = listOf(hba1cData to Color.rgb(200, 50, 50)),
-                            startY = currentY,
-                            height = SINGLE_GRAPH_HEIGHT,
-                            yStep = 1.0,
-                            ranges = listOf(
-                                (0.0 to HealthThresholds.HBA1C_GOOD) to Color.rgb(232, 245, 233),
-                                (HealthThresholds.HBA1C_PREDIABETES to HealthThresholds.HBA1C_DIABETES) to Color.rgb(255, 253, 231),
-                                (HealthThresholds.HBA1C_DIABETES to 20.0) to Color.rgb(255, 235, 238)
-                            ),
-                            isInteger = false,
-                            subtitles = listOf(
-                                "HbA1c判定：${HealthThresholds.HBA1C_LABEL_NORMAL}(${HealthThresholds.HBA1C_GOOD}%以下) / ${HealthThresholds.HBA1C_LABEL_NORMAL_HIGH} / ${HealthThresholds.HBA1C_LABEL_PREDIABETES}(${HealthThresholds.HBA1C_PREDIABETES}%以上) / ${HealthThresholds.HBA1C_LABEL_DIABETES}(${HealthThresholds.HBA1C_DIABETES}%以上)"
-                            ),
-                            fixedMinX = globalMinX,
-                            fixedMaxX = globalMaxX
-                        )
-                        currentY += 40f
-                    }
+                    currentY += 15f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
                 drawGlucoseAndHbA1cTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
@@ -495,6 +340,47 @@ object PdfExporter {
             }
         }
         return result
+    }
+
+    /**
+     * HealthChartConfig を元にグラフを描画する
+     */
+    private fun drawSingleGraphFromConfig(
+        canvas: Canvas,
+        config: HealthChartConfig,
+        startY: Float,
+        height: Float,
+        fixedMinX: Double?,
+        fixedMaxX: Double?
+    ): Float {
+        // LineChartConfig から drawSingleGraph 用のデータに変換
+        val lineDataList = config.dataList.map { lineData ->
+            lineData.points.map { it.first.toLong() to it.second } to lineData.color.toArgb()
+        }
+        
+        val rangeList = config.ranges.map { range ->
+            (range.startValue to range.endValue) to range.color.toArgb()
+        }
+
+        // ヘルプテキストをサブタイトルとして利用（改行で分割）
+        val subtitles = if (config.helpContent.isNotBlank()) {
+            config.helpContent.split("\n").filter { it.isNotBlank() }
+        } else emptyList()
+
+        return drawSingleGraph(
+            canvas = canvas,
+            title = "${config.title} 推移",
+            lineDataList = lineDataList,
+            startY = startY,
+            height = height,
+            yStep = config.stepY,
+            ranges = rangeList,
+            limitLines = emptyList(), // しきい値線は現在 range（背景色）に統合
+            isInteger = !config.showDecimal,
+            subtitles = subtitles,
+            fixedMinX = fixedMinX,
+            fixedMaxX = fixedMaxX
+        )
     }
 
     private fun drawSingleGraph(

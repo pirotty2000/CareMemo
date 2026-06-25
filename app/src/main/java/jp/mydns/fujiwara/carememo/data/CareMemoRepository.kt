@@ -54,6 +54,7 @@ class CareMemoRepository(
             bpAndPulseDao.restoreByPersonId(personId)
             glucoseAndHbA1cDao.restoreByPersonId(personId)
             conditionAtVisitDao.restoreByPersonId(personId)
+            conditionPhotoDao.restoreByPersonId(personId)
         }
     }
 
