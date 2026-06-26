@@ -86,8 +86,7 @@ fun ConditionPhotoPreviewScreen(
                 ) {
                     OutlinedButton(
                         onClick = onBack,
-                        modifier = Modifier.weight(1f),
-                        enabled = !isProcessing
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text("キャンセル")
                     }
@@ -96,8 +95,7 @@ fun ConditionPhotoPreviewScreen(
                             viewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
                             onSaved()
                         },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isProcessing
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text("保存する")
                     }
