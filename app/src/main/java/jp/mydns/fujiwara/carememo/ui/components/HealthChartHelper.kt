@@ -37,7 +37,7 @@ object HealthChartHelper {
             Category.BP_AND_PULSE -> 3
             Category.GLUCOSE_AND_HBA1C -> 2
             Category.HEIGHT_AND_WEIGHT -> 2
-            else -> 0
+            Category.CONDITION_AT_VISIT, Category.MEDICATION -> 0
         }
     }
 
@@ -49,7 +49,7 @@ object HealthChartHelper {
             Category.BP_AND_PULSE -> getBpAndPulseConfig(index, records.filterIsInstance<BpAndPulse>())
             Category.GLUCOSE_AND_HBA1C -> getGlucoseAndHbA1cConfig(index, records.filterIsInstance<GlucoseAndHbA1c>())
             Category.HEIGHT_AND_WEIGHT -> getHeightAndWeightConfig(index, records.filterIsInstance<HeightAndWeight>())
-            else -> null
+            Category.CONDITION_AT_VISIT, Category.MEDICATION -> null
         }
     }
 

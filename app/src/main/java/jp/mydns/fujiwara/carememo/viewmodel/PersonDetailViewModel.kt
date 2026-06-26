@@ -119,6 +119,10 @@ class PersonDetailViewModel(
                         _conditionPhotoMap.value = map
                     }
                 }
+                Category.MEDICATION -> {
+                    // 服薬管理は別画面（MedicationScreen）で扱うため、ここでは何もしない
+                    _records.value = emptyList()
+                }
             }
         }
     }

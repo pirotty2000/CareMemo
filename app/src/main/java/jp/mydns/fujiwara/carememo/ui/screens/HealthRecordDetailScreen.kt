@@ -63,7 +63,7 @@ fun HealthRecordDetailScreen(
             Category.HEIGHT_AND_WEIGHT -> records.filterIsInstance<HeightAndWeight>().find { it.id == recordId }
             Category.BP_AND_PULSE -> records.filterIsInstance<BpAndPulse>().find { it.id == recordId }
             Category.GLUCOSE_AND_HBA1C -> records.filterIsInstance<GlucoseAndHbA1c>().find { it.id == recordId }
-            else -> null
+            Category.CONDITION_AT_VISIT, Category.MEDICATION -> null
         }
     }
 
@@ -215,7 +215,7 @@ fun HealthRecordDetailScreen(
                             Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
                             Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
                             Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
-                            else -> throw IllegalStateException("Unknown category")
+                            Category.CONDITION_AT_VISIT, Category.MEDICATION -> throw IllegalStateException("Not supported category in this screen")
                         }
                         viewModel.saveRecord(newRecord)
                         if (recordId == 0) onBack() else isEditing = false
@@ -352,7 +352,7 @@ fun HealthRecordEditForm(
                             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                         )
                     }
-                    else -> {}
+                    Category.CONDITION_AT_VISIT, Category.MEDICATION -> {}
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -364,7 +364,7 @@ fun HealthRecordEditForm(
                             Category.HEIGHT_AND_WEIGHT -> weightText.isNotBlank()
                             Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank() || bodyTemperatureText.isNotBlank()
                             Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
-                            else -> true
+                            Category.CONDITION_AT_VISIT, Category.MEDICATION -> true
                         }
                     ) { Text("保存") }
                 }

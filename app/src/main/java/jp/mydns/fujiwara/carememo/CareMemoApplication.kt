@@ -23,7 +23,8 @@ class CareMemoApplication : Application() {
             database.bpAndPulseDao(),
             database.glucoseAndHbA1cDao(),
             database.conditionAtVisitDao(),
-            database.conditionPhotoDao()
+            database.conditionPhotoDao(),
+            database.medicationRecordDao()
         ) 
     }
 }

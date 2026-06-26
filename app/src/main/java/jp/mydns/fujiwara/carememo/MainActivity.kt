@@ -37,6 +37,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -173,9 +174,13 @@ fun CareMemoApp(activity: FragmentActivity) {
             MainScreen(
                 viewModel = listViewModel,
                 onNavigateToDetail = { personId, category ->
-                    val query = listViewModel.searchQuery.value
-                    val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
-                    navController.navigate("detail/$personId/${category.name}?query=$encodedQuery")
+                    if (category == Category.MEDICATION) {
+                        navController.navigate("medication/$personId")
+                    } else {
+                        val query = listViewModel.searchQuery.value
+                        val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
+                        navController.navigate("detail/$personId/${category.name}?query=$encodedQuery")
+                    }
                 },
                 onNavigateToSettings = {
                     navController.navigate("settings")
@@ -201,6 +206,28 @@ fun CareMemoApp(activity: FragmentActivity) {
                     navController.navigate("restore")
                 },
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "medication/{personId}",
+            arguments = listOf(navArgument("personId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+            val medicationViewModel: MedicationViewModel = viewModel(
+                factory = MedicationViewModel.Factory(repository, userSettingsRepository)
+            )
+            MedicationScreen(
+                viewModel = medicationViewModel,
+                personId = personId,
+                onBack = { navController.popBackStack("main", inclusive = false) },
+                onNavigateToCategory = { category ->
+                    // クエリパラメータを含めたルートを指定
+                    navController.navigate("detail/$personId/${category.name}?query=") {
+                        popUpTo("main") { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
         composable(
@@ -237,7 +264,7 @@ fun CareMemoApp(activity: FragmentActivity) {
                 viewModel = detailViewModel,
                 initialCategoryType = category,
                 personId = personId,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack("main", inclusive = false) },
                 onNavigateToConditionDetail = { pId, cId ->
                     navController.navigate("conditionDetail/$pId/$cId")
                 },
@@ -246,6 +273,13 @@ fun CareMemoApp(activity: FragmentActivity) {
                 },
                 onNavigateToGraphExpansion = { pId, cat, index ->
                     navController.navigate("graphExpansion/$pId/${cat.name}/$index")
+                },
+                onNavigateToMedication = { pId ->
+                    navController.navigate("medication/$pId") {
+                        popUpTo("main") { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }

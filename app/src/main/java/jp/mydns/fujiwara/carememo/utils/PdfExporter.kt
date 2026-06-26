@@ -146,6 +146,10 @@ object PdfExporter {
                     document.finishPage(currentPage)
                 }
             }
+            Category.MEDICATION -> {
+                // TODO: 服薬管理のPDF出力実装
+                document.finishPage(currentPage)
+            }
         }
 
         val fileName = "CareMemo_${category.name}_${System.currentTimeMillis()}.pdf"

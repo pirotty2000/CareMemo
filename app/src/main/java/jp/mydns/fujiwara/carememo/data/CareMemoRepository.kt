@@ -14,7 +14,8 @@ class CareMemoRepository(
     private val bpAndPulseDao: BpAndPulseDao,
     private val glucoseAndHbA1cDao: GlucoseAndHbA1cDao,
     private val conditionAtVisitDao: ConditionAtVisitDao,
-    private val conditionPhotoDao: ConditionPhotoDao
+    private val conditionPhotoDao: ConditionPhotoDao,
+    private val medicationRecordDao: MedicationRecordDao
 ) {
     // --- Person ---
     fun getAllPersons(): Flow<List<Person>> = personDao.getAllPersons()
@@ -40,6 +41,7 @@ class CareMemoRepository(
             glucoseAndHbA1cDao.logicalDeleteByPersonId(personId, timestamp)
             conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
             conditionPhotoDao.logicalDeleteByPersonId(personId, timestamp)
+            medicationRecordDao.logicalDeleteByPersonId(personId, timestamp)
         }
     }
 
@@ -55,6 +57,7 @@ class CareMemoRepository(
             glucoseAndHbA1cDao.restoreByPersonId(personId)
             conditionAtVisitDao.restoreByPersonId(personId)
             conditionPhotoDao.restoreByPersonId(personId)
+            medicationRecordDao.restoreByPersonId(personId)
         }
     }
 
@@ -112,6 +115,17 @@ class CareMemoRepository(
     
     suspend fun getAllPhotosByPersonId(personId: Int) = conditionPhotoDao.getAllByPersonId(personId)
 
+    // --- MedicationRecord ---
+    fun getMedicationRecordsByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>> =
+        medicationRecordDao.getByDate(personId, dosageDate)
+
+    fun getMedicationRecordsByMonth(personId: Int, month: String): Flow<List<MedicationRecord>> =
+        medicationRecordDao.getByMonth(personId, month)
+
+    suspend fun insertMedicationRecord(item: MedicationRecord) = medicationRecordDao.insert(item)
+
+    suspend fun deleteMedicationRecord(item: MedicationRecord) = medicationRecordDao.delete(item)
+
     fun getPersonIdsByConditionKeyword(query: String): Flow<List<Int>> =
         conditionAtVisitDao.getPersonIdsByConditionKeyword(query)
 
@@ -123,7 +137,8 @@ class CareMemoRepository(
             bpAndPulses = bpAndPulseDao.getAllRaw(),
             glucoseAndHbA1cs = glucoseAndHbA1cDao.getAllRaw(),
             conditionAtVisits = conditionAtVisitDao.getAllRaw(),
-            conditionPhotos = conditionPhotoDao.getAllRaw()
+            conditionPhotos = conditionPhotoDao.getAllRaw(),
+            medicationRecords = medicationRecordDao.getAllRaw()
         )
     }
 
@@ -136,11 +151,13 @@ class CareMemoRepository(
             glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
             conditionAtVisitDao.insertAll(backup.conditionAtVisits)
             conditionPhotoDao.insertAll(backup.conditionPhotos)
+            medicationRecordDao.insertAll(backup.medicationRecords)
         }
     }
 
     suspend fun clearAllData() {
         database.withTransaction {
+            medicationRecordDao.deleteAll()
             conditionPhotoDao.deleteAll()
             conditionAtVisitDao.deleteAll()
             glucoseAndHbA1cDao.deleteAll()
@@ -180,15 +197,17 @@ class CareMemoRepository(
             heightAndWeightDao.getPersonIdsWithHeightWeight(),
             bpAndPulseDao.getPersonIdsWithVital(),
             glucoseAndHbA1cDao.getPersonIdsWithGlucose(),
-            conditionAtVisitDao.getPersonIdsWithCondition()
-        ) { hw, vital, glucose, condition ->
-            val allIds = (hw + vital + glucose + condition).distinct()
+            conditionAtVisitDao.getPersonIdsWithCondition(),
+            medicationRecordDao.getPersonIdsWithMedication()
+        ) { hw, vital, glucose, condition, medication ->
+            val allIds = (hw + vital + glucose + condition + medication).distinct()
             allIds.associateWith { id ->
                 PersonCategorySummary(
                     hasHeightWeight = hw.contains(id),
                     hasBpAndPulse = vital.contains(id),
                     hasGlucoseAndHbA1c = glucose.contains(id),
-                    hasCondition = condition.contains(id)
+                    hasCondition = condition.contains(id),
+                    hasMedication = medication.contains(id)
                 )
             }
         }
@@ -202,13 +221,15 @@ class CareMemoRepository(
             heightAndWeightDao.hasDataForPerson(personId),
             bpAndPulseDao.hasDataForPerson(personId),
             glucoseAndHbA1cDao.hasDataForPerson(personId),
-            conditionAtVisitDao.hasDataForPerson(personId)
-        ) { hw, bp, glucose, condition ->
+            conditionAtVisitDao.hasDataForPerson(personId),
+            medicationRecordDao.hasDataForPerson(personId)
+        ) { hw, bp, glucose, condition, medication ->
             PersonCategorySummary(
                 hasHeightWeight = hw,
                 hasBpAndPulse = bp,
                 hasGlucoseAndHbA1c = glucose,
-                hasCondition = condition
+                hasCondition = condition,
+                hasMedication = medication
             )
         }
     }

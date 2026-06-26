@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
+import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
@@ -52,7 +53,8 @@ fun UnifiedRecordScreen(
     onBack: () -> Unit,
     onNavigateToConditionDetail: (Int, Int) -> Unit,
     onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit,
-    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit
+    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
+    onNavigateToMedication: (Int) -> Unit
 ) {
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     
@@ -123,12 +125,17 @@ fun UnifiedRecordScreen(
                     navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") } },
                     actions = { IconButton(onClick = { if (records.isEmpty()) { scope.launch { snackbarHostState.showSnackbar("${currentCategory.displayName}の記録がないため出力できません") }; return@IconButton }; showPdfSettingsDialog = true }) { Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力") } }
                 )
-                LazyRow(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).padding(vertical = 8.dp), state = categoryListState, contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    itemsIndexed(Category.entries) { _, category ->
-                        val hasData = when (category) { Category.HEIGHT_AND_WEIGHT -> personCategorySummary?.hasHeightWeight == true; Category.BP_AND_PULSE -> personCategorySummary?.hasBpAndPulse == true; Category.GLUCOSE_AND_HBA1C -> personCategorySummary?.hasGlucoseAndHbA1c == true; Category.CONDITION_AT_VISIT -> personCategorySummary?.hasCondition == true }
-                        FilterChip(selected = currentCategory == category, onClick = { currentCategory = category }, label = { Text(category.displayName) }, leadingIcon = if (currentCategory == category) { { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) } } else null, border = FilterChipDefaults.filterChipBorder(enabled = true, selected = currentCategory == category, borderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, borderWidth = if (hasData) 1.5.dp else 1.0.dp, selectedBorderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline))
+                CategorySelectorBar(
+                    currentCategory = currentCategory,
+                    personCategorySummary = personCategorySummary,
+                    onCategoryClick = { category ->
+                        if (category == Category.MEDICATION) {
+                            onNavigateToMedication(personId)
+                        } else {
+                            currentCategory = category
+                        }
                     }
-                }
+                )
             }
         },
         floatingActionButton = { FloatingActionButton(onClick = { if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, 0) else onNavigateToHealthRecordDetail(personId, currentCategory, 0) }) { Icon(Icons.Rounded.Add, contentDescription = "新規追加") } }
@@ -238,6 +245,7 @@ fun HistoryItemBody(category: Category, record: HistoryRecord, hasOption: Boolea
         Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) GlucoseRecordItemContent(record)
         Category.HEIGHT_AND_WEIGHT -> if (record is HeightAndWeight) HeightWeightRecordItemContent(record)
         Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) ConditionMemoContent(record, hasOption)
+        Category.MEDICATION -> { /* 統合画面では表示しない */ }
     }
 }
 
