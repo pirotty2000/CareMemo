@@ -62,4 +62,11 @@ abstract class BaseViewModel(
 
     protected fun showSnackbar(message: String) = sendUiEvent(UiEvent.ShowSnackbar(message))
     protected fun showError(title: String, message: String) = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
+
+    /**
+     * 外部アプリ（ファイルピッカー等）呼び出しのために、次回のフォアグラウンド復帰時のロックを一時的にスキップさせる
+     */
+    fun setLockBypassEnabled(enabled: Boolean) {
+        userSettingsRepository.isLockBypassed = enabled
+    }
 }

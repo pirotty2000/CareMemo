@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -61,12 +62,12 @@ fun ConditionDetailScreen(
     val dateTimeState = rememberDateTimeInputState()
 
     // 編集モードの状態
-    var isEditing by remember { mutableStateOf(conditionId == 0) }
+    var isEditing by rememberSaveable { mutableStateOf(conditionId == 0) }
 
     // 入力用状態
-    var title by remember { mutableStateOf("") }
-    var condition by remember { mutableStateOf("") }
-    var author by remember { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
+    var condition by rememberSaveable { mutableStateOf("") }
+    var author by rememberSaveable { mutableStateOf("") }
 
     val memo = remember(records, conditionId) { 
         records.asSequence().filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
@@ -104,7 +105,7 @@ fun ConditionDetailScreen(
     }
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
-    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var tempPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -225,6 +226,7 @@ fun ConditionDetailScreen(
                                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString())
                                         }
+                                        viewModel.setLockBypassEnabled(true)
                                         speechLauncher.launch(intent)
                                     }) {
                                         Icon(Icons.Rounded.Mic, contentDescription = "音声入力")
@@ -314,6 +316,7 @@ fun ConditionDetailScreen(
                                 tempFile
                             )
                             tempPhotoUri = uri
+                            viewModel.setLockBypassEnabled(true)
                             cameraLauncher.launch(uri)
                         },
                         enabled = !isProcessing

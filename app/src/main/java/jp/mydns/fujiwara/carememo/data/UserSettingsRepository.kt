@@ -47,6 +47,9 @@ class UserSettingsRepository(private val context: Context) {
             preferences[DEFAULT_RECORDER_NAME] ?: ""
         }
 
+    // 一時的にロックを無効化するためのフラグ（外部アプリ連携時など）
+    var isLockBypassed: Boolean = false
+
     suspend fun setNameMaskingEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_NAME_MASKING_ENABLED] = enabled

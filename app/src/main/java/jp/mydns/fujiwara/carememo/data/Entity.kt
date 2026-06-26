@@ -22,8 +22,9 @@ import java.time.Instant
  *   ├ [height_and_weight_db(pk:id, fk:person_id)] 利用者の「身長・体重」情報を格納
  *   ├ [bp_and_pulse_db(pk:id, fk:person_id)] 利用者の「バイタル」情報を格納
  *   ├ [glucose_and_hba1c_db(pk:id, fk:person_id)] 利用者の「血糖値・HbA1c」を格納
- *   └ [condition_at_visit_db(pk:id, fk:person_id)] 利用者の「所見メモ」を格納
- *       └ [condition_photo_db(pk:id, fk:condition_id)] 所見メモに添付した写真のファイル名を格納
+ *   ├ [condition_at_visit_db(pk:id, fk:person_id)] 利用者の「所見メモ」を格納
+ *   ├   └ [condition_photo_db(pk:id, fk:condition_id)] 所見メモに添付した写真のファイル名を格納
+ *   └ [medication_record_db(pk:id, fk:person_id)] 利用者の服薬状況を格納
  *
  **********************************************************************/
 

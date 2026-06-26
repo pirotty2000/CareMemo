@@ -107,6 +107,12 @@ fun CareMemoApp(activity: FragmentActivity) {
                 Lifecycle.Event.ON_START -> {
                     // フォアグラウンドに戻った際にタイムアウト判定
                     if ((isBiometricEnabled == true) && isAuthenticated) {
+                        // 外部アプリ呼び出し（ファイル選択等）からの復帰時はロックをスキップ
+                        if (userSettingsRepository.isLockBypassed) {
+                            userSettingsRepository.isLockBypassed = false
+                            return@LifecycleEventObserver
+                        }
+
                         if (lockTimeoutMinutes != -1) { // -1 は「ロックしない」
                             val elapsedMillis = System.currentTimeMillis() - lastActiveTime
                             val timeoutMillis = lockTimeoutMinutes * 60 * 1000L
