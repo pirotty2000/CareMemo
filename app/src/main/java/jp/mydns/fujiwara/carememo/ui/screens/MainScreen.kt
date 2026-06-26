@@ -83,18 +83,18 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is PersonListViewModel.UiEvent.ShowSnackbar -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
                 }
-                is PersonListViewModel.UiEvent.ShowInfoDialog -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is PersonListViewModel.UiEvent.ShowErrorDialog -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is PersonListViewModel.UiEvent.SaveSuccess -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
                     showEditDialog = false
                 }
             }
@@ -445,27 +445,31 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
         confirmButton = {
             Button(
                 onClick = {
-                    if (isInputValid && westernYear != null && m != null && d != null) {
-                        keyboardController?.hide()
-                        val birthday = LocalDate.of(westernYear, m, d)
-                            .atStartOfDay(ZoneId.systemDefault())
-                            .toInstant()
-                        val newPerson = person?.copy(
-                            lastName = lastName,
-                            firstName = firstName,
-                            lastNameFurigana = lastNameFurigana,
-                            firstNameFurigana = firstNameFurigana,
-                            birthday = birthday,
-                            note = note
-                        ) ?: Person(
-                            lastName = lastName,
-                            firstName = firstName,
-                            lastNameFurigana = lastNameFurigana,
-                            firstNameFurigana = firstNameFurigana,
-                            birthday = birthday,
-                            note = note
-                        )
-                        onSave(newPerson)
+                    westernYear?.let { y ->
+                        m?.let { month ->
+                            d?.let { day ->
+                                keyboardController?.hide()
+                                val birthday = LocalDate.of(y, month, day)
+                                    .atStartOfDay(ZoneId.systemDefault())
+                                    .toInstant()
+                                val newPerson = person?.copy(
+                                    lastName = lastName,
+                                    firstName = firstName,
+                                    lastNameFurigana = lastNameFurigana,
+                                    firstNameFurigana = firstNameFurigana,
+                                    birthday = birthday,
+                                    note = note
+                                ) ?: Person(
+                                    lastName = lastName,
+                                    firstName = firstName,
+                                    lastNameFurigana = lastNameFurigana,
+                                    firstNameFurigana = firstNameFurigana,
+                                    birthday = birthday,
+                                    note = note
+                                )
+                                onSave(newPerson)
+                            }
+                        }
                     }
                 },
                 enabled = isInputValid

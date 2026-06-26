@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -396,19 +397,24 @@ fun HealthRecordDisplayCard(record: Any) {
                     DetailItem(label = HealthThresholds.HEALTH_LABEL_WEIGHT, value = record.weight?.let { "${it} kg" } ?: "---")
                     val bmi = record.calculateBMI()
                     if (bmi > 0) {
-                        DetailItem(label = HealthThresholds.HEALTH_LABEL_BMI, value = "%.1f (${bmi.evaluateBMI()})".format(bmi))
+                        val (label, _) = record.getBmiResult()
+                        DetailItem(label = HealthThresholds.HEALTH_LABEL_BMI, value = "%.1f ($label)".format(bmi))
                     }
                 }
                 is BpAndPulse -> {
                     DetailItem(label = HealthThresholds.HEALTH_LABEL_BP, value = "${record.bpSystolic ?: "---"} / ${record.bpDiastolic ?: "---"} mmHg")
                     DetailItem(label = HealthThresholds.HEALTH_LABEL_PULSE, value = record.pulse?.let { "$it bpm" } ?: "---")
                     DetailItem(label = HealthThresholds.HEALTH_LABEL_BODY_TEMP, value = record.bodyTemperature?.let { "$it ℃" } ?: "---")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = record.checkStatus())
+                    val statusText = record.getVitalResults().joinToString("・") { it.first }
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = statusText)
                 }
                 is GlucoseAndHbA1c -> {
                     DetailItem(label = HealthThresholds.HEALTH_LABEL_GLUCOSE, value = record.glucose?.let { "$it mg/dL" } ?: "---")
                     DetailItem(label = HealthThresholds.HEALTH_LABEL_HBA1C, value = record.hba1c?.let { "$it %" } ?: "---")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = record.checkStatus())
+                    val g = record.getGlucoseResult().first
+                    val h = record.getHbA1cResult().first
+                    val statusText = if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = statusText)
                 }
             }
         }

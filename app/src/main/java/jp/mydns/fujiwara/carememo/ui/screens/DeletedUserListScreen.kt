@@ -29,7 +29,7 @@ fun DeletedUserListScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is PersonListViewModel.UiEvent.ShowSnackbar -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
                 }
                 else -> { /* ダイアログ等は必要に応じて */ }

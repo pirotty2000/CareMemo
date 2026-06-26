@@ -23,14 +23,9 @@ object HealthChartHelper {
      * 全データを通じた共通のX軸（時間軸）の範囲を計算します
      */
     fun calculateGlobalXRange(records: List<Any>): Pair<Double?, Double?> {
-        val allTimes = records.mapNotNull {
-            when (it) {
-                is BpAndPulse -> it.recordTime.toEpochMilli().toDouble()
-                is GlucoseAndHbA1c -> it.recordTime.toEpochMilli().toDouble()
-                is HeightAndWeight -> it.recordTime.toEpochMilli().toDouble()
-                else -> null
-            }
-        }
+        val allTimes = records.filterIsInstance<HistoryRecord>()
+            .map { it.recordTime.toEpochMilli().toDouble() }
+
         return allTimes.minOrNull() to allTimes.maxOrNull()
     }
 

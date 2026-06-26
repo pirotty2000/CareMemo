@@ -29,9 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.compose.ui.focus.FocusRequester
 import coil.compose.AsyncImage
-import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import java.io.File

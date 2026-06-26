@@ -75,20 +75,20 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is PersonListViewModel.UiEvent.ShowInfoDialog -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is PersonListViewModel.UiEvent.ShowErrorDialog -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is PersonListViewModel.UiEvent.ShowSnackbar -> {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
                     // 設定画面ではスナックバーのホストがないため、必要なら追加するかダイアログで代用
                     dialogTitle = "通知"
                     dialogMessage = event.message
                 }
-                PersonListViewModel.UiEvent.SaveSuccess -> {
+                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
                     // 設定画面では特に何もしない
                 }
             }

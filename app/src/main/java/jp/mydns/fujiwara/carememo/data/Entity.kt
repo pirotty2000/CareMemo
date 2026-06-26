@@ -33,6 +33,15 @@ object InstantSerializer : KSerializer<Instant> {
     override fun deserialize(decoder: Decoder): Instant = Instant.parse(decoder.decodeString())
 }
 
+/**
+ * すべての履歴データの基底インターフェース
+ */
+interface HistoryRecord {
+    val id: Int
+    val personId: Int
+    val recordTime: Instant
+}
+
 @Serializable
 @Entity(
     tableName = "person_db",
@@ -100,14 +109,14 @@ fun String.mask(): String {
     ]
 )
 data class HeightAndWeight(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "person_id") val personId: Int,
+    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
+    @ColumnInfo(name = "person_id") override val personId: Int,
     @ColumnInfo(name = "height") val height: Double?,
     @ColumnInfo(name = "weight") val weight: Double? = null,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "record_time") override val recordTime: Instant,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
-)
+) : HistoryRecord
 
 @Serializable
 @Entity(
@@ -126,16 +135,16 @@ data class HeightAndWeight(
     ]
 )
 data class BpAndPulse(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "person_id") val personId: Int,
+    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
+    @ColumnInfo(name = "person_id") override val personId: Int,
     @ColumnInfo(name = "bp_systolic") val bpSystolic: Int? = null,
     @ColumnInfo(name = "bp_diastolic") val bpDiastolic: Int? = null,
     @ColumnInfo(name = "pulse") val pulse: Int? = null,
     @ColumnInfo(name = "body_temperature") val bodyTemperature: Double? = null,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "record_time") override val recordTime: Instant,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
-)
+) : HistoryRecord
 
 @Serializable
 @Entity(
@@ -154,14 +163,14 @@ data class BpAndPulse(
     ]
 )
 data class GlucoseAndHbA1c(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "person_id") val personId: Int,
+    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
+    @ColumnInfo(name = "person_id") override val personId: Int,
     @ColumnInfo(name = "glucose") val glucose: Int? = null,
     @ColumnInfo(name = "hba1c") val hba1c: Double? = null,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "record_time") override val recordTime: Instant,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
-)
+) : HistoryRecord
 
 @Serializable
 @Entity(
@@ -180,15 +189,15 @@ data class GlucoseAndHbA1c(
     ]
 )
 data class ConditionAtVisit(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "person_id") val personId: Int,
+    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
+    @ColumnInfo(name = "person_id") override val personId: Int,
     @ColumnInfo(name = "title") val title: String?,
     @ColumnInfo(name = "condition") val condition: String?,
     @ColumnInfo(name = "author") val author: String,
     @Serializable(with = InstantSerializer::class)
-    @ColumnInfo(name = "record_time") val recordTime: Instant,
+    @ColumnInfo(name = "record_time") override val recordTime: Instant,
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
-)
+) : HistoryRecord
 
 @Serializable
 @Entity(
@@ -243,7 +252,7 @@ data class PersonCategorySummary(
     val hasCondition: Boolean = false
 )
 
-// --- 計算・判定用拡張関数 ---
+// --- 計算・判定用拡張関数（基軸となる HealthThresholds を使用） ---
 
 fun HeightAndWeight.calculateBMI(): Double {
     val h = height ?: 0.0
@@ -253,90 +262,14 @@ fun HeightAndWeight.calculateBMI(): Double {
     return w / (heightM * heightM)
 }
 
-fun Double.evaluateBMI(): String {
-    return when {
-        this <= 0.0 -> "-"
-        this < HealthThresholds.BMI_NORMAL_LOW -> HealthThresholds.BMI_LABEL_UNDERWEIGHT
-        this < HealthThresholds.BMI_NORMAL_HIGH -> HealthThresholds.BMI_LABEL_NORMAL
-        this < HealthThresholds.BMI_OBESITY_1 -> HealthThresholds.BMI_LABEL_OBESITY_1
-        this < HealthThresholds.BMI_OBESITY_2 -> HealthThresholds.BMI_LABEL_OBESITY_2
-        this < HealthThresholds.BMI_OBESITY_3 -> HealthThresholds.BMI_LABEL_OBESITY_3
-        else -> HealthThresholds.BMI_LABEL_OBESITY_4
-    }
-}
+fun HeightAndWeight.getBmiResult(): Pair<String, HealthThresholds.AlertLevel> =
+    HealthThresholds.evaluateBMI(calculateBMI())
 
-fun BpAndPulse.checkStatus(): String {
-    val status = getVitalStatus()
-    val labels = mutableListOf<String>()
-    
-    if (status.isHighBp) labels.add(HealthThresholds.VITAL_LABEL_HIGH_BP)
-    if (status.isLowBp) labels.add(HealthThresholds.VITAL_LABEL_LOW_BP)
-    if (status.isTachycardia) labels.add(HealthThresholds.VITAL_LABEL_TACHYCARDIA)
-    if (status.isBradycardia) labels.add(HealthThresholds.VITAL_LABEL_BRADYCARDIA)
-    if (status.isFever) labels.add(HealthThresholds.VITAL_LABEL_FEVER)
-    if (status.isHypothermia) labels.add(HealthThresholds.VITAL_LABEL_HYPOTHERMIA)
-    
-    return if (labels.isEmpty()) HealthThresholds.VITAL_LABEL_NORMAL else labels.joinToString("・")
-}
+fun BpAndPulse.getVitalResults(): List<Pair<String, HealthThresholds.AlertLevel>> =
+    HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
 
-/**
- * 各指標の判定結果を保持するデータクラス
- */
-data class VitalStatus(
-    val isHighBp: Boolean,
-    val isLowBp: Boolean,
-    val isTachycardia: Boolean,
-    val isBradycardia: Boolean,
-    val isFever: Boolean,
-    val isHypothermia: Boolean
-)
+fun GlucoseAndHbA1c.getGlucoseResult(): Pair<String, HealthThresholds.AlertLevel> =
+    HealthThresholds.evaluateGlucose(glucose)
 
-/**
- * 現在の値に基づいた判定フラグを返す
- */
-fun BpAndPulse.getVitalStatus(): VitalStatus {
-    val systolic = bpSystolic ?: 120
-    val diastolic = bpDiastolic ?: 80
-    val pulseVal = pulse ?: 70
-    val tempVal = bodyTemperature ?: 36.5
-
-    return VitalStatus(
-        isHighBp = systolic >= HealthThresholds.BP_HIGH_SYSTOLIC || diastolic >= HealthThresholds.BP_HIGH_DIASTOLIC,
-        isLowBp = systolic < HealthThresholds.BP_LOW_SYSTOLIC || diastolic < HealthThresholds.BP_LOW_DIASTOLIC,
-        isTachycardia = pulseVal >= HealthThresholds.PULSE_HIGH,
-        isBradycardia = pulseVal <= HealthThresholds.PULSE_LOW,
-        isFever = tempVal >= HealthThresholds.TEMP_HIGH,
-        isHypothermia = tempVal < HealthThresholds.TEMP_LOW
-    )
-}
-
-fun GlucoseAndHbA1c.evaluateGlucose(): String? {
-    val g = glucose ?: return null
-    return when {
-        g < HealthThresholds.GLUCOSE_NORMAL_LOW -> HealthThresholds.GLUCOSE_LABEL_LOW
-        g <= HealthThresholds.GLUCOSE_NORMAL_HIGH -> HealthThresholds.GLUCOSE_LABEL_NORMAL
-        else -> HealthThresholds.GLUCOSE_LABEL_HIGH
-    }
-}
-
-fun GlucoseAndHbA1c.evaluateHbA1c(): String? {
-    val h = hba1c ?: return null
-    return when {
-        h >= HealthThresholds.HBA1C_DIABETES -> HealthThresholds.HBA1C_LABEL_DIABETES
-        h >= HealthThresholds.HBA1C_PREDIABETES -> HealthThresholds.HBA1C_LABEL_PREDIABETES
-        h > HealthThresholds.HBA1C_GOOD -> HealthThresholds.HBA1C_LABEL_NORMAL_HIGH
-        else -> HealthThresholds.HBA1C_LABEL_NORMAL
-    }
-}
-
-fun GlucoseAndHbA1c.checkStatus(): String {
-    val gStatus = evaluateGlucose()
-    val hStatus = evaluateHbA1c()
-
-    return when {
-        gStatus != null && hStatus != null -> "$gStatus・$hStatus"
-        gStatus != null -> gStatus
-        hStatus != null -> hStatus
-        else -> "---"
-    }
-}
+fun GlucoseAndHbA1c.getHbA1cResult(): Pair<String, HealthThresholds.AlertLevel> =
+    HealthThresholds.evaluateHbA1c(hba1c)

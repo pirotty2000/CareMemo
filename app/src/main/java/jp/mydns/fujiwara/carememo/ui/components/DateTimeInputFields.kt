@@ -44,78 +44,78 @@ fun DateTimeInputFields(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            CompactTextField(
+            DateTimeUnitField(
                 value = year,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 4) {
-                        onYearChange(filtered)
-                        if (filtered.length == 4) monthFocusRequester.requestFocus()
-                    }
-                },
+                onValueChange = onYearChange,
+                maxLength = 4,
+                label = "年",
                 modifier = Modifier.weight(1.3f),
-                onFocusChanged = { if (it.isFocused) onYearChange("") },
-                suffix = { Text("年", style = MaterialTheme.typography.bodySmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { monthFocusRequester.requestFocus() })
+                nextFocusRequester = monthFocusRequester
             )
-            CompactTextField(
+            DateTimeUnitField(
                 value = month,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 2) {
-                        onMonthChange(filtered)
-                        if (filtered.length == 2) dayFocusRequester.requestFocus()
-                    }
-                },
+                onValueChange = onMonthChange,
+                maxLength = 2,
+                label = "月",
                 modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
-                onFocusChanged = { if (it.isFocused) onMonthChange("") },
-                suffix = { Text("月", style = MaterialTheme.typography.bodySmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { dayFocusRequester.requestFocus() })
+                nextFocusRequester = dayFocusRequester
             )
-            CompactTextField(
+            DateTimeUnitField(
                 value = day,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 2) {
-                        onDayChange(filtered)
-                        if (filtered.length == 2) hourFocusRequester.requestFocus()
-                    }
-                },
+                onValueChange = onDayChange,
+                maxLength = 2,
+                label = "日",
                 modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
-                onFocusChanged = { if (it.isFocused) onDayChange("") },
-                suffix = { Text("日", style = MaterialTheme.typography.bodySmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { hourFocusRequester.requestFocus() })
+                nextFocusRequester = hourFocusRequester
             )
-            CompactTextField(
+            DateTimeUnitField(
                 value = hour,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 2) {
-                        onHourChange(filtered)
-                        if (filtered.length == 2) minuteFocusRequester.requestFocus()
-                    }
-                },
+                onValueChange = onHourChange,
+                maxLength = 2,
+                label = "時",
                 modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
-                onFocusChanged = { if (it.isFocused) onHourChange("") },
-                suffix = { Text("時", style = MaterialTheme.typography.bodySmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { minuteFocusRequester.requestFocus() })
+                nextFocusRequester = minuteFocusRequester
             )
-            CompactTextField(
+            DateTimeUnitField(
                 value = minute,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 2) onMinuteChange(filtered)
-                },
+                onValueChange = onMinuteChange,
+                maxLength = 2,
+                label = "分",
                 modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
-                onFocusChanged = { if (it.isFocused) onMinuteChange("") },
-                suffix = { Text("分", style = MaterialTheme.typography.bodySmall) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                imeAction = ImeAction.Done,
+                onDone = { focusManager.clearFocus() }
             )
         }
     }
+}
+
+@Composable
+private fun DateTimeUnitField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    maxLength: Int,
+    label: String,
+    modifier: Modifier = Modifier,
+    nextFocusRequester: FocusRequester? = null,
+    imeAction: ImeAction = ImeAction.Next,
+    onDone: (() -> Unit)? = null
+) {
+    CompactTextField(
+        value = value,
+        onValueChange = {
+            val filtered = it.filter { c -> c.isDigit() }
+            if (filtered.length <= maxLength) {
+                onValueChange(filtered)
+                if (filtered.length == maxLength) nextFocusRequester?.requestFocus()
+            }
+        },
+        modifier = modifier,
+        onFocusChanged = { if (it.isFocused) onValueChange("") },
+        suffix = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = imeAction),
+        keyboardActions = KeyboardActions(
+            onNext = { nextFocusRequester?.requestFocus() },
+            onDone = { onDone?.invoke() }
+        )
+    )
 }

@@ -1,16 +1,32 @@
 package jp.mydns.fujiwara.carememo.data
 
-// 健康指標の判定基準
-object HealthThresholds {
-    // 高血圧・低血圧・頻脈・徐脈の判定ルールとなる数値
-    const val BP_HIGH_SYSTOLIC = 140.0  // 高血圧：血圧（上）
-    const val BP_HIGH_DIASTOLIC = 90.0  // 高血圧：血圧（下）
-    const val BP_LOW_SYSTOLIC = 100.0   // 低血圧：血圧（上）
-    const val BP_LOW_DIASTOLIC = 60.0   // 低血圧：血圧（下）
-    const val PULSE_HIGH = 100.0        // 頻脈
-    const val PULSE_LOW = 50.0          // 徐脈
+import android.graphics.Color
 
-    // バイタル判定ラベル
+/**
+ * 健康指標の判定基準と判定ロジックを管理する基軸オブジェクト
+ */
+object HealthThresholds {
+    // --- 定数定義 ---
+    const val BP_HIGH_SYSTOLIC = 140.0
+    const val BP_HIGH_DIASTOLIC = 90.0
+    const val BP_LOW_SYSTOLIC = 100.0
+    const val BP_LOW_DIASTOLIC = 60.0
+    const val PULSE_HIGH = 100.0
+    const val PULSE_LOW = 50.0
+    const val TEMP_HIGH = 37.5
+    const val TEMP_LOW = 35.5
+    const val GLUCOSE_NORMAL_HIGH = 99.0
+    const val GLUCOSE_NORMAL_LOW = 70.0
+    const val HBA1C_GOOD = 5.5
+    const val HBA1C_PREDIABETES = 6.0
+    const val HBA1C_DIABETES = 6.5
+    const val BMI_NORMAL_LOW = 18.5
+    const val BMI_NORMAL_HIGH = 25.0
+    const val BMI_OBESITY_1 = 30.0
+    const val BMI_OBESITY_2 = 35.0
+    const val BMI_OBESITY_3 = 40.0
+
+    // --- ラベル定義 ---
     const val VITAL_LABEL_NORMAL = "正常"
     const val VITAL_LABEL_HIGH_BP = "高血圧"
     const val VITAL_LABEL_LOW_BP = "低血圧"
@@ -18,38 +34,20 @@ object HealthThresholds {
     const val VITAL_LABEL_BRADYCARDIA = "徐脈"
     const val VITAL_LABEL_FEVER = "発熱"
     const val VITAL_LABEL_HYPOTHERMIA = "低体温"
-
-    // 体温の判定基準
-    const val TEMP_HIGH = 37.5          // 発熱
-    const val TEMP_LOW = 35.5           // 低体温
-
-    // 血糖値・HbA1cの判定基準
-    const val GLUCOSE_NORMAL_HIGH = 99.0
-    const val GLUCOSE_NORMAL_LOW = 70.0
-
-    // 血糖値判定ラベル
     const val GLUCOSE_LABEL_LOW = "低血糖"
     const val GLUCOSE_LABEL_NORMAL = "良好"
     const val GLUCOSE_LABEL_HIGH = "高血糖"
-
-    const val HBA1C_GOOD = 5.5
-    const val HBA1C_PREDIABETES = 6.0
-    const val HBA1C_DIABETES = 6.5
-
-    // HbA1c判定ラベル
     const val HBA1C_LABEL_NORMAL = "正常"
     const val HBA1C_LABEL_NORMAL_HIGH = "正常高値"
     const val HBA1C_LABEL_PREDIABETES = "糖尿病予備軍"
     const val HBA1C_LABEL_DIABETES = "糖尿病型"
+    const val BMI_LABEL_UNDERWEIGHT = "低体重"
+    const val BMI_LABEL_NORMAL = "普通体重"
+    const val BMI_LABEL_OBESITY_1 = "肥満(１度)"
+    const val BMI_LABEL_OBESITY_2 = "肥満(２度)"
+    const val BMI_LABEL_OBESITY_3 = "肥満(３度)"
+    const val BMI_LABEL_OBESITY_4 = "肥満(４度)"
 
-    // BMIの判定基準
-    const val BMI_NORMAL_LOW = 18.5
-    const val BMI_NORMAL_HIGH = 25.0
-    const val BMI_OBESITY_1 = 30.0
-    const val BMI_OBESITY_2 = 35.0
-    const val BMI_OBESITY_3 = 40.0
-
-    // 健康指標項目ラベル
     const val HEALTH_LABEL_HEIGHT = "身長"
     const val HEALTH_LABEL_WEIGHT = "体重"
     const val HEALTH_LABEL_BMI = "BMI"
@@ -65,64 +63,89 @@ object HealthThresholds {
     const val HEALTH_LABEL_HBA1C = "HbA1c"
     const val HEALTH_LABEL_STATUS = "判定"
 
-    // BMI判定ラベル
-    const val BMI_LABEL_UNDERWEIGHT = "低体重"
-    const val BMI_LABEL_NORMAL = "普通体重"
-    const val BMI_LABEL_OBESITY_1 = "肥満(１度)"
-    const val BMI_LABEL_OBESITY_2 = "肥満(２度)"
-    const val BMI_LABEL_OBESITY_3 = "肥満(３度)"
-    const val BMI_LABEL_OBESITY_4 = "肥満(４度)"
+    /**
+     * アラートレベルの定義
+     */
+    enum class AlertLevel(val color: Int, val pdfBgColor: Int?) {
+        NORMAL(Color.BLUE, null),
+        WARNING(Color.BLACK, 0xFFF0F0F0.toInt()),
+        ALERT(Color.RED, 0xFFD8D8D8.toInt())
+    }
 
-    // 指標の説明文
-    val BP_EXPLANATION = """
-        血圧グラフの見方：
-        ・赤い線（血圧・上）が、上の薄い緑色の範囲（${BP_LOW_SYSTOLIC.toInt()}〜${BP_HIGH_SYSTOLIC.toInt()}）にあれば正常です。
-        ・青い線（血圧・下）が、下の薄い緑色の範囲（${BP_LOW_DIASTOLIC.toInt()}〜${BP_HIGH_DIASTOLIC.toInt()}）にあれば正常です。
+    // --- 判定ロジック ---
+
+    /**
+     * BMIの判定
+     */
+    fun evaluateBMI(bmi: Double): Pair<String, AlertLevel> {
+        return when {
+            bmi <= 0.0 -> "---" to AlertLevel.NORMAL
+            bmi < BMI_NORMAL_LOW -> BMI_LABEL_UNDERWEIGHT to AlertLevel.WARNING
+            bmi < BMI_NORMAL_HIGH -> BMI_LABEL_NORMAL to AlertLevel.NORMAL
+            bmi < BMI_OBESITY_1 -> BMI_LABEL_OBESITY_1 to AlertLevel.WARNING
+            bmi < BMI_OBESITY_2 -> BMI_LABEL_OBESITY_2 to AlertLevel.WARNING
+            bmi < BMI_OBESITY_3 -> BMI_LABEL_OBESITY_3 to AlertLevel.ALERT
+            else -> BMI_LABEL_OBESITY_4 to AlertLevel.ALERT
+        }
+    }
+
+    /**
+     * バイタルの判定
+     */
+    fun evaluateVital(systolic: Int?, diastolic: Int?, pulse: Int?, temp: Double?): List<Pair<String, AlertLevel>> {
+        val results = mutableListOf<Pair<String, AlertLevel>>()
         
-        ※ いずれかの線が緑色の範囲より上にあれば「$VITAL_LABEL_HIGH_BP」、下にあれば「$VITAL_LABEL_LOW_BP」の目安となります。
-    """.trimIndent()
+        systolic?.let {
+            if (it >= BP_HIGH_SYSTOLIC) results.add(VITAL_LABEL_HIGH_BP to AlertLevel.ALERT)
+            else if (it < BP_LOW_SYSTOLIC) results.add(VITAL_LABEL_LOW_BP to AlertLevel.WARNING)
+        }
+        diastolic?.let {
+            if (it >= BP_HIGH_DIASTOLIC) results.add(VITAL_LABEL_HIGH_BP to AlertLevel.ALERT)
+            else if (it < BP_LOW_DIASTOLIC) results.add(VITAL_LABEL_LOW_BP to AlertLevel.WARNING)
+        }
+        pulse?.let {
+            if (it >= PULSE_HIGH) results.add(VITAL_LABEL_TACHYCARDIA to AlertLevel.ALERT)
+            else if (it <= PULSE_LOW) results.add(VITAL_LABEL_BRADYCARDIA to AlertLevel.WARNING)
+        }
+        temp?.let {
+            if (it >= TEMP_HIGH) results.add(VITAL_LABEL_FEVER to AlertLevel.ALERT)
+            else if (it < TEMP_LOW) results.add(VITAL_LABEL_HYPOTHERMIA to AlertLevel.WARNING)
+        }
 
-    val PULSE_EXPLANATION = """
-        脈拍グラフの見方：
-        ・線が薄い緑色の範囲（${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()}）にあれば正常です。
-        
-        ※ 範囲より上にあれば「$VITAL_LABEL_TACHYCARDIA」、下にあれば「$VITAL_LABEL_BRADYCARDIA」の目安となります。
-    """.trimIndent()
+        if (results.isEmpty()) return listOf(VITAL_LABEL_NORMAL to AlertLevel.NORMAL)
+        return results.distinctBy { it.first }
+    }
 
-    val TEMP_EXPLANATION = """
-        体温グラフの見方：
-        ・線が薄い緑色の範囲（$TEMP_LOW〜$TEMP_HIGH）にあれば平熱の目安です。
-        
-        ※ 37.5℃以上は「$VITAL_LABEL_FEVER」、35.5℃未満は「$VITAL_LABEL_HYPOTHERMIA」の目安となります。
-    """.trimIndent()
+    /**
+     * 血糖値の判定
+     */
+    fun evaluateGlucose(glucose: Int?): Pair<String, AlertLevel> {
+        val g = glucose ?: return "---" to AlertLevel.NORMAL
+        return when {
+            g < GLUCOSE_NORMAL_LOW -> GLUCOSE_LABEL_LOW to AlertLevel.ALERT
+            g <= GLUCOSE_NORMAL_HIGH -> GLUCOSE_LABEL_NORMAL to AlertLevel.NORMAL
+            else -> GLUCOSE_LABEL_HIGH to AlertLevel.ALERT
+        }
+    }
 
-    val GLUCOSE_EXPLANATION = """
-        血糖値グラフの見方：
-        ・$GLUCOSE_LABEL_NORMAL：${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()} mg/dL
-        
-        ※ 範囲より上にあれば「$GLUCOSE_LABEL_HIGH」、下にあれば「$GLUCOSE_LABEL_LOW」の目安となります。
-    """.trimIndent()
+    /**
+     * HbA1cの判定
+     */
+    fun evaluateHbA1c(hba1c: Double?): Pair<String, AlertLevel> {
+        val h = hba1c ?: return "---" to AlertLevel.NORMAL
+        return when {
+            h >= HBA1C_DIABETES -> HBA1C_LABEL_DIABETES to AlertLevel.ALERT
+            h >= HBA1C_PREDIABETES -> HBA1C_LABEL_PREDIABETES to AlertLevel.ALERT
+            h > HBA1C_GOOD -> HBA1C_LABEL_NORMAL_HIGH to AlertLevel.WARNING
+            else -> HBA1C_LABEL_NORMAL to AlertLevel.NORMAL
+        }
+    }
 
-    val HBA1C_EXPLANATION = """
-        HbA1cグラフの見方：
-        ・$HBA1C_LABEL_NORMAL：$HBA1C_GOOD％以下
-        ・$HBA1C_LABEL_NORMAL_HIGH：$HBA1C_GOOD％超〜$HBA1C_PREDIABETES％未満
-        ・$HBA1C_LABEL_PREDIABETES：$HBA1C_PREDIABETES％以上〜$HBA1C_DIABETES％未満
-        ・$HBA1C_LABEL_DIABETES：$HBA1C_DIABETES％以上
-    """.trimIndent()
-
-    val BMI_EXPLANATION = """
-        BMIグラフの見方：
-        ・薄い緑色（${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満）：$BMI_LABEL_NORMAL
-        ・薄い青色（${BMI_NORMAL_LOW}未満）：$BMI_LABEL_UNDERWEIGHT（低栄養への注意）
-        ・薄い赤色（${BMI_OBESITY_2}以上）：高度な肥満（３度以上）
-        
-        【判定基準（WHO）】
-        ・${BMI_NORMAL_LOW}未満：$BMI_LABEL_UNDERWEIGHT
-        ・${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満：$BMI_LABEL_NORMAL
-        ・${BMI_NORMAL_HIGH}〜${BMI_OBESITY_1}未満：$BMI_LABEL_OBESITY_1
-        ・${BMI_OBESITY_1}〜${BMI_OBESITY_2}未満：$BMI_LABEL_OBESITY_2
-        ・${BMI_OBESITY_2}〜${BMI_OBESITY_3}未満：$BMI_LABEL_OBESITY_3
-        ・${BMI_OBESITY_3}以上：$BMI_LABEL_OBESITY_4
-    """.trimIndent()
+    // --- 説明文（グラフ補助用） ---
+    val BP_EXPLANATION = "血圧グラフの見方：\n・${BP_LOW_SYSTOLIC.toInt()}〜${BP_HIGH_SYSTOLIC.toInt()}（上）、${BP_LOW_DIASTOLIC.toInt()}〜${BP_HIGH_DIASTOLIC.toInt()}（下）が正常範囲です。"
+    val PULSE_EXPLANATION = "脈拍グラフの見方：\n・${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()} が正常範囲です。"
+    val TEMP_EXPLANATION = "体温グラフの見方：\n・$TEMP_LOW〜$TEMP_HIGH が平熱の目安です。"
+    val GLUCOSE_EXPLANATION = "血糖値グラフの見方：\n・${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()} mg/dL が良好な範囲です。"
+    val HBA1C_EXPLANATION = "HbA1cグラフの見方：\n・$HBA1C_GOOD％以下が正常範囲です。"
+    val BMI_EXPLANATION = "BMIグラフの見方：\n・${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満が普通体重です。"
 }
