@@ -304,8 +304,9 @@ fun CareMemoApp(activity: FragmentActivity) {
                     val encodedUri = Uri.encode(uri.toString())
                     navController.navigate("photoPreview/$encodedUri/$pId/$cId")
                 },
-                onNavigateToFullScreen = { fileName ->
-                    navController.navigate("photoFull/$fileName")
+                onNavigateToFullScreen = { fileName, caption ->
+                    val encodedCaption = caption?.let { java.net.URLEncoder.encode(it, "UTF-8") } ?: ""
+                    navController.navigate("photoFull/$fileName?caption=$encodedCaption")
                 }
             )
         }
@@ -379,12 +380,21 @@ fun CareMemoApp(activity: FragmentActivity) {
             )
         }
         composable(
-            route = "photoFull/{fileName}",
-            arguments = listOf(navArgument("fileName") { type = NavType.StringType })
+            route = "photoFull/{fileName}?caption={caption}",
+            arguments = listOf(
+                navArgument("fileName") { type = NavType.StringType },
+                navArgument("caption") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
+            val caption = backStackEntry.arguments?.getString("caption")
             ConditionPhotoFullScreen(
                 fileName = fileName,
+                caption = caption,
                 onBack = { navController.popBackStack() }
             )
         }

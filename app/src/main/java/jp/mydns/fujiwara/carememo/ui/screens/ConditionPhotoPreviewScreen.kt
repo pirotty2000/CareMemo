@@ -10,9 +10,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,15 +26,25 @@ fun ConditionPhotoPreviewScreen(
 ) {
     val context = LocalContext.current
     val isProcessing by viewModel.isProcessing.collectAsState()
+    val currentPerson by viewModel.currentPerson.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
     // キャプションの初期値を現在の日時に設定
     var caption by remember { 
-        mutableStateOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"))) 
+        mutableStateOf(DateTimeUtils.getCurrentPhotoCaption())
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("写真の確認") })
+            TopAppBar(
+                title = {
+                    PersonHeaderTitle(
+                        person = currentPerson,
+                        isNameMaskingEnabled = isNameMaskingEnabled,
+                        defaultTitle = "写真の確認"
+                    )
+                }
+            )
         }
     ) { paddingValues ->
         Column(

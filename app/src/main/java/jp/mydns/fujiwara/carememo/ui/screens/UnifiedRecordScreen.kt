@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
@@ -101,26 +102,17 @@ fun UnifiedRecordScreen(
         if (index >= 0) categoryListState.animateScrollToItem(index)
     }
 
-    val age = remember(currentPerson) {
-        currentPerson?.birthday?.let { birthdayInstant ->
-            val birthDate = birthdayInstant.atZone(ZoneId.systemDefault()).toLocalDate()
-            val now = LocalDate.now()
-            java.time.Period.between(birthDate, now).years
-        }
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 TopAppBar(
                     title = {
-                        currentPerson?.let { person ->
-                            Column {
-                                Text(text = person.getMaskedFurigana(isNameMaskingEnabled), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                                Text(text = buildString { append(person.getMaskedName(isNameMaskingEnabled)); append(" さん"); if (age != null) append(" (${age}歳)"); if (person.note.isNotBlank()) append(" [${person.note}]") }, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                            }
-                        } ?: Text("利用者記録", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        PersonHeaderTitle(
+                            person = currentPerson,
+                            isNameMaskingEnabled = isNameMaskingEnabled,
+                            defaultTitle = "利用者記録"
+                        )
                     },
                     navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") } },
                     actions = { IconButton(onClick = { if (records.isEmpty()) { scope.launch { snackbarHostState.showSnackbar("${currentCategory.displayName}の記録がないため出力できません") }; return@IconButton }; showPdfSettingsDialog = true }) { Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力") } }

@@ -198,7 +198,7 @@ object PdfExporter {
     private fun drawHeader(canvas: Canvas, person: Person, isNameMaskingEnabled: Boolean, category: Category, pageNumber: Int): Float {
         val paint = Paint().apply { color = Color.BLACK; textSize = 18f; isFakeBoldText = true }
         val name = person.getMaskedName(isNameMaskingEnabled)
-        val date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"))
+        val date = DateTimeUtils.getCurrentPhotoCaption()
         canvas.drawText("利用者記録報告書 (${category.displayName})", MARGIN, 50f, paint)
         paint.textSize = 12f; paint.isFakeBoldText = false
         canvas.drawText("利用者名: $name 様", MARGIN, 80f, paint)

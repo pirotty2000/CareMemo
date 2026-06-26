@@ -21,6 +21,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
+import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputState
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
+import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import java.time.Instant
@@ -37,16 +40,14 @@ fun HealthRecordDetailScreen(
     onBack: () -> Unit
 ) {
     val records by viewModel.records.collectAsState()
+    val currentPerson by viewModel.currentPerson.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
     // 編集モードの状態
     var isEditing by remember { mutableStateOf(recordId == 0) }
 
-    // 共通の日時状態
-    var year by remember { mutableStateOf("") }
-    var month by remember { mutableStateOf("") }
-    var day by remember { mutableStateOf("") }
-    var hour by remember { mutableStateOf("") }
-    var minute by remember { mutableStateOf("") }
+    // 日時ステート管理
+    val dateTimeState = rememberDateTimeInputState()
 
     // カテゴリー固有の状態
     var heightText by remember { mutableStateOf("") }
@@ -76,12 +77,7 @@ fun HealthRecordDetailScreen(
                 is GlucoseAndHbA1c -> record.recordTime
                 else -> Instant.now()
             }
-            val zdt = recordTime.atZone(ZoneId.systemDefault())
-            year = zdt.year.toString()
-            month = zdt.monthValue.toString()
-            day = zdt.dayOfMonth.toString()
-            hour = "%02d".format(zdt.hour)
-            minute = "%02d".format(zdt.minute)
+            dateTimeState.setFromInstant(recordTime)
 
             when (record) {
                 is HeightAndWeight -> {
@@ -99,13 +95,8 @@ fun HealthRecordDetailScreen(
                     hba1cText = record.hba1c?.toString() ?: ""
                 }
             }
-        } else if (recordId == 0 && year.isEmpty()) {
-            val now = LocalDateTime.now()
-            year = now.year.toString()
-            month = now.monthValue.toString()
-            day = now.dayOfMonth.toString()
-            hour = "%02d".format(now.hour)
-            minute = "%02d".format(now.minute)
+        } else if (recordId == 0 && dateTimeState.year.value.isEmpty()) {
+            dateTimeState.setFromInstant(Instant.now())
             
             if (category == Category.HEIGHT_AND_WEIGHT) {
                 val latestHeight = records.filterIsInstance<HeightAndWeight>()
@@ -133,10 +124,6 @@ fun HealthRecordDetailScreen(
         viewModel.loadRecords(personId, category)
     }
 
-    val monthFocusRequester = remember { FocusRequester() }
-    val dayFocusRequester = remember { FocusRequester() }
-    val hourFocusRequester = remember { FocusRequester() }
-    val minuteFocusRequester = remember { FocusRequester() }
     val firstFieldFocusRequester = remember { FocusRequester() }
     val secondFieldFocusRequester = remember { FocusRequester() }
     val thirdFieldFocusRequester = remember { FocusRequester() }
@@ -145,7 +132,13 @@ fun HealthRecordDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (recordId == 0) "新規記録" else if (isEditing) "記録の編集" else "${category.displayName}詳細") },
+                title = {
+                    PersonHeaderTitle(
+                        person = currentPerson,
+                        isNameMaskingEnabled = isNameMaskingEnabled,
+                        defaultTitle = "${category.displayName}記録"
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { if (isEditing && recordId != 0) isEditing = false else onBack() }) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
@@ -179,11 +172,7 @@ fun HealthRecordDetailScreen(
             if (isEditing) {
                 HealthRecordEditForm(
                     category = category,
-                    year = year, onYearChange = { year = it },
-                    month = month, onMonthChange = { month = it },
-                    day = day, onDayChange = { day = it },
-                    hour = hour, onHourChange = { hour = it },
-                    minute = minute, onMinuteChange = { minute = it },
+                    dateTimeState = dateTimeState,
                     heightText = heightText, onHeightChange = { heightText = it },
                     weightText = weightText, onWeightChange = { weightText = it },
                     bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
@@ -192,24 +181,13 @@ fun HealthRecordDetailScreen(
                     bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
                     glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
                     hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
-                    monthFocusRequester = monthFocusRequester,
-                    dayFocusRequester = dayFocusRequester,
-                    hourFocusRequester = hourFocusRequester,
-                    minuteFocusRequester = minuteFocusRequester,
                     firstFieldFocusRequester = firstFieldFocusRequester,
                     secondFieldFocusRequester = secondFieldFocusRequester,
                     thirdFieldFocusRequester = thirdFieldFocusRequester,
                     fourthFieldFocusRequester = fourthFieldFocusRequester,
                     onCancel = { if (recordId == 0) onBack() else isEditing = false },
                     onSave = {
-                        val recordTime = try {
-                            LocalDateTime.of(
-                                year.toInt(), month.toInt(), day.toInt(),
-                                hour.toInt(), minute.toInt()
-                            ).atZone(ZoneId.systemDefault()).toInstant()
-                        } catch (_: Exception) {
-                            Instant.now()
-                        }
+                        val recordTime = dateTimeState.toInstant() ?: Instant.now()
 
                         val newRecord: Any = when (category) {
                             Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
@@ -231,11 +209,7 @@ fun HealthRecordDetailScreen(
 @Composable
 fun HealthRecordEditForm(
     category: Category,
-    year: String, onYearChange: (String) -> Unit,
-    month: String, onMonthChange: (String) -> Unit,
-    day: String, onDayChange: (String) -> Unit,
-    hour: String, onHourChange: (String) -> Unit,
-    minute: String, onMinuteChange: (String) -> Unit,
+    dateTimeState: DateTimeInputState,
     heightText: String, onHeightChange: (String) -> Unit,
     weightText: String, onWeightChange: (String) -> Unit,
     bpSystolicText: String, onBpSystolicChange: (String) -> Unit,
@@ -244,10 +218,6 @@ fun HealthRecordEditForm(
     bodyTemperatureText: String, onBodyTemperatureChange: (String) -> Unit,
     glucoseText: String, onGlucoseChange: (String) -> Unit,
     hba1cText: String, onHba1cChange: (String) -> Unit,
-    monthFocusRequester: FocusRequester,
-    dayFocusRequester: FocusRequester,
-    hourFocusRequester: FocusRequester,
-    minuteFocusRequester: FocusRequester,
     firstFieldFocusRequester: FocusRequester,
     secondFieldFocusRequester: FocusRequester,
     thirdFieldFocusRequester: FocusRequester,
@@ -262,17 +232,7 @@ fun HealthRecordEditForm(
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            DateTimeInputFields(
-                year = year, onYearChange = onYearChange,
-                month = month, onMonthChange = onMonthChange,
-                day = day, onDayChange = onDayChange,
-                hour = hour, onHourChange = onHourChange,
-                minute = minute, onMinuteChange = onMinuteChange,
-                monthFocusRequester = monthFocusRequester,
-                dayFocusRequester = dayFocusRequester,
-                hourFocusRequester = hourFocusRequester,
-                minuteFocusRequester = minuteFocusRequester
-            )
+            DateTimeInputFields(state = dateTimeState)
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
