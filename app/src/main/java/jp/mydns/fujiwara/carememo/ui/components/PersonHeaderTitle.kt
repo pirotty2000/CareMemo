@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
@@ -16,7 +15,7 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 fun PersonHeaderTitle(
     person: Person?,
     isNameMaskingEnabled: Boolean,
-    defaultTitle: String
+    defaultTitle: String,
 ) {
     person?.let { p ->
         val age = DateTimeUtils.calculateAge(p.birthday)

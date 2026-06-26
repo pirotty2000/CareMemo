@@ -4,25 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -34,7 +29,6 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
-import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatMedicationDialogTitle
@@ -43,12 +37,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.YearMonth
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -410,7 +400,7 @@ fun MedicationInputDialog(
                             } else {
                                 // 新規または変更
                                 syncCurrentTimeFieldsToTemp()
-                                val instant = if (current != null) current.recordTime else Instant.now()
+                                val instant = current?.recordTime ?: Instant.now()
                                 tempRecords = tempRecords.toMutableMap().apply {
                                     put(slot, MedicationRecord(
                                         id = current?.id ?: 0,

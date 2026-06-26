@@ -22,7 +22,7 @@ fun ConditionPhotoPreviewScreen(
     personId: Int,
     conditionId: Int,
     onBack: () -> Unit,
-    onSaved: () -> Unit
+    onSaved: () -> Unit,
 ) {
     val context = LocalContext.current
     val isProcessing by viewModel.isProcessing.collectAsState()
@@ -55,7 +55,7 @@ fun ConditionPhotoPreviewScreen(
             AsyncImage(
                 model = coil.request.ImageRequest.Builder(context)
                     .data(uri)
-                    .crossfade(true)
+                    .crossfade(enable = true)
                     .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
                     .diskCachePolicy(coil.request.CachePolicy.DISABLED)
                     .build(),

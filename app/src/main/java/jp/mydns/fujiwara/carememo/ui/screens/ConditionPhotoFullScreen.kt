@@ -19,7 +19,7 @@ import jp.mydns.fujiwara.carememo.utils.ImageUtils
 fun ConditionPhotoFullScreen(
     fileName: String,
     caption: String? = null,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val photoFile = ImageUtils.getPhotoFile(context, fileName)

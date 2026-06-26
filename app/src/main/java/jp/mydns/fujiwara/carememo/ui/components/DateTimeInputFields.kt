@@ -32,7 +32,7 @@ class DateTimeInputState(
     val monthFocusRequester: FocusRequester = FocusRequester(),
     val dayFocusRequester: FocusRequester = FocusRequester(),
     val hourFocusRequester: FocusRequester = FocusRequester(),
-    val minuteFocusRequester: FocusRequester = FocusRequester()
+    val minuteFocusRequester: FocusRequester = FocusRequester(),
 ) {
     /**
      * 入力値から Instant を生成する。不正な入力の場合は null を返す。
@@ -44,7 +44,7 @@ class DateTimeInputState(
                 hour.value.toInt(), minute.value.toInt(), 0, 0,
                 ZoneId.systemDefault()
             ).toInstant()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -171,7 +171,9 @@ fun DateTimeInputFields(
                 label = "分",
                 modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
                 imeAction = ImeAction.Done,
-                onDone = { focusManager.clearFocus() }
+                onDone = {
+                    focusManager.clearFocus()
+                }
             )
         }
     }

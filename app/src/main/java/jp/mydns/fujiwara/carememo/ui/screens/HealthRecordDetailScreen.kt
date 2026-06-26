@@ -27,8 +27,6 @@ import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import java.time.Instant
-import java.time.ZoneId
-import java.time.LocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +35,7 @@ fun HealthRecordDetailScreen(
     personId: Int,
     category: Category,
     recordId: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val records by viewModel.records.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
@@ -61,9 +59,9 @@ fun HealthRecordDetailScreen(
 
     val record = remember(records, recordId) {
         when (category) {
-            Category.HEIGHT_AND_WEIGHT -> records.filterIsInstance<HeightAndWeight>().find { it.id == recordId }
-            Category.BP_AND_PULSE -> records.filterIsInstance<BpAndPulse>().find { it.id == recordId }
-            Category.GLUCOSE_AND_HBA1C -> records.filterIsInstance<GlucoseAndHbA1c>().find { it.id == recordId }
+            Category.HEIGHT_AND_WEIGHT -> records.asSequence().filterIsInstance<HeightAndWeight>().find { it.id == recordId }
+            Category.BP_AND_PULSE -> records.asSequence().filterIsInstance<BpAndPulse>().find { it.id == recordId }
+            Category.GLUCOSE_AND_HBA1C -> records.asSequence().filterIsInstance<GlucoseAndHbA1c>().find { it.id == recordId }
             Category.CONDITION_AT_VISIT, Category.MEDICATION -> null
         }
     }
@@ -95,7 +93,7 @@ fun HealthRecordDetailScreen(
                     hba1cText = record.hba1c?.toString() ?: ""
                 }
             }
-        } else if (recordId == 0 && dateTimeState.year.value.isEmpty()) {
+        } else if ((recordId == 0) && dateTimeState.year.value.isEmpty()) {
             dateTimeState.setFromInstant(Instant.now())
             
             if (category == Category.HEIGHT_AND_WEIGHT) {
@@ -341,20 +339,22 @@ fun HealthRecordDisplayCard(record: Any) {
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = formatRecordTime(when (record) {
-                    is HeightAndWeight -> record.recordTime
-                    is BpAndPulse -> record.recordTime
-                    is GlucoseAndHbA1c -> record.recordTime
-                    else -> Instant.now()
-                }),
+                text = formatRecordTime(
+                    when (record) {
+                        is HeightAndWeight -> record.recordTime
+                        is BpAndPulse -> record.recordTime
+                        is GlucoseAndHbA1c -> record.recordTime
+                        else -> Instant.now()
+                    }
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
 
             when (record) {
                 is HeightAndWeight -> {
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_HEIGHT, value = record.height?.let { "${it} cm" } ?: "---")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_WEIGHT, value = record.weight?.let { "${it} kg" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_HEIGHT, value = record.height?.let { "$it cm" } ?: "---")
+                    DetailItem(label = HealthThresholds.HEALTH_LABEL_WEIGHT, value = record.weight?.let { "$it kg" } ?: "---")
                     val bmi = record.calculateBMI()
                     if (bmi > 0) {
                         val (label, _) = record.getBmiResult()

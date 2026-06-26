@@ -41,7 +41,6 @@ import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -55,12 +54,12 @@ fun UnifiedRecordScreen(
     onNavigateToConditionDetail: (Int, Int) -> Unit,
     onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit,
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
-    onNavigateToMedication: (Int) -> Unit
+    onNavigateToMedication: (Int) -> Unit,
 ) {
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     
     // ユーザーの表示モード設定（初期値は履歴: true）
-    var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
+    var preferredShowHistory by rememberSaveable { mutableStateOf(value = true) }
     
     // 実際の表示判定：カテゴリがグラフを持たない場合は強制的に履歴。そうでなければユーザーの好みに従う
     val isEffectivelyShowingHistory = preferredShowHistory || !currentCategory.hasGraph
@@ -76,9 +75,9 @@ fun UnifiedRecordScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var showPdfSettingsDialog by remember { mutableStateOf(false) }
-    var dialogTitle by remember { mutableStateOf<String?>(null) }
-    var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var showPdfSettingsDialog by remember { mutableStateOf(value = false) }
+    var dialogTitle by remember { mutableStateOf<String?>(value = null) }
+    var dialogMessage by remember { mutableStateOf<String?>(value = null) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
@@ -170,7 +169,21 @@ fun UnifiedRecordScreen(
         }
     }
     if (dialogMessage != null) { AlertDialog(onDismissRequest = { dialogMessage = null; dialogTitle = null }, title = { dialogTitle?.let { Text(it) } }, text = { Text(dialogMessage!!) }, confirmButton = { TextButton(onClick = { dialogMessage = null; dialogTitle = null }) { Text("閉じる") } }) }
-    if (showPdfSettingsDialog) { PdfSettingsDialog(category = currentCategory, onDismiss = { showPdfSettingsDialog = false }, onExport = { r, o, start, end, photos -> showPdfSettingsDialog = false; scope.launch { val allPhotos = if (currentCategory.hasOption && photos) viewModel.getAllPhotosForPerson(personId) else emptyList(); currentPerson?.let { person -> val success = PdfExporter.exportAndShare(context, person, isNameMaskingEnabled, currentCategory, records, allPhotos, r, o, start, end); if (!success) snackbarHostState.showSnackbar("指定された期間のデータがありません") } } }) }
+    if (showPdfSettingsDialog) {
+        PdfSettingsDialog(
+            category = currentCategory,
+            onDismiss = { showPdfSettingsDialog = false }
+        ) { r, o, start, end, photos ->
+            showPdfSettingsDialog = false
+            scope.launch {
+                val allPhotos = if (currentCategory.hasOption && photos) viewModel.getAllPhotosForPerson(personId) else emptyList()
+                currentPerson?.let { person ->
+                    val success = PdfExporter.exportAndShare(context, person, isNameMaskingEnabled, currentCategory, records, allPhotos, r, o, start, end)
+                    if (!success) snackbarHostState.showSnackbar("指定された期間のデータがありません")
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -181,7 +194,7 @@ fun UnifiedHistoryList(
     conditionPhotoMap: Map<Int, Boolean>,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
-    isAnyDialogOpen: Boolean
+    isAnyDialogOpen: Boolean,
 ) {
     val groupedRecords = remember(records) { records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }.mapValues { entry -> entry.value.sortedBy { it.recordTime } }.toSortedMap(compareByDescending { it }) }
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
@@ -198,7 +211,7 @@ fun UnifiedHistoryList(
             items(items.size) { index ->
                 val record = items[index]
                 HistoryItemWrapper(record = record, showTime = !isSingle, onItemClick = { onItemClick(record) }, onDeleteSwipe = { onDeleteSwipe(record) }, isAnyDialogOpen = isAnyDialogOpen) {
-                    val hasOptionData = category.hasOption && conditionPhotoMap[record.id] == true
+                    val hasOptionData = (category.hasOption && conditionPhotoMap[record.id] == true)
                     HistoryItemBody(category, record, hasOptionData)
                 }
                 HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
@@ -215,11 +228,15 @@ fun HistoryItemWrapper(
     onItemClick: () -> Unit,
     onDeleteSwipe: () -> Unit,
     isAnyDialogOpen: Boolean,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
     LaunchedEffect(dismissState.currentValue) { if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) onDeleteSwipe() }
-    LaunchedEffect(isAnyDialogOpen) { if (!isAnyDialogOpen && dismissState.currentValue != SwipeToDismissBoxValue.Settled) dismissState.snapTo(SwipeToDismissBoxValue.Settled) }
+    LaunchedEffect(isAnyDialogOpen) {
+        if (!isAnyDialogOpen && (dismissState.currentValue != SwipeToDismissBoxValue.Settled)) {
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        }
+    }
     SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
         Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onItemClick).padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -233,10 +250,10 @@ fun HistoryItemWrapper(
 @Composable
 fun HistoryItemBody(category: Category, record: HistoryRecord, hasOption: Boolean) {
     when (category) {
-        Category.BP_AND_PULSE -> if (record is BpAndPulse) VitalRecordItemContent(record)
-        Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) GlucoseRecordItemContent(record)
-        Category.HEIGHT_AND_WEIGHT -> if (record is HeightAndWeight) HeightWeightRecordItemContent(record)
-        Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) ConditionMemoContent(record, hasOption)
+        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalRecordItemContent(it) }
+        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseRecordItemContent(it) }
+        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightRecordItemContent(it) }
+        Category.CONDITION_AT_VISIT -> (record as? ConditionAtVisit)?.let { ConditionMemoContent(it, hasOption) }
         Category.MEDICATION -> { /* 統合画面では表示しない */ }
     }
 }
@@ -314,11 +331,151 @@ enum class ExportOrder(val displayName: String) { NEWEST_FIRST("新しい順"), 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PdfSettingsDialog(category: Category, onDismiss: () -> Unit, onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean) -> Unit) {
-    var selectedRange by remember { mutableStateOf(ExportRange.ALL) }; var selectedOrder by remember { mutableStateOf(ExportOrder.NEWEST_FIRST) }; var includePhotos by remember { mutableStateOf(true) }; var startDate by remember { mutableStateOf<Long?>(null) }; var endDate by remember { mutableStateOf<Long?>(null) }; var showStartDatePicker by remember { mutableStateOf(false) }; var showEndDatePicker by remember { mutableStateOf(false) }
-    if (showStartDatePicker) { val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDate ?: endDate ?: System.currentTimeMillis()); DatePickerDialog(onDismissRequest = { showStartDatePicker = false }, confirmButton = { TextButton(onClick = { startDate = datePickerState.selectedDateMillis; showStartDatePicker = false }) { Text("決定") } }) { DatePicker(state = datePickerState) } }
-    if (showEndDatePicker) { val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endDate ?: startDate ?: System.currentTimeMillis()); DatePickerDialog(onDismissRequest = { showEndDatePicker = false }, confirmButton = { TextButton(onClick = { endDate = datePickerState.selectedDateMillis; showEndDatePicker = false }) { Text("決定") } }) { DatePicker(state = datePickerState) } }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("PDF出力設定 (${category.displayName})") }, text = { Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("抽出範囲", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); ExportRange.entries.forEach { range -> Row(Modifier.fillMaxWidth().selectable(selected = (range == selectedRange), onClick = { selectedRange = range }).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = (range == selectedRange), onClick = { selectedRange = range }); Text(text = range.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp)) } }; if (selectedRange == ExportRange.CUSTOM) { Row(modifier = Modifier.fillMaxWidth().padding(start = 32.dp, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { OutlinedButton(onClick = { showStartDatePicker = true }, modifier = Modifier.weight(1f)) { Text(startDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "開始日") }; Text("〜"); OutlinedButton(onClick = { showEndDatePicker = true }, modifier = Modifier.weight(1f)) { Text(endDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "終了日") } } }; if (category.hasOption) { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)); Row(modifier = Modifier.fillMaxWidth().clickable { includePhotos = !includePhotos }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) { Text("写真を印刷に含める"); Switch(checked = includePhotos, onCheckedChange = { includePhotos = it }) } }; HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)); Text("並び順", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); ExportOrder.entries.forEach { order -> Row(Modifier.fillMaxWidth().selectable(selected = (order == selectedOrder), onClick = { selectedOrder = order }).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = (order == selectedOrder), onClick = { selectedOrder = order }); Text(text = order.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp)) } } } }, confirmButton = { Button(onClick = { onExport(selectedRange, selectedOrder, startDate?.let { Instant.ofEpochMilli(it) }, endDate?.let { Instant.ofEpochMilli(it) }, includePhotos) }, enabled = if (selectedRange == ExportRange.CUSTOM) startDate != null || endDate != null else true) { Text("PDFを作成") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("キャンセル") } })
+fun PdfSettingsDialog(
+    category: Category,
+    onDismiss: () -> Unit,
+    onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean) -> Unit,
+) {
+    var selectedRange by remember { mutableStateOf(ExportRange.ALL) }
+    var selectedOrder by remember { mutableStateOf(ExportOrder.NEWEST_FIRST) }
+    var includePhotos by remember { mutableStateOf(value = true) }
+    var startDate by remember { mutableStateOf<Long?>(null) }
+    var endDate by remember { mutableStateOf<Long?>(null) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+
+    if (showStartDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDate ?: endDate ?: System.currentTimeMillis())
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        startDate = datePickerState.selectedDateMillis
+                        showStartDatePicker = false
+                    }
+                ) {
+                    Text("決定")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+    if (showEndDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endDate ?: startDate ?: System.currentTimeMillis())
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        endDate = datePickerState.selectedDateMillis
+                        showEndDatePicker = false
+                    }
+                ) {
+                    Text("決定")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("PDF出力設定 (${category.displayName})") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("抽出範囲", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                ExportRange.entries.forEach { range ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (range == selectedRange),
+                                onClick = {
+                                    selectedRange = range
+                                },
+                            )
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = (range == selectedRange), onClick = { selectedRange = range })
+                        Text(text = range.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                if (selectedRange == ExportRange.CUSTOM) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 32.dp, top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(onClick = { showStartDatePicker = true }, modifier = Modifier.weight(1f)) {
+                            Text(startDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "開始日")
+                        }
+                        Text("〜")
+                        OutlinedButton(onClick = { showEndDatePicker = true }, modifier = Modifier.weight(1f)) {
+                            Text(endDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "終了日")
+                        }
+                    }
+                }
+                if (category.hasOption) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { includePhotos = !includePhotos }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("写真を印刷に含める")
+                        Switch(checked = includePhotos, onCheckedChange = { includePhotos = it })
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("並び順", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                ExportOrder.entries.forEach { order ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (order == selectedOrder),
+                                onClick = {
+                                    selectedOrder = order
+                                },
+                            )
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = (order == selectedOrder), onClick = { selectedOrder = order })
+                        Text(text = order.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onExport(selectedRange, selectedOrder, startDate?.let { Instant.ofEpochMilli(it) }, endDate?.let { Instant.ofEpochMilli(it) }, includePhotos)
+                },
+                enabled = if (selectedRange == ExportRange.CUSTOM) (startDate != null || endDate != null) else true
+            ) {
+                Text("PDFを作成")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("キャンセル")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true)

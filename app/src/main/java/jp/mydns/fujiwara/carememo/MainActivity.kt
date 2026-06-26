@@ -62,7 +62,7 @@ class MainActivity : FragmentActivity() {
             val taskDescription = ActivityManager.TaskDescription(
                 getString(R.string.app_name),
                 R.mipmap.ic_launcher,
-                0xFF6650A4.toInt()
+                0xFF6650A4.toInt(),
             )
             setTaskDescription(taskDescription)
         }
@@ -106,7 +106,7 @@ fun CareMemoApp(activity: FragmentActivity) {
                 }
                 Lifecycle.Event.ON_START -> {
                     // フォアグラウンドに戻った際にタイムアウト判定
-                    if (isBiometricEnabled == true && isAuthenticated) {
+                    if ((isBiometricEnabled == true) && isAuthenticated) {
                         if (lockTimeoutMinutes != -1) { // -1 は「ロックしない」
                             val elapsedMillis = System.currentTimeMillis() - lastActiveTime
                             val timeoutMillis = lockTimeoutMinutes * 60 * 1000L
@@ -127,9 +127,11 @@ fun CareMemoApp(activity: FragmentActivity) {
     }
 
     LaunchedEffect(isBiometricEnabled, isAuthenticated) {
-        if (isBiometricEnabled == true && !isAuthenticated) {
+        if ((isBiometricEnabled == true) && !isAuthenticated) {
             val executor = ContextCompat.getMainExecutor(activity)
-            val biometricPrompt = BiometricPrompt(activity, executor,
+            val biometricPrompt = BiometricPrompt(
+                activity,
+                executor,
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         super.onAuthenticationSucceeded(result)
@@ -305,7 +307,7 @@ fun CareMemoApp(activity: FragmentActivity) {
                     navController.navigate("photoPreview/$encodedUri/$pId/$cId")
                 },
                 onNavigateToFullScreen = { fileName, caption ->
-                    val encodedCaption = caption?.let { java.net.URLEncoder.encode(it, "UTF-8") } ?: ""
+                    val encodedCaption = caption?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
                     navController.navigate("photoFull/$fileName?caption=$encodedCaption")
                 }
             )

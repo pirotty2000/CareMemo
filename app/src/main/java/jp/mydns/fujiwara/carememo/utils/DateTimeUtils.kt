@@ -48,7 +48,7 @@ object DateTimeUtils {
             localDate.dayOfMonth,
             dayOfWeek,
             localDateTime.hour,
-            localDateTime.minute
+            localDateTime.minute,
         )
     }
 

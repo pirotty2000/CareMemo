@@ -23,7 +23,6 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
@@ -49,7 +48,7 @@ object PdfExporter {
         range: ExportRange = ExportRange.ALL,
         order: ExportOrder = ExportOrder.NEWEST_FIRST,
         customStartDate: Instant? = null,
-        customEndDate: Instant? = null
+        customEndDate: Instant? = null,
     ): Boolean {
         // 新しく作る前に古いキャッシュを掃除（常に1世代しか残らないようにする）
         clearOldExports(context)
@@ -73,12 +72,12 @@ object PdfExporter {
 
         when (category) {
             Category.HEIGHT_AND_WEIGHT -> {
-                val castedRecords = filteredRecords.filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }
+                val castedRecords = filteredRecords.asSequence().filterIsInstance<HeightAndWeight>().sortedBy { it.recordTime }.toList()
                 if (castedRecords.isNotEmpty()) {
                     // グラフ描画
                     repeat(HealthChartHelper.getGraphCount(category)) { index ->
                         val config = HealthChartHelper.getChartConfig(category, index, filteredRecords)
-                        if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
+                        if ((config != null) && config.dataList.any { it.points.isNotEmpty() }) {
                             currentY = drawSingleGraphFromConfig(canvas, config, currentY, SINGLE_GRAPH_HEIGHT, globalMinX, globalMaxX)
                             currentY += 25f
                         }
@@ -86,18 +85,18 @@ object PdfExporter {
                     currentY += 15f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
-                drawHeightAndWeightTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
+                drawHeightAndWeightTable(document, currentPage, displayRecords, currentY) { newCanvas, newPageNum ->
                     pageNumber = newPageNum
                     drawHeader(newCanvas, person, isNameMaskingEnabled, category, pageNumber)
-                })
+                }
             }
             Category.BP_AND_PULSE -> {
-                val castedRecords = filteredRecords.filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }
+                val castedRecords = filteredRecords.asSequence().filterIsInstance<BpAndPulse>().sortedBy { it.recordTime }.toList()
                 if (castedRecords.isNotEmpty()) {
                     // グラフ描画
                     repeat(HealthChartHelper.getGraphCount(category)) { index ->
                         val config = HealthChartHelper.getChartConfig(category, index, filteredRecords)
-                        if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
+                        if ((config != null) && config.dataList.any { it.points.isNotEmpty() }) {
                             val graphHeight = if (index == 0) 180f else 120f
                             currentY = drawSingleGraphFromConfig(canvas, config, currentY, graphHeight, globalMinX, globalMaxX)
                             currentY += 25f
@@ -106,18 +105,18 @@ object PdfExporter {
                     currentY += 15f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
-                drawBpAndPulseTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
+                drawBpAndPulseTable(document, currentPage, displayRecords, currentY) { newCanvas, newPageNum ->
                     pageNumber = newPageNum
                     drawHeader(newCanvas, person, isNameMaskingEnabled, category, pageNumber)
-                })
+                }
             }
             Category.GLUCOSE_AND_HBA1C -> {
-                val castedRecords = filteredRecords.filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }
+                val castedRecords = filteredRecords.asSequence().filterIsInstance<GlucoseAndHbA1c>().sortedBy { it.recordTime }.toList()
                 if (castedRecords.isNotEmpty()) {
                     // グラフ描画
                     repeat(HealthChartHelper.getGraphCount(category)) { index ->
                         val config = HealthChartHelper.getChartConfig(category, index, filteredRecords)
-                        if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
+                        if ((config != null) && config.dataList.any { it.points.isNotEmpty() }) {
                             currentY = drawSingleGraphFromConfig(canvas, config, currentY, SINGLE_GRAPH_HEIGHT, globalMinX, globalMaxX)
                             currentY += 25f
                         }
@@ -125,10 +124,10 @@ object PdfExporter {
                     currentY += 15f
                 }
                 val displayRecords = if (order == ExportOrder.NEWEST_FIRST) castedRecords.sortedByDescending { it.recordTime } else castedRecords
-                drawGlucoseAndHbA1cTable(document, currentPage, displayRecords, currentY, { newCanvas, newPageNum ->
+                drawGlucoseAndHbA1cTable(document, currentPage, displayRecords, currentY) { newCanvas, newPageNum ->
                     pageNumber = newPageNum
                     drawHeader(newCanvas, person, isNameMaskingEnabled, category, pageNumber)
-                })
+                }
             }
             Category.CONDITION_AT_VISIT -> {
                 val castedRecords = filteredRecords.filterIsInstance<ConditionAtVisit>()
@@ -138,10 +137,10 @@ object PdfExporter {
                     } else {
                         castedRecords.sortedBy { it.recordTime }
                     }
-                    drawConditionAtVisitContent(context, document, currentPage, sortedRecords, allPhotos, currentY, { newCanvas, newPageNum ->
+                    drawConditionAtVisitContent(context, document, currentPage, sortedRecords, allPhotos, currentY) { newCanvas, newPageNum ->
                         pageNumber = newPageNum
                         drawHeader(newCanvas, person, isNameMaskingEnabled, category, pageNumber)
-                    })
+                    }
                 } else {
                     document.finishPage(currentPage)
                 }
@@ -499,14 +498,16 @@ object PdfExporter {
                     if (prev?.weight != null) {
                         val df = cur - prev.weight
                         "%.1f (%s)".format(cur, if (df >= 0) "+%.1f".format(df) else "%.1f".format(df))
-                    } else "%.1f".format(cur)
+                    } else "$cur"
                 } else "---"
             },
             TableColumn<HeightAndWeight>(HealthThresholds.HEALTH_LABEL_BMI, 60f) { rec, _ ->
                 val bmi = rec.calculateBMI()
                 if (bmi > 0) "%.1f".format(bmi) else "---"
             },
-            TableColumn<HeightAndWeight>(HealthThresholds.HEALTH_LABEL_STATUS, 130f,
+            TableColumn<HeightAndWeight>(
+                header = HealthThresholds.HEALTH_LABEL_STATUS,
+                width = 130f,
                 getBackgroundColor = { rec -> rec.getBmiResult().second.pdfBgColor },
                 getValue = { rec, _ -> rec.getBmiResult().first }
             )

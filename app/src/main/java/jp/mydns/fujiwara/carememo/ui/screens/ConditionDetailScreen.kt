@@ -27,12 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.compose.ui.focus.FocusRequester
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
-import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
@@ -50,7 +48,7 @@ fun ConditionDetailScreen(
     conditionId: Int,
     onBack: () -> Unit,
     onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
-    onNavigateToFullScreen: (String, String?) -> Unit
+    onNavigateToFullScreen: (String, String?) -> Unit,
 ) {
     val context = LocalContext.current
     val records by viewModel.records.collectAsState()
@@ -71,17 +69,17 @@ fun ConditionDetailScreen(
     var author by remember { mutableStateOf("") }
 
     val memo = remember(records, conditionId) { 
-        records.filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
+        records.asSequence().filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
     }
 
     // 初期値セット
     LaunchedEffect(memo) {
-        if (memo != null && title.isEmpty() && condition.isEmpty()) {
+        if ((memo != null) && title.isEmpty() && condition.isEmpty()) {
             title = memo.title ?: ""
             condition = memo.condition ?: ""
             author = memo.author
             dateTimeState.setFromInstant(memo.recordTime)
-        } else if (conditionId == 0 && dateTimeState.year.value.isEmpty()) {
+        } else if ((conditionId == 0) && dateTimeState.year.value.isEmpty()) {
             // 新規作成時：現在の日時をセット
             dateTimeState.setFromInstant(Instant.now())
             
@@ -109,7 +107,7 @@ fun ConditionDetailScreen(
     var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
     
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
+        contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         if (success && tempPhotoUri != null) {
             onNavigateToPhotoPreview(tempPhotoUri!!, personId, conditionId)
@@ -157,7 +155,11 @@ fun ConditionDetailScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (isEditing && conditionId != 0) isEditing = false else onBack() }) {
+                    IconButton(
+                        onClick = {
+                            if (isEditing && conditionId != 0) isEditing = false else onBack()
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -379,7 +381,7 @@ fun PhotoGrid(
     photos: List<ConditionPhoto>,
     isEditable: Boolean,
     onPhotoClick: (ConditionPhoto) -> Unit,
-    onDeletePhoto: (ConditionPhoto) -> Unit
+    onDeletePhoto: (ConditionPhoto) -> Unit,
 ) {
     val context = LocalContext.current
     
