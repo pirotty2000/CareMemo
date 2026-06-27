@@ -215,6 +215,9 @@ interface ConditionPhotoDao {
     @Query("UPDATE condition_photo_db SET deleted_at = NULL WHERE person_id = :personId")
     suspend fun restoreByPersonId(personId: Int)
 
+    @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId AND deleted_at IS NULL")
+    fun getAllByPersonIdFlow(personId: Int): Flow<List<ConditionPhoto>>
+
     @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId")
     suspend fun getAllByPersonId(personId: Int): List<ConditionPhoto>
 
@@ -227,4 +230,44 @@ interface ConditionPhotoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<ConditionPhoto>)
+}
+
+@Dao
+interface MedicationRecordDao {
+    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL")
+    fun getByPersonId(personId: Int): Flow<List<MedicationRecord>>
+
+    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date = :dosageDate AND deleted_at IS NULL")
+    fun getByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>>
+
+    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date LIKE :month || '%' AND deleted_at IS NULL")
+    fun getByMonth(personId: Int, month: String): Flow<List<MedicationRecord>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(item: MedicationRecord)
+
+    @Query("UPDATE medication_record_db SET deleted_at = :timestamp WHERE person_id = :personId")
+    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+
+    @Query("UPDATE medication_record_db SET deleted_at = NULL WHERE person_id = :personId")
+    suspend fun restoreByPersonId(personId: Int)
+
+    @Delete
+    suspend fun delete(item: MedicationRecord)
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM medication_record_db")
+    suspend fun getAllRaw(): List<MedicationRecord>
+
+    @Query("DELETE FROM medication_record_db")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List<MedicationRecord>)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL)")
+    fun hasDataForPerson(personId: Int): Flow<Boolean>
+
+    @Query("SELECT DISTINCT person_id FROM medication_record_db WHERE deleted_at IS NULL")
+    fun getPersonIdsWithMedication(): Flow<List<Int>>
 }

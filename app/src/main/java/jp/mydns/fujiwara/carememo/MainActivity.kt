@@ -37,6 +37,8 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -61,7 +63,7 @@ class MainActivity : FragmentActivity() {
             val taskDescription = ActivityManager.TaskDescription(
                 getString(R.string.app_name),
                 R.mipmap.ic_launcher,
-                0xFF6650A4.toInt()
+                0xFF6650A4.toInt(),
             )
             setTaskDescription(taskDescription)
         }
@@ -105,7 +107,13 @@ fun CareMemoApp(activity: FragmentActivity) {
                 }
                 Lifecycle.Event.ON_START -> {
                     // フォアグラウンドに戻った際にタイムアウト判定
-                    if (isBiometricEnabled == true && isAuthenticated) {
+                    if ((isBiometricEnabled == true) && isAuthenticated) {
+                        // 外部アプリ呼び出し（ファイル選択等）からの復帰時はロックをスキップ
+                        if (userSettingsRepository.isLockBypassed) {
+                            userSettingsRepository.isLockBypassed = false
+                            return@LifecycleEventObserver
+                        }
+
                         if (lockTimeoutMinutes != -1) { // -1 は「ロックしない」
                             val elapsedMillis = System.currentTimeMillis() - lastActiveTime
                             val timeoutMillis = lockTimeoutMinutes * 60 * 1000L
@@ -126,9 +134,11 @@ fun CareMemoApp(activity: FragmentActivity) {
     }
 
     LaunchedEffect(isBiometricEnabled, isAuthenticated) {
-        if (isBiometricEnabled == true && !isAuthenticated) {
+        if ((isBiometricEnabled == true) && !isAuthenticated) {
             val executor = ContextCompat.getMainExecutor(activity)
-            val biometricPrompt = BiometricPrompt(activity, executor,
+            val biometricPrompt = BiometricPrompt(
+                activity,
+                executor,
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         super.onAuthenticationSucceeded(result)
@@ -173,9 +183,13 @@ fun CareMemoApp(activity: FragmentActivity) {
             MainScreen(
                 viewModel = listViewModel,
                 onNavigateToDetail = { personId, category ->
-                    val query = listViewModel.searchQuery.value
-                    val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
-                    navController.navigate("detail/$personId/${category.name}?query=$encodedQuery")
+                    if (category == Category.MEDICATION) {
+                        navController.navigate("medication/$personId")
+                    } else {
+                        val query = listViewModel.searchQuery.value
+                        val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
+                        navController.navigate("detail/$personId/${category.name}?query=$encodedQuery")
+                    }
                 },
                 onNavigateToSettings = {
                     navController.navigate("settings")
@@ -192,15 +206,37 @@ fun CareMemoApp(activity: FragmentActivity) {
             )
         }
         composable("settings") {
-            val listViewModel: PersonListViewModel = viewModel(
-                factory = PersonListViewModel.Factory(repository, userSettingsRepository)
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModel.Factory(repository, userSettingsRepository)
             )
             SettingsScreen(
-                viewModel = listViewModel,
+                viewModel = settingsViewModel,
                 onNavigateToRestore = {
                     navController.navigate("restore")
                 },
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "medication/{personId}",
+            arguments = listOf(navArgument("personId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+            val medicationViewModel: MedicationViewModel = viewModel(
+                factory = MedicationViewModel.Factory(repository, userSettingsRepository)
+            )
+            MedicationScreen(
+                viewModel = medicationViewModel,
+                personId = personId,
+                onBack = { navController.popBackStack("main", inclusive = false) },
+                onNavigateToCategory = { category ->
+                    // クエリパラメータを含めたルートを指定
+                    navController.navigate("detail/$personId/${category.name}?query=") {
+                        popUpTo("main") { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
         composable(
@@ -237,7 +273,7 @@ fun CareMemoApp(activity: FragmentActivity) {
                 viewModel = detailViewModel,
                 initialCategoryType = category,
                 personId = personId,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack("main", inclusive = false) },
                 onNavigateToConditionDetail = { pId, cId ->
                     navController.navigate("conditionDetail/$pId/$cId")
                 },
@@ -246,6 +282,13 @@ fun CareMemoApp(activity: FragmentActivity) {
                 },
                 onNavigateToGraphExpansion = { pId, cat, index ->
                     navController.navigate("graphExpansion/$pId/${cat.name}/$index")
+                },
+                onNavigateToMedication = { pId ->
+                    navController.navigate("medication/$pId") {
+                        popUpTo("main") { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
@@ -270,8 +313,9 @@ fun CareMemoApp(activity: FragmentActivity) {
                     val encodedUri = Uri.encode(uri.toString())
                     navController.navigate("photoPreview/$encodedUri/$pId/$cId")
                 },
-                onNavigateToFullScreen = { fileName ->
-                    navController.navigate("photoFull/$fileName")
+                onNavigateToFullScreen = { fileName, caption ->
+                    val encodedCaption = caption?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
+                    navController.navigate("photoFull/$fileName?caption=$encodedCaption")
                 }
             )
         }
@@ -345,12 +389,21 @@ fun CareMemoApp(activity: FragmentActivity) {
             )
         }
         composable(
-            route = "photoFull/{fileName}",
-            arguments = listOf(navArgument("fileName") { type = NavType.StringType })
+            route = "photoFull/{fileName}?caption={caption}",
+            arguments = listOf(
+                navArgument("fileName") { type = NavType.StringType },
+                navArgument("caption") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
+            val caption = backStackEntry.arguments?.getString("caption")
             ConditionPhotoFullScreen(
                 fileName = fileName,
+                caption = caption,
                 onBack = { navController.popBackStack() }
             )
         }

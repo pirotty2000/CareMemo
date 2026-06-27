@@ -33,6 +33,10 @@ fun CategoryBadges(
             BadgeChar(text = "糖", isActive = summary.hasGlucoseAndHbA1c, color = Color(0xFFFF9800))
             BadgeChar(text = "メ", isActive = summary.hasCondition, color = Color(0xFF4CAF50))
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            // 薬 -> 服薬
+            BadgeChar(text = "薬", isActive = summary.hasMedication, color = Color(0xFF673AB7))
+        }
     }
 }
 

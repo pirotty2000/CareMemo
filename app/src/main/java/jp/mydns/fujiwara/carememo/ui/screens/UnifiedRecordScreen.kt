@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,16 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
+import jp.mydns.fujiwara.carememo.ui.components.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,12 +48,13 @@ fun UnifiedRecordScreen(
     onBack: () -> Unit,
     onNavigateToConditionDetail: (Int, Int) -> Unit,
     onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit,
-    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit
+    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
+    onNavigateToMedication: (Int) -> Unit,
 ) {
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     
     // ユーザーの表示モード設定（初期値は履歴: true）
-    var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
+    var preferredShowHistory by rememberSaveable { mutableStateOf(value = true) }
     
     // 実際の表示判定：カテゴリがグラフを持たない場合は強制的に履歴。そうでなければユーザーの好みに従う
     val isEffectivelyShowingHistory = preferredShowHistory || !currentCategory.hasGraph
@@ -73,9 +70,9 @@ fun UnifiedRecordScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var showPdfSettingsDialog by remember { mutableStateOf(false) }
-    var dialogTitle by remember { mutableStateOf<String?>(null) }
-    var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var showPdfSettingsDialog by remember { mutableStateOf(value = false) }
+    var dialogTitle by remember { mutableStateOf<String?>(value = null) }
+    var dialogMessage by remember { mutableStateOf<String?>(value = null) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
@@ -94,17 +91,9 @@ fun UnifiedRecordScreen(
 
     LaunchedEffect(currentCategory, personId) {
         viewModel.loadPerson(personId)
-        viewModel.loadRecords(personId, currentCategory)
+        viewModel.setCategory(currentCategory)
         val index = Category.entries.indexOf(currentCategory)
         if (index >= 0) categoryListState.animateScrollToItem(index)
-    }
-
-    val age = remember(currentPerson) {
-        currentPerson?.birthday?.let { birthdayInstant ->
-            val birthDate = birthdayInstant.atZone(ZoneId.systemDefault()).toLocalDate()
-            val now = LocalDate.now()
-            java.time.Period.between(birthDate, now).years
-        }
     }
 
     Scaffold(
@@ -113,22 +102,26 @@ fun UnifiedRecordScreen(
             Column {
                 TopAppBar(
                     title = {
-                        currentPerson?.let { person ->
-                            Column {
-                                Text(text = person.getMaskedFurigana(isNameMaskingEnabled), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                                Text(text = buildString { append(person.getMaskedName(isNameMaskingEnabled)); append(" さん"); if (age != null) append(" (${age}歳)"); if (person.note.isNotBlank()) append(" [${person.note}]") }, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                            }
-                        } ?: Text("利用者記録", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        PersonHeaderTitle(
+                            person = currentPerson,
+                            isNameMaskingEnabled = isNameMaskingEnabled,
+                            defaultTitle = "利用者記録"
+                        )
                     },
                     navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") } },
                     actions = { IconButton(onClick = { if (records.isEmpty()) { scope.launch { snackbarHostState.showSnackbar("${currentCategory.displayName}の記録がないため出力できません") }; return@IconButton }; showPdfSettingsDialog = true }) { Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力") } }
                 )
-                LazyRow(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).padding(vertical = 8.dp), state = categoryListState, contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    itemsIndexed(Category.entries) { _, category ->
-                        val hasData = when (category) { Category.HEIGHT_AND_WEIGHT -> personCategorySummary?.hasHeightWeight == true; Category.BP_AND_PULSE -> personCategorySummary?.hasBpAndPulse == true; Category.GLUCOSE_AND_HBA1C -> personCategorySummary?.hasGlucoseAndHbA1c == true; Category.CONDITION_AT_VISIT -> personCategorySummary?.hasCondition == true }
-                        FilterChip(selected = currentCategory == category, onClick = { currentCategory = category }, label = { Text(category.displayName) }, leadingIcon = if (currentCategory == category) { { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) } } else null, border = FilterChipDefaults.filterChipBorder(enabled = true, selected = currentCategory == category, borderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, borderWidth = if (hasData) 1.5.dp else 1.0.dp, selectedBorderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline))
+                CategorySelectorBar(
+                    currentCategory = currentCategory,
+                    personCategorySummary = personCategorySummary,
+                    onCategoryClick = { category ->
+                        if (category == Category.MEDICATION) {
+                            onNavigateToMedication(personId)
+                        } else {
+                            currentCategory = category
+                        }
                     }
-                }
+                )
             }
         },
         floatingActionButton = { FloatingActionButton(onClick = { if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, 0) else onNavigateToHealthRecordDetail(personId, currentCategory, 0) }) { Icon(Icons.Rounded.Add, contentDescription = "新規追加") } }
@@ -171,7 +164,25 @@ fun UnifiedRecordScreen(
         }
     }
     if (dialogMessage != null) { AlertDialog(onDismissRequest = { dialogMessage = null; dialogTitle = null }, title = { dialogTitle?.let { Text(it) } }, text = { Text(dialogMessage!!) }, confirmButton = { TextButton(onClick = { dialogMessage = null; dialogTitle = null }) { Text("閉じる") } }) }
-    if (showPdfSettingsDialog) { PdfSettingsDialog(category = currentCategory, onDismiss = { showPdfSettingsDialog = false }, onExport = { r, o, start, end, photos -> showPdfSettingsDialog = false; scope.launch { val allPhotos = if (currentCategory.hasOption && photos) viewModel.getAllPhotosForPerson(personId) else emptyList(); currentPerson?.let { person -> val success = PdfExporter.exportAndShare(context, person, isNameMaskingEnabled, currentCategory, records, allPhotos, r, o, start, end); if (!success) snackbarHostState.showSnackbar("指定された期間のデータがありません") } } }) }
+    if (showPdfSettingsDialog) {
+        PdfSettingsDialog(
+            category = currentCategory,
+            onDismiss = { showPdfSettingsDialog = false }
+        ) { r, o, start, end, photos ->
+            showPdfSettingsDialog = false
+            // PDF共有（外部アプリ遷移）のため、戻ってきた際のアプリロックをスキップする設定を有効化
+            viewModel.setLockBypassEnabled(true)
+            scope.launch {
+                val allPhotos = if (currentCategory.hasOption && photos) viewModel.getAllPhotosForPerson(personId) else emptyList()
+                currentPerson?.let { person ->
+                    val success = PdfExporter.exportAndShare(context, person, isNameMaskingEnabled, currentCategory, records, allPhotos, r, o, start, end)
+                    if (!success) {
+                        snackbarHostState.showSnackbar("PDFの作成に失敗したか、対象データがありません")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -182,7 +193,7 @@ fun UnifiedHistoryList(
     conditionPhotoMap: Map<Int, Boolean>,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
-    isAnyDialogOpen: Boolean
+    isAnyDialogOpen: Boolean,
 ) {
     val groupedRecords = remember(records) { records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }.mapValues { entry -> entry.value.sortedBy { it.recordTime } }.toSortedMap(compareByDescending { it }) }
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
@@ -199,7 +210,7 @@ fun UnifiedHistoryList(
             items(items.size) { index ->
                 val record = items[index]
                 HistoryItemWrapper(record = record, showTime = !isSingle, onItemClick = { onItemClick(record) }, onDeleteSwipe = { onDeleteSwipe(record) }, isAnyDialogOpen = isAnyDialogOpen) {
-                    val hasOptionData = category.hasOption && conditionPhotoMap[record.id] == true
+                    val hasOptionData = (category.hasOption && conditionPhotoMap[record.id] == true)
                     HistoryItemBody(category, record, hasOptionData)
                 }
                 HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
@@ -216,11 +227,15 @@ fun HistoryItemWrapper(
     onItemClick: () -> Unit,
     onDeleteSwipe: () -> Unit,
     isAnyDialogOpen: Boolean,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
     LaunchedEffect(dismissState.currentValue) { if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) onDeleteSwipe() }
-    LaunchedEffect(isAnyDialogOpen) { if (!isAnyDialogOpen && dismissState.currentValue != SwipeToDismissBoxValue.Settled) dismissState.snapTo(SwipeToDismissBoxValue.Settled) }
+    LaunchedEffect(isAnyDialogOpen) {
+        if (!isAnyDialogOpen && (dismissState.currentValue != SwipeToDismissBoxValue.Settled)) {
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        }
+    }
     SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
         Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onItemClick).padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -234,10 +249,11 @@ fun HistoryItemWrapper(
 @Composable
 fun HistoryItemBody(category: Category, record: HistoryRecord, hasOption: Boolean) {
     when (category) {
-        Category.BP_AND_PULSE -> if (record is BpAndPulse) VitalRecordItemContent(record)
-        Category.GLUCOSE_AND_HBA1C -> if (record is GlucoseAndHbA1c) GlucoseRecordItemContent(record)
-        Category.HEIGHT_AND_WEIGHT -> if (record is HeightAndWeight) HeightWeightRecordItemContent(record)
-        Category.CONDITION_AT_VISIT -> if (record is ConditionAtVisit) ConditionMemoContent(record, hasOption)
+        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalRecordItemContent(it) }
+        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseRecordItemContent(it) }
+        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightRecordItemContent(it) }
+        Category.CONDITION_AT_VISIT -> (record as? ConditionAtVisit)?.let { ConditionMemoContent(it, hasOption) }
+        Category.MEDICATION -> { /* 統合画面では表示しない */ }
     }
 }
 
@@ -308,18 +324,6 @@ fun VitalStatusIndicator(label: String, isActive: Boolean) { Text(text = label, 
 
 @Composable
 fun EmptyState(message: String, description: String? = null, icon: ImageVector) { Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)); Spacer(modifier = Modifier.height(16.dp)); Text(text = message, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline); if (description != null) { Spacer(modifier = Modifier.height(8.dp)); Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f), textAlign = TextAlign.Center) } } }
-
-enum class ExportRange(val displayName: String) { ALL("全ての記録"), LATEST("最新の1件のみ"), ONE_MONTH("直近 1ヶ月分"), THREE_MONTHS("直近 3ヶ月分"), SIX_MONTHS("直近 半年分"), CUSTOM("期間を指定する") }
-enum class ExportOrder(val displayName: String) { NEWEST_FIRST("新しい順"), OLDEST_FIRST("古い順") }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PdfSettingsDialog(category: Category, onDismiss: () -> Unit, onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean) -> Unit) {
-    var selectedRange by remember { mutableStateOf(ExportRange.ALL) }; var selectedOrder by remember { mutableStateOf(ExportOrder.NEWEST_FIRST) }; var includePhotos by remember { mutableStateOf(true) }; var startDate by remember { mutableStateOf<Long?>(null) }; var endDate by remember { mutableStateOf<Long?>(null) }; var showStartDatePicker by remember { mutableStateOf(false) }; var showEndDatePicker by remember { mutableStateOf(false) }
-    if (showStartDatePicker) { val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDate ?: endDate ?: System.currentTimeMillis()); DatePickerDialog(onDismissRequest = { showStartDatePicker = false }, confirmButton = { TextButton(onClick = { startDate = datePickerState.selectedDateMillis; showStartDatePicker = false }) { Text("決定") } }) { DatePicker(state = datePickerState) } }
-    if (showEndDatePicker) { val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endDate ?: startDate ?: System.currentTimeMillis()); DatePickerDialog(onDismissRequest = { showEndDatePicker = false }, confirmButton = { TextButton(onClick = { endDate = datePickerState.selectedDateMillis; showEndDatePicker = false }) { Text("決定") } }) { DatePicker(state = datePickerState) } }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("PDF出力設定 (${category.displayName})") }, text = { Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("抽出範囲", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); ExportRange.entries.forEach { range -> Row(Modifier.fillMaxWidth().selectable(selected = (range == selectedRange), onClick = { selectedRange = range }).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = (range == selectedRange), onClick = { selectedRange = range }); Text(text = range.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp)) } }; if (selectedRange == ExportRange.CUSTOM) { Row(modifier = Modifier.fillMaxWidth().padding(start = 32.dp, top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) { OutlinedButton(onClick = { showStartDatePicker = true }, modifier = Modifier.weight(1f)) { Text(startDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "開始日") }; Text("〜"); OutlinedButton(onClick = { showEndDatePicker = true }, modifier = Modifier.weight(1f)) { Text(endDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "終了日") } } }; if (category.hasOption) { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)); Row(modifier = Modifier.fillMaxWidth().clickable { includePhotos = !includePhotos }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) { Text("写真を印刷に含める"); Switch(checked = includePhotos, onCheckedChange = { includePhotos = it }) } }; HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)); Text("並び順", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary); ExportOrder.entries.forEach { order -> Row(Modifier.fillMaxWidth().selectable(selected = (order == selectedOrder), onClick = { selectedOrder = order }).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = (order == selectedOrder), onClick = { selectedOrder = order }); Text(text = order.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp)) } } } }, confirmButton = { Button(onClick = { onExport(selectedRange, selectedOrder, startDate?.let { Instant.ofEpochMilli(it) }, endDate?.let { Instant.ofEpochMilli(it) }, includePhotos) }, enabled = if (selectedRange == ExportRange.CUSTOM) startDate != null || endDate != null else true) { Text("PDFを作成") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("キャンセル") } })
-}
 
 @Preview(showBackground = true)
 @Composable

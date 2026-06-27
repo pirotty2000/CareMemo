@@ -15,12 +15,17 @@ package jp.mydns.fujiwara.carememo.data
  *    - 文字列による履歴の検索ができる
  *    - アラート判定およびグラフ表示は行わない
  *    - 写真等の追加情報（Option）を付与できる
+ *
+ * 3. (C) 状態データ型 (服薬管理など):
+ *    - 年月日で集約し、カレンダーで状態を可視化する
+ *    - グラフ表示や文字列検索は行わない
  */
 enum class Category(
     val displayName: String,
-    val hasGraph: Boolean = true,  // (A)の性質
+    val hasGraph: Boolean = true,   // (A)の性質
     val hasSearch: Boolean = false, // (B)の性質
-    val hasOption: Boolean = false  // (B)の拡張性
+    val hasOption: Boolean = false, // (B)の拡張性
+    val hasCalendar: Boolean = false // (C)の性質
 ) {
     /** 身長・体重 (A) */
     HEIGHT_AND_WEIGHT(
@@ -43,5 +48,12 @@ enum class Category(
         hasGraph = false,
         hasSearch = true,
         hasOption = true
+    ),
+
+    /** 服薬管理 (C) */
+    MEDICATION(
+        displayName = "服薬管理",
+        hasGraph = false,
+        hasCalendar = true
     )
 }

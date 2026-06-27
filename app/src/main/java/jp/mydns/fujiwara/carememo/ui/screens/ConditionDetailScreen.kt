@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,11 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.compose.ui.focus.FocusRequester
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
+import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -47,59 +49,40 @@ fun ConditionDetailScreen(
     conditionId: Int,
     onBack: () -> Unit,
     onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
-    onNavigateToFullScreen: (String) -> Unit
+    onNavigateToFullScreen: (String, String?) -> Unit,
 ) {
     val context = LocalContext.current
     val records by viewModel.records.collectAsState()
     val photos by viewModel.currentConditionPhotos.collectAsState()
     val isProcessing by viewModel.isProcessing.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
+    val currentPerson by viewModel.currentPerson.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
-    val monthFocusRequester = remember { FocusRequester() }
-    val dayFocusRequester = remember { FocusRequester() }
-    val hourFocusRequester = remember { FocusRequester() }
-    val minuteFocusRequester = remember { FocusRequester() }
+    val dateTimeState = rememberDateTimeInputState()
 
     // 編集モードの状態
-    var isEditing by remember { mutableStateOf(conditionId == 0) }
-    
-    // 入力用状態
-    var title by remember { mutableStateOf("") }
-    var condition by remember { mutableStateOf("") }
-    var author by remember { mutableStateOf("") }
+    var isEditing by rememberSaveable { mutableStateOf(conditionId == 0) }
 
-    // 日時状態
-    var year by remember { mutableStateOf("") }
-    var month by remember { mutableStateOf("") }
-    var day by remember { mutableStateOf("") }
-    var hour by remember { mutableStateOf("") }
-    var minute by remember { mutableStateOf("") }
+    // 入力用状態
+    var title by rememberSaveable { mutableStateOf("") }
+    var condition by rememberSaveable { mutableStateOf("") }
+    var author by rememberSaveable { mutableStateOf("") }
 
     val memo = remember(records, conditionId) { 
-        records.filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
+        records.asSequence().filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
     }
 
     // 初期値セット
     LaunchedEffect(memo) {
-        if (memo != null && title.isEmpty() && condition.isEmpty()) {
+        if ((memo != null) && title.isEmpty() && condition.isEmpty()) {
             title = memo.title ?: ""
             condition = memo.condition ?: ""
             author = memo.author
-            
-            val zdt = memo.recordTime.atZone(java.time.ZoneId.systemDefault())
-            year = zdt.year.toString()
-            month = zdt.monthValue.toString()
-            day = zdt.dayOfMonth.toString()
-            hour = "%02d".format(zdt.hour)
-            minute = "%02d".format(zdt.minute)
-        } else if (conditionId == 0 && year.isEmpty()) {
+            dateTimeState.setFromInstant(memo.recordTime)
+        } else if ((conditionId == 0) && dateTimeState.year.value.isEmpty()) {
             // 新規作成時：現在の日時をセット
-            val now = java.time.LocalDateTime.now()
-            year = now.year.toString()
-            month = now.monthValue.toString()
-            day = now.dayOfMonth.toString()
-            hour = "%02d".format(now.hour)
-            minute = "%02d".format(now.minute)
+            dateTimeState.setFromInstant(Instant.now())
             
             if (author.isEmpty() && defaultRecorderName.isNotEmpty()) {
                 author = defaultRecorderName
@@ -117,15 +100,15 @@ fun ConditionDetailScreen(
     // データのロード
     LaunchedEffect(personId, conditionId) {
         viewModel.loadPerson(personId)
-        viewModel.loadRecords(personId, jp.mydns.fujiwara.carememo.data.Category.CONDITION_AT_VISIT)
+        viewModel.setCategory(jp.mydns.fujiwara.carememo.data.Category.CONDITION_AT_VISIT)
         viewModel.setSelectedConditionId(if (conditionId != 0) conditionId else null)
     }
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
-    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var tempPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
+        contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         if (success && tempPhotoUri != null) {
             onNavigateToPhotoPreview(tempPhotoUri!!, personId, conditionId)
@@ -163,9 +146,21 @@ fun ConditionDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (conditionId == 0) "新規記録" else if (isEditing) "記録の編集" else "所見詳細") },
+                title = {
+                    Column {
+                        PersonHeaderTitle(
+                            person = currentPerson,
+                            isNameMaskingEnabled = isNameMaskingEnabled,
+                            defaultTitle = "所見記録"
+                        )
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = { if (isEditing && conditionId != 0) isEditing = false else onBack() }) {
+                    IconButton(
+                        onClick = {
+                            if (isEditing && conditionId != 0) isEditing = false else onBack()
+                        }
+                    ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -203,17 +198,7 @@ fun ConditionDetailScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        DateTimeInputFields(
-                            year = year, onYearChange = { year = it },
-                            month = month, onMonthChange = { month = it },
-                            day = day, onDayChange = { day = it },
-                            hour = hour, onHourChange = { hour = it },
-                            minute = minute, onMinuteChange = { minute = it },
-                            monthFocusRequester = monthFocusRequester,
-                            dayFocusRequester = dayFocusRequester,
-                            hourFocusRequester = hourFocusRequester,
-                            minuteFocusRequester = minuteFocusRequester
-                        )
+                        DateTimeInputFields(state = dateTimeState)
 
                         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -241,6 +226,7 @@ fun ConditionDetailScreen(
                                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.JAPANESE.toString())
                                         }
+                                        viewModel.setLockBypassEnabled(true)
                                         speechLauncher.launch(intent)
                                     }) {
                                         Icon(Icons.Rounded.Mic, contentDescription = "音声入力")
@@ -260,14 +246,7 @@ fun ConditionDetailScreen(
                                 }
                                 Button(
                                     onClick = {
-                                        val recordTime = try {
-                                            java.time.LocalDateTime.of(
-                                                year.toInt(), month.toInt(), day.toInt(),
-                                                hour.toInt(), minute.toInt()
-                                            ).atZone(java.time.ZoneId.systemDefault()).toInstant()
-                                        } catch (_: Exception) {
-                                            memo?.recordTime ?: Instant.now()
-                                        }
+                                        val recordTime = dateTimeState.toInstant() ?: Instant.now()
 
                                         val newMemo = ConditionAtVisit(
                                             id = conditionId,
@@ -337,6 +316,7 @@ fun ConditionDetailScreen(
                                 tempFile
                             )
                             tempPhotoUri = uri
+                            viewModel.setLockBypassEnabled(true)
                             cameraLauncher.launch(uri)
                         },
                         enabled = !isProcessing
@@ -364,7 +344,7 @@ fun ConditionDetailScreen(
                 PhotoGrid(
                     photos = photos,
                     isEditable = isEditing,
-                    onPhotoClick = { onNavigateToFullScreen(it.photoFileName) },
+                    onPhotoClick = { onNavigateToFullScreen(it.photoFileName, it.caption) },
                     onDeletePhoto = { photoToDelete = it }
                 )
             }
@@ -404,7 +384,7 @@ fun PhotoGrid(
     photos: List<ConditionPhoto>,
     isEditable: Boolean,
     onPhotoClick: (ConditionPhoto) -> Unit,
-    onDeletePhoto: (ConditionPhoto) -> Unit
+    onDeletePhoto: (ConditionPhoto) -> Unit,
 ) {
     val context = LocalContext.current
     

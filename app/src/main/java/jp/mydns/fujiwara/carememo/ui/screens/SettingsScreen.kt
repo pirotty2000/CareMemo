@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -30,12 +31,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: PersonListViewModel,
+    viewModel: SettingsViewModel,
     onNavigateToRestore: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -59,17 +60,17 @@ fun SettingsScreen(
     }
 
     // ダイアログ管理用状態
-    var showImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var showLegacyFolderUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var showEraseConfirm by remember { mutableStateOf(false) }
-    var showDevClearConfirm by remember { mutableStateOf(false) }
-    var showVersionDialog by remember { mutableStateOf(false) }
-    var showHelpDialog by remember { mutableStateOf(false) }
-    var showTimeoutDialog by remember { mutableStateOf(false) }
+    var showImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
+    var showLegacyFolderUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
+    var showEraseConfirm by rememberSaveable { mutableStateOf(false) }
+    var showDevClearConfirm by rememberSaveable { mutableStateOf(false) }
+    var showVersionDialog by rememberSaveable { mutableStateOf(false) }
+    var showHelpDialog by rememberSaveable { mutableStateOf(false) }
+    var showTimeoutDialog by rememberSaveable { mutableStateOf(false) }
 
     // 通知ダイアログ用の共通状態
-    var dialogTitle by remember { mutableStateOf<String?>(null) }
-    var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var dialogTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    var dialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     // ViewModelからのイベントを監視
     LaunchedEffect(Unit) {
@@ -84,7 +85,6 @@ fun SettingsScreen(
                     dialogMessage = event.message
                 }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
-                    // 設定画面ではスナックバーのホストがないため、必要なら追加するかダイアログで代用
                     dialogTitle = "通知"
                     dialogMessage = event.message
                 }
@@ -175,7 +175,7 @@ fun SettingsScreen(
                         ) {
                             RadioButton(
                                 selected = lockTimeoutMinutes == minutes,
-                                onClick = null // Rowのクリックで処理
+                                onClick = null
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(label)
@@ -266,21 +266,33 @@ fun SettingsScreen(
                     headlineContent = { Text("データのバックアップ (保存)") },
                     supportingContent = { Text("現在の全データと写真をZipファイルとして書き出します") },
                     trailingContent = {
-                        IconButton(onClick = { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }) {
+                        IconButton(onClick = {
+                            viewModel.setLockBypassEnabled(true)
+                            exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
+                        }) {
                             Icon(Icons.Rounded.Output, contentDescription = "バックアップ")
                         }
                     },
-                    modifier = Modifier.clickable { exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }
+                    modifier = Modifier.clickable {
+                        viewModel.setLockBypassEnabled(true)
+                        exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
+                    }
                 )
                 ListItem(
                     headlineContent = { Text("データの復元 (読込)") },
                     supportingContent = { Text("バックアップファイル(ZipまたはJSON)からデータを読み込みます") },
                     trailingContent = {
-                        IconButton(onClick = { importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }) {
+                        IconButton(onClick = {
+                            viewModel.setLockBypassEnabled(true)
+                            importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
+                        }) {
                             Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = "復元")
                         }
                     },
-                    modifier = Modifier.clickable { importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }
+                    modifier = Modifier.clickable {
+                        viewModel.setLockBypassEnabled(true)
+                        importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
+                    }
                 )
                 
                 // データベースが空の時のみ表示（旧アプリ移行）
@@ -288,7 +300,10 @@ fun SettingsScreen(
                     ListItem(
                         headlineContent = { Text("旧アプリデータの引き継ぎ", color = MaterialTheme.colorScheme.secondary) },
                         supportingContent = { Text("旧アプリのJSONフォルダを選択してデータを移行します") },
-                        modifier = Modifier.clickable { legacyFolderLauncher.launch(null) }
+                        modifier = Modifier.clickable {
+                            viewModel.setLockBypassEnabled(true)
+                            legacyFolderLauncher.launch(null)
+                        }
                     )
                 }
             }

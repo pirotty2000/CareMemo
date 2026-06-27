@@ -22,8 +22,9 @@ import java.time.Instant
  *   ├ [height_and_weight_db(pk:id, fk:person_id)] 利用者の「身長・体重」情報を格納
  *   ├ [bp_and_pulse_db(pk:id, fk:person_id)] 利用者の「バイタル」情報を格納
  *   ├ [glucose_and_hba1c_db(pk:id, fk:person_id)] 利用者の「血糖値・HbA1c」を格納
- *   └ [condition_at_visit_db(pk:id, fk:person_id)] 利用者の「所見メモ」を格納
- *       └ [condition_photo_db(pk:id, fk:condition_id)] 所見メモに添付した写真のファイル名を格納
+ *   ├ [condition_at_visit_db(pk:id, fk:person_id)] 利用者の「所見メモ」を格納
+ *   ├   └ [condition_photo_db(pk:id, fk:condition_id)] 所見メモに添付した写真のファイル名を格納
+ *   └ [medication_record_db(pk:id, fk:person_id)] 利用者の服薬状況を格納
  *
  **********************************************************************/
 
@@ -227,29 +228,82 @@ data class ConditionPhoto(
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
 )
 
+@Serializable
+@Entity(
+    tableName = "medication_record_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["person_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["person_id"]),
+        // 「ある利用者の、ある服用対象日の、ある時間枠」は1つだけに制限
+        Index(value = ["person_id", "dosage_date", "time_slot"], unique = true)
+    ]
+)
+data class MedicationRecord(
+    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
+    @ColumnInfo(name = "person_id") override val personId: Int,
+
+    /**
+     * 服用対象日 (例: "2023-10-27")
+     * カレンダーの「どのマス」に表示するかを決定する論理的な日付
+     */
+    @ColumnInfo(name = "dosage_date") val dosageDate: String,
+
+    /**
+     * 時間枠 (0:朝, 1:昼, 2:夕, 3:寝る前)
+     */
+    @ColumnInfo(name = "time_slot") val timeSlot: Int,
+
+    /**
+     * 服用ステータス
+     * 0: 未服用 (グレー)
+     * 1: 服薬介助 (薄い色)
+     * 2: 服用 (濃い色)
+     * ※ レコードが存在しない場合は「未確認 (白)」として扱う
+     */
+    @ColumnInfo(name = "status") val status: Int,
+
+    /**
+     * 実際に確認・記録した日時
+     * 「朝の分を、結局何時に確認したのか」という事実情報
+     */
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "record_time") override val recordTime: Instant,
+
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+) : HistoryRecord
+
 /**
  * アプリ全体のバックアップデータを保持するクラス
  */
 @Serializable
 data class CareMemoBackup(
-    val version: Int = 2,
+    val version: Int = 3,
     val persons: List<Person>,
     val heightAndWeights: List<HeightAndWeight>,
     val bpAndPulses: List<BpAndPulse>,
     val glucoseAndHbA1cs: List<GlucoseAndHbA1c>,
     val conditionAtVisits: List<ConditionAtVisit>,
-    val conditionPhotos: List<ConditionPhoto> = emptyList()
+    val conditionPhotos: List<ConditionPhoto> = emptyList(),
+    val medicationRecords: List<MedicationRecord> = emptyList()
 )
 
 /**
- * 利用者ごとの記録有無サマリー (4つのカテゴリーに対応)
+ * 利用者ごとの記録有無サマリー
  * メイン画面のインジケーター（バッジ）点灯判定に使用
  */
 data class PersonCategorySummary(
     val hasHeightWeight: Boolean = false,
     val hasBpAndPulse: Boolean = false,
     val hasGlucoseAndHbA1c: Boolean = false,
-    val hasCondition: Boolean = false
+    val hasCondition: Boolean = false,
+    val hasMedication: Boolean = false
 )
 
 // --- 計算・判定用拡張関数（基軸となる HealthThresholds を使用） ---

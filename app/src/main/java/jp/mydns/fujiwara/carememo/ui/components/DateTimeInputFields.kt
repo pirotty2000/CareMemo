@@ -5,6 +5,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -13,6 +16,91 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
+/**
+ * 日時入力フィールドのステートを管理するクラス
+ */
+class DateTimeInputState(
+    val year: MutableState<String>,
+    val month: MutableState<String>,
+    val day: MutableState<String>,
+    val hour: MutableState<String>,
+    val minute: MutableState<String>,
+    val monthFocusRequester: FocusRequester = FocusRequester(),
+    val dayFocusRequester: FocusRequester = FocusRequester(),
+    val hourFocusRequester: FocusRequester = FocusRequester(),
+    val minuteFocusRequester: FocusRequester = FocusRequester(),
+) {
+    /**
+     * 入力値から Instant を生成する。不正な入力の場合は null を返す。
+     */
+    fun toInstant(): Instant? {
+        return try {
+            ZonedDateTime.of(
+                year.value.toInt(), month.value.toInt(), day.value.toInt(),
+                hour.value.toInt(), minute.value.toInt(), 0, 0,
+                ZoneId.systemDefault()
+            ).toInstant()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 指定された Instant で各フィールドの値を更新する
+     */
+    fun setFromInstant(instant: Instant) {
+        val zdt = instant.atZone(ZoneId.systemDefault())
+        year.value = zdt.year.toString()
+        month.value = zdt.monthValue.toString()
+        day.value = zdt.dayOfMonth.toString()
+        hour.value = "%02d".format(zdt.hour)
+        minute.value = "%02d".format(zdt.minute)
+    }
+}
+
+/**
+ * DateTimeInputState を生成・保持する Composable
+ */
+@Composable
+fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
+    val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
+    
+    val year = remember { mutableStateOf(zdt.year.toString()) }
+    val month = remember { mutableStateOf(zdt.monthValue.toString()) }
+    val day = remember { mutableStateOf(zdt.dayOfMonth.toString()) }
+    val hour = remember { mutableStateOf("%02d".format(zdt.hour)) }
+    val minute = remember { mutableStateOf("%02d".format(zdt.minute)) }
+
+    return remember {
+        DateTimeInputState(year, month, day, hour, minute)
+    }
+}
+
+@Composable
+fun DateTimeInputFields(
+    state: DateTimeInputState
+) {
+    DateTimeInputFields(
+        year = state.year.value,
+        onYearChange = { state.year.value = it },
+        month = state.month.value,
+        onMonthChange = { state.month.value = it },
+        day = state.day.value,
+        onDayChange = { state.day.value = it },
+        hour = state.hour.value,
+        onHourChange = { state.hour.value = it },
+        minute = state.minute.value,
+        onMinuteChange = { state.minute.value = it },
+        monthFocusRequester = state.monthFocusRequester,
+        dayFocusRequester = state.dayFocusRequester,
+        hourFocusRequester = state.hourFocusRequester,
+        minuteFocusRequester = state.minuteFocusRequester
+    )
+}
 
 @Composable
 fun DateTimeInputFields(
@@ -83,7 +171,9 @@ fun DateTimeInputFields(
                 label = "分",
                 modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
                 imeAction = ImeAction.Done,
-                onDone = { focusManager.clearFocus() }
+                onDone = {
+                    focusManager.clearFocus()
+                }
             )
         }
     }

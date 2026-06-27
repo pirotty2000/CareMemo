@@ -18,7 +18,8 @@ import jp.mydns.fujiwara.carememo.utils.ImageUtils
 @Composable
 fun ConditionPhotoFullScreen(
     fileName: String,
-    onBack: () -> Unit
+    caption: String? = null,
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val photoFile = ImageUtils.getPhotoFile(context, fileName)
@@ -31,7 +32,7 @@ fun ConditionPhotoFullScreen(
     ) {
         AsyncImage(
             model = photoFile,
-            contentDescription = null,
+            contentDescription = caption,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
@@ -48,6 +49,24 @@ fun ConditionPhotoFullScreen(
             )
         ) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+        }
+
+        // キャプションの表示（あれば）
+        if (!caption.isNullOrBlank()) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                color = Color.Black.copy(alpha = 0.5f),
+                contentColor = Color.White
+            ) {
+                Text(
+                    text = caption,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
