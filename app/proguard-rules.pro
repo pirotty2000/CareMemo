@@ -10,7 +10,6 @@
 -keepclassmembers class * extends androidx.room.RoomDatabase {
     <init>(...);
 }
--keep class androidx.room.concurrent.ThreadLocalDelegate
 
 # If your project uses WebView with JS, uncomment the following
 # and specify the fully qualified class name to the JavaScript interface

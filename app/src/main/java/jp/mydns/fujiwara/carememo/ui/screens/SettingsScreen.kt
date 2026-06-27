@@ -45,7 +45,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateToRestore: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
@@ -53,7 +53,6 @@ fun SettingsScreen(
     val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
     val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsState()
     val backupPassword by viewModel.backupPassword.collectAsState()
-    val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
 
     val context = LocalContext.current
@@ -61,7 +60,7 @@ fun SettingsScreen(
     // 入力バグ対策用のローカル状態
     var localRecorderName by remember { mutableStateOf(persistedRecorderName) }
     var localBackupPassword by remember { mutableStateOf(backupPassword) }
-    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isPasswordVisible by remember { mutableStateOf(value = false) }
 
     // パスワードのバリデーション (6文字以上)
     val isPasswordValid = localBackupPassword.length >= 6
@@ -81,13 +80,12 @@ fun SettingsScreen(
 
     // ダイアログ管理用状態
     var showImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
-    var showLegacyFolderUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
-    var showEraseConfirm by rememberSaveable { mutableStateOf(false) }
-    var showDevClearConfirm by rememberSaveable { mutableStateOf(false) }
-    var showVersionDialog by rememberSaveable { mutableStateOf(false) }
-    var showHelpDialog by rememberSaveable { mutableStateOf(false) }
-    var showTimeoutDialog by rememberSaveable { mutableStateOf(false) }
-    var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
+    var showEraseConfirm by rememberSaveable { mutableStateOf(value = false) }
+    var showDevClearConfirm by rememberSaveable { mutableStateOf(value = false) }
+    var showVersionDialog by rememberSaveable { mutableStateOf(value = false) }
+    var showHelpDialog by rememberSaveable { mutableStateOf(value = false) }
+    var showTimeoutDialog by rememberSaveable { mutableStateOf(value = false) }
+    var showPasswordInputDialog by rememberSaveable { mutableStateOf(value = false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
 
     // 通知ダイアログ用の共通状態
@@ -122,16 +120,12 @@ fun SettingsScreen(
 
     // ファイル・フォルダ選択ランチャー
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/zip")
+        contract = ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri -> uri?.let { viewModel.exportData(context, it) } }
 
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let { showImportUri = it } }
-
-    val legacyFolderLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> uri?.let { showLegacyFolderUri = it } }
 
     // 各種ダイアログ表示
     if (dialogMessage != null) {
@@ -139,12 +133,33 @@ fun SettingsScreen(
             onDismissRequest = { dialogMessage = null; dialogTitle = null },
             title = { dialogTitle?.let { Text(it) } },
             text = { Text(dialogMessage!!) },
-            confirmButton = { TextButton(onClick = { dialogMessage = null; dialogTitle = null }) { Text("OK") } }
+            confirmButton = {
+                TextButton(onClick = { dialogMessage = null; dialogTitle = null }) {
+                    Text("OK")
+                }
+            },
         )
     }
 
     if (showImportUri != null) {
-        AlertDialog(onDismissRequest = { showImportUri = null }, title = { Text("データの復元") }, text = { Text("現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？") }, confirmButton = { Button(onClick = { viewModel.importData(context, showImportUri!!); showImportUri = null }) { Text("復元を実行") } }, dismissButton = { TextButton(onClick = { showImportUri = null }) { Text("キャンセル") } })
+        AlertDialog(
+            onDismissRequest = { showImportUri = null },
+            title = { Text("データの復元") },
+            text = { Text("現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.importData(context, showImportUri!!)
+                        showImportUri = null
+                    },
+                ) {
+                    Text("復元を実行")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportUri = null }) { Text("キャンセル") }
+            },
+        )
     }
 
 
@@ -153,13 +168,43 @@ fun SettingsScreen(
             onDismissRequest = { showEraseConfirm = false },
             title = { Text("個人情報の完全抹消", color = MaterialTheme.colorScheme.error) },
             text = { Text("現在「利用終了」となっている ${endedUserList.size} 名分のデータを完全に抹消します。この操作を行うと記録は二度と復旧できません。よろしいですか？", color = MaterialTheme.colorScheme.error) },
-            confirmButton = { Button(onClick = { viewModel.deleteEndedPersons(); showEraseConfirm = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("対象者 (${endedUserList.size}名) を抹消する") } },
-            dismissButton = { TextButton(onClick = { showEraseConfirm = false }) { Text("キャンセル") } }
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteEndedPersons()
+                        showEraseConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text("対象者 (${endedUserList.size}名) を抹消する")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEraseConfirm = false }) { Text("キャンセル") }
+            },
         )
     }
 
     if (showDevClearConfirm) {
-        AlertDialog(onDismissRequest = { showDevClearConfirm = false }, title = { Text("(開発用) 全データ消去", color = MaterialTheme.colorScheme.error) }, text = { Text("データベース内のすべてのデータおよび保存された写真を物理削除します。この操作は取り消せません。", color = MaterialTheme.colorScheme.error) }, confirmButton = { Button(onClick = { viewModel.clearAllData(context); showDevClearConfirm = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("実行する") } }, dismissButton = { TextButton(onClick = { showDevClearConfirm = false }) { Text("キャンセル") } })
+        AlertDialog(
+            onDismissRequest = { showDevClearConfirm = false },
+            title = { Text("(開発用) 全データ消去", color = MaterialTheme.colorScheme.error) },
+            text = { Text("データベース内のすべてのデータおよび保存された写真を物理削除します。この操作は取り消せません。", color = MaterialTheme.colorScheme.error) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllData(context)
+                        showDevClearConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text("実行する")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDevClearConfirm = false }) { Text("キャンセル") }
+            },
+        )
     }
 
     if (showVersionDialog) {
@@ -167,12 +212,25 @@ fun SettingsScreen(
             onDismissRequest = { showVersionDialog = false },
             title = { Text("バージョン情報") },
             text = { Text("CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy") },
-            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } }
+            confirmButton = {
+                TextButton(onClick = { showVersionDialog = false }) {
+                    Text("閉じる")
+                }
+            },
         )
     }
 
     if (showHelpDialog) {
-        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text("ヘルプ") }, text = { Text("・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「利用者管理」から復帰できます。\n・データは定期的にバックアップすることをお勧めします。") }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text("閉じる") } })
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = false },
+            title = { Text("ヘルプ") },
+            text = { Text("・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「利用者管理」から復帰できます。\n・データは定期的にバックアップすることをお勧めします。") },
+            confirmButton = {
+                TextButton(onClick = { showHelpDialog = false }) {
+                    Text("閉じる")
+                }
+            },
+        )
     }
 
     if (showTimeoutDialog) {
@@ -182,7 +240,7 @@ fun SettingsScreen(
             5 to "5分",
             10 to "10分",
             30 to "30分",
-            -1 to "ロックしない"
+            -1 to "ロックしない",
         )
         AlertDialog(
             onDismissRequest = { showTimeoutDialog = false },
@@ -198,7 +256,7 @@ fun SettingsScreen(
                                     showTimeoutDialog = false
                                 }
                                 .padding(16.dp),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                         ) {
                             RadioButton(
                                 selected = lockTimeoutMinutes == minutes,
@@ -212,12 +270,12 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showTimeoutDialog = false }) { Text("キャンセル") }
-            }
+            },
         )
     }
 
     if (showPasswordInputDialog) {
-        var isInputPasswordVisible by remember { mutableStateOf(false) }
+        var isInputPasswordVisible by remember { mutableStateOf(value = false) }
         AlertDialog(
             onDismissRequest = { showPasswordInputDialog = false },
             title = { Text("パスワードの入力") },
@@ -251,12 +309,14 @@ fun SettingsScreen(
                         showPasswordInputDialog = false
                         inputPasswordForImport = ""
                     },
-                    enabled = inputPasswordForImport.isNotEmpty()
-                ) { Text("実行") }
+                    enabled = inputPasswordForImport.isNotEmpty(),
+                ) {
+                    Text("実行")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showPasswordInputDialog = false; inputPasswordForImport = "" }) { Text("キャンセル") }
-            }
+            },
         )
     }
 
@@ -268,9 +328,9 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -348,7 +408,7 @@ fun SettingsScreen(
                         value = localBackupPassword,
                         onValueChange = {
                             localBackupPassword = it
-                            if (it.length >= 6 || it.isEmpty()) {
+                            if ((it.length >= 6) || it.isEmpty()) {
                                 viewModel.setBackupPassword(it)
                             }
                         },
@@ -385,7 +445,7 @@ fun SettingsScreen(
                     trailingContent = {
                         IconButton(
                             onClick = {
-                                viewModel.setLockBypassEnabled(true)
+                                viewModel.setLockBypassEnabled(enabled = true)
                                 exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
                             },
                             enabled = canExport
@@ -398,7 +458,7 @@ fun SettingsScreen(
                         }
                     },
                     modifier = Modifier.clickable(enabled = canExport) {
-                        viewModel.setLockBypassEnabled(true)
+                        viewModel.setLockBypassEnabled(enabled = true)
                         exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
                     }
                 )
@@ -406,15 +466,23 @@ fun SettingsScreen(
                     headlineContent = { Text("データの復元 (読込)") },
                     supportingContent = { Text("バックアップファイル(ZipまたはJSON)からデータを読み込みます") },
                     trailingContent = {
-                        IconButton(onClick = {
-                            viewModel.setLockBypassEnabled(true)
-                            importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
-                        }) {
+                        IconButton(
+                            onClick = {
+                                viewModel.setLockBypassEnabled(enabled = true)
+                                importLauncher.launch(
+                                    arrayOf(
+                                        "application/zip",
+                                        "application/json",
+                                        "application/octet-stream"
+                                    )
+                                )
+                            }
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = "復元")
                         }
                     },
                     modifier = Modifier.clickable {
-                        viewModel.setLockBypassEnabled(true)
+                        viewModel.setLockBypassEnabled(enabled = true)
                         importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
                     }
                 )
@@ -516,19 +584,19 @@ fun SettingsScreen(
 @Composable
 fun SettingsSection(
     title: String,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier.padding(horizontal = 4.dp),
         )
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(content = content)
         }

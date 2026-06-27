@@ -15,7 +15,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         GlucoseAndHbA1c::class,
         ConditionAtVisit::class,
         ConditionPhoto::class,
-        MedicationRecord::class
+        MedicationRecord::class,
     ],
     version = 8,
     exportSchema = false
@@ -61,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                             null
                         )
                         db.close()
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // パスワードが一致しない、または平文DBの場合はここに来る
                         // ファイルを削除して、Roomに再作成させる
                         context.deleteDatabase(dbName)
@@ -74,7 +74,7 @@ abstract class AppDatabase : RoomDatabase() {
                     dbName
                 )
                     .openHelperFactory(factory)
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { Instance = it }
             }

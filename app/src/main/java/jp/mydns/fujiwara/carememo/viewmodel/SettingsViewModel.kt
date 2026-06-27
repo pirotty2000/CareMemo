@@ -30,7 +30,7 @@ import java.io.OutputStream
  */
 class SettingsViewModel(
     private val repository: CareMemoRepository,
-    userSettingsRepository: UserSettingsRepository
+    userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
     private val json = Json { prettyPrint = true }
@@ -39,46 +39,39 @@ class SettingsViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
+            initialValue = false,
         )
 
     val lockTimeoutMinutes: StateFlow<Int> = userSettingsRepository.lockTimeoutMinutes
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
+            initialValue = 0,
         )
 
     val isBackupPasswordEnabled: StateFlow<Boolean> = userSettingsRepository.isBackupPasswordEnabled
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
+            initialValue = false,
         )
 
     val backupPassword: StateFlow<String> = userSettingsRepository.backupPassword
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ""
+            initialValue = "",
         )
 
     // 復元処理用の一時保持
     private var pendingImportFile: File? = null
     private var pendingImportUri: Uri? = null
 
-    val userList: StateFlow<List<Person>> = repository.getAllPersons()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     val deletedUserList: StateFlow<List<Person>> = repository.getDeletedPersons()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
+            initialValue = emptyList(),
         )
 
     fun setNameMaskingEnabled(enabled: Boolean) {
@@ -93,15 +86,15 @@ class SettingsViewModel(
                 val biometricManager = BiometricManager.from(context)
                 val canAuthenticate = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                 if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
-                    userSettingsRepository.setBiometricEnabled(true)
+                    userSettingsRepository.setBiometricEnabled(enabled = true)
                 } else {
                     showError(
                         "設定できません",
-                        "このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。"
+                        "このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。",
                     )
                 }
             } else {
-                userSettingsRepository.setBiometricEnabled(false)
+                userSettingsRepository.setBiometricEnabled(enabled = false)
             }
         }
     }
@@ -153,7 +146,7 @@ class SettingsViewModel(
                 val photosDir = ImageUtils.getPhotosDir(context)
                 val filesToZip = mutableListOf<File>()
                 filesToZip.add(jsonFile)
-                if (photosDir.exists() && photosDir.list()?.isNotEmpty() == true) {
+                if (photosDir.exists() && (photosDir.list()?.isNotEmpty() == true)) {
                     filesToZip.add(photosDir)
                 }
                 val tempZipFile = File(context.cacheDir, "temp_backup.zip")
@@ -206,7 +199,11 @@ class SettingsViewModel(
                     val isZip = tempZipFile.inputStream().use { input ->
                         val header = ByteArray(4)
                         val read = input.read(header)
-                        read == 4 && header[0] == 0x50.toByte() && header[1] == 0x4B.toByte() && header[2] == 0x03.toByte() && header[3] == 0x04.toByte()
+                        (read == 4) &&
+                                (header[0] == 0x50.toByte()) &&
+                                (header[1] == 0x4B.toByte()) &&
+                                (header[2] == 0x03.toByte()) &&
+                                (header[3] == 0x04.toByte())
                     }
 
                     if (isZip) {
@@ -299,6 +296,7 @@ class SettingsViewModel(
     /**
      * 旧アプリのデータフォルダからデータをインポートします（スケルトン）
      */
+    @Suppress("UNUSED_PARAMETER", "unused")
     fun importLegacyDataFromFolder(context: Context, uri: Uri) {
         viewModelScope.launch {
             showError("未実装", "旧アプリデータの引き継ぎ機能は現在準備中です。")
@@ -309,7 +307,7 @@ class SettingsViewModel(
 
     class Factory(
         private val repository: CareMemoRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

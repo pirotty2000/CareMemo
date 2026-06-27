@@ -1,7 +1,9 @@
+@file:Suppress("DEPRECATION")
 package jp.mydns.fujiwara.carememo.data
 
 import android.content.Context
 import android.util.Base64
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.security.SecureRandom
@@ -19,7 +21,7 @@ class DatabaseKeyManager(context: Context) {
         "db_key_prefs",
         masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
     /**
@@ -33,7 +35,9 @@ class DatabaseKeyManager(context: Context) {
             // 256ビット（32バイト）のランダムなキーを生成
             val newKey = ByteArray(32).apply { SecureRandom().nextBytes(this) }
             val encoded = Base64.encodeToString(newKey, Base64.DEFAULT)
-            sharedPrefs.edit().putString("db_passphrase", encoded).apply()
+            sharedPrefs.edit {
+                putString("db_passphrase", encoded)
+            }
             newKey
         }
     }
