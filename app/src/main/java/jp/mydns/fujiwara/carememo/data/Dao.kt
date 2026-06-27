@@ -194,20 +194,20 @@ interface ConditionPhotoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: ConditionPhoto)
 
-    @Update
-    suspend fun update(item: ConditionPhoto)
+//    @Update
+//    suspend fun update(item: ConditionPhoto)
 
-    @Delete
-    suspend fun delete(item: ConditionPhoto)
+//    @Delete
+//    suspend fun delete(item: ConditionPhoto)
 
     @Query("DELETE FROM condition_photo_db WHERE id = :id")
     suspend fun deleteById(id: Int)
 
-    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE id = :id")
-    suspend fun logicalDelete(id: Int, timestamp: Long)
+//    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE id = :id")
+//    suspend fun logicalDelete(id: Int, timestamp: Long)
 
-    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE condition_id = :conditionId")
-    suspend fun logicalDeleteByConditionId(conditionId: Int, timestamp: Long)
+//    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE condition_id = :conditionId")
+//    suspend fun logicalDeleteByConditionId(conditionId: Int, timestamp: Long)
 
     @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -237,8 +237,8 @@ interface MedicationRecordDao {
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL")
     fun getByPersonId(personId: Int): Flow<List<MedicationRecord>>
 
-    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date = :dosageDate AND deleted_at IS NULL")
-    fun getByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>>
+//    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date = :dosageDate AND deleted_at IS NULL")
+//    fun getByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>>
 
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date LIKE :month || '%' AND deleted_at IS NULL")
     fun getByMonth(personId: Int, month: String): Flow<List<MedicationRecord>>

@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import java.io.File
 import java.io.FileOutputStream
@@ -40,7 +41,7 @@ object ImageUtils {
             val rotation = getRotation(context, inputUri)
 
             // 2. 画像を適切なサイズで読み込む
-            val bitmap = loadResizedBitmap(context, inputUri, MAX_IMAGE_SIZE) ?: return null
+            val bitmap = loadResizedBitmap(context, inputUri) ?: return null
             
             // 3. 回転補正を適用
             val rotatedBitmap = rotateBitmap(bitmap, rotation)
@@ -80,7 +81,8 @@ object ImageUtils {
         }
     }
 
-    private fun loadResizedBitmap(context: Context, uri: Uri, maxSize: Int): Bitmap? {
+    private fun loadResizedBitmap(context: Context, uri: Uri): Bitmap? {
+        val maxSize = MAX_IMAGE_SIZE
         return try {
             // サイズ計測
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -118,17 +120,32 @@ object ImageUtils {
         return inSampleSize
     }
 
+    // 2026/06/28 Inspection
+//    private fun createScaledBitmap(bitmap: Bitmap, maxSize: Int): Bitmap {
+//        val width = bitmap.width
+//        val height = bitmap.height
+//        val scale = maxSize.toFloat() / Math.max(width, height).toFloat()
+//
+//        if (scale >= 1.0f) return bitmap // 既に小さい場合はそのまま
+//
+//        val targetWidth = (width * scale).toInt()
+//        val targetHeight = (height * scale).toInt()
+//
+//        return Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true)
+//    }
+
     private fun createScaledBitmap(bitmap: Bitmap, maxSize: Int): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
-        val scale = maxSize.toFloat() / Math.max(width, height).toFloat()
-        
-        if (scale >= 1.0f) return bitmap // 既に小さい場合はそのまま
+        val scale = maxSize.toFloat() / width.coerceAtLeast(height).toFloat()
+
+        if (scale >= 1.0f) return bitmap
 
         val targetWidth = (width * scale).toInt()
         val targetHeight = (height * scale).toInt()
-        
-        return Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true)
+
+        // KTXを使用して書き換え
+        return bitmap.scale(targetWidth, targetHeight)
     }
 
     private fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {

@@ -142,10 +142,10 @@ object HealthThresholds {
     }
 
     // --- 説明文（グラフ補助用） ---
-    val BP_EXPLANATION = "血圧グラフの見方：\n・${BP_LOW_SYSTOLIC.toInt()}〜${BP_HIGH_SYSTOLIC.toInt()}（上）、${BP_LOW_DIASTOLIC.toInt()}〜${BP_HIGH_DIASTOLIC.toInt()}（下）が正常範囲です。"
-    val PULSE_EXPLANATION = "脈拍グラフの見方：\n・${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()} が正常範囲です。"
-    val TEMP_EXPLANATION = "体温グラフの見方：\n・$TEMP_LOW〜$TEMP_HIGH が平熱の目安です。"
-    val GLUCOSE_EXPLANATION = "血糖値グラフの見方：\n・${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()} mg/dL が良好な範囲です。"
-    val HBA1C_EXPLANATION = "HbA1cグラフの見方：\n・$HBA1C_GOOD％以下が正常範囲です。"
-    val BMI_EXPLANATION = "BMIグラフの見方：\n・${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満が普通体重です。"
+    const val BP_EXPLANATION = "血圧グラフの見方：\n・${BP_LOW_SYSTOLIC.toInt()}〜${BP_HIGH_SYSTOLIC.toInt()}（上）、${BP_LOW_DIASTOLIC.toInt()}〜${BP_HIGH_DIASTOLIC.toInt()}（下）が正常範囲です。"
+    const val PULSE_EXPLANATION = "脈拍グラフの見方：\n・${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()} が正常範囲です。"
+    const val TEMP_EXPLANATION = "体温グラフの見方：\n・$TEMP_LOW〜$TEMP_HIGH が平熱の目安です。"
+    const val GLUCOSE_EXPLANATION = "血糖値グラフの見方：\n・${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()} mg/dL が良好な範囲です。"
+    const val HBA1C_EXPLANATION = "HbA1cグラフの見方：\n・$HBA1C_GOOD％以下が正常範囲です。"
+    const val BMI_EXPLANATION = "BMIグラフの見方：\n・${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満が普通体重です。"
 }

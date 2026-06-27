@@ -23,6 +23,7 @@ import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.LineChart
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +61,7 @@ fun GraphExpansionScreen(
     LaunchedEffect(records) {
         if (records.isNotEmpty()) {
             listState.scrollToItem(initialGraphIndex)
-            delay(500) // 少し待ってからハイライトを消す演出
+            delay(500.milliseconds) // 少し待ってからハイライトを消す演出
             highlightedIndex = -1
         }
     }

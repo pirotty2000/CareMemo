@@ -62,9 +62,9 @@ class MedicationViewModel(
             records.groupBy { it.dosageDate }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    fun selectMonth(month: YearMonth) {
-        _selectedMonth.value = month
-    }
+//    fun selectMonth(month: YearMonth) {
+//        _selectedMonth.value = month
+//    }
 
     fun nextMonth() {
         _selectedMonth.value = _selectedMonth.value.plusMonths(1)

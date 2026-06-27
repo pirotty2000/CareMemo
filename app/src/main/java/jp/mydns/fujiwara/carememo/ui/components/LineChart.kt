@@ -57,9 +57,9 @@ fun LineChart(
 
     val allPoints = dataList.flatMap { it.points }
     if (allPoints.isEmpty() && (fixedMinX == null || fixedMaxX == null)) return
-    
-    val minX = fixedMinX ?: (allPoints.map { it.first }.minOrNull() ?: 0.0)
-    val maxX = fixedMaxX ?: (allPoints.map { it.first }.maxOrNull() ?: 0.0)
+
+    val minX = fixedMinX ?: (allPoints.minOfOrNull { it.first } ?: 0.0)
+    val maxX = fixedMaxX ?: (allPoints.maxOfOrNull { it.first } ?: 0.0)
     val duration = if (maxX - minX == 0.0) 1.0 else maxX - minX
     
     val allYValues = if (allPoints.isNotEmpty()) {

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.IntOffset
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
@@ -130,7 +132,10 @@ fun UnifiedRecordScreen(
         if (recordToDelete != null) {
             AlertDialog(onDismissRequest = { recordToDelete = null }, title = { Text("データの削除") }, text = { Text("この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。") }, confirmButton = { TextButton(onClick = { recordToDelete?.let { viewModel.deleteRecord(it) }; recordToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("削除") } }, dismissButton = { TextButton(onClick = { recordToDelete = null }) { Text("キャンセル") } })
         }
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Spacer(modifier = Modifier.height(4.dp))
             if (currentCategory.hasSearch) { OutlinedTextField(value = searchQuery, onValueChange = { viewModel.updateSearchQuery(it) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("${currentCategory.displayName}を検索...") }, leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }, trailingIcon = { if (searchQuery.isNotEmpty()) { IconButton(onClick = { viewModel.updateSearchQuery("") }) { Icon(Icons.Rounded.Clear, contentDescription = "クリア") } } }, singleLine = true, shape = MaterialTheme.shapes.medium) }
             
@@ -158,7 +163,10 @@ fun UnifiedRecordScreen(
                     UnifiedHistoryList(records = records.filterIsInstance<HistoryRecord>(), category = currentCategory, conditionPhotoMap = conditionPhotoMap, onItemClick = { record -> if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, record.id) else onNavigateToHealthRecordDetail(personId, currentCategory, record.id) }, onDeleteSwipe = { record -> recordToDelete = record }, isAnyDialogOpen = recordToDelete != null)
                 } else {
                     val scrollState = rememberScrollState()
-                    Box(modifier = Modifier.fillMaxSize()) { Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(end = 16.dp)) { HealthGraphView(records = records, categoryType = currentCategory, onExpandGraph = { index -> onNavigateToGraphExpansion(personId, currentCategory, index) }); Spacer(modifier = Modifier.height(80.dp)) }; if (scrollState.maxValue > 0) { VerticalScrollIndicator(scrollState) } }
+                    Box(modifier = Modifier.fillMaxSize()) { Column(modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(end = 16.dp)) { HealthGraphView(records = records, categoryType = currentCategory, onExpandGraph = { index -> onNavigateToGraphExpansion(personId, currentCategory, index) }); Spacer(modifier = Modifier.height(80.dp)) }; if (scrollState.maxValue > 0) { VerticalScrollIndicator(scrollState) } }
                 }
             }
         }
@@ -213,7 +221,9 @@ fun UnifiedHistoryList(
             val isSingle = items.size == 1
             stickyHeader {
                 Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = formatDateHeader(date), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (isSingle) { Text(text = formatTime(items.first().recordTime), style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary) }
                     }
@@ -248,9 +258,17 @@ fun HistoryItemWrapper(
             dismissState.snapTo(SwipeToDismissBoxValue.Settled)
         }
     }
-    SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
-        Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onItemClick).padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier
+        .fillMaxSize()
+        .background(color)
+        .padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
+        Card(modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onItemClick)
+            .padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)) {
                 if (showTime) { Text(text = formatTime(record.recordTime), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary); Spacer(modifier = Modifier.height(4.dp)) }
                 content()
             }
@@ -307,10 +325,65 @@ fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
     }
 }
 
+//@Composable
+//fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
+//    val barHeight = 60.dp; val density = LocalDensity.current; val viewportHeight = with(density) { scrollState.viewportSize.toDp() }; val maxOffset = viewportHeight - barHeight; val scrollFraction by remember { derivedStateOf { if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f } }; val isBottomSelected by remember { derivedStateOf { scrollState.value > (scrollState.maxValue / 2) } }
+//    Column(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) { repeat(2) { index -> val isSelected = if (index == 0) !isBottomSelected else isBottomSelected; Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))) } }; Box(modifier = Modifier.width(4.dp).height(barHeight).align(Alignment.TopEnd).offset(y = maxOffset * scrollFraction).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
+//
+//}
 @Composable
 fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
-    val barHeight = 60.dp; val density = LocalDensity.current; val viewportHeight = with(density) { scrollState.viewportSize.toDp() }; val maxOffset = viewportHeight - barHeight; val scrollFraction by remember { derivedStateOf { if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f } }; val isBottomSelected by remember { derivedStateOf { scrollState.value > (scrollState.maxValue / 2) } }
-    Column(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) { repeat(2) { index -> val isSelected = if (index == 0) !isBottomSelected else isBottomSelected; Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))) } }; Box(modifier = Modifier.width(4.dp).height(barHeight).align(Alignment.TopEnd).offset(y = maxOffset * scrollFraction).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
+    val barHeight = 60.dp
+    val density = LocalDensity.current
+    val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
+    val maxOffset = viewportHeight - barHeight
+
+    val scrollFraction by remember {
+        derivedStateOf {
+            if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f
+        }
+    }
+    val isBottomSelected by remember {
+        derivedStateOf { scrollState.value > (scrollState.maxValue / 2) }
+    }
+
+    Column(
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .padding(end = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        repeat(2) { index ->
+            val isSelected = if (index == 0) !isBottomSelected else isBottomSelected
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                            alpha = 0.3f
+                        )
+                    )
+            )
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .width(4.dp)
+            .height(barHeight)
+            .align(Alignment.TopEnd)
+            // ここを修正：ラムダ形式にすることでスクロール中の再構成を回避
+            .offset {
+                IntOffset(
+                    x = 0,
+                    y = (maxOffset * scrollFraction).roundToPx()
+                )
+            }
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+    )
 }
 
 @Composable

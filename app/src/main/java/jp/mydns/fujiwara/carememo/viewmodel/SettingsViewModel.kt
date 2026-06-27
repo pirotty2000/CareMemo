@@ -293,15 +293,15 @@ class SettingsViewModel(
         }
     }
 
-    /**
-     * 旧アプリのデータフォルダからデータをインポートします（スケルトン）
-     */
-    @Suppress("UNUSED_PARAMETER", "unused")
-    fun importLegacyDataFromFolder(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            showError("未実装", "旧アプリデータの引き継ぎ機能は現在準備中です。")
-        }
-    }
+//    /**
+//     * 旧アプリのデータフォルダからデータをインポートします（スケルトン）
+//     */
+//    @Suppress("UNUSED_PARAMETER", "unused")
+//    fun importLegacyDataFromFolder(context: Context, uri: Uri) {
+//        viewModelScope.launch {
+//            showError("未実装", "旧アプリデータの引き継ぎ機能は現在準備中です。")
+//        }
+//    }
 
 
 

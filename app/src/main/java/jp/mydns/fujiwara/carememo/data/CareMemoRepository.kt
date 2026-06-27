@@ -72,7 +72,8 @@ class CareMemoRepository(
     /**
      * 利用者を物理削除します。外部キーの CASCADE 設定により、子データも自動で物理削除されます。
      */
-    suspend fun deletePerson(person: Person) = personDao.delete(person)
+
+    //suspend fun deletePerson(person: Person) = personDao.delete(person)
 
     // --- 各種記録操作 ---
     fun getHeightAndWeightByPersonId(personId: Int): Flow<List<HeightAndWeight>> = 
@@ -109,7 +110,7 @@ class CareMemoRepository(
 
     suspend fun insertConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.insert(item)
 
-    suspend fun deleteConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.delete(item)
+    //suspend fun deleteConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.delete(item)
 
     suspend fun deleteConditionPhotoById(id: Int) = conditionPhotoDao.deleteById(id)
     
@@ -122,8 +123,8 @@ class CareMemoRepository(
     fun getMedicationRecords(personId: Int): Flow<List<MedicationRecord>> =
         medicationRecordDao.getByPersonId(personId)
 
-    fun getMedicationRecordsByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>> =
-        medicationRecordDao.getByDate(personId, dosageDate)
+    //fun getMedicationRecordsByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>> =
+    //    medicationRecordDao.getByDate(personId, dosageDate)
 
     fun getMedicationRecordsByMonth(personId: Int, month: String): Flow<List<MedicationRecord>> =
         medicationRecordDao.getByMonth(personId, month)

@@ -241,6 +241,7 @@ object PdfExporter {
     }
 
     private fun drawHeader(canvas: Canvas, person: Person, isNameMaskingEnabled: Boolean, category: Category, pageNumber: Int): Float {
+        val nextY = 140f // ヘッダーの高さ(140f)で固定
         val paint = Paint().apply { color = Color.BLACK; textSize = 18f; isFakeBoldText = true }
         val name = person.getMaskedName(isNameMaskingEnabled)
         val date = DateTimeUtils.getCurrentPhotoCaption()
@@ -250,7 +251,7 @@ object PdfExporter {
         canvas.drawText("出力日時: $date", MARGIN, 100f, paint)
         canvas.drawText("ページ: $pageNumber", PAGE_WIDTH - MARGIN - 50f, 100f, paint)
         canvas.drawLine(MARGIN, 110f, PAGE_WIDTH - MARGIN, 110f, paint)
-        return 140f
+        return nextY
     }
 
     private fun drawConditionAtVisitContent(
