@@ -76,7 +76,7 @@ object ImageUtils {
                     else -> 0
                 }
             } ?: 0
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0
         }
     }
@@ -101,7 +101,7 @@ object ImageUtils {
 
             // 指定サイズに正確にリサイズ
             createScaledBitmap(sampledBitmap, maxSize)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
