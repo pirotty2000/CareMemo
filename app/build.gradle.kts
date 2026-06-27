@@ -24,7 +24,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -72,7 +72,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.sqlcipher.android)
-    implementation("androidx.sqlite:sqlite-ktx:2.4.0")
+    implementation(libs.androidx.sqlite.ktx)
 
     // Room
     implementation(libs.room.runtime)
