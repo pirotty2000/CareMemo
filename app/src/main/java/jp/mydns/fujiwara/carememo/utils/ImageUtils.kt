@@ -139,6 +139,9 @@ object ImageUtils {
 
     private fun saveBitmapToFile(bitmap: Bitmap, file: File, quality: Int) {
         FileOutputStream(file).use { out ->
+            // Bitmap.compressを実行すると、ピクセルデータのみが書き出され、
+            // 元のファイルに含まれていたExif情報（GPS位置情報、端末情報など）は自動的に破棄される。
+            // これにより、個人情報の漏洩を防ぐことができる。
             bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
         }
     }

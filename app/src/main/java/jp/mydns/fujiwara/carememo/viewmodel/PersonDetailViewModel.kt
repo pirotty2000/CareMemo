@@ -15,6 +15,7 @@ import jp.mydns.fujiwara.carememo.data.CareMemoRepository
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -175,6 +176,25 @@ class PersonDetailViewModel(
     }
 
     /**
+     * 一時ファイルを削除します。
+     */
+    fun deleteTempFile(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                if (uri.scheme == "file" || uri.scheme == "content") {
+                    try {
+                        context.contentResolver.delete(uri, null, null)
+                    } catch (ignore: Exception) {
+                        uri.path?.let { File(it).delete() }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
      * 写真をリサイズ・保存し、データベースに登録します。
      */
     fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int, caption: String) {
@@ -193,6 +213,17 @@ class PersonDetailViewModel(
                         caption = caption
                     )
                     repository.insertConditionPhoto(photo)
+                    
+                    // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
+                    if (uri.scheme == "file" || uri.scheme == "content") {
+                        try {
+                            context.contentResolver.delete(uri, null, null)
+                        } catch (ignore: Exception) {
+                            // 一部のURI（FileProvider等）ではdeleteが失敗する場合があるため、Fileとして試行
+                            uri.path?.let { File(it).delete() }
+                        }
+                    }
+
                     showSnackbar("写真を保存しました")
                 } else {
                     showError("保存エラー", "画像の処理に失敗しました。空き容量を確認してください。")

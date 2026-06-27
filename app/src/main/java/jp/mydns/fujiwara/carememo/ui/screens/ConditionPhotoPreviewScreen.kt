@@ -85,7 +85,10 @@ fun ConditionPhotoPreviewScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onBack,
+                        onClick = {
+                            viewModel.deleteTempFile(context, uri)
+                            onBack()
+                        },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("キャンセル")

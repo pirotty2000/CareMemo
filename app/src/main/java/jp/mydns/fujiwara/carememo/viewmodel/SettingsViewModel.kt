@@ -191,11 +191,15 @@ class SettingsViewModel(
         }
     }
 
-    fun clearAllData() {
+    fun clearAllData(context: Context) {
         viewModelScope.launch {
             try {
+                // データベースの全消去
                 repository.clearAllData()
-                sendUiEvent(UiEvent.ShowInfoDialog("完了", "全てのデータを削除しました。"))
+                // 写真ファイルの全消去
+                ImageUtils.clearPhotosDir(context)
+                
+                sendUiEvent(UiEvent.ShowInfoDialog("完了", "全てのデータと写真を削除しました。"))
             } catch (e: Exception) {
                 showError("エラー", "データの削除に失敗しました: ${e.localizedMessage}")
             }
