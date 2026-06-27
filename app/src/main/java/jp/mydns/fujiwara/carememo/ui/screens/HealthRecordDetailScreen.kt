@@ -119,7 +119,7 @@ fun HealthRecordDetailScreen(
 
     LaunchedEffect(personId, category) {
         viewModel.loadPerson(personId)
-        viewModel.loadRecords(personId, category)
+        viewModel.setCategory(category)
     }
 
     val firstFieldFocusRequester = remember { FocusRequester() }

@@ -50,7 +50,7 @@ fun GraphExpansionScreen(
 
     LaunchedEffect(personId, category) {
         viewModel.loadPerson(personId)
-        viewModel.loadRecords(personId, category)
+        viewModel.setCategory(category)
     }
 
     val listState = rememberLazyListState()

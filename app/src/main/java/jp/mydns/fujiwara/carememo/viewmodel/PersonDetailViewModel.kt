@@ -1,5 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -10,146 +12,132 @@ import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
-import android.content.Context
-import android.net.Uri
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 
+/**
+ * 利用者詳細画面（各カテゴリの履歴表示・編集）用の ViewModel
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 class PersonDetailViewModel(
-    private val repository: CareMemoRepository,
+    repository: CareMemoRepository,
     userSettingsRepository: UserSettingsRepository,
-) : BaseViewModel(userSettingsRepository) {
+) : PersonBaseViewModel(repository, userSettingsRepository) {
 
-    private val _currentPerson = MutableStateFlow<Person?>(null)
-    val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
+    private val _currentCategory = MutableStateFlow<Category?>(null)
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
-        .flatMapLatest { person ->
-            if (person != null) repository.getPersonCategorySummaryById(person.id)
-            else kotlinx.coroutines.flow.flowOf(null)
+    /**
+     * 現在のカテゴリに基づいたレコード一覧
+     */
+    val records: StateFlow<List<Any>> = combine(_currentPerson, _currentCategory) { person, category ->
+        person to category
+    }.flatMapLatest { (person, category) ->
+        if (person == null || category == null) flowOf(emptyList())
+        else when (category) {
+            Category.HEIGHT_AND_WEIGHT -> repository.getHeightAndWeightByPersonId(person.id)
+            Category.BP_AND_PULSE -> repository.getBpAndPulseByPersonId(person.id)
+            Category.GLUCOSE_AND_HBA1C -> repository.getGlucoseAndHbA1cByPersonId(person.id)
+            Category.CONDITION_AT_VISIT -> repository.getConditionAtVisitByPersonId(person.id)
+            Category.MEDICATION -> flowOf(emptyList())
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _records = MutableStateFlow<List<Any>>(emptyList())
-    val records: StateFlow<List<Any>> = _records.asStateFlow()
-    
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredRecords: StateFlow<List<Any>> = combine(_records, _searchQuery) { records, query ->
+    /**
+     * 検索クエリでフィルタリングされたレコード一覧
+     */
+    val filteredRecords: StateFlow<List<Any>> = combine(records, _searchQuery) { records, query ->
         if (query.isBlank()) {
             records
         } else {
             records.filter { record ->
-                if (record is ConditionAtVisit) {
-                    val titleMatch = record.title?.contains(query, ignoreCase = true) == true
-                    val conditionMatch = record.condition?.contains(query, ignoreCase = true) == true
-                    titleMatch || conditionMatch
-                } else {
-                    true
+                when (record) {
+                    is ConditionAtVisit -> {
+                        val titleMatch = record.title?.contains(query, ignoreCase = true) == true
+                        val conditionMatch = record.condition?.contains(query, ignoreCase = true) == true
+                        titleMatch || conditionMatch
+                    }
+                    else -> true // 数値系データは現状検索対象外（全て表示）
                 }
             }
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
-    
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
+    /**
+     * 選択された所見メモに紐づく写真一覧
+     */
     val currentConditionPhotos: StateFlow<List<ConditionPhoto>> = _selectedConditionId
         .flatMapLatest { id ->
             if (id != null) repository.getConditionPhotosByConditionId(id)
-            else kotlinx.coroutines.flow.flowOf(emptyList())
+            else flowOf(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _conditionPhotoMap = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
-    val conditionPhotoMap: StateFlow<Map<Int, Boolean>> = _conditionPhotoMap.asStateFlow()
+    /**
+     * 所見メモIDと「写真の有無」のマップ（一覧表示でのアイコン制御用）
+     */
+    val conditionPhotoMap: StateFlow<Map<Int, Boolean>> = combine(_currentPerson, records) { person, recs ->
+        person to recs
+    }.flatMapLatest { (person, recs) ->
+        if (person == null || recs.isEmpty() || recs.first() !is ConditionAtVisit) {
+            flowOf(emptyMap())
+        } else {
+            repository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
+                (recs as List<ConditionAtVisit>).associate { memo ->
+                    memo.id to photos.any { it.conditionId == memo.id }
+                }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
-    fun loadPerson(personId: Int) {
-        viewModelScope.launch {
-            repository.getPersonById(personId).collectLatest {
-                _currentPerson.value = it
-            }
-        }
-    }
-
-    fun loadRecords(personId: Int, category: Category) {
-        viewModelScope.launch {
-            when (category) {
-                Category.HEIGHT_AND_WEIGHT -> {
-                    repository.getHeightAndWeightByPersonId(personId).collectLatest { _records.value = it }
-                }
-                Category.BP_AND_PULSE -> {
-                    repository.getBpAndPulseByPersonId(personId).collectLatest { _records.value = it }
-                }
-                Category.GLUCOSE_AND_HBA1C -> {
-                    repository.getGlucoseAndHbA1cByPersonId(personId).collectLatest { _records.value = it }
-                }
-                Category.CONDITION_AT_VISIT -> {
-                    repository.getConditionAtVisitByPersonId(personId).collectLatest { memos ->
-                        _records.value = memos
-                        val photos = repository.getAllPhotosByPersonId(personId)
-                        val map = memos.associate { memo ->
-                            memo.id to photos.any { it.conditionId == memo.id }
-                        }
-                        _conditionPhotoMap.value = map
-                    }
-                }
-                Category.MEDICATION -> {
-                    // 服薬管理は別画面（MedicationScreen）で扱うため、ここでは何もしない
-                    _records.value = emptyList()
-                }
-            }
-        }
+    /**
+     * 表示するカテゴリを設定します。
+     */
+    fun setCategory(category: Category) {
+        _currentCategory.value = category
     }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
+    /**
+     * レコードを保存または更新します。
+     */
     fun saveRecord(record: Any?) {
         if (record == null) return
         viewModelScope.launch {
             try {
-                val isUpdate = isRecordUpdate(record)
+                _isProcessing.value = true
+                val isUpdate = if (record is HistoryRecord) record.id != 0 else false
                 performSave(record)
                 showSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました")
             } catch (e: Exception) {
                 showError("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}")
+            } finally {
+                _isProcessing.value = false
             }
         }
-    }
-
-    private fun isRecordUpdate(record: Any): Boolean = when (record) {
-        is HeightAndWeight -> record.id != 0
-        is BpAndPulse -> record.id != 0
-        is GlucoseAndHbA1c -> record.id != 0
-        is ConditionAtVisit -> record.id != 0
-        else -> false
     }
 
     private suspend fun performSave(record: Any) = when (record) {
@@ -160,6 +148,9 @@ class PersonDetailViewModel(
         else -> {}
     }
 
+    /**
+     * レコードを削除します。
+     */
     fun deleteRecord(record: Any) {
         viewModelScope.launch {
             try {
@@ -183,6 +174,9 @@ class PersonDetailViewModel(
         _selectedConditionId.value = id
     }
 
+    /**
+     * 写真をリサイズ・保存し、データベースに登録します。
+     */
     fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int, caption: String) {
         viewModelScope.launch {
             _isProcessing.value = true
@@ -211,6 +205,9 @@ class PersonDetailViewModel(
         }
     }
 
+    /**
+     * 写真データおよび物理ファイルを削除します。
+     */
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
         viewModelScope.launch {
             try {

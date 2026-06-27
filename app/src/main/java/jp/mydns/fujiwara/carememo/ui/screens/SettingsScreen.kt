@@ -31,12 +31,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: PersonListViewModel,
+    viewModel: SettingsViewModel,
     onNavigateToRestore: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -85,7 +85,6 @@ fun SettingsScreen(
                     dialogMessage = event.message
                 }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
-                    // 設定画面ではスナックバーのホストがないため、必要なら追加するかダイアログで代用
                     dialogTitle = "通知"
                     dialogMessage = event.message
                 }
@@ -176,7 +175,7 @@ fun SettingsScreen(
                         ) {
                             RadioButton(
                                 selected = lockTimeoutMinutes == minutes,
-                                onClick = null // Rowのクリックで処理
+                                onClick = null
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(label)

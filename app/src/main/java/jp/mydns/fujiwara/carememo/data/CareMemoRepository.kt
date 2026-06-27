@@ -115,7 +115,13 @@ class CareMemoRepository(
     
     suspend fun getAllPhotosByPersonId(personId: Int) = conditionPhotoDao.getAllByPersonId(personId)
 
+    fun getAllPhotosByPersonIdFlow(personId: Int): Flow<List<ConditionPhoto>> = 
+        conditionPhotoDao.getAllByPersonIdFlow(personId)
+
     // --- MedicationRecord ---
+    fun getMedicationRecords(personId: Int): Flow<List<MedicationRecord>> =
+        medicationRecordDao.getByPersonId(personId)
+
     fun getMedicationRecordsByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>> =
         medicationRecordDao.getByDate(personId, dosageDate)
 

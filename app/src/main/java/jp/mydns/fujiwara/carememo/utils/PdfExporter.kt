@@ -17,14 +17,18 @@ import androidx.core.content.FileProvider
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.HealthChartConfig
 import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
-import jp.mydns.fujiwara.carememo.ui.screens.ExportOrder
-import jp.mydns.fujiwara.carememo.ui.screens.ExportRange
+import jp.mydns.fujiwara.carememo.ui.components.ExportOrder
+import jp.mydns.fujiwara.carememo.ui.components.ExportRange
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.chrono.JapaneseDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -146,16 +150,30 @@ object PdfExporter {
                 }
             }
             Category.MEDICATION -> {
-                // TODO: 服薬管理のPDF出力実装
-                document.finishPage(currentPage)
+                val castedRecords = filteredRecords.asSequence().filterIsInstance<MedicationRecord>().toList()
+                if (castedRecords.isNotEmpty()) {
+                    drawMedicationContent(document, currentPage, castedRecords, currentY) { newCanvas, newPageNum ->
+                        pageNumber = newPageNum
+                        drawHeader(newCanvas, person, isNameMaskingEnabled, category, pageNumber)
+                    }
+                } else {
+                    document.finishPage(currentPage)
+                }
             }
         }
 
         val fileName = "CareMemo_${category.name}_${System.currentTimeMillis()}.pdf"
         val file = File(context.cacheDir, fileName)
-        try { FileOutputStream(file).use { out -> document.writeTo(out) } } catch (e: Exception) { e.printStackTrace() } finally { document.close() }
-        shareFile(context, file)
-        return true
+        try {
+            FileOutputStream(file).use { out -> document.writeTo(out) }
+            shareFile(context, file)
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            document.close()
+        }
     }
 
     private fun filterAnyRecords(records: List<Any>, range: ExportRange, customStart: Instant?, customEnd: Instant?): List<Any> {
@@ -198,7 +216,7 @@ object PdfExporter {
         val paint = Paint().apply { color = Color.BLACK; textSize = 18f; isFakeBoldText = true }
         val name = person.getMaskedName(isNameMaskingEnabled)
         val date = DateTimeUtils.getCurrentPhotoCaption()
-        canvas.drawText("利用者記録報告書 (${category.displayName})", MARGIN, 50f, paint)
+        canvas.drawText("利用者記録 (${category.displayName})", MARGIN, 50f, paint)
         paint.textSize = 12f; paint.isFakeBoldText = false
         canvas.drawText("利用者名: $name 様", MARGIN, 80f, paint)
         canvas.drawText("出力日時: $date", MARGIN, 100f, paint)
@@ -645,6 +663,153 @@ object PdfExporter {
                 cx += col.width
             }
             currentY += 20f
+        }
+        document.finishPage(currentPage)
+    }
+
+    private fun drawMedicationContent(
+        document: PdfDocument,
+        initialPage: PdfDocument.Page,
+        records: List<MedicationRecord>,
+        startY: Float,
+        onNewPage: (Canvas, Int) -> Float
+    ) {
+        var currentPage = initialPage
+        var canvas = currentPage.canvas
+        var currentY = startY
+        var pageNum = 1
+
+        val titlePaint = Paint().apply { color = Color.BLACK; textSize = 12f; isFakeBoldText = true; isAntiAlias = true }
+        val headerPaint = Paint().apply { color = Color.BLACK; textSize = 8f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+        val bodyPaint = Paint().apply { color = Color.BLACK; textSize = 9f; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+        val labelPaint = Paint().apply { color = Color.BLACK; textSize = 9f; isFakeBoldText = true; isAntiAlias = true }
+        val linePaint = Paint().apply { color = Color.LTGRAY; strokeWidth = 0.5f; style = Paint.Style.STROKE }
+
+        // 曜日の色
+        val sundayPaint = Paint().apply { color = Color.rgb(211, 47, 47); textSize = 8f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+        val saturdayPaint = Paint().apply { color = Color.rgb(25, 118, 210); textSize = 8f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+
+        // ステータスの色・記号設定
+        val statusPaints = mapOf(
+            2 to Paint().apply { color = Color.rgb(103, 58, 183); textSize = 10f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }, // Taken (Purple)
+            1 to Paint().apply { color = Color.rgb(126, 87, 194); textSize = 10f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }, // Assisted (Medium Purple)
+            0 to Paint().apply { color = Color.rgb(211, 47, 47); textSize = 11f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }  // Not taken (Red)
+        )
+        val grayPaint = Paint().apply { color = Color.LTGRAY; textSize = 9f; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+
+        // 月ごとにグループ化し、降順（新しい月が上）にソート
+        val recordsByMonth = records.groupBy {
+            val date = try { LocalDate.parse(it.dosageDate) } catch (e: Exception) { LocalDate.now() }
+            YearMonth.from(date)
+        }.toSortedMap(compareByDescending { it })
+
+        val rowLabels = listOf("朝", "昼", "夕", "寝る前")
+        val labelWidth = 60f
+        val colWidth = (PAGE_WIDTH - MARGIN * 2 - labelWidth) / 31f
+        val rowHeight = 22f
+        val tableHeight = rowHeight * 6 + 40f // ヘッダー2行 + データ4行 + タイトル・余白
+
+        recordsByMonth.forEach { (yearMonth, monthRecords) ->
+            // ページ跨ぎ判定
+            if (currentY + tableHeight > PAGE_HEIGHT - MARGIN) {
+                document.finishPage(currentPage)
+                pageNum++
+                val pi = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create()
+                currentPage = document.startPage(pi)
+                canvas = currentPage.canvas
+                currentY = onNewPage(canvas, pageNum)
+            }
+
+            // 月タイトル描画 (和暦)
+            val eraDate = JapaneseDate.from(yearMonth.atDay(1))
+            val eraName = eraDate.format(DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN))
+            val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
+            val titleText = "${yearMonth.year}($eraName$eraYear)年${yearMonth.monthValue}月"
+            canvas.drawText(titleText, MARGIN, currentY, titlePaint)
+            currentY += 15f
+
+            val startX = MARGIN
+            val tableTop = currentY
+            val daysInMonth = yearMonth.lengthOfMonth()
+            
+            // 土日の背景色塗りつぶし
+            val sunBgPaint = Paint().apply { color = Color.rgb(255, 240, 240); style = Paint.Style.FILL }
+            val satBgPaint = Paint().apply { color = Color.rgb(240, 248, 255); style = Paint.Style.FILL }
+            for (day in 1..daysInMonth) {
+                val date = yearMonth.atDay(day)
+                val dayOfWeek = date.dayOfWeek
+                if (dayOfWeek == java.time.DayOfWeek.SUNDAY || dayOfWeek == java.time.DayOfWeek.SATURDAY) {
+                    val xStart = startX + labelWidth + (day - 1) * colWidth
+                    val rect = RectF(xStart, tableTop, xStart + colWidth, tableTop + rowHeight * 6)
+                    canvas.drawRect(rect, if (dayOfWeek == java.time.DayOfWeek.SUNDAY) sunBgPaint else satBgPaint)
+                }
+            }
+
+            // 表のグリッド（横線）
+            for (i in 0..6) {
+                val y = tableTop + i * rowHeight
+                canvas.drawLine(startX, y, startX + labelWidth + colWidth * daysInMonth, y, linePaint)
+            }
+            // 縦線
+            canvas.drawLine(startX, tableTop, startX, tableTop + rowHeight * 6, linePaint) // 左端
+            canvas.drawLine(startX + labelWidth, tableTop, startX + labelWidth, tableTop + rowHeight * 6, linePaint) // ラベルとデータの境界
+            for (i in 1..daysInMonth) {
+                val x = startX + labelWidth + i * colWidth
+                canvas.drawLine(x, tableTop, x, tableTop + rowHeight * 6, linePaint)
+            }
+
+            // ヘッダー行 (日付)
+            for (day in 1..daysInMonth) {
+                val x = startX + labelWidth + (day - 0.5f) * colWidth
+                canvas.drawText(day.toString(), x, tableTop + rowHeight * 0.65f, headerPaint)
+                
+                // 曜日
+                val date = yearMonth.atDay(day)
+                val dayOfWeek = date.dayOfWeek
+                val dowStr = when (dayOfWeek) {
+                    java.time.DayOfWeek.SUNDAY -> "日"
+                    java.time.DayOfWeek.MONDAY -> "月"
+                    java.time.DayOfWeek.TUESDAY -> "火"
+                    java.time.DayOfWeek.WEDNESDAY -> "水"
+                    java.time.DayOfWeek.THURSDAY -> "木"
+                    java.time.DayOfWeek.FRIDAY -> "金"
+                    java.time.DayOfWeek.SATURDAY -> "土"
+                    else -> ""
+                }
+                val dowPaint = when (dayOfWeek) {
+                    java.time.DayOfWeek.SUNDAY -> sundayPaint
+                    java.time.DayOfWeek.SATURDAY -> saturdayPaint
+                    else -> headerPaint
+                }
+                canvas.drawText(dowStr, x, tableTop + rowHeight * 1.65f, dowPaint)
+            }
+
+            // データ行
+            val recordsByDayAndSlot = monthRecords.associateBy { it.dosageDate to it.timeSlot }
+            rowLabels.forEachIndexed { rowIndex, label ->
+                val y = tableTop + (rowIndex + 2) * rowHeight
+                canvas.drawText(label, startX + 5f, y + rowHeight * 0.65f, labelPaint)
+                
+                for (day in 1..daysInMonth) {
+                    val dateStr = yearMonth.atDay(day).toString()
+                    val record = recordsByDayAndSlot[dateStr to rowIndex]
+                    val x = startX + labelWidth + (day - 0.5f) * colWidth
+                    if (record != null) {
+                        val mark = when (record.status) {
+                            2 -> "〇"
+                            1 -> "△"
+                            0 -> "×"
+                            else -> "－"
+                        }
+                        val paint = statusPaints[record.status] ?: bodyPaint
+                        canvas.drawText(mark, x, y + rowHeight * 0.7f, paint)
+                    } else {
+                        canvas.drawText("－", x, y + rowHeight * 0.7f, grayPaint)
+                    }
+                }
+            }
+
+            currentY += rowHeight * 6 + 30f // 次の表までの余白
         }
         document.finishPage(currentPage)
     }

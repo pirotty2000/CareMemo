@@ -38,6 +38,7 @@ import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -205,11 +206,11 @@ fun CareMemoApp(activity: FragmentActivity) {
             )
         }
         composable("settings") {
-            val listViewModel: PersonListViewModel = viewModel(
-                factory = PersonListViewModel.Factory(repository, userSettingsRepository)
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModel.Factory(repository, userSettingsRepository)
             )
             SettingsScreen(
-                viewModel = listViewModel,
+                viewModel = settingsViewModel,
                 onNavigateToRestore = {
                     navController.navigate("restore")
                 },

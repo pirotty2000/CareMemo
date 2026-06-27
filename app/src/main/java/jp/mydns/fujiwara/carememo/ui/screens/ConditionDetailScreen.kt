@@ -100,7 +100,7 @@ fun ConditionDetailScreen(
     // データのロード
     LaunchedEffect(personId, conditionId) {
         viewModel.loadPerson(personId)
-        viewModel.loadRecords(personId, jp.mydns.fujiwara.carememo.data.Category.CONDITION_AT_VISIT)
+        viewModel.setCategory(jp.mydns.fujiwara.carememo.data.Category.CONDITION_AT_VISIT)
         viewModel.setSelectedConditionId(if (conditionId != 0) conditionId else null)
     }
 

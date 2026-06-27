@@ -14,11 +14,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -27,13 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
-import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
-import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
-import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
-import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
+import jp.mydns.fujiwara.carememo.ui.components.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatMedicationDialogTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
+import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -51,8 +52,14 @@ fun MedicationScreen(
     val currentPerson by viewModel.currentPerson.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val recordsByDate by viewModel.recordsByDate.collectAsState()
+    val allRecords by viewModel.allRecords.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var showDialog by remember { mutableStateOf<LocalDate?>(null) }
 
@@ -67,6 +74,7 @@ fun MedicationScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 TopAppBar(
@@ -80,6 +88,21 @@ fun MedicationScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                if (allRecords.isEmpty()) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("服薬記録がないため出力できません")
+                                    }
+                                    return@IconButton
+                                }
+                                showPdfSettingsDialog = true
+                            }
+                        ) {
+                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                         }
                     }
                 )
@@ -117,6 +140,35 @@ fun MedicationScreen(
                     recordsByDate = recordsByDate,
                     onDayClick = { date -> showDialog = date }
                 )
+            }
+        }
+    }
+
+    if (showPdfSettingsDialog) {
+        PdfSettingsDialog(
+            category = Category.MEDICATION,
+            onDismiss = { showPdfSettingsDialog = false }
+        ) { range, order, start, end, _ ->
+            showPdfSettingsDialog = false
+            // PDF共有（外部アプリ遷移）のため、戻ってきた際のアプリロックをスキップする設定を有効化
+            viewModel.setLockBypassEnabled(true)
+            scope.launch {
+                currentPerson?.let { person ->
+                    val success = PdfExporter.exportAndShare(
+                        context = context,
+                        person = person,
+                        isNameMaskingEnabled = isNameMaskingEnabled,
+                        category = Category.MEDICATION,
+                        records = allRecords,
+                        range = range,
+                        order = order,
+                        customStartDate = start,
+                        customEndDate = end
+                    )
+                    if (!success) {
+                        snackbarHostState.showSnackbar("PDFの作成に失敗したか、対象データがありません")
+                    }
+                }
             }
         }
     }

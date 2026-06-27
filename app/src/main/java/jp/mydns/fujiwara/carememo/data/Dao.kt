@@ -215,6 +215,9 @@ interface ConditionPhotoDao {
     @Query("UPDATE condition_photo_db SET deleted_at = NULL WHERE person_id = :personId")
     suspend fun restoreByPersonId(personId: Int)
 
+    @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId AND deleted_at IS NULL")
+    fun getAllByPersonIdFlow(personId: Int): Flow<List<ConditionPhoto>>
+
     @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId")
     suspend fun getAllByPersonId(personId: Int): List<ConditionPhoto>
 
@@ -231,6 +234,9 @@ interface ConditionPhotoDao {
 
 @Dao
 interface MedicationRecordDao {
+    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL")
+    fun getByPersonId(personId: Int): Flow<List<MedicationRecord>>
+
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date = :dosageDate AND deleted_at IS NULL")
     fun getByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>>
 
