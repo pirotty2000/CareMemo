@@ -322,8 +322,23 @@ fun HeightAndWeight.getBmiResult(): Pair<String, HealthThresholds.AlertLevel> =
 fun BpAndPulse.getVitalResults(): List<Pair<String, HealthThresholds.AlertLevel>> =
     HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
 
+fun BpAndPulse.getWorstAlertLevel(): HealthThresholds.AlertLevel =
+    getVitalResults().maxByOrNull { it.second.severity }?.second ?: HealthThresholds.AlertLevel.NORMAL
+
 fun GlucoseAndHbA1c.getGlucoseResult(): Pair<String, HealthThresholds.AlertLevel> =
     HealthThresholds.evaluateGlucose(glucose)
 
 fun GlucoseAndHbA1c.getHbA1cResult(): Pair<String, HealthThresholds.AlertLevel> =
     HealthThresholds.evaluateHbA1c(hba1c)
+
+fun GlucoseAndHbA1c.getWorstAlertLevel(): HealthThresholds.AlertLevel =
+    maxOfBySeverity(getGlucoseResult().second, getHbA1cResult().second)
+
+fun GlucoseAndHbA1c.getCombinedResultText(): String {
+    val g = getGlucoseResult().first
+    val h = getHbA1cResult().first
+    return if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
+}
+
+private fun maxOfBySeverity(a: HealthThresholds.AlertLevel, b: HealthThresholds.AlertLevel): HealthThresholds.AlertLevel =
+    if (a.severity >= b.severity) a else b

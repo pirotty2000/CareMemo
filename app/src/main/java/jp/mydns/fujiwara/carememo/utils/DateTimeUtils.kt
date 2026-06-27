@@ -20,6 +20,37 @@ object DateTimeUtils {
     }
 
     /**
+     * 年月を和暦付きでフォーマットする (例: 2023(令和5)年10月)
+     */
+    fun formatYearMonthHeader(yearMonth: java.time.YearMonth): String {
+        val localDate = yearMonth.atDay(1)
+        val eraDate = JapaneseDate.from(localDate)
+        val eraName = eraDate.format(DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN))
+        val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
+        return "%d(%s%d)年%02d月".format(yearMonth.year, eraName, eraYear, yearMonth.monthValue)
+    }
+
+    /**
+     * 短い曜日名のリストを取得する (日, 月, ..., 土)
+     */
+    fun getShortDayOfWeekNames(): List<String> =
+        listOf("日", "月", "火", "水", "木", "金", "土")
+
+    /**
+     * 日付から短い曜日名を取得する (例: 金)
+     */
+    fun formatShortDayOfWeek(date: LocalDate): String =
+        date.format(DateTimeFormatter.ofPattern("E", Locale.JAPANESE))
+
+    /**
+     * グラフのX軸表示用 (例: 23/10/27)
+     */
+    fun formatDateShort(instant: Instant): String =
+        DateTimeFormatter.ofPattern("yy/MM/dd")
+            .withZone(ZoneId.systemDefault())
+            .format(instant)
+
+    /**
      * 時刻のみをフォーマットする (例: 14:30)
      */
     fun formatTime(instant: Instant): String =

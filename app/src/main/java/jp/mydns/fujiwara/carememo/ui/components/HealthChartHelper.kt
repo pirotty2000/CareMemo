@@ -15,7 +15,15 @@ data class HealthChartConfig(
     val minYConstraint: Double? = null,
     val maxYConstraint: Double? = null,
     val showDecimal: Boolean = false
-)
+) {
+    /**
+     * サブタイトル（ヒント）を行ごとのリストとして取得する
+     */
+    fun getSubtitleLines(): List<String> =
+        if (helpContent.isNotBlank()) {
+            helpContent.split("\n").filter { it.isNotBlank() }
+        } else emptyList()
+}
 
 object HealthChartHelper {
 

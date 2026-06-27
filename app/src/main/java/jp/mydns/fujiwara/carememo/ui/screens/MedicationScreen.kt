@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -15,10 +16,14 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +37,9 @@ import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.ui.components.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatMedicationDialogTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.getShortDayOfWeekNames
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
 import kotlinx.coroutines.launch
@@ -39,7 +47,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +70,7 @@ fun MedicationScreen(
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var showDialog by remember { mutableStateOf<LocalDate?>(null) }
+    var isHistoryMode by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
@@ -117,12 +126,13 @@ fun MedicationScreen(
                 )
             }
         }
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 月の選択
             MonthSelector(
@@ -131,15 +141,54 @@ fun MedicationScreen(
                 onNextMonth = { viewModel.nextMonth() }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // 表示切り替え
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = !isHistoryMode,
+                    onClick = { isHistoryMode = false },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    icon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null) }
+                ) {
+                    Text("カレンダー")
+                }
+                SegmentedButton(
+                    selected = isHistoryMode,
+                    onClick = { isHistoryMode = true },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    icon = { Icon(Icons.Rounded.History, contentDescription = null) }
+                ) {
+                    Text("履歴")
+                }
+            }
 
-            // カレンダー
-            Box(modifier = Modifier.weight(1f)) {
-                CalendarGrid(
-                    yearMonth = selectedMonth,
-                    recordsByDate = recordsByDate,
-                    onDayClick = { date -> showDialog = date }
+            if (isHistoryMode) {
+                Text(
+                    text = "※ ここでは記録の編集はできません",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            } else {
+                Text(
+                    text = "※ 日付のセルをタップして記録を追加／編集しましょう",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // コンテンツ
+            Box(modifier = Modifier.weight(1f)) {
+                if (isHistoryMode) {
+                    MedicationHistoryTable(
+                        yearMonth = selectedMonth,
+                        recordsByDate = recordsByDate
+                    )
+                } else {
+                    CalendarGrid(
+                        yearMonth = selectedMonth,
+                        recordsByDate = recordsByDate,
+                        onDayClick = { date -> showDialog = date }
+                    )
+                }
             }
         }
     }
@@ -204,12 +253,126 @@ fun MonthSelector(
             Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
         }
         Text(
-            text = selectedMonth.format(DateTimeFormatter.ofPattern("yyyy年 MM月")),
+            text = formatYearMonthHeader(selectedMonth),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         IconButton(onClick = onNextMonth) {
             Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+        }
+    }
+}
+
+@Composable
+fun MedicationHistoryTable(
+    yearMonth: YearMonth,
+    recordsByDate: Map<String, List<MedicationRecord>>
+) {
+    val daysInMonth = yearMonth.lengthOfMonth()
+    // その月に1件でも記録があるか判定
+    val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
+
+    if (!hasAnyRecord) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "記録がありません",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+            .clip(MaterialTheme.shapes.medium)
+    ) {
+        // テーブルヘッダー
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("日", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("朝", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("昼", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("夕", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("寝る前", modifier = Modifier.weight(1.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        // スクロール可能なデータ行
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(count = daysInMonth) { index ->
+                val day = index + 1
+                val date = yearMonth.atDay(day)
+                val dateStr = date.toString()
+                val records = recordsByDate[dateStr] ?: emptyList()
+
+                val dayOfWeek = date.dayOfWeek
+                val dayOfWeekText = formatShortDayOfWeek(date)
+
+                // 曜日による背景色の設定（平日:白、土曜:薄い青、日曜:薄い赤）
+                val rowBgColor = when (dayOfWeek) {
+                    DayOfWeek.SUNDAY -> Color(0xFFFFEBEE) // 薄い赤
+                    DayOfWeek.SATURDAY -> Color(0xFFE3F2FD) // 薄い青
+                    else -> MaterialTheme.colorScheme.surface // 白（サーフェスカラー）
+                }
+
+                // 曜日による文字色
+                val textColor = getDayOfWeekColor(dayOfWeek)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(rowBgColor)
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 日(曜日)
+                    Text(
+                        text = "${day}日(${dayOfWeekText})",
+                        modifier = Modifier.weight(1.5f),
+                        textAlign = TextAlign.Center,
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    // 各時間帯（朝:0, 昼:1, 夕:2, 寝る前:3）
+                    listOf(0, 1, 2, 3).forEach { slot ->
+                        val weight = if (slot == 3) 1.2f else 1f
+                        val record = records.find { it.timeSlot == slot }
+                        val symbol = getMedicationStatusSymbol(record?.status)
+                        val symbolColor = when (record?.status) {
+                            0 -> getMedicationStatusColor(0)
+                            1, 2 -> getMedicationStatusColor(2)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        }
+                        Text(
+                            text = symbol,
+                            modifier = Modifier.weight(weight),
+                            textAlign = TextAlign.Center,
+                            color = symbolColor,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                if (day < daysInMonth) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                }
+            }
         }
     }
 }
@@ -232,7 +395,7 @@ fun CalendarGrid(
     Column {
         // 曜日見出し
         Row(modifier = Modifier.fillMaxWidth()) {
-            val daysOfWeek = listOf("日", "月", "火", "水", "木", "金", "土")
+            val daysOfWeek = getShortDayOfWeekNames()
             daysOfWeek.forEachIndexed { index, day ->
                 Text(
                     text = day,
@@ -296,11 +459,7 @@ fun DayCell(
             text = date.dayOfMonth.toString(),
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-            color = when (dayOfWeek) {
-                DayOfWeek.SUNDAY -> Color.Red
-                DayOfWeek.SATURDAY -> Color.Blue
-                else -> MaterialTheme.colorScheme.onSurface
-            }
+            color = getDayOfWeekColor(dayOfWeek)
         )
 
         // 日付の下の残りスペース全体を使って記号を中央配置する
@@ -313,12 +472,12 @@ fun DayCell(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    MedicationStatusIcon(label = "朝", status = records.find { it.timeSlot == 0 }?.status)
-                    MedicationStatusIcon(label = "昼", status = records.find { it.timeSlot == 1 }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(0, true), status = records.find { it.timeSlot == 0 }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(1, true), status = records.find { it.timeSlot == 1 }?.status)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    MedicationStatusIcon(label = "夕", status = records.find { it.timeSlot == 2 }?.status)
-                    MedicationStatusIcon(label = "寝", status = records.find { it.timeSlot == 3 }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(2, true), status = records.find { it.timeSlot == 2 }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(3, true), status = records.find { it.timeSlot == 3 }?.status)
                 }
             }
         }
@@ -328,18 +487,17 @@ fun DayCell(
 @Composable
 fun MedicationStatusIcon(label: String, status: Int?) {
     val bgColor = when (status) {
-        2 -> Color(0xFF673AB7) // 濃い色（自立）
-        1 -> Color(0xFFD1C4E9) // 薄い色（介助）
-        0 -> Color(0xFFD32F2F) // 赤（未服用背景）
+        2 -> getMedicationStatusColor(2) // 濃い色（自立）
+        1 -> getMedicationStatusColor(1) // 薄い色（介助）
+        0 -> getMedicationStatusColor(0) // 赤（未服用背景）
         else -> Color.Transparent
     }
     val contentColor = when (status) {
-        2 -> Color.White
-        1 -> Color(0xFF673AB7)
-        0 -> Color.White       // 白（未服用文字）
+        2, 0 -> Color.White
+        1 -> getMedicationStatusColor(2)
         else -> Color.LightGray.copy(alpha = 0.5f)
     }
-    val displayText = if (status == 0) "×" else label
+    val displayText = if (status == 0) getMedicationStatusSymbol(0) else label
     val displayLabel = if (status == null) "－" else displayText
 
     Box(
@@ -381,8 +539,6 @@ fun MedicationInputDialog(
     onSave: (MedicationRecord) -> Unit,
     onDelete: (MedicationRecord) -> Unit
 ) {
-    // 閲覧モード/編集モードの状態
-    var isEditing by remember { mutableStateOf(false) }
     // 編集途中の状態を保持
     var tempRecords by remember { mutableStateOf(records.associateBy { it.timeSlot }) }
     // どの日時を編集しているか
@@ -414,33 +570,19 @@ fun MedicationInputDialog(
     }
 
     AlertDialog(
-        onDismissRequest = {
-            if (!isEditing) onDismiss()
-        },
+        onDismissRequest = onDismiss,
         title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "${formatMedicationDialogTitle(date)} の服薬状況",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                if (!isEditing) {
-                    IconButton(onClick = { isEditing = true }) {
-                        Icon(Icons.Rounded.Edit, contentDescription = "編集")
-                    }
-                }
-            }
+            Text(
+                text = "${formatMedicationDialogTitle(date)} の服薬状況",
+                style = MaterialTheme.typography.titleMedium
+            )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                listOf(0 to "朝", 1 to "昼", 2 to "夕", 3 to "寝る前").forEach { (slot, label) ->
+                listOf(0, 1, 2, 3).forEach { slot ->
                     MedicationRow(
-                        label = label,
+                        label = getTimeSlotLabel(slot),
                         currentRecord = tempRecords[slot],
-                        isEditing = isEditing,
                         isSelectedForTime = editingSlot == slot,
                         onStatusToggle = { status ->
                             val current = tempRecords[slot]
@@ -467,59 +609,44 @@ fun MedicationInputDialog(
                             }
                         },
                         onTimeClick = {
-                            if (isEditing) {
-                                startEditingSlot(slot)
-                            }
+                            startEditingSlot(slot)
                         }
                     )
                 }
 
-                if (isEditing && editingSlot != null) {
+                if (editingSlot != null) {
                     HorizontalDivider()
                     DateTimeInputFields(state = dateTimeState)
                 }
             }
         },
         confirmButton = {
-            if (isEditing) {
-                TextButton(
-                    onClick = {
-                        syncCurrentTimeFieldsToTemp()
+            TextButton(
+                onClick = {
+                    syncCurrentTimeFieldsToTemp()
 
-                        // 差分を保存/削除
-                        val initialMap = records.associateBy { it.timeSlot }
+                    // 差分を保存/削除
+                    val initialMap = records.associateBy { it.timeSlot }
 
-                        initialMap.keys.forEach { slot ->
-                            if (!tempRecords.containsKey(slot)) {
-                                onDelete(initialMap[slot]!!)
-                            }
+                    initialMap.keys.forEach { slot ->
+                        if (!tempRecords.containsKey(slot)) {
+                            onDelete(initialMap[slot]!!)
                         }
-                        tempRecords.forEach { (slot, record) ->
-                            if (record != initialMap[slot]) {
-                                onSave(record)
-                            }
-                        }
-                        onDismiss()
                     }
-                ) {
-                    Text("保存")
+                    tempRecords.forEach { (slot, record) ->
+                        if (record != initialMap[slot]) {
+                            onSave(record)
+                        }
+                    }
+                    onDismiss()
                 }
-            } else {
-                TextButton(onClick = onDismiss) {
-                    Text("閉じる")
-                }
+            ) {
+                Text("保存")
             }
         },
         dismissButton = {
-            if (isEditing) {
-                TextButton(onClick = {
-                    // キャンセル：変更を破棄して閲覧モードに戻る
-                    tempRecords = records.associateBy { it.timeSlot }
-                    editingSlot = null
-                    isEditing = false
-                }) {
-                    Text("キャンセル")
-                }
+            TextButton(onClick = onDismiss) {
+                Text("キャンセル")
             }
         }
     )
@@ -529,7 +656,6 @@ fun MedicationInputDialog(
 fun MedicationRow(
     label: String,
     currentRecord: MedicationRecord?,
-    isEditing: Boolean,
     isSelectedForTime: Boolean,
     onStatusToggle: (Int) -> Unit,
     onTimeClick: () -> Unit
@@ -549,20 +675,20 @@ fun MedicationRow(
                 StatusChip(
                     text = "未",
                     isSelected = currentRecord?.status == 0,
-                    color = Color(0xFFD32F2F),
-                    onClick = { if (isEditing) onStatusToggle(0) }
+                    color = getMedicationStatusColor(0),
+                    onClick = { onStatusToggle(0) }
                 )
                 StatusChip(
                     text = "介助",
                     isSelected = currentRecord?.status == 1,
-                    color = Color(0xFFB39DDB),
-                    onClick = { if (isEditing) onStatusToggle(1) }
+                    color = getMedicationStatusColor(1),
+                    onClick = { onStatusToggle(1) }
                 )
                 StatusChip(
                     text = "服用",
                     isSelected = currentRecord?.status == 2,
-                    color = Color(0xFF673AB7),
-                    onClick = { if (isEditing) onStatusToggle(2) }
+                    color = getMedicationStatusColor(2),
+                    onClick = { onStatusToggle(2) }
                 )
             }
         }
@@ -577,9 +703,47 @@ fun MedicationRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 16.sp.value.dp) // 1行分の高さを常に確保
-                .then(if (isEditing && currentRecord != null) Modifier.clickable { onTimeClick() } else Modifier)
+                .then(if (currentRecord != null) Modifier.clickable { onTimeClick() } else Modifier)
                 .padding(vertical = 2.dp)
         )
+    }
+}
+
+@Composable
+private fun getDayOfWeekColor(dayOfWeek: DayOfWeek): Color {
+    return when (dayOfWeek) {
+        DayOfWeek.SUNDAY -> Color.Red
+        DayOfWeek.SATURDAY -> Color.Blue
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+}
+
+private fun getMedicationStatusSymbol(status: Int?): String {
+    return when (status) {
+        0 -> "×"
+        1 -> "△"
+        2 -> "○"
+        else -> "ー"
+    }
+}
+
+private fun getTimeSlotLabel(slot: Int, isShort: Boolean = false): String {
+    return when (slot) {
+        0 -> "朝"
+        1 -> "昼"
+        2 -> "夕"
+        3 -> if (isShort) "寝" else "寝る前"
+        else -> ""
+    }
+}
+
+@Composable
+private fun getMedicationStatusColor(status: Int): Color {
+    return when (status) {
+        0 -> Color(0xFFD32F2F) // 未 (赤)
+        1 -> Color(0xFFD1C4E9) // 介助 (薄紫)
+        2 -> Color(0xFF673AB7) // 服用 (濃紫)
+        else -> Color.Transparent
     }
 }
 

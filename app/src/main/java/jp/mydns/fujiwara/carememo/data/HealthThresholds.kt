@@ -66,10 +66,10 @@ object HealthThresholds {
     /**
      * アラートレベルの定義
      */
-    enum class AlertLevel(val color: Int, val pdfBgColor: Int?) {
-        NORMAL(Color.BLUE, null),
-        WARNING(Color.BLACK, 0xFFF0F0F0.toInt()),
-        ALERT(Color.RED, 0xFFD8D8D8.toInt())
+    enum class AlertLevel(val color: Int, val pdfBgColor: Int?, val severity: Int) {
+        NORMAL(Color.BLUE, null, 0),
+        WARNING(Color.BLACK, 0xFFF0F0F0.toInt(), 1),
+        ALERT(Color.RED, 0xFFD8D8D8.toInt(), 2)
     }
 
     // --- 判定ロジック ---

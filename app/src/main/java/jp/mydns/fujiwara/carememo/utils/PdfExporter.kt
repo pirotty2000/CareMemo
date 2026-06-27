@@ -20,15 +20,15 @@ import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.components.ExportRange
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateShort
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.chrono.JapaneseDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -374,11 +374,6 @@ object PdfExporter {
             (range.startValue to range.endValue) to range.color.toArgb()
         }
 
-        // ヘルプテキストをサブタイトルとして利用（改行で分割）
-        val subtitles = if (config.helpContent.isNotBlank()) {
-            config.helpContent.split("\n").filter { it.isNotBlank() }
-        } else emptyList()
-
         return drawSingleGraph(
             canvas = canvas,
             title = "${config.title} 推移",
@@ -389,7 +384,7 @@ object PdfExporter {
             ranges = rangeList,
             limitLines = emptyList(), // しきい値線は現在 range（背景色）に統合
             isInteger = !config.showDecimal,
-            subtitles = subtitles,
+            subtitles = config.getSubtitleLines(),
             fixedMinX = fixedMinX,
             fixedMaxX = fixedMaxX
         )
@@ -481,7 +476,7 @@ object PdfExporter {
         for (i in 0..3) {
             val xTime = minX + (xRange / 3.0) * i
             val xPos = graphArea.left + (i.toFloat() / 3.0f) * graphArea.width()
-            val ds = Instant.ofEpochMilli(xTime.toLong()).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd"))
+            val ds = formatDateShort(Instant.ofEpochMilli(xTime.toLong()))
             canvas.drawText(ds, xPos, graphArea.bottom + 12f, xLabelPaint)
         }
 
@@ -541,10 +536,7 @@ object PdfExporter {
             TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_PULSE_SHORT, 50f) { rec, _ -> rec.pulse?.toString() ?: "---" },
             TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_BODY_TEMP, 55f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
             TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_STATUS, 130f,
-                getBackgroundColor = { rec -> 
-                    val results = rec.getVitalResults()
-                    results.firstNotNullOfOrNull { it.second.takeIf { level -> level != HealthThresholds.AlertLevel.NORMAL } }?.pdfBgColor
-                },
+                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor },
                 getValue = { rec, _ -> rec.getVitalResults().joinToString("・") { it.first } }
             )
         )
@@ -575,21 +567,8 @@ object PdfExporter {
                 } else "---"
             },
             TableColumn<GlucoseAndHbA1c>(HealthThresholds.HEALTH_LABEL_STATUS, 150f,
-                getBackgroundColor = { rec ->
-                    val g = rec.getGlucoseResult().second
-                    val h = rec.getHbA1cResult().second
-                    // より深刻な方を優先
-                    when {
-                        g == HealthThresholds.AlertLevel.ALERT || h == HealthThresholds.AlertLevel.ALERT -> HealthThresholds.AlertLevel.ALERT.pdfBgColor
-                        g == HealthThresholds.AlertLevel.WARNING || h == HealthThresholds.AlertLevel.WARNING -> HealthThresholds.AlertLevel.WARNING.pdfBgColor
-                        else -> null
-                    }
-                },
-                getValue = { rec, _ -> 
-                    val g = rec.getGlucoseResult().first
-                    val h = rec.getHbA1cResult().first
-                    if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
-                }
+                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor },
+                getValue = { rec, _ -> rec.getCombinedResultText() }
             )
         )
         drawGenericTable(document, initialPage, records, columns, startY, onNewPage)
@@ -721,10 +700,7 @@ object PdfExporter {
             }
 
             // 月タイトル描画 (和暦)
-            val eraDate = JapaneseDate.from(yearMonth.atDay(1))
-            val eraName = eraDate.format(DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN))
-            val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
-            val titleText = "${yearMonth.year}($eraName$eraYear)年${yearMonth.monthValue}月"
+            val titleText = formatYearMonthHeader(yearMonth)
             canvas.drawText(titleText, MARGIN, currentY, titlePaint)
             currentY += 15f
 
@@ -765,18 +741,8 @@ object PdfExporter {
                 
                 // 曜日
                 val date = yearMonth.atDay(day)
-                val dayOfWeek = date.dayOfWeek
-                val dowStr = when (dayOfWeek) {
-                    java.time.DayOfWeek.SUNDAY -> "日"
-                    java.time.DayOfWeek.MONDAY -> "月"
-                    java.time.DayOfWeek.TUESDAY -> "火"
-                    java.time.DayOfWeek.WEDNESDAY -> "水"
-                    java.time.DayOfWeek.THURSDAY -> "木"
-                    java.time.DayOfWeek.FRIDAY -> "金"
-                    java.time.DayOfWeek.SATURDAY -> "土"
-                    else -> ""
-                }
-                val dowPaint = when (dayOfWeek) {
+                val dowStr = formatShortDayOfWeek(date)
+                val dowPaint = when (date.dayOfWeek) {
                     java.time.DayOfWeek.SUNDAY -> sundayPaint
                     java.time.DayOfWeek.SATURDAY -> saturdayPaint
                     else -> headerPaint
