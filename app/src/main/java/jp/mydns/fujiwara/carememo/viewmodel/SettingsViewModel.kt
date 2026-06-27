@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.provider.DocumentsContract
-import jp.mydns.fujiwara.carememo.data.InitialDataLoader
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
@@ -275,39 +274,7 @@ class SettingsViewModel(
         }
     }
 
-    /**
-     * 旧アプリ（JSONベース）からのデータ引き継ぎ。
-     */
-    fun importLegacyDataFromFolder(context: Context, treeUri: Uri) {
-        viewModelScope.launch {
-            try {
-                val loader = InitialDataLoader(context, repository)
-                loader.clearAllData()
-                val resolver = context.contentResolver
-                val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
-                    treeUri, DocumentsContract.getTreeDocumentId(treeUri)
-                )
-                val fileMap = mutableMapOf<String, Uri>()
-                resolver.query(childrenUri, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)?.use { cursor ->
-                    val nameIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                    val idIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-                    while (cursor.moveToNext()) {
-                        val name = cursor.getString(nameIdx)
-                        val id = cursor.getString(idIdx)
-                        fileMap[name] = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
-                    }
-                }
-                fileMap["person_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadPersons(s) } }
-                fileMap["height_and_weight_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadHeightAndWeight(s) } }
-                fileMap["bp_and_pulse_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadBpAndPulse(s) } }
-                fileMap["glucose_and_hba1c_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadGlucoseAndHbA1c(s) } }
-                fileMap["condition_at_visit_db.json"]?.let { resolver.openInputStream(it)?.let { s -> loader.loadConditionAtVisit(s) } }
-                sendUiEvent(UiEvent.ShowInfoDialog("完了", "旧アプリデータの引き継ぎが完了しました。"))
-            } catch (e: Exception) {
-                showError("エラー", "引き継ぎに失敗しました: ${e.localizedMessage}")
-            }
-        }
-    }
+
 
     class Factory(
         private val repository: CareMemoRepository,
