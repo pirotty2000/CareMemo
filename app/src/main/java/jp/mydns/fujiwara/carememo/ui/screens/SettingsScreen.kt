@@ -51,7 +51,7 @@ fun SettingsScreen(
     val lockTimeoutMinutes by viewModel.lockTimeoutMinutes.collectAsState()
     val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
     val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsState()
-    val backupPassword by viewModel.backupPassword
+    val backupPassword by viewModel.backupPassword.collectAsState()
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
 

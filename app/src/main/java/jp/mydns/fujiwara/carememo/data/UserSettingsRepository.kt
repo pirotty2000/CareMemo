@@ -1,12 +1,12 @@
 package jp.mydns.fujiwara.carememo.data
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -19,22 +19,11 @@ class UserSettingsRepository(private val context: Context) {
         private val IS_NAME_MASKING_ENABLED = booleanPreferencesKey("is_name_masking_enabled")
         private val DEFAULT_RECORDER_NAME = stringPreferencesKey("default_recorder_name")
         private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
-        private val LOCK_TIMEOUT_MINUTES = androidx.datastore.preferences.core.intPreferencesKey("lock_timeout_minutes")
-        private val LAST_ACTIVE_TIME = androidx.datastore.preferences.core.longPreferencesKey("last_active_time")
+        private val LOCK_TIMEOUT_MINUTES = intPreferencesKey("lock_timeout_minutes")
+        private val LAST_ACTIVE_TIME = longPreferencesKey("last_active_time")
         private val IS_BACKUP_PASSWORD_ENABLED = booleanPreferencesKey("is_backup_password_enabled")
+        private val BACKUP_PASSWORD = stringPreferencesKey("backup_password")
     }
-
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        "secure_user_settings",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -67,9 +56,10 @@ class UserSettingsRepository(private val context: Context) {
             preferences[IS_BACKUP_PASSWORD_ENABLED] ?: false
         }
 
-    fun getBackupPassword(): String {
-        return encryptedPrefs.getString("backup_password", "") ?: ""
-    }
+    val backupPassword: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[BACKUP_PASSWORD] ?: ""
+        }
 
     // 一時的にロックを無効化するためのフラグ（外部アプリ連携時など）
     var isLockBypassed: Boolean = false
@@ -110,9 +100,9 @@ class UserSettingsRepository(private val context: Context) {
         }
     }
 
-    fun setBackupPassword(password: String) {
-        val editor = encryptedPrefs.edit()
-        editor.putString("backup_password", password)
-        editor.apply()
+    suspend fun setBackupPassword(password: String) {
+        context.dataStore.edit { preferences ->
+            preferences[BACKUP_PASSWORD] = password
+        }
     }
 }

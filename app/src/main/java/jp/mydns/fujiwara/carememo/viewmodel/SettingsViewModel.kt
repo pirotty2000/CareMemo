@@ -57,7 +57,12 @@ class SettingsViewModel(
             initialValue = false
         )
 
-    val backupPassword = mutableStateOf(userSettingsRepository.getBackupPassword())
+    val backupPassword: StateFlow<String> = userSettingsRepository.backupPassword
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ""
+        )
 
     // 復元処理用の一時保持
     private var pendingImportFile: File? = null
@@ -121,8 +126,9 @@ class SettingsViewModel(
     }
 
     fun setBackupPassword(password: String) {
-        backupPassword.value = password
-        userSettingsRepository.setBackupPassword(password)
+        viewModelScope.launch {
+            userSettingsRepository.setBackupPassword(password)
+        }
     }
 
     fun deleteEndedPersons() {
@@ -152,8 +158,8 @@ class SettingsViewModel(
                     filesToZip.add(photosDir)
                 }
                 val tempZipFile = File(context.cacheDir, "temp_backup.zip")
-                val password = if (userSettingsRepository.isBackupPasswordEnabled.stateIn(viewModelScope).value) {
-                    userSettingsRepository.getBackupPassword()
+                val password = if (isBackupPasswordEnabled.value) {
+                    backupPassword.value
                 } else null
                 ZipUtils.zip(filesToZip, tempZipFile, password)
                 context.contentResolver.openOutputStream(uri)?.use { output: OutputStream ->
@@ -194,7 +200,7 @@ class SettingsViewModel(
                     if (isZip) {
                         if (ZipUtils.isEncrypted(tempZipFile)) {
                             // デフォルトパスワードで試行
-                            val defaultPw = userSettingsRepository.getBackupPassword()
+                            val defaultPw = backupPassword.value
                             if (defaultPw.isNotEmpty() && ZipUtils.isValidPassword(tempZipFile, defaultPw)) {
                                 proceedImportZip(context, tempZipFile, defaultPw)
                             } else {
