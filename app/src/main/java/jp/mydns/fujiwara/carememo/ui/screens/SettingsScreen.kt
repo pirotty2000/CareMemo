@@ -25,11 +25,17 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Dangerous
 import androidx.compose.material.icons.rounded.Output
 import androidx.compose.material.icons.automirrored.rounded.Input
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
@@ -44,6 +50,8 @@ fun SettingsScreen(
     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
     val lockTimeoutMinutes by viewModel.lockTimeoutMinutes.collectAsState()
     val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
+    val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsState()
+    val backupPassword by viewModel.backupPassword
     val userList by viewModel.userList.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
 
@@ -51,11 +59,22 @@ fun SettingsScreen(
 
     // 入力バグ対策用のローカル状態
     var localRecorderName by remember { mutableStateOf(persistedRecorderName) }
+    var localBackupPassword by remember { mutableStateOf(backupPassword) }
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
+    // パスワードのバリデーション (6文字以上)
+    val isPasswordValid = localBackupPassword.length >= 6
 
     // ViewModel側の値が外部から変わった場合のみ同期
     LaunchedEffect(persistedRecorderName) {
         if (localRecorderName != persistedRecorderName) {
             localRecorderName = persistedRecorderName
+        }
+    }
+
+    LaunchedEffect(backupPassword) {
+        if (localBackupPassword != backupPassword) {
+            localBackupPassword = backupPassword
         }
     }
 
@@ -67,6 +86,8 @@ fun SettingsScreen(
     var showVersionDialog by rememberSaveable { mutableStateOf(false) }
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showTimeoutDialog by rememberSaveable { mutableStateOf(false) }
+    var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
+    var inputPasswordForImport by remember { mutableStateOf("") }
 
     // 通知ダイアログ用の共通状態
     var dialogTitle by rememberSaveable { mutableStateOf<String?>(null) }
@@ -83,6 +104,9 @@ fun SettingsScreen(
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
+                }
+                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> {
+                    showPasswordInputDialog = true
                 }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
                     dialogTitle = "通知"
@@ -189,6 +213,41 @@ fun SettingsScreen(
         )
     }
 
+    if (showPasswordInputDialog) {
+        AlertDialog(
+            onDismissRequest = { showPasswordInputDialog = false },
+            title = { Text("パスワードの入力") },
+            text = {
+                Column {
+                    Text("このバックアップファイルはパスワードで保護されています。")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = inputPasswordForImport,
+                        onValueChange = { inputPasswordForImport = it },
+                        label = { Text("パスワード") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.importData(context, android.net.Uri.EMPTY, inputPasswordForImport)
+                        showPasswordInputDialog = false
+                        inputPasswordForImport = ""
+                    },
+                    enabled = inputPasswordForImport.isNotEmpty()
+                ) { Text("実行") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordInputDialog = false; inputPasswordForImport = "" }) { Text("キャンセル") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -263,17 +322,70 @@ fun SettingsScreen(
             // --- 3. データ管理 ---
             SettingsSection(title = "データ管理") {
                 ListItem(
+                    headlineContent = { Text("データのバックアップにパスワードを設定") },
+                    supportingContent = { Text("Zipファイルを暗号化して保護します") },
+                    trailingContent = {
+                        Switch(
+                            checked = isBackupPasswordEnabled,
+                            onCheckedChange = { viewModel.setBackupPasswordEnabled(it) }
+                        )
+                    }
+                )
+                if (isBackupPasswordEnabled) {
+                    OutlinedTextField(
+                        value = localBackupPassword,
+                        onValueChange = {
+                            localBackupPassword = it
+                            if (it.length >= 6 || it.isEmpty()) {
+                                viewModel.setBackupPassword(it)
+                            }
+                        },
+                        label = { Text("デフォルトのパスワード") },
+                        placeholder = { Text("6桁以上の数字を推奨") },
+                        supportingText = {
+                            if (!isPasswordValid && localBackupPassword.isNotEmpty()) {
+                                Text("パスワードは6文字以上で入力してください", color = MaterialTheme.colorScheme.error)
+                            } else {
+                                Text("バックアップ作成時に使用されます (6文字以上必須)")
+                            }
+                        },
+                        isError = !isPasswordValid && localBackupPassword.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                                    contentDescription = if (isPasswordVisible) "非表示" else "表示"
+                                )
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                val canExport = !isBackupPasswordEnabled || isPasswordValid
+                ListItem(
                     headlineContent = { Text("データのバックアップ (保存)") },
                     supportingContent = { Text("現在の全データと写真をZipファイルとして書き出します") },
                     trailingContent = {
-                        IconButton(onClick = {
-                            viewModel.setLockBypassEnabled(true)
-                            exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
-                        }) {
-                            Icon(Icons.Rounded.Output, contentDescription = "バックアップ")
+                        IconButton(
+                            onClick = {
+                                viewModel.setLockBypassEnabled(true)
+                                exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
+                            },
+                            enabled = canExport
+                        ) {
+                            Icon(
+                                Icons.Rounded.Output,
+                                contentDescription = "バックアップ",
+                                tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
                         }
                     },
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable(enabled = canExport) {
                         viewModel.setLockBypassEnabled(true)
                         exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
                     }

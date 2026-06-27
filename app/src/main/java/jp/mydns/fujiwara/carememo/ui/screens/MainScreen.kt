@@ -97,6 +97,9 @@ fun MainScreen(
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
                     showEditDialog = false
                 }
+                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> {
+                    // MainScreenでは使用しない
+                }
             }
         }
     }

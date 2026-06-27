@@ -23,6 +23,10 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateShort
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
+import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Instant
@@ -53,7 +57,11 @@ object PdfExporter {
         order: ExportOrder = ExportOrder.NEWEST_FIRST,
         customStartDate: Instant? = null,
         customEndDate: Instant? = null,
+        password: String? = null // パスワード保護用
     ): Boolean {
+        // PDFBoxの初期化
+        PDFBoxResourceLoader.init(context)
+
         // 新しく作る前に古いキャッシュを掃除（常に1世代しか残らないようにする）
         clearOldExports(context)
 
@@ -166,11 +174,34 @@ object PdfExporter {
         val file = File(context.cacheDir, fileName)
         try {
             FileOutputStream(file).use { out -> document.writeTo(out) }
+
+            // パスワード保護の適用
+            if (!password.isNullOrEmpty()) {
+                encryptPdf(file, password)
+            }
+
             shareFile(context, file)
             return true
         } catch (e: Exception) {
             e.printStackTrace()
             return false
+        } finally {
+            document.close()
+        }
+    }
+
+    /**
+     * PDFファイルをパスワードで暗号化する
+     */
+    private fun encryptPdf(file: File, password: String) {
+        val document = PDDocument.load(file)
+        try {
+            val ap = AccessPermission()
+            val spp = StandardProtectionPolicy(password, password, ap)
+            spp.encryptionKeyLength = 128
+            spp.permissions = ap
+            document.protect(spp)
+            document.save(file)
         } finally {
             document.close()
         }

@@ -1,6 +1,8 @@
 package jp.mydns.fujiwara.carememo.data
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -19,7 +21,17 @@ class UserSettingsRepository(private val context: Context) {
         private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
         private val LOCK_TIMEOUT_MINUTES = androidx.datastore.preferences.core.intPreferencesKey("lock_timeout_minutes")
         private val LAST_ACTIVE_TIME = androidx.datastore.preferences.core.longPreferencesKey("last_active_time")
+        private val IS_BACKUP_PASSWORD_ENABLED = booleanPreferencesKey("is_backup_password_enabled")
     }
+
+    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+    private val encryptedPrefs = EncryptedSharedPreferences.create(
+        "secure_user_settings",
+        masterKeyAlias,
+        context,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -46,6 +58,15 @@ class UserSettingsRepository(private val context: Context) {
         .map { preferences ->
             preferences[DEFAULT_RECORDER_NAME] ?: ""
         }
+
+    val isBackupPasswordEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[IS_BACKUP_PASSWORD_ENABLED] ?: false
+        }
+
+    fun getBackupPassword(): String {
+        return encryptedPrefs.getString("backup_password", "") ?: ""
+    }
 
     // 一時的にロックを無効化するためのフラグ（外部アプリ連携時など）
     var isLockBypassed: Boolean = false
@@ -78,5 +99,17 @@ class UserSettingsRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[DEFAULT_RECORDER_NAME] = name
         }
+    }
+
+    suspend fun setBackupPasswordEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IS_BACKUP_PASSWORD_ENABLED] = enabled
+        }
+    }
+
+    fun setBackupPassword(password: String) {
+        val editor = encryptedPrefs.edit()
+        editor.putString("backup_password", password)
+        editor.commit()
     }
 }

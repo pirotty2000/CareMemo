@@ -1,73 +1,76 @@
 package jp.mydns.fujiwara.carememo.utils
 
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
+import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.model.ZipParameters
+import net.lingala.zip4j.model.enums.EncryptionMethod
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
 
 /**
- * ファイルやフォルダのZip圧縮・解凍を行うユーティリティ
+ * Zip4jを使用して、パスワード付きZip圧縮・解凍を行うユーティリティ
  */
 object ZipUtils {
 
     /**
      * 指定されたファイルやフォルダをZip圧縮する
+     * @param files 圧縮対象のファイルリスト
+     * @param zipFile 出力先Zipファイル
+     * @param password パスワード（nullまたは空文字でパスワードなし）
      */
-    fun zip(files: List<File>, zipFile: File) {
-        ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
-            files.forEach { file ->
-                zipFileOrDirectory(zos, file, "")
+    fun zip(files: List<File>, zipFile: File, password: String? = null) {
+        val zip = ZipFile(zipFile)
+        
+        val parameters = ZipParameters().apply {
+            if (!password.isNullOrEmpty()) {
+                isEncryptFiles = true
+                encryptionMethod = EncryptionMethod.AES
             }
         }
-    }
 
-    private fun zipFileOrDirectory(zos: ZipOutputStream, file: File, parentPath: String) {
-        val path = if (parentPath.isEmpty()) file.name else "$parentPath/${file.name}"
-        if (file.isDirectory) {
-            val entries = file.listFiles()
-            if (entries != null && entries.isNotEmpty()) {
-                entries.forEach { entry ->
-                    zipFileOrDirectory(zos, entry, path)
-                }
+        if (!password.isNullOrEmpty()) {
+            zip.setPassword(password.toCharArray())
+        }
+
+        files.forEach { file ->
+            if (file.isDirectory) {
+                zip.addFolder(file, parameters)
             } else {
-                // 空のディレクトリ
-                zos.putNextEntry(ZipEntry("$path/"))
-                zos.closeEntry()
-            }
-        } else {
-            BufferedInputStream(FileInputStream(file)).use { bis ->
-                zos.putNextEntry(ZipEntry(path))
-                bis.copyTo(zos)
-                zos.closeEntry()
+                zip.addFile(file, parameters)
             }
         }
     }
 
     /**
-     * Zipファイルを指定されたディレクトリに解凍する
+     * Zipファイルがパスワード保護されているか確認する
      */
-    fun unzip(zipFile: File, targetDir: File) {
-        if (!targetDir.exists()) targetDir.mkdirs()
+    fun isEncrypted(zipFile: File): Boolean {
+        return ZipFile(zipFile).isEncrypted
+    }
 
-        ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { zis ->
-            var entry: ZipEntry? = zis.nextEntry
-            while (entry != null) {
-                val file = File(targetDir, entry.name)
-                if (entry.isDirectory) {
-                    file.mkdirs()
-                } else {
-                    file.parentFile?.mkdirs()
-                    FileOutputStream(file).use { fos ->
-                        zis.copyTo(fos)
-                    }
-                }
-                zis.closeEntry()
-                entry = zis.nextEntry
-            }
+    /**
+     * パスワードが正しいか確認する
+     */
+    fun isValidPassword(zipFile: File, password: String): Boolean {
+        return try {
+            val zip = ZipFile(zipFile)
+            zip.setPassword(password.toCharArray())
+            zip.fileHeaders.isNotEmpty() // ヘッダーが読めればOK
+            true
+        } catch (e: Exception) {
+            false
         }
+    }
+
+    /**
+     * Zipファイルを指定されたディレクトリに解凍する
+     * @param zipFile 解凍元Zipファイル
+     * @param targetDir 解凍先ディレクトリ
+     * @param password パスワード
+     */
+    fun unzip(zipFile: File, targetDir: File, password: String? = null) {
+        val zip = ZipFile(zipFile)
+        if (zip.isEncrypted && !password.isNullOrEmpty()) {
+            zip.setPassword(password.toCharArray())
+        }
+        zip.extractAll(targetDir.absolutePath)
     }
 }

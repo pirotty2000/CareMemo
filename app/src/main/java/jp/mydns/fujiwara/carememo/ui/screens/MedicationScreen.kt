@@ -197,7 +197,7 @@ fun MedicationScreen(
         PdfSettingsDialog(
             category = Category.MEDICATION,
             onDismiss = { showPdfSettingsDialog = false }
-        ) { range, order, start, end, _ ->
+        ) { range, order, start, end, _, password ->
             showPdfSettingsDialog = false
             // PDF共有（外部アプリ遷移）のため、戻ってきた際のアプリロックをスキップする設定を有効化
             viewModel.setLockBypassEnabled(true)
@@ -212,7 +212,8 @@ fun MedicationScreen(
                         range = range,
                         order = order,
                         customStartDate = start,
-                        customEndDate = end
+                        customEndDate = end,
+                        password = password
                     )
                     if (!success) {
                         snackbarHostState.showSnackbar("PDFの作成に失敗したか、対象データがありません")

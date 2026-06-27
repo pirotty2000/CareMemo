@@ -168,14 +168,26 @@ fun UnifiedRecordScreen(
         PdfSettingsDialog(
             category = currentCategory,
             onDismiss = { showPdfSettingsDialog = false }
-        ) { r, o, start, end, photos ->
+        ) { r, o, start, end, photos, password ->
             showPdfSettingsDialog = false
             // PDF共有（外部アプリ遷移）のため、戻ってきた際のアプリロックをスキップする設定を有効化
             viewModel.setLockBypassEnabled(true)
             scope.launch {
                 val allPhotos = if (currentCategory.hasOption && photos) viewModel.getAllPhotosForPerson(personId) else emptyList()
                 currentPerson?.let { person ->
-                    val success = PdfExporter.exportAndShare(context, person, isNameMaskingEnabled, currentCategory, records, allPhotos, r, o, start, end)
+                    val success = PdfExporter.exportAndShare(
+                        context = context,
+                        person = person,
+                        isNameMaskingEnabled = isNameMaskingEnabled,
+                        category = currentCategory,
+                        records = records,
+                        allPhotos = allPhotos,
+                        range = r,
+                        order = o,
+                        customStartDate = start,
+                        customEndDate = end,
+                        password = password
+                    )
                     if (!success) {
                         snackbarHostState.showSnackbar("PDFの作成に失敗したか、対象データがありません")
                     }

@@ -25,6 +25,7 @@ abstract class BaseViewModel(
         data class ShowSnackbar(val message: String) : UiEvent
         data class ShowInfoDialog(val title: String, val message: String) : UiEvent
         data class ShowErrorDialog(val title: String, val message: String) : UiEvent
+        object RequestPassword : UiEvent
         object SaveSuccess : UiEvent
     }
 
