@@ -55,7 +55,7 @@ object ZipUtils {
             zip.setPassword(password.toCharArray())
             zip.fileHeaders.isNotEmpty() // ヘッダーが読めればOK
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }

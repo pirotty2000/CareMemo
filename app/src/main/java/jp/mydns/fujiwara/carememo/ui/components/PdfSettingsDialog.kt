@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -102,6 +101,9 @@ fun PdfSettingsDialog(
         title = { Text("PDF出力設定 (${category.displayName})") },
         text = {
             val scrollState = rememberScrollState()
+            val showScrollIndicator by remember {
+                derivedStateOf { scrollState.value < scrollState.maxValue }
+            }
             Box {
                 Column(
                     modifier = Modifier.verticalScroll(scrollState),
@@ -228,7 +230,7 @@ fun PdfSettingsDialog(
                 }
 
                 // スクロールが必要なことを示すインジケーター（下端に到達していない場合のみ表示）
-                if (scrollState.value < scrollState.maxValue) {
+                if (showScrollIndicator) {
                     Icon(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = "さらに下に項目があります",

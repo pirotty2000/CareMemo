@@ -57,7 +57,7 @@ object PdfExporter {
         order: ExportOrder = ExportOrder.NEWEST_FIRST,
         customStartDate: Instant? = null,
         customEndDate: Instant? = null,
-        password: String? = null // パスワード保護用
+        password: String? = null, // パスワード保護用
     ): Boolean {
         // PDFBoxの初期化
         PDFBoxResourceLoader.init(context)
@@ -194,16 +194,13 @@ object PdfExporter {
      * PDFファイルをパスワードで暗号化する
      */
     private fun encryptPdf(file: File, password: String) {
-        val document = PDDocument.load(file)
-        try {
+        PDDocument.load(file).use { document ->
             val ap = AccessPermission()
             val spp = StandardProtectionPolicy(password, password, ap)
             spp.encryptionKeyLength = 128
             spp.permissions = ap
             document.protect(spp)
             document.save(file)
-        } finally {
-            document.close()
         }
     }
 
@@ -219,7 +216,7 @@ object PdfExporter {
 
         if (range == ExportRange.LATEST) return listOf(sorted.first())
         
-        if (range == ExportRange.CUSTOM && (customStart != null || customEnd != null)) {
+        if ((range == ExportRange.CUSTOM) && (customStart != null || customEnd != null)) {
             var filtered = sorted.asSequence()
             if (customStart != null) {
                 filtered = filtered.filter { it.recordTime.isAfter(customStart) || it.recordTime == customStart }
@@ -279,7 +276,7 @@ object PdfExporter {
         val photoSize = (contentWidth - 20f) / 3f // 写真の最大幅（余白込）
 
         records.forEach { record ->
-            val photos = allPhotos.filter { it.conditionId == record.id }.take(3)
+            val photos = allPhotos.asSequence().filter { it.conditionId == record.id }.take(3).toList()
             val memoLines = splitTextIntoLines(record.condition ?: "", bodyPaint, contentWidth - 10f)
             
             // 1レコード分の高さを計算（ページ跨ぎ判定用）
@@ -532,62 +529,62 @@ object PdfExporter {
     }
 
     private fun drawHeightAndWeightTable(document: PdfDocument, initialPage: PdfDocument.Page, records: List<HeightAndWeight>, startY: Float, onNewPage: (Canvas, Int) -> Float) {
-        val columns = listOf(
-            TableColumn<HeightAndWeight>("日付", 160f) { rec, _ -> formatRecordTime(rec.recordTime) },
-            TableColumn<HeightAndWeight>("${HealthThresholds.HEALTH_LABEL_HEIGHT}(cm)", 70f) { rec, _ -> rec.height?.toString() ?: "---" },
-            TableColumn<HeightAndWeight>("${HealthThresholds.HEALTH_LABEL_WEIGHT}(kg)", 75f) { rec, idx ->
+        val columns = listOf<TableColumn<HeightAndWeight>>(
+            TableColumn("日付", 160f) { rec, _ -> formatRecordTime(rec.recordTime) },
+            TableColumn("${HealthThresholds.HEALTH_LABEL_HEIGHT}(cm)", 70f) { rec, _ -> rec.height?.toString() ?: "---" },
+            TableColumn("${HealthThresholds.HEALTH_LABEL_WEIGHT}(kg)", 75f) { rec, idx ->
                 if (rec.weight != null) {
                     val cur = rec.weight
                     val prev = if (idx < records.size - 1) records[idx + 1] else null
                     if (prev?.weight != null) {
                         val df = cur - prev.weight
                         "%.1f (%s)".format(cur, if (df >= 0) "+%.1f".format(df) else "%.1f".format(df))
-                    } else "$cur"
+                    } else cur.toString()
                 } else "---"
             },
-            TableColumn<HeightAndWeight>(HealthThresholds.HEALTH_LABEL_BMI, 60f) { rec, _ ->
+            TableColumn(HealthThresholds.HEALTH_LABEL_BMI, 60f) { rec, _ ->
                 val bmi = rec.calculateBMI()
                 if (bmi > 0) "%.1f".format(bmi) else "---"
             },
-            TableColumn<HeightAndWeight>(
+            TableColumn(
                 header = HealthThresholds.HEALTH_LABEL_STATUS,
                 width = 130f,
-                getBackgroundColor = { rec -> rec.getBmiResult().second.pdfBgColor },
-                getValue = { rec, _ -> rec.getBmiResult().first }
-            )
+                getBackgroundColor = { rec -> rec.getBmiResult().second.pdfBgColor }
+            ) { rec, _ -> rec.getBmiResult().first }
         )
         drawGenericTable(document, initialPage, records, columns, startY, onNewPage)
     }
 
     private fun drawBpAndPulseTable(document: PdfDocument, initialPage: PdfDocument.Page, records: List<BpAndPulse>, startY: Float, onNewPage: (Canvas, Int) -> Float) {
-        val columns = listOf(
-            TableColumn<BpAndPulse>("日付", 150f) { rec, _ -> formatRecordTime(rec.recordTime) },
-            TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_SYSTOLIC_SHORT, 55f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
-            TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_DIASTOLIC_SHORT, 55f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
-            TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_PULSE_SHORT, 50f) { rec, _ -> rec.pulse?.toString() ?: "---" },
-            TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_BODY_TEMP, 55f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
-            TableColumn<BpAndPulse>(HealthThresholds.HEALTH_LABEL_STATUS, 130f,
-                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor },
-                getValue = { rec, _ -> rec.getVitalResults().joinToString("・") { it.first } }
-            )
+        val columns = listOf<TableColumn<BpAndPulse>>(
+            TableColumn("日付", 150f) { rec, _ -> formatRecordTime(rec.recordTime) },
+            TableColumn(HealthThresholds.HEALTH_LABEL_SYSTOLIC_SHORT, 55f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
+            TableColumn(HealthThresholds.HEALTH_LABEL_DIASTOLIC_SHORT, 55f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
+            TableColumn(HealthThresholds.HEALTH_LABEL_PULSE_SHORT, 50f) { rec, _ -> rec.pulse?.toString() ?: "---" },
+            TableColumn(HealthThresholds.HEALTH_LABEL_BODY_TEMP, 55f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
+            TableColumn(
+                header = HealthThresholds.HEALTH_LABEL_STATUS,
+                width = 130f,
+                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
+            ) { rec, _ -> rec.getVitalResults().joinToString("・") { it.first } }
         )
         drawGenericTable(document, initialPage, records, columns, startY, onNewPage)
     }
 
     private fun drawGlucoseAndHbA1cTable(document: PdfDocument, initialPage: PdfDocument.Page, records: List<GlucoseAndHbA1c>, startY: Float, onNewPage: (Canvas, Int) -> Float) {
-        val columns = listOf(
-            TableColumn<GlucoseAndHbA1c>("日付", 155f) { rec, _ -> formatRecordTime(rec.recordTime) },
-            TableColumn<GlucoseAndHbA1c>("${HealthThresholds.HEALTH_LABEL_GLUCOSE}(mg/dL)", 95f) { rec, idx ->
+        val columns = listOf<TableColumn<GlucoseAndHbA1c>>(
+            TableColumn("日付", 155f) { rec, _ -> formatRecordTime(rec.recordTime) },
+            TableColumn("${HealthThresholds.HEALTH_LABEL_GLUCOSE}(mg/dL)", 95f) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 if (rec.glucose != null) {
                     val cur = rec.glucose
                     if (pr?.glucose != null) {
                         val df = cur - pr.glucose
                         "$cur(${if (df >= 0) "+$df" else df})"
-                    } else "$cur"
+                    } else cur.toString()
                 } else "---"
             },
-            TableColumn<GlucoseAndHbA1c>("${HealthThresholds.HEALTH_LABEL_HBA1C}(%)", 95f) { rec, idx ->
+            TableColumn("${HealthThresholds.HEALTH_LABEL_HBA1C}(%)", 95f) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 if (rec.hba1c != null) {
                     val cur = rec.hba1c
@@ -597,10 +594,11 @@ object PdfExporter {
                     } else "%.1f".format(cur)
                 } else "---"
             },
-            TableColumn<GlucoseAndHbA1c>(HealthThresholds.HEALTH_LABEL_STATUS, 150f,
-                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor },
-                getValue = { rec, _ -> rec.getCombinedResultText() }
-            )
+            TableColumn(
+                header = HealthThresholds.HEALTH_LABEL_STATUS,
+                width = 150f,
+                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
+            ) { rec, _ -> rec.getCombinedResultText() }
         )
         drawGenericTable(document, initialPage, records, columns, startY, onNewPage)
     }
@@ -709,7 +707,7 @@ object PdfExporter {
 
         // 月ごとにグループ化し、降順（新しい月が上）にソート
         val recordsByMonth = records.groupBy {
-            val date = try { LocalDate.parse(it.dosageDate) } catch (e: Exception) { LocalDate.now() }
+            val date = try { LocalDate.parse(it.dosageDate) } catch (_: Exception) { LocalDate.now() }
             YearMonth.from(date)
         }.toSortedMap(compareByDescending { it })
 
