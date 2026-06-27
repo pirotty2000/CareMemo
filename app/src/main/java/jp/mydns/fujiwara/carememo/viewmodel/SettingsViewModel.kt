@@ -10,10 +10,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
+import android.util.Base64
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -155,9 +157,17 @@ class SettingsViewModel(
                     filesToZip.add(photosDir)
                 }
                 val tempZipFile = File(context.cacheDir, "temp_backup.zip")
+
+                // 暗号化パスワードの決定
+                // 1. ユーザー指定パスワード
+                // 2. 指定なしの場合はデータベースのパスワード（Base64）をデフォルトで使用
                 val password = if (isBackupPasswordEnabled.value) {
                     backupPassword.value
-                } else null
+                } else {
+                    val dbKey = DatabaseKeyManager(context).getOrCreatePassphrase()
+                    Base64.encodeToString(dbKey, Base64.NO_WRAP)
+                }
+
                 ZipUtils.zip(filesToZip, tempZipFile, password)
                 context.contentResolver.openOutputStream(uri)?.use { output: OutputStream ->
                     tempZipFile.inputStream().use { input: InputStream ->
@@ -179,6 +189,11 @@ class SettingsViewModel(
             try {
                 // 初回呼び出し（passwordOverrideがnull）の場合、ファイルを一時保存してチェック
                 if (passwordOverride == null) {
+                    // 以前の中断データがあれば削除
+                    pendingImportFile?.parentFile?.deleteRecursively()
+                    pendingImportFile = null
+                    pendingImportUri = null
+
                     val tempDir = File(context.cacheDir, "import_check_${System.currentTimeMillis()}")
                     tempDir.mkdirs()
                     val tempZipFile = File(tempDir, "temp_import.zip")
@@ -196,17 +211,25 @@ class SettingsViewModel(
 
                     if (isZip) {
                         if (ZipUtils.isEncrypted(tempZipFile)) {
-                            // デフォルトパスワードで試行
-                            val defaultPw = backupPassword.value
-                            if (defaultPw.isNotEmpty() && ZipUtils.isValidPassword(tempZipFile, defaultPw)) {
-                                proceedImportZip(context, tempZipFile, defaultPw)
-                            } else {
-                                // パスワード入力が必要
-                                pendingImportFile = tempZipFile
-                                pendingImportUri = uri
-                                sendUiEvent(UiEvent.RequestPassword)
+                            // 1. ユーザー設定のバックアップパスワードで試行
+                            val userPw = backupPassword.value
+                            if (userPw.isNotEmpty() && ZipUtils.isValidPassword(tempZipFile, userPw)) {
+                                proceedImportZip(context, tempZipFile, userPw)
                                 return@launch
                             }
+
+                            // 2. データベースのパスワード（Base64）で試行（デフォルト暗号化対応）
+                            val dbKey = DatabaseKeyManager(context).getOrCreatePassphrase()
+                            val dbPw = Base64.encodeToString(dbKey, Base64.NO_WRAP)
+                            if (ZipUtils.isValidPassword(tempZipFile, dbPw)) {
+                                proceedImportZip(context, tempZipFile, dbPw)
+                                return@launch
+                            }
+
+                            // 3. いずれも失敗した場合はパスワード入力を求める
+                            pendingImportFile = tempZipFile
+                            pendingImportUri = uri
+                            sendUiEvent(UiEvent.RequestPassword)
                         } else {
                             proceedImportZip(context, tempZipFile, null)
                         }
@@ -270,6 +293,15 @@ class SettingsViewModel(
             } catch (e: Exception) {
                 showError("エラー", "データの削除に失敗しました: ${e.localizedMessage}")
             }
+        }
+    }
+
+    /**
+     * 旧アプリのデータフォルダからデータをインポートします（スケルトン）
+     */
+    fun importLegacyDataFromFolder(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            showError("未実装", "旧アプリデータの引き継ぎ機能は現在準備中です。")
         }
     }
 

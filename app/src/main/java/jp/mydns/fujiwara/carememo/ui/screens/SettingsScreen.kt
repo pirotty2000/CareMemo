@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -146,9 +147,6 @@ fun SettingsScreen(
         AlertDialog(onDismissRequest = { showImportUri = null }, title = { Text("データの復元") }, text = { Text("現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？") }, confirmButton = { Button(onClick = { viewModel.importData(context, showImportUri!!); showImportUri = null }) { Text("復元を実行") } }, dismissButton = { TextButton(onClick = { showImportUri = null }) { Text("キャンセル") } })
     }
 
-    if (showLegacyFolderUri != null) {
-        AlertDialog(onDismissRequest = { showLegacyFolderUri = null }, title = { Text("旧アプリデータの引き継ぎ", color = MaterialTheme.colorScheme.error) }, text = { Text("現在のデータはすべて削除され、選択したフォルダ内の旧アプリ用JSONデータで初期化されます。一度きりの移行処理として実行してください。", color = MaterialTheme.colorScheme.error) }, confirmButton = { Button(onClick = { viewModel.importLegacyDataFromFolder(context, showLegacyFolderUri!!); showLegacyFolderUri = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("削除して引き継ぐ") } }, dismissButton = { TextButton(onClick = { showLegacyFolderUri = null }) { Text("キャンセル") } })
-    }
 
     if (showEraseConfirm) {
         AlertDialog(
@@ -165,7 +163,12 @@ fun SettingsScreen(
     }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン 1.2.0\n\n(C) 2025-2026 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        AlertDialog(
+            onDismissRequest = { showVersionDialog = false },
+            title = { Text("バージョン情報") },
+            text = { Text("CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy") },
+            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } }
+        )
     }
 
     if (showHelpDialog) {
@@ -214,12 +217,13 @@ fun SettingsScreen(
     }
 
     if (showPasswordInputDialog) {
+        var isInputPasswordVisible by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showPasswordInputDialog = false },
             title = { Text("パスワードの入力") },
             text = {
                 Column {
-                    Text("このバックアップファイルはパスワードで保護されています。")
+                    Text("このバックアップファイルはパスワードで保護されています。設定されたパスワードを入力してください。")
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = inputPasswordForImport,
@@ -227,8 +231,16 @@ fun SettingsScreen(
                         label = { Text("パスワード") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        visualTransformation = PasswordVisualTransformation()
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        visualTransformation = if (isInputPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isInputPasswordVisible = !isInputPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isInputPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                                    contentDescription = if (isInputPasswordVisible) "非表示" else "表示"
+                                )
+                            }
+                        }
                     )
                 }
             },
@@ -407,17 +419,6 @@ fun SettingsScreen(
                     }
                 )
                 
-                // データベースが空の時のみ表示（旧アプリ移行）
-                if (userList.isEmpty() && endedUserList.isEmpty()) {
-                    ListItem(
-                        headlineContent = { Text("旧アプリデータの引き継ぎ", color = MaterialTheme.colorScheme.secondary) },
-                        supportingContent = { Text("旧アプリのJSONフォルダを選択してデータを移行します") },
-                        modifier = Modifier.clickable {
-                            viewModel.setLockBypassEnabled(true)
-                            legacyFolderLauncher.launch(null)
-                        }
-                    )
-                }
             }
 
             // --- 4. セキュリティ ---
@@ -486,12 +487,24 @@ fun SettingsScreen(
                 )
             }
 
-            // --- 5. 開発者向け ---
-            SettingsSection(title = "開発者オプション") {
+            // --- 5. 全データ削除 ---
+            SettingsSection(title = "リセット") {
+                Text(
+                    text = "※ 利用者データと撮影した写真が全て消去されます。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
                 ListItem(
-                    headlineContent = { Text("(開発用) データベースの全消去", color = MaterialTheme.colorScheme.error) },
+                    headlineContent = { Text("■要注意■ データと写真の全消去", color = MaterialTheme.colorScheme.error) },
                     leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                     modifier = Modifier.clickable { showDevClearConfirm = true }
+                )
+                Text(
+                    text = "※ 十分注意して実行してください。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
 

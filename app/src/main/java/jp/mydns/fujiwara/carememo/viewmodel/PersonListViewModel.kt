@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -25,6 +26,9 @@ class PersonListViewModel(
     private val repository: CareMemoRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
+
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _selectedSection = MutableStateFlow("全")
     val selectedSection: StateFlow<String> = _selectedSection.asStateFlow()
@@ -53,7 +57,7 @@ class PersonListViewModel(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val userList: StateFlow<List<Person>> = combine(
-        repository.getAllPersons(),
+        repository.getAllPersons().onEach { _isLoading.value = false },
         _selectedSection,
         _personsWithMatchedConditions
     ) { allPersons, section, matchedIds ->

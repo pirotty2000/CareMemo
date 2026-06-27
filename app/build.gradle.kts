@@ -36,6 +36,11 @@ android {
         compose = true
         buildConfig = true
     }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 // 最新のコンパイラオプション指定方法
@@ -66,6 +71,8 @@ dependencies {
     implementation(libs.pdfbox.android)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.sqlcipher.android)
+    implementation("androidx.sqlite:sqlite-ktx:2.4.0")
 
     // Room
     implementation(libs.room.runtime)

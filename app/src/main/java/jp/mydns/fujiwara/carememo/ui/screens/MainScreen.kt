@@ -59,6 +59,7 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val userList by viewModel.userList.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val categorySummaries by viewModel.categorySummaries.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val selectedSection by viewModel.selectedSection.collectAsState()
@@ -106,6 +107,7 @@ fun MainScreen(
 
     MainScreenContent(
         userList = userList,
+        isLoading = isLoading,
         categorySummaries = categorySummaries,
         isNameMaskingEnabled = isNameMaskingEnabled,
         searchQuery = searchQuery,
@@ -177,6 +179,7 @@ fun MainScreen(
 @Composable
 fun MainScreenContent(
     userList: List<Person>,
+    isLoading: Boolean,
     categorySummaries: Map<Int, PersonCategorySummary>,
     isNameMaskingEnabled: Boolean,
     searchQuery: String,
@@ -292,48 +295,85 @@ fun MainScreenContent(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.fillMaxSize(), state = lazyListState, contentPadding = PaddingValues(bottom = 80.dp)) {
-                items(userList, key = { it.id }) { user ->
-                    val age = calculateAge(user.birthday)
-                    val birthdayStr = formatToJapaneseEra(user.birthday)
-                    var showItemMenu by remember { mutableStateOf(false) }
-                    Column(modifier = Modifier.animateItem()) {
-                        ListItem(
-                            leadingContent = {
-                                CategoryBadges(summary = categorySummaries[user.id] ?: PersonCategorySummary())
-                            },
-                            headlineContent = { 
-                                Column { 
-                                    Text(
-                                        text = user.getMaskedFurigana(isNameMaskingEnabled), 
-                                        style = MaterialTheme.typography.labelSmall, 
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                    Text(
-                                        text = buildString { 
-                                            append(user.getMaskedName(isNameMaskingEnabled))
-                                            if (user.note.isNotBlank()) append(" (${user.note})") 
-                                        }, 
-                                        style = MaterialTheme.typography.titleMedium, 
-                                        fontWeight = FontWeight.Bold, 
-                                        maxLines = 1, 
-                                        overflow = TextOverflow.Ellipsis
-                                    ) 
-                                } 
-                            },
-                            supportingContent = { Text(text = "${birthdayStr}生　${age}歳", style = MaterialTheme.typography.bodySmall) },
-                            trailingContent = {
-                                Box {
-                                    IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
-                                    DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
-                                        DropdownMenuItem(text = { Text("利用者情報を編集") }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
-                                        DropdownMenuItem(text = { Text("利用を終了する", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
-                                    }
-                                }
-                            },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface).clickable { onUserClick(user) }
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "読み込み中...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        HorizontalDivider()
+                    }
+                }
+            } else if (userList.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (searchQuery.isNotEmpty()) "検索条件に一致する利用者は見つかりませんでした" else "利用者が登録されていません。\n右下のボタンから登録してください。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = lazyListState,
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(userList, key = { it.id }) { user ->
+                        val age = calculateAge(user.birthday)
+                        val birthdayStr = formatToJapaneseEra(user.birthday)
+                        var showItemMenu by remember { mutableStateOf(false) }
+                        Column(modifier = Modifier.animateItem()) {
+                            ListItem(
+                                leadingContent = {
+                                    CategoryBadges(summary = categorySummaries[user.id] ?: PersonCategorySummary())
+                                },
+                                headlineContent = { 
+                                    Column { 
+                                        Text(
+                                            text = user.getMaskedFurigana(isNameMaskingEnabled), 
+                                            style = MaterialTheme.typography.labelSmall, 
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                        Text(
+                                            text = buildString { 
+                                                append(user.getMaskedName(isNameMaskingEnabled))
+                                                if (user.note.isNotBlank()) append(" (${user.note})") 
+                                            }, 
+                                            style = MaterialTheme.typography.titleMedium, 
+                                            fontWeight = FontWeight.Bold, 
+                                            maxLines = 1, 
+                                            overflow = TextOverflow.Ellipsis
+                                        ) 
+                                    } 
+                                },
+                                supportingContent = { Text(text = "${birthdayStr}生　${age}歳", style = MaterialTheme.typography.bodySmall) },
+                                trailingContent = {
+                                    Box {
+                                        IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
+                                        DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
+                                            DropdownMenuItem(text = { Text("利用者情報を編集") }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
+                                            DropdownMenuItem(text = { Text("利用を終了する", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface).clickable { onUserClick(user) }
+                            )
+                            HorizontalDivider()
+                        }
                     }
                 }
             }
@@ -524,6 +564,7 @@ fun MainScreenPreview() {
     CareMemoTheme { 
         MainScreenContent(
             userList = mockUserList, 
+            isLoading = false,
             categorySummaries = emptyMap(), 
             isNameMaskingEnabled = false, 
             searchQuery = "",

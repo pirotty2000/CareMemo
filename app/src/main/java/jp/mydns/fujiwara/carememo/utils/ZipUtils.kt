@@ -52,9 +52,20 @@ object ZipUtils {
     fun isValidPassword(zipFile: File, password: String): Boolean {
         return try {
             val zip = ZipFile(zipFile)
+            if (!zip.isEncrypted) return true
+
             zip.setPassword(password.toCharArray())
-            zip.fileHeaders.isNotEmpty() // ヘッダーが読めればOK
-            true
+            // Zip4jでは中央ディレクトリが暗号化されていない場合、
+            // ヘッダー取得だけではパスワードの正否を判定できない。
+            // 最初のファイルの内容を1バイト読み取ってみることで、パスワードの正否を確実に判定する。
+            val firstFileHeader = zip.fileHeaders.find { !it.isDirectory }
+            if (firstFileHeader != null) {
+                zip.getInputStream(firstFileHeader).use { it.read() }
+                true
+            } else {
+                // ファイルが含まれていない場合はヘッダーが読めるだけで良しとする
+                zip.fileHeaders.isNotEmpty()
+            }
         } catch (_: Exception) {
             false
         }

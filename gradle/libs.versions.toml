@@ -23,6 +23,7 @@ coil = "2.7.0"
 security-crypto = "1.1.0"
 zip4j = "2.11.6"
 pdfbox-android = "2.0.27.0"
+sqlcipher = "4.16.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -58,6 +59,7 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox-android" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
