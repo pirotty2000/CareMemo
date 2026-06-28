@@ -12,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
 import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
@@ -61,6 +62,13 @@ class SettingsViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = "",
+        )
+
+    val themeSetting: StateFlow<ThemeSetting> = userSettingsRepository.themeSetting
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ThemeSetting.SYSTEM,
         )
 
     // 復元処理用の一時保持
@@ -120,6 +128,12 @@ class SettingsViewModel(
     fun setBackupPassword(password: String) {
         viewModelScope.launch {
             userSettingsRepository.setBackupPassword(password)
+        }
+    }
+
+    fun setThemeSetting(theme: ThemeSetting) {
+        viewModelScope.launch {
+            userSettingsRepository.setThemeSetting(theme)
         }
     }
 

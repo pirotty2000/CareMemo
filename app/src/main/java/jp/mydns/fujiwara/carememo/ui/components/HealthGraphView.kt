@@ -1,6 +1,8 @@
 package jp.mydns.fujiwara.carememo.ui.components
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.ZoomOutMap
@@ -22,6 +24,8 @@ fun HealthGraphView(
     onExpandGraph: ((Int) -> Unit)? = null
 ) {
     var showHelpDialog by remember { mutableStateOf<String?>(null) }
+    // 背景色の輝度が低い（0.5未満）場合にダークモードと判定する
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     
     // 全データを通じた共通のX軸（時間軸）の範囲を計算
     val (globalMinX, globalMaxX) = remember(records) {
@@ -54,8 +58,8 @@ fun HealthGraphView(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         repeat(graphCount) { index ->
-            val config = remember(categoryType, index, records, context) {
-                HealthChartHelper.getChartConfig(context, categoryType, index, records)
+            val config = remember(categoryType, index, records, context, isDark) {
+                HealthChartHelper.getChartConfig(context, categoryType, index, records, isDark)
             }
 
             if (config != null) {

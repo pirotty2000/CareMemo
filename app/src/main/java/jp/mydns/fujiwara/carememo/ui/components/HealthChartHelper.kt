@@ -53,17 +53,30 @@ object HealthChartHelper {
     /**
      * 指定されたカテゴリーとインデックスに対応するグラフ設定を生成します
      */
-    fun getChartConfig(context: Context, category: Category, index: Int, records: List<Any>): HealthChartConfig? {
+    fun getChartConfig(
+        context: Context,
+        category: Category,
+        index: Int,
+        records: List<Any>,
+        isDark: Boolean = false
+    ): HealthChartConfig? {
         return when (category) {
-            Category.BP_AND_PULSE -> getBpAndPulseConfig(context, index, records.filterIsInstance<BpAndPulse>())
-            Category.GLUCOSE_AND_HBA1C -> getGlucoseAndHbA1cConfig(context, index, records.filterIsInstance<GlucoseAndHbA1c>())
-            Category.HEIGHT_AND_WEIGHT -> getHeightAndWeightConfig(context, index, records.filterIsInstance<HeightAndWeight>())
+            Category.BP_AND_PULSE -> getBpAndPulseConfig(context, index, records.filterIsInstance<BpAndPulse>(), isDark)
+            Category.GLUCOSE_AND_HBA1C -> getGlucoseAndHbA1cConfig(context, index, records.filterIsInstance<GlucoseAndHbA1c>(), isDark)
+            Category.HEIGHT_AND_WEIGHT -> getHeightAndWeightConfig(context, index, records.filterIsInstance<HeightAndWeight>(), isDark)
             Category.CONDITION_AT_VISIT, Category.MEDICATION -> null
         }
     }
 
-    private fun getBpAndPulseConfig(context: Context, index: Int, data: List<BpAndPulse>): HealthChartConfig? {
+    // --- ハイライト色の定義 ---
+    private fun getNormalHighlight(isDark: Boolean) = if (isDark) Color(0xFF1B2E1D) else Color(0xFFE8F5E9)
+    private fun getWarningHighlight(isDark: Boolean) = if (isDark) Color(0xFF333112) else Color(0xFFFFFDE7)
+    private fun getAlertHighlight(isDark: Boolean) = if (isDark) Color(0xFF3D1F1F) else Color(0xFFFFEBEE)
+    private fun getInfoHighlight(isDark: Boolean) = if (isDark) Color(0xFF1A213D) else Color(0xFFE3F2FD)
+
+    private fun getBpAndPulseConfig(context: Context, index: Int, data: List<BpAndPulse>, isDark: Boolean): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }
+        val normalColor = getNormalHighlight(isDark)
         return when (index) {
             0 -> { // 血圧
                 val sysPoints = sortedData.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpSystolic!!.toDouble() }
@@ -76,8 +89,8 @@ object HealthChartHelper {
                         ChartLineData("${context.getString(HealthThresholds.HEALTH_LABEL_BP)}(${context.getString(HealthThresholds.HEALTH_LABEL_DIASTOLIC_SHORT)})", diaPoints, Color.Blue)
                     ),
                     ranges = listOf(
-                        ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)),
-                        ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, Color(0xFFE8F5E9))
+                        ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, normalColor),
+                        ChartRangeHighlight(HealthThresholds.BP_LOW_DIASTOLIC, HealthThresholds.BP_HIGH_DIASTOLIC, normalColor)
                     ),
                     stepY = 10.0,
                     minYConstraint = 70.0,
@@ -90,7 +103,7 @@ object HealthChartHelper {
                     title = context.getString(HealthThresholds.HEALTH_LABEL_PULSE),
                     helpContent = HealthThresholds.getPulseExplanation(context),
                     dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_PULSE), pulsePoints, Color(0xFF4CAF50))),
-                    ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, Color(0xFFE8F5E9))),
+                    ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, normalColor)),
                     stepY = 10.0,
                     minYConstraint = 40.0,
                     maxYConstraint = 110.0
@@ -102,7 +115,7 @@ object HealthChartHelper {
                     title = context.getString(HealthThresholds.HEALTH_LABEL_BODY_TEMP),
                     helpContent = HealthThresholds.getTempExplanation(context),
                     dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_BODY_TEMP), tempPoints, Color(0xFFFF9800))),
-                    ranges = listOf(ChartRangeHighlight(HealthThresholds.TEMP_LOW, HealthThresholds.TEMP_HIGH, Color(0xFFE8F5E9))),
+                    ranges = listOf(ChartRangeHighlight(HealthThresholds.TEMP_LOW, HealthThresholds.TEMP_HIGH, normalColor)),
                     stepY = 0.5,
                     minYConstraint = 35.0,
                     maxYConstraint = 39.0,
@@ -113,8 +126,12 @@ object HealthChartHelper {
         }
     }
 
-    private fun getGlucoseAndHbA1cConfig(context: Context, index: Int, data: List<GlucoseAndHbA1c>): HealthChartConfig? {
+    private fun getGlucoseAndHbA1cConfig(context: Context, index: Int, data: List<GlucoseAndHbA1c>, isDark: Boolean): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }
+        val normalColor = getNormalHighlight(isDark)
+        val warningColor = getWarningHighlight(isDark)
+        val alertColor = getAlertHighlight(isDark)
+        
         return when (index) {
             0 -> { // 血糖値
                 val glucoses = sortedData.mapNotNull { it.glucose?.toDouble() }
@@ -125,7 +142,7 @@ object HealthChartHelper {
                     title = context.getString(HealthThresholds.HEALTH_LABEL_GLUCOSE),
                     helpContent = HealthThresholds.getGlucoseExplanation(context),
                     dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_GLUCOSE), glucosePoints, Color.Magenta)),
-                    ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, Color(0xFFE8F5E9))),
+                    ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, normalColor)),
                     stepY = 50.0,
                     minYConstraint = minG - 10.0,
                     maxYConstraint = maxG + 10.0
@@ -141,9 +158,9 @@ object HealthChartHelper {
                     helpContent = HealthThresholds.getHbA1cExplanation(context),
                     dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_HBA1C), hba1cPoints, Color.Red)),
                     ranges = listOf(
-                        ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)),
-                        ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, HealthThresholds.HBA1C_DIABETES, Color(0xFFFFFDE7)),
-                        ChartRangeHighlight(HealthThresholds.HBA1C_DIABETES, 100.0, Color(0xFFFFEBEE))
+                        ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, normalColor),
+                        ChartRangeHighlight(HealthThresholds.HBA1C_GOOD, HealthThresholds.HBA1C_PREDIABETES, warningColor),
+                        ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, 100.0, alertColor)
                     ),
                     stepY = 0.5,
                     minYConstraint = minH - 0.5,
@@ -155,8 +172,12 @@ object HealthChartHelper {
         }
     }
 
-    private fun getHeightAndWeightConfig(context: Context, index: Int, data: List<HeightAndWeight>): HealthChartConfig? {
+    private fun getHeightAndWeightConfig(context: Context, index: Int, data: List<HeightAndWeight>, isDark: Boolean): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }
+        val normalColor = getNormalHighlight(isDark)
+        val infoColor = getInfoHighlight(isDark)
+        val alertColor = getAlertHighlight(isDark)
+
         return when (index) {
             0 -> { // 体重
                 val weights = sortedData.mapNotNull { it.weight }
@@ -182,9 +203,9 @@ object HealthChartHelper {
                     helpContent = HealthThresholds.getBmiExplanation(context),
                     dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_BMI), bmiPoints, Color.Red)),
                     ranges = listOf(
-                        ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)),
-                        ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)),
-                        ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, Color(0xFFFFEBEE))
+                        ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, infoColor),
+                        ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, normalColor),
+                        ChartRangeHighlight(HealthThresholds.BMI_OBESITY_2, 100.0, alertColor)
                     ),
                     stepY = 2.0,
                     minYConstraint = minB - 1.0,

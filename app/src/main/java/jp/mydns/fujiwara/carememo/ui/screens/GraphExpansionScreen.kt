@@ -6,6 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -142,13 +143,15 @@ fun GraphExpansionScreen(
 @Composable
 fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
     val context = LocalContext.current
+    // 背景色の輝度で判定
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     // 共通のX軸範囲計算
     val (globalMinX, globalMaxX) = remember(records) {
         HealthChartHelper.calculateGlobalXRange(records)
     }
 
-    val config = remember(category, index, records, context) {
-        HealthChartHelper.getChartConfig(context, category, index, records)
+    val config = remember(category, index, records, context, isDark) {
+        HealthChartHelper.getChartConfig(context, category, index, records, isDark)
     }
 
     if (config != null) {

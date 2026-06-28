@@ -23,6 +23,7 @@ class UserSettingsRepository(private val context: Context) {
         private val LAST_ACTIVE_TIME = longPreferencesKey("last_active_time")
         private val IS_BACKUP_PASSWORD_ENABLED = booleanPreferencesKey("is_backup_password_enabled")
         private val BACKUP_PASSWORD = stringPreferencesKey("backup_password")
+        private val THEME_SETTING = stringPreferencesKey("theme_setting")
     }
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
@@ -59,6 +60,16 @@ class UserSettingsRepository(private val context: Context) {
     val backupPassword: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[BACKUP_PASSWORD] ?: ""
+        }
+
+    val themeSetting: Flow<ThemeSetting> = context.dataStore.data
+        .map { preferences ->
+            val themeName = preferences[THEME_SETTING] ?: ThemeSetting.SYSTEM.name
+            try {
+                ThemeSetting.valueOf(themeName)
+            } catch (e: Exception) {
+                ThemeSetting.SYSTEM
+            }
         }
 
     // 一時的にロックを無効化するためのフラグ（外部アプリ連携時など）
@@ -103,6 +114,12 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setBackupPassword(password: String) {
         context.dataStore.edit { preferences ->
             preferences[BACKUP_PASSWORD] = password
+        }
+    }
+
+    suspend fun setThemeSetting(theme: ThemeSetting) {
+        context.dataStore.edit { preferences ->
+            preferences[THEME_SETTING] = theme.name
         }
     }
 }

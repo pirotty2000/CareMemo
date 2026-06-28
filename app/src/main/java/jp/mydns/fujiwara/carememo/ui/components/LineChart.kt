@@ -47,10 +47,13 @@ fun LineChart(
     showDecimal: Boolean = false
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(fontSize = 10.sp, color = Color.Gray)
+    val labelStyle = TextStyle(fontSize = 10.sp, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     val valueLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold)
     val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
-    val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface)
+
+    val gridColor = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant
+    val axisColor = androidx.compose.material3.MaterialTheme.colorScheme.outline
     
     var scaleX by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -157,7 +160,7 @@ fun LineChart(
                         for (i in 0..yStepsCount) {
                             val py = topPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
                             drawLine(
-                                color = Color.LightGray.copy(alpha = 0.5f),
+                                color = gridColor.copy(alpha = 0.5f),
                                 start = Offset(leftBufferPx, py),
                                 end = Offset(size.width - rightBufferPx, py),
                                 strokeWidth = 1.dp.toPx()
@@ -172,7 +175,7 @@ fun LineChart(
                             
                             if (px in (leftBufferPx - 100f)..(size.width - rightBufferPx + 100f)) {
                                 drawLine(
-                                    color = Color.LightGray.copy(alpha = 0.3f),
+                                    color = gridColor.copy(alpha = 0.3f),
                                     start = Offset(px, topPx),
                                     end = Offset(px, topPx + chartHeight),
                                     strokeWidth = 1.dp.toPx()
@@ -220,8 +223,8 @@ fun LineChart(
                         }
                     }
                     
-                    drawLine(Color.Gray, Offset(leftBufferPx, topPx), Offset(leftBufferPx, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
-                    drawLine(Color.Gray, Offset(leftBufferPx, topPx + chartHeight), Offset(size.width - rightBufferPx, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+                    drawLine(axisColor, Offset(leftBufferPx, topPx), Offset(leftBufferPx, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
+                    drawLine(axisColor, Offset(leftBufferPx, topPx + chartHeight), Offset(size.width - rightBufferPx, topPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                 }
             }
         }

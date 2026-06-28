@@ -23,7 +23,7 @@ fun PersonHeaderTitle(
             Text(
                 text = p.getMaskedFurigana(isNameMaskingEnabled),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
             )
             Text(
                 text = buildString {
@@ -35,12 +35,14 @@ fun PersonHeaderTitle(
                     }
                 },
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     } ?: Text(
         text = defaultTitle,
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleMedium
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onPrimaryContainer
     )
 }

@@ -32,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.screens.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
@@ -75,21 +76,22 @@ class MainActivity : FragmentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            CareMemoTheme {
-                CareMemoApp(this)
-            }
+            CareMemoApp(this)
         }
     }
 }
 
 @Composable
 fun CareMemoApp(activity: FragmentActivity) {
-    val navController = rememberNavController()
     val context = LocalContext.current
     val application = context.applicationContext as CareMemoApplication
     val repository = application.repository
     val userSettingsRepository = application.userSettingsRepository
-    val scope = rememberCoroutineScope()
+    val themeSetting by userSettingsRepository.themeSetting.collectAsState(initial = ThemeSetting.SYSTEM)
+
+    CareMemoTheme(themeSetting = themeSetting) {
+        val navController = rememberNavController()
+        val scope = rememberCoroutineScope()
 
     val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = null)
     val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 0)
@@ -429,6 +431,7 @@ fun CareMemoApp(activity: FragmentActivity) {
                 onBack = { navController.popBackStack() }
             )
         }
+        }
     }
-  }
+    }
 }

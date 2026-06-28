@@ -98,6 +98,8 @@ UIの状態（State）を保持し、`data` レイヤーとの仲介を行いま
 - `HealthThresholds.kt`: バイタルサインの閾値などの定義。
 #### 4.4. 設定・管理に必要なデータ
 - `UserSettingsRepository.kt`: 設定情報（DataStoreなど）の管理。
+#### 4.5. テーマ設定に必要なデータ
+- `ThemeSetting.kt`：アプリのテーマ設定を定義する列挙型
 
 ### 5. `utils/`
 特定のドメインに依存しない共通処理を記述します。
