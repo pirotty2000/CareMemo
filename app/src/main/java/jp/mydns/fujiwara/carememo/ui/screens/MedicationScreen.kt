@@ -1,5 +1,36 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
+/**
+ * Screen : MedicationScreen
+ *
+ * 【画面名】
+ * 服薬管理画面
+ *
+ * 【役割】
+ * 選択された利用者の日々の服薬状況（朝・昼・夕・寝る前）をカレンダーおよびリスト形式で管理し、
+ * 記録の登録・編集、および報告用データの外部出力を提供する画面。
+ *
+ * 【主な機能】
+ * ・カレンダー表示：月単位のグリッドで服薬状況をアイコン表示し、日付タップで編集ダイアログを表示。
+ * ・履歴（テーブル）表示：曜日ごとに色分けされた月間の服薬ステータス一覧を表示。
+ * ・服薬ステータス管理：「未服用(×)」「介助(△)」「服用(○)」の3段階と確認日時の記録。
+ * ・カテゴリ切り替え：上部のセレクターバーによる他の記録カテゴリ（バイタル等）への遷移。
+ * ・月選択：前後月への移動機能による過去データの参照。
+ * ・PDF出力：月間の服薬記録を期間指定・パスワード保護付きでPDF化し、共有する機能。
+ *
+ * 【遷移】
+ * ← MainScreen / UnifiedRecordScreen（戻るボタン）
+ * → UnifiedRecordScreen（上部カテゴリセレクターにて他カテゴリ選択時）
+ *
+ * 【使用するViewModel】
+ * MedicationViewModel
+ *
+ * 【備考】
+ * 服薬管理は他の健康記録（数値・テキスト）と異なり、日別・時間帯別のマトリックス管理が必要なため、
+ * 専用の ViewModel と UI コンポーネントで構成されている。
+ * PDF出力時の外部アプリ遷移に伴うロックバイパス（LockBypass）制御に対応。
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

@@ -1,5 +1,35 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
+/**
+ * Screen : MainScreen
+ *
+ * 【画面名】
+ * 利用者一覧（メイン画面）
+ *
+ * 【役割】
+ * 登録された利用者（ケア対象者）の一覧を表示し、健康記録カテゴリへの橋渡しや、
+ * 利用者情報の管理（登録・変更・サービス終了処理）を行うアプリのメインエントランス。。
+ *
+ * 【主な機能】
+ * ・利用者一覧：名前（マスキング対応）、フリガナ、年齢、備考および最新の記録状況をバッジで表示。
+ * ・絞り込み検索：五十音順インデックスによる絞り込みと、検索バーによるフリーワード検索。
+ * ・利用者管理：ダイアログ形式での情報登録・編集、および論理削除（サービス終了）と復元（Undo）機能。
+ * ・カテゴリ連携：利用者選択時に表示されるボトムシートから、バイタルや食事等の各記録画面へ遷移。
+ * ・システムメニュー：アプリ設定、操作ヘルプ、バージョン情報の確認。
+ *
+ * 【遷移】
+ * ← （アプリ起動）
+ * → UnifiedRecordScreen / MedicationScreen（カテゴリ選択シート経由）
+ * → SettingsScreen（オプションメニューより遷移）
+ *
+ * 【使用するViewModel】
+ * PersonListViewModel
+ *
+ * 【備考】
+ * UIの状態管理とイベント処理（Snackbar表示等）を担当。
+ * データ操作および検索ロジックの本体は ViewModel に集約されている。
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

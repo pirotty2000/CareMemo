@@ -1,5 +1,35 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
+/**
+ * Screen : SettingsScreen
+ *
+ * 【画面名】
+ * 設定・管理画面
+ *
+ * 【役割】
+ * アプリ全体の動作設定、利用者のデータ管理（復元・抹消）、セキュリティ設定、
+ * およびバックアップ・リストア等のシステムメンテナンス機能を提供する画面。
+ *
+ * 【主な機能】
+ * ・表示・記録設定：氏名の伏せ字表示（マスキング）の切替、デフォルト記録者名の設定。
+ * ・利用者管理：利用終了（論理削除）した利用者の復帰操作、およびデータの完全抹消（物理削除）。
+ * ・データ管理：全データと写真のバックアップ（Zip形式）および復元（インポート）機能。
+ * ・セキュリティ：生体認証によるアプリロックの制御、再ロック待機時間の設定、バックアップのパスワード保護。
+ * ・テーマ設定：アプリ全体の配色モード（ライト/ダーク/システム連携等）の切り替え。
+ * ・システム情報：操作ヘルプの閲覧、アプリのバージョン情報確認、および全データのリセット機能。
+ *
+ * 【遷移】
+ * ← MainScreen（戻るボタン）
+ * → UserRestoreScreen（「利用終了者の復帰」選択時）
+ *
+ * 【使用するViewModel】
+ * SettingsViewModel
+ *
+ * 【備考】
+ * ストレージアクセスフレームワーク（SAF）を利用したファイル入出力や、生体認証（BiometricPrompt）の制御、
+ * 外部アプリ連携時のロックバイパス管理など、アプリの基盤となる重要な管理ロジックを担当する。
+ */
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
