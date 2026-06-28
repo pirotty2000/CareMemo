@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.Icons

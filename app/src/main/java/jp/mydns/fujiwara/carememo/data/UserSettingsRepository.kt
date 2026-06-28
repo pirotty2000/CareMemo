@@ -67,7 +67,7 @@ class UserSettingsRepository(private val context: Context) {
             val themeName = preferences[THEME_SETTING] ?: ThemeSetting.SYSTEM.name
             try {
                 ThemeSetting.valueOf(themeName)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 ThemeSetting.SYSTEM
             }
         }
