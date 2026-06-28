@@ -69,31 +69,31 @@ fun ConditionDetailScreen(
     var condition by rememberSaveable { mutableStateOf("") }
     var author by rememberSaveable { mutableStateOf("") }
 
+    // 初期化済みフラグ
+    var isInitialized by rememberSaveable { mutableStateOf(false) }
+
     val memo = remember(records, conditionId) { 
         records.asSequence().filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
     }
 
     // 初期値セット
-    LaunchedEffect(memo) {
-        if ((memo != null) && title.isEmpty() && condition.isEmpty()) {
-            title = memo.title ?: ""
-            condition = memo.condition ?: ""
-            author = memo.author
-            dateTimeState.setFromInstant(memo.recordTime)
-        } else if ((conditionId == 0) && dateTimeState.year.value.isEmpty()) {
-            // 新規作成時：現在の日時をセット
-            dateTimeState.setFromInstant(Instant.now())
-            
-            if (author.isEmpty() && defaultRecorderName.isNotEmpty()) {
-                author = defaultRecorderName
+    LaunchedEffect(memo, defaultRecorderName) {
+        if (!isInitialized) {
+            if (memo != null) {
+                // 既存データの編集：データベースの値を優先的にセット
+                title = memo.title ?: ""
+                condition = memo.condition ?: ""
+                author = memo.author
+                dateTimeState.setFromInstant(memo.recordTime)
+                isInitialized = true
+            } else if (conditionId == 0) {
+                // 新規作成時：現在の日時とデフォルト記録者をセット
+                dateTimeState.setFromInstant(Instant.now())
+                if (defaultRecorderName.isNotEmpty()) {
+                    author = defaultRecorderName
+                    isInitialized = true
+                }
             }
-        }
-    }
-
-    // デフォルト記録者が後から読み込まれた場合の考慮
-    LaunchedEffect(defaultRecorderName) {
-        if (conditionId == 0 && author.isEmpty() && defaultRecorderName.isNotEmpty()) {
-            author = defaultRecorderName
         }
     }
 
@@ -246,7 +246,8 @@ fun ConditionDetailScreen(
                                 }
                                 Button(
                                     onClick = {
-                                        val recordTime = dateTimeState.toInstant() ?: Instant.now()
+                                        // 日時入力が不正な場合は、既存データの時間を優先し、それもなければ現在時刻
+                                        val recordTime = dateTimeState.toInstant() ?: memo?.recordTime ?: Instant.now()
 
                                         val newMemo = ConditionAtVisit(
                                             id = conditionId,

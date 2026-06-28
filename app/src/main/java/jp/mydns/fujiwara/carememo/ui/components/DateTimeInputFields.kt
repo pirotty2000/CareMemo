@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -69,11 +70,11 @@ class DateTimeInputState(
 fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
     val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
     
-    val year = remember { mutableStateOf(zdt.year.toString()) }
-    val month = remember { mutableStateOf(zdt.monthValue.toString()) }
-    val day = remember { mutableStateOf(zdt.dayOfMonth.toString()) }
-    val hour = remember { mutableStateOf("%02d".format(zdt.hour)) }
-    val minute = remember { mutableStateOf("%02d".format(zdt.minute)) }
+    val year = rememberSaveable { mutableStateOf(zdt.year.toString()) }
+    val month = rememberSaveable { mutableStateOf(zdt.monthValue.toString()) }
+    val day = rememberSaveable { mutableStateOf(zdt.dayOfMonth.toString()) }
+    val hour = rememberSaveable { mutableStateOf("%02d".format(zdt.hour)) }
+    val minute = rememberSaveable { mutableStateOf("%02d".format(zdt.minute)) }
 
     return remember {
         DateTimeInputState(year, month, day, hour, minute)

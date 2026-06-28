@@ -207,37 +207,55 @@ object PdfExporter {
     private fun filterAnyRecords(records: List<Any>, range: ExportRange, customStart: Instant?, customEnd: Instant?): List<Any> {
         if (range == ExportRange.ALL) return records
         
-        // HistoryRecord インターフェースを利用して汎用的に recordTime を取得
-        val sorted = records.asSequence().filterIsInstance<HistoryRecord>()
-            .sortedByDescending { it.recordTime }
-            .toList()
-        
-        if (sorted.isEmpty()) return emptyList()
+        val items = records.filterIsInstance<HistoryRecord>()
+        if (items.isEmpty()) return emptyList()
 
-        if (range == ExportRange.LATEST) return listOf(sorted.first())
+        val zone = ZoneId.systemDefault()
         
-        if ((range == ExportRange.CUSTOM) && (customStart != null || customEnd != null)) {
-            var filtered = sorted.asSequence()
-            if (customStart != null) {
-                filtered = filtered.filter { it.recordTime.isAfter(customStart) || it.recordTime == customStart }
+        // 判定用の時刻を取得する関数
+        // MedicationRecordの場合は dosageDate (服用日) を基準にし、それ以外は recordTime を基準にする
+        val getEffectiveTime: (HistoryRecord) -> Instant = { rec ->
+            if (rec is MedicationRecord) {
+                try {
+                    LocalDate.parse(rec.dosageDate).atStartOfDay(zone).toInstant()
+                } catch (_: Exception) {
+                    rec.recordTime
+                }
+            } else {
+                rec.recordTime
             }
-            if (customEnd != null) {
-                // 終了日の23:59:59まで含めるための調整
-                val endInclusive = customEnd.atZone(ZoneId.systemDefault()).toLocalDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().minusMillis(1)
-                filtered = filtered.filter { it.recordTime.isBefore(endInclusive) || it.recordTime == endInclusive }
-            }
-            return filtered.toList()
         }
 
-        val latestTime = sorted.first().recordTime.atZone(ZoneId.systemDefault())
-        val startTime = when (range) {
-            ExportRange.ONE_MONTH -> latestTime.minusMonths(1)
-            ExportRange.THREE_MONTHS -> latestTime.minusMonths(3)
-            ExportRange.SIX_MONTHS -> latestTime.minusMonths(6)
-            else -> latestTime.minusYears(100)
-        }.toInstant()
-        
-        return sorted.filter { it.recordTime.isAfter(startTime) || it.recordTime == startTime }
+        // 基準となる最新データを見つけるため、一旦判定用時刻でソート
+        val sortedByEffective = items.sortedByDescending { getEffectiveTime(it) }
+
+        if (range == ExportRange.LATEST) return listOf(sortedByEffective.first())
+
+        val startInclusive: Instant?
+        val endInclusive: Instant?
+
+        if (range == ExportRange.CUSTOM) {
+            // DatePickerの戻り値（UTC午前0時）を、利用者のローカルタイムゾーンでの「その日の開始/終了」に変換する
+            startInclusive = customStart?.atZone(java.time.ZoneOffset.UTC)?.toLocalDate()?.atStartOfDay(zone)?.toInstant()
+            endInclusive = customEnd?.atZone(java.time.ZoneOffset.UTC)?.toLocalDate()?.atTime(23, 59, 59, 999_999_999)?.atZone(zone)?.toInstant()
+        } else {
+            // 最新データの時刻を基準に、過去方向への範囲を計算
+            val referenceTime = getEffectiveTime(sortedByEffective.first()).atZone(zone)
+            startInclusive = when (range) {
+                ExportRange.ONE_MONTH -> referenceTime.minusMonths(1).toInstant()
+                ExportRange.THREE_MONTHS -> referenceTime.minusMonths(3).toInstant()
+                ExportRange.SIX_MONTHS -> referenceTime.minusMonths(6).toInstant()
+                else -> null
+            }
+            endInclusive = null
+        }
+
+        return items.filter { item ->
+            val t = getEffectiveTime(item)
+            val afterStart = startInclusive == null || t.isAfter(startInclusive) || t == startInclusive
+            val beforeEnd = endInclusive == null || t.isBefore(endInclusive) || t == endInclusive
+            afterStart && beforeEnd
+        }
     }
 
     private fun drawHeader(canvas: Canvas, person: Person, isNameMaskingEnabled: Boolean, category: Category, pageNumber: Int): Float {
