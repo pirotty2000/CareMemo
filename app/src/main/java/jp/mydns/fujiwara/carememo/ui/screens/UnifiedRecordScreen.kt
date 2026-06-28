@@ -67,7 +67,6 @@ fun UnifiedRecordScreen(
     
     val records by viewModel.filteredRecords.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val conditionRecords = viewModel.records // ここでrecordsのflowを取得
     val conditionPhotoMap by conditionViewModel.getConditionPhotoMap(viewModel.records).collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
@@ -119,7 +118,23 @@ fun UnifiedRecordScreen(
                         )
                     },
                     navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) } },
-                    actions = { IconButton(onClick = { if (records.isEmpty()) { val categoryName = context.getString(currentCategory.displayNameRes); scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(categoryName)) }; return@IconButton }; showPdfSettingsDialog = true }) { Icon(Icons.Rounded.PictureAsPdf, contentDescription = stringResource(R.string.pdf_export)) } }
+                    actions = {
+                        val categoryName = stringResource(currentCategory.displayNameRes)
+                        IconButton(onClick = {
+                            if (records.isEmpty()) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(noRecordsMsgFormat.format(categoryName))
+                                }
+                            } else {
+                                showPdfSettingsDialog = true
+                            }
+                        }) {
+                            Icon(
+                                Icons.Rounded.PictureAsPdf,
+                                contentDescription = stringResource(R.string.pdf_export)
+                            )
+                        }
+                    }
                 )
                 CategorySelectorBar(
                     currentCategory = currentCategory,
@@ -403,17 +418,78 @@ fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
 fun VitalRecordItemContent(record: BpAndPulse) {
     val context = LocalContext.current
     val results = record.getVitalResults(context)
+
+    val highBpLabel = stringResource(HealthThresholds.VITAL_LABEL_HIGH_BP)
+    val lowBpLabel = stringResource(HealthThresholds.VITAL_LABEL_LOW_BP)
+    val tachycardiaLabel = stringResource(HealthThresholds.VITAL_LABEL_TACHYCARDIA)
+    val bradycardiaLabel = stringResource(HealthThresholds.VITAL_LABEL_BRADYCARDIA)
+    val feverLabel = stringResource(HealthThresholds.VITAL_LABEL_FEVER)
+    val hypothermiaLabel = stringResource(HealthThresholds.VITAL_LABEL_HYPOTHERMIA)
+
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(4.dp)); Text(text = "${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg", style = MaterialTheme.typography.labelMedium)
-            Spacer(modifier = Modifier.width(12.dp)); Icon(Icons.Rounded.MonitorHeart, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(4.dp)); Text(text = "${record.pulse ?: "---"} bpm", style = MaterialTheme.typography.labelMedium)
-            Spacer(modifier = Modifier.width(12.dp)); Icon(Icons.Rounded.Thermostat, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(4.dp)); Text(text = "${record.bodyTemperature?.let { "%.1f".format(it) } ?: "---"} ℃", style = MaterialTheme.typography.labelMedium)
+            Icon(
+                Icons.Rounded.Favorite,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "${record.bpSystolic ?: "---"}/${record.bpDiastolic ?: "---"} mmHg",
+                style = MaterialTheme.typography.labelMedium
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Icon(
+                Icons.Rounded.MonitorHeart,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = "${record.pulse ?: "---"} bpm", style = MaterialTheme.typography.labelMedium)
+            Spacer(modifier = Modifier.width(12.dp))
+            Icon(
+                Icons.Rounded.Thermostat,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "${record.bodyTemperature?.let { "%.1f".format(it) } ?: "---"} ℃",
+                style = MaterialTheme.typography.labelMedium
+            )
         }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_HIGH_BP), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_HIGH_BP) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_LOW_BP), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_LOW_BP) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_TACHYCARDIA), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_TACHYCARDIA) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_BRADYCARDIA), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_BRADYCARDIA) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_FEVER), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_FEVER) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_HYPOTHERMIA), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_HYPOTHERMIA) })
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VitalStatusIndicator(
+                label = highBpLabel,
+                isActive = results.any { it.first == highBpLabel }
+            )
+            VitalStatusIndicator(
+                label = lowBpLabel,
+                isActive = results.any { it.first == lowBpLabel }
+            )
+            VitalStatusIndicator(
+                label = tachycardiaLabel,
+                isActive = results.any { it.first == tachycardiaLabel }
+            )
+            VitalStatusIndicator(
+                label = bradycardiaLabel,
+                isActive = results.any { it.first == bradycardiaLabel }
+            )
+            VitalStatusIndicator(
+                label = feverLabel,
+                isActive = results.any { it.first == feverLabel }
+            )
+            VitalStatusIndicator(
+                label = hypothermiaLabel,
+                isActive = results.any { it.first == hypothermiaLabel }
+            )
         }
     }
 }

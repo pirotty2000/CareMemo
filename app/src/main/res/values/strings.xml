@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">CareMemo</string>
-    <string name="loading">読み込み中...</string>
+    <string name="loading">読み込み中…</string>
     <string name="no_user_found">検索条件に一致する利用者は見つかりませんでした</string>
     <string name="no_user_registered">利用者が登録されていません。\n右下のボタンから登録してください。</string>
     <string name="menu_settings">設定</string>
@@ -26,7 +26,7 @@
     <string name="save">保存</string>
     <string name="cancel">キャンセル</string>
     <string name="search_memo_placeholder">所見メモ検索</string>
-    <string name="search_memo_hint">特定の症状や出来事を入力...</string>
+    <string name="search_memo_hint">特定の症状や出来事を入力…</string>
     <string name="clear">クリア</string>
     <string name="era_ad">西暦</string>
     <string name="era_showa">昭和</string>
@@ -54,7 +54,7 @@
     <string name="empty_records_description">右下の ＋ ボタンをタップして、\n記録を追加しましょう</string>
     <string name="error_no_records_for_pdf">%1$sの記録がないため出力できません</string>
     <string name="error_pdf_export_failed">PDFの作成に失敗したか、対象データがありません</string>
-    <string name="search_placeholder">%1$sを検索...</string>
+    <string name="search_placeholder">%1$sを検索…</string>
     <string name="edit">編集</string>
     <string name="record_suffix">%1$s記録</string>
 

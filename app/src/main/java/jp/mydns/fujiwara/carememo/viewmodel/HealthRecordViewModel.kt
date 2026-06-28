@@ -3,10 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.CareMemoRepository
 import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
