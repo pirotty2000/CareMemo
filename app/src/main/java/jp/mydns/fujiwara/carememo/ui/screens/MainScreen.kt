@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.focus.FocusRequester
@@ -34,22 +35,21 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.CategoryBadges
 import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.BuildConfig
 import java.time.Instant
 import java.time.LocalDate
-import java.time.Period
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.chrono.JapaneseDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +68,8 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
+    val userEndedFormat = stringResource(R.string.snackbar_user_ended)
+    val undoLabel = stringResource(R.string.undo)
 
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -124,8 +126,8 @@ fun MainScreen(
             scope.launch {
                 val fullName = person.getMaskedName(isNameMaskingEnabled)
                 val result = snackbarHostState.showSnackbar(
-                    message = "$fullName さんの利用を終了しました", 
-                    actionLabel = "元に戻す", 
+                    message = userEndedFormat.format(fullName), 
+                    actionLabel = undoLabel,
                     duration = SnackbarDuration.Short
                 )
                 if (result == SnackbarResult.ActionPerformed) { 
@@ -145,7 +147,7 @@ fun MainScreen(
             text = { Text(dialogMessage!!) },
             confirmButton = {
                 TextButton(onClick = { dialogMessage = null; dialogTitle = null }) {
-                    Text("閉じる")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -201,10 +203,10 @@ fun MainScreenContent(
     if (showVersionDialog) {
         AlertDialog(
             onDismissRequest = { showVersionDialog = false },
-            title = { Text("バージョン情報") },
+            title = { Text(stringResource(R.string.dialog_version_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("CareMemo", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     Text("バージョン: ${BuildConfig.VERSION_NAME}")
                     HorizontalDivider()
                     Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -214,12 +216,12 @@ fun MainScreenContent(
                     Text("(C) 2025-2026 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
                 }
             },
-            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } }
+            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text(stringResource(R.string.close)) } }
         )
     }
 
     if (showHelpDialog) {
-        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text("ヘルプ") }, text = { Text("・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「設定」内の「利用者管理」から復帰できます。") }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text("閉じる") } })
+        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text(stringResource(R.string.dialog_help_title)) }, text = { Text(stringResource(R.string.dialog_help_content)) }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(stringResource(R.string.close)) } })
     }
 
     val kanaGroups = listOf("全", "あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他")
@@ -227,22 +229,22 @@ fun MainScreenContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("CareMemo", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text("設定") },
+                            text = { Text(stringResource(R.string.menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                             onClick = { showMenu = false; onNavigateToSettings() }
                         )
                         DropdownMenuItem(
-                            text = { Text("ヘルプ") },
+                            text = { Text(stringResource(R.string.menu_help)) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
                             onClick = { showMenu = false; showHelpDialog = true }
                         )
                         DropdownMenuItem(
-                            text = { Text("バージョン情報") },
+                            text = { Text(stringResource(R.string.menu_version)) },
                             leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
                             onClick = { showMenu = false; showVersionDialog = true }
                         )
@@ -251,7 +253,7 @@ fun MainScreenContent(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = "利用者登録") } }
+        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.user_registration)) } }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SearchBar(query = searchQuery, onQueryChange = onSearchQueryChange)
@@ -308,7 +310,7 @@ fun MainScreenContent(
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "読み込み中...",
+                            text = stringResource(R.string.loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -320,7 +322,7 @@ fun MainScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.isNotEmpty()) "検索条件に一致する利用者は見つかりませんでした" else "利用者が登録されていません。\n右下のボタンから登録してください。",
+                        text = if (searchQuery.isNotEmpty()) stringResource(R.string.no_user_found) else stringResource(R.string.no_user_registered),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -333,8 +335,8 @@ fun MainScreenContent(
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                     items(userList, key = { it.id }) { user ->
-                        val age = calculateAge(user.birthday)
-                        val birthdayStr = formatToJapaneseEra(user.birthday)
+                        val age = DateTimeUtils.calculateAge(user.birthday)
+                        val birthdayStr = DateTimeUtils.formatDateJapaneseEra(user.birthday)
                         var showItemMenu by remember { mutableStateOf(false) }
                         Column(modifier = Modifier.animateItem()) {
                             ListItem(
@@ -360,13 +362,13 @@ fun MainScreenContent(
                                         ) 
                                     } 
                                 },
-                                supportingContent = { Text(text = "${birthdayStr}生　${age}歳", style = MaterialTheme.typography.bodySmall) },
+                                supportingContent = { Text(text = stringResource(R.string.birthday_summary_format, birthdayStr, stringResource(R.string.age_suffix, age)), style = MaterialTheme.typography.bodySmall) },
                                 trailingContent = {
                                     Box {
                                         IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
                                         DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
-                                            DropdownMenuItem(text = { Text("利用者情報を編集") }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
-                                            DropdownMenuItem(text = { Text("利用を終了する", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.edit_user_info)) }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.end_user_service), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
                                         }
                                     }
                                 },
@@ -384,16 +386,21 @@ fun MainScreenContent(
 @Composable
 fun CategorySelectionSheet(personName: String, onCategorySelect: (Category) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = "$personName さんの記録を選択", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
+        Text(text = stringResource(R.string.category_selection_title, personName), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
         Category.entries.forEach { category ->
             Button(onClick = { onCategorySelect(category) }, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)) {
-                Text(category.displayName, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(category.displayNameRes), style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
 }
 
-enum class BirthEra(val displayName: String) { AD("西暦"), SHOWA("昭和"), HEISEI("平成"), REIWA("令和") }
+enum class BirthEra(val displayNameRes: Int) { 
+    AD(R.string.era_ad), 
+    SHOWA(R.string.era_showa), 
+    HEISEI(R.string.era_heisei), 
+    REIWA(R.string.era_reiwa) 
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -423,14 +430,14 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
     val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && !isYearError && !isMonthError && !isDayError
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (person == null) "利用者登録" else "登録情報の編集") },
+        title = { Text(if (person == null) stringResource(R.string.user_registration) else stringResource(R.string.user_edit)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = lastName,
                         onValueChange = { lastName = it },
-                        label = { Text("姓") },
+                        label = { Text(stringResource(R.string.last_name)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -438,7 +445,7 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                     OutlinedTextField(
                         value = firstName,
                         onValueChange = { firstName = it },
-                        label = { Text("名") },
+                        label = { Text(stringResource(R.string.first_name)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -448,7 +455,7 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                     OutlinedTextField(
                         value = lastNameFurigana,
                         onValueChange = { lastNameFurigana = it },
-                        label = { Text("せい") },
+                        label = { Text(stringResource(R.string.last_name_furigana)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -456,7 +463,7 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                     OutlinedTextField(
                         value = firstNameFurigana,
                         onValueChange = { firstNameFurigana = it },
-                        label = { Text("めい") },
+                        label = { Text(stringResource(R.string.first_name_furigana)) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -465,23 +472,23 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("同姓同名識別用メモ") },
+                    label = { Text(stringResource(R.string.note_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("生年月日", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.birthday), style = MaterialTheme.typography.labelMedium)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     ExposedDropdownMenuBox(expanded = eraExpanded, onExpandedChange = { eraExpanded = !eraExpanded }, modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(value = selectedEra.displayName, onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable), singleLine = true, textStyle = MaterialTheme.typography.bodyMedium)
-                        ExposedDropdownMenu(expanded = eraExpanded, onDismissRequest = { eraExpanded = false }) { BirthEra.entries.forEach { era -> DropdownMenuItem(text = { Text(era.displayName, style = MaterialTheme.typography.bodyMedium) }, onClick = { selectedEra = era; eraExpanded = false }) } }
+                        OutlinedTextField(value = stringResource(selectedEra.displayNameRes), onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable), singleLine = true, textStyle = MaterialTheme.typography.bodyMedium)
+                        ExposedDropdownMenu(expanded = eraExpanded, onDismissRequest = { eraExpanded = false }) { BirthEra.entries.forEach { era -> DropdownMenuItem(text = { Text(stringResource(era.displayNameRes), style = MaterialTheme.typography.bodyMedium) }, onClick = { selectedEra = era; eraExpanded = false }) } }
                     }
-                    CompactTextField(value = yearText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; val maxLength = if (selectedEra == BirthEra.AD) 4 else 2; if (filtered.length <= maxLength) { yearText = filtered; if (filtered.length == maxLength) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(yearFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isYearError, suffix = { Text("年", style = MaterialTheme.typography.labelSmall) })
+                    CompactTextField(value = yearText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; val maxLength = if (selectedEra == BirthEra.AD) 4 else 2; if (filtered.length <= maxLength) { yearText = filtered; if (filtered.length == maxLength) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(yearFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isYearError, suffix = { Text(stringResource(R.string.year_suffix), style = MaterialTheme.typography.labelSmall) })
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = monthText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) { monthText = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isMonthError, suffix = { Text("月", style = MaterialTheme.typography.labelSmall) })
-                    CompactTextField(value = dayText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) dayText = filtered }, modifier = Modifier.weight(1f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isDayError, suffix = { Text("日", style = MaterialTheme.typography.labelSmall) })
+                    CompactTextField(value = monthText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) { monthText = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isMonthError, suffix = { Text(stringResource(R.string.month_suffix), style = MaterialTheme.typography.labelSmall) })
+                    CompactTextField(value = dayText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) dayText = filtered }, modifier = Modifier.weight(1f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isDayError, suffix = { Text(stringResource(R.string.day_suffix), style = MaterialTheme.typography.labelSmall) })
                 }
             }
         },
@@ -516,38 +523,26 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                     }
                 },
                 enabled = isInputValid
-            ) { Text("保存") }
+            ) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("キャンセル") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
 
-fun calculateAge(birthday: Instant): Int {
-    val birthDate = birthday.atZone(ZoneId.systemDefault()).toLocalDate()
-    val currentDate = LocalDate.now()
-    return Period.between(birthDate, currentDate).years
-}
-
-fun formatToJapaneseEra(instant: Instant): String {
-    val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
-    val japaneseDate = JapaneseDate.from(localDate)
-    val formatter = DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)
-    return japaneseDate.format(formatter)
-}
 
 @Composable
 fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = { onQueryChange(it) },
-        label = { Text("所見メモ検索") },
-        placeholder = { Text("特定の症状や出来事を入力...", style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
+        label = { Text(stringResource(R.string.search_memo_placeholder)) },
+        placeholder = { Text(stringResource(R.string.search_memo_hint), style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
         leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Rounded.Close, contentDescription = "クリア")
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear))
                 }
             }
         },

@@ -37,6 +37,7 @@ import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import java.io.File
 import java.time.Instant
 import java.util.Locale
@@ -45,6 +46,7 @@ import java.util.Locale
 @Composable
 fun ConditionDetailScreen(
     viewModel: PersonDetailViewModel,
+    conditionViewModel: PersonConditionViewModel,
     personId: Int,
     conditionId: Int,
     onBack: () -> Unit,
@@ -53,8 +55,8 @@ fun ConditionDetailScreen(
 ) {
     val context = LocalContext.current
     val records by viewModel.records.collectAsState()
-    val photos by viewModel.currentConditionPhotos.collectAsState()
-    val isProcessing by viewModel.isProcessing.collectAsState()
+    val photos by conditionViewModel.currentConditionPhotos.collectAsState()
+    val isProcessing by conditionViewModel.isProcessing.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -101,7 +103,8 @@ fun ConditionDetailScreen(
     LaunchedEffect(personId, conditionId) {
         viewModel.loadPerson(personId)
         viewModel.setCategory(jp.mydns.fujiwara.carememo.data.Category.CONDITION_AT_VISIT)
-        viewModel.setSelectedConditionId(if (conditionId != 0) conditionId else null)
+        conditionViewModel.loadPerson(personId)
+        conditionViewModel.setSelectedConditionId(if (conditionId != 0) conditionId else null)
     }
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
@@ -317,7 +320,7 @@ fun ConditionDetailScreen(
                                 tempFile
                             )
                             tempPhotoUri = uri
-                            viewModel.setLockBypassEnabled(true)
+                            conditionViewModel.setLockBypassEnabled(true)
                             cameraLauncher.launch(uri)
                         },
                         enabled = !isProcessing
@@ -367,7 +370,7 @@ fun ConditionDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        photoToDelete?.let { viewModel.deletePhoto(context, it) }
+                        photoToDelete?.let { conditionViewModel.deletePhoto(context, it) }
                         photoToDelete = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)

@@ -32,12 +32,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 
@@ -45,6 +48,7 @@ import java.time.ZoneId
 @Composable
 fun UnifiedRecordScreen(
     viewModel: PersonDetailViewModel,
+    conditionViewModel: PersonConditionViewModel,
     initialCategoryType: Category,
     personId: Int,
     onBack: () -> Unit,
@@ -63,7 +67,8 @@ fun UnifiedRecordScreen(
     
     val records by viewModel.filteredRecords.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val conditionPhotoMap by viewModel.conditionPhotoMap.collectAsState()
+    val conditionRecords = viewModel.records // ここでrecordsのflowを取得
+    val conditionPhotoMap by conditionViewModel.getConditionPhotoMap(viewModel.records).collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -71,6 +76,8 @@ fun UnifiedRecordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf)
+    val pdfExportFailedMsg = stringResource(R.string.error_pdf_export_failed)
 
     var showPdfSettingsDialog by remember { mutableStateOf(value = false) }
     var dialogTitle by remember { mutableStateOf<String?>(value = null) }
@@ -93,6 +100,7 @@ fun UnifiedRecordScreen(
 
     LaunchedEffect(currentCategory, personId) {
         viewModel.loadPerson(personId)
+        conditionViewModel.loadPerson(personId)
         viewModel.setCategory(currentCategory)
         val index = Category.entries.indexOf(currentCategory)
         if (index >= 0) categoryListState.animateScrollToItem(index)
@@ -107,11 +115,11 @@ fun UnifiedRecordScreen(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "利用者記録"
+                            defaultTitle = stringResource(R.string.app_name)
                         )
                     },
-                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") } },
-                    actions = { IconButton(onClick = { if (records.isEmpty()) { scope.launch { snackbarHostState.showSnackbar("${currentCategory.displayName}の記録がないため出力できません") }; return@IconButton }; showPdfSettingsDialog = true }) { Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力") } }
+                    navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                    actions = { IconButton(onClick = { if (records.isEmpty()) { val categoryName = context.getString(currentCategory.displayNameRes); scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(categoryName)) }; return@IconButton }; showPdfSettingsDialog = true }) { Icon(Icons.Rounded.PictureAsPdf, contentDescription = stringResource(R.string.pdf_export)) } }
                 )
                 CategorySelectorBar(
                     currentCategory = currentCategory,
@@ -126,18 +134,21 @@ fun UnifiedRecordScreen(
                 )
             }
         },
-        floatingActionButton = { FloatingActionButton(onClick = { if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, 0) else onNavigateToHealthRecordDetail(personId, currentCategory, 0) }) { Icon(Icons.Rounded.Add, contentDescription = "新規追加") } }
+        floatingActionButton = { FloatingActionButton(onClick = { if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, 0) else onNavigateToHealthRecordDetail(personId, currentCategory, 0) }) { Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_new)) } }
     ) { paddingValues ->
         var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
         if (recordToDelete != null) {
-            AlertDialog(onDismissRequest = { recordToDelete = null }, title = { Text("データの削除") }, text = { Text("この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。") }, confirmButton = { TextButton(onClick = { recordToDelete?.let { viewModel.deleteRecord(it) }; recordToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("削除") } }, dismissButton = { TextButton(onClick = { recordToDelete = null }) { Text("キャンセル") } })
+            AlertDialog(onDismissRequest = { recordToDelete = null }, title = { Text(stringResource(R.string.delete_data_title)) }, text = { Text(stringResource(R.string.delete_confirm_message)) }, confirmButton = { TextButton(onClick = { recordToDelete?.let { viewModel.deleteRecord(it) }; recordToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.delete)) } }, dismissButton = { TextButton(onClick = { recordToDelete = null }) { Text(stringResource(R.string.cancel)) } })
         }
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
             .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Spacer(modifier = Modifier.height(4.dp))
-            if (currentCategory.hasSearch) { OutlinedTextField(value = searchQuery, onValueChange = { viewModel.updateSearchQuery(it) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("${currentCategory.displayName}を検索...") }, leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }, trailingIcon = { if (searchQuery.isNotEmpty()) { IconButton(onClick = { viewModel.updateSearchQuery("") }) { Icon(Icons.Rounded.Clear, contentDescription = "クリア") } } }, singleLine = true, shape = MaterialTheme.shapes.medium) }
+            if (currentCategory.hasSearch) { 
+                val categoryName = stringResource(currentCategory.displayNameRes)
+                OutlinedTextField(value = searchQuery, onValueChange = { viewModel.updateSearchQuery(it) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.search_placeholder, categoryName)) }, leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }, trailingIcon = { if (searchQuery.isNotEmpty()) { IconButton(onClick = { viewModel.updateSearchQuery("") }) { Icon(Icons.Rounded.Clear, contentDescription = stringResource(R.string.clear)) } } }, singleLine = true, shape = MaterialTheme.shapes.medium) 
+            }
             
             // グラフを持つカテゴリのみ表示切り替えボタンを出す
             if (currentCategory.hasGraph) { 
@@ -147,18 +158,18 @@ fun UnifiedRecordScreen(
                         onClick = { preferredShowHistory = true }, 
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2), 
                         icon = { Icon(Icons.Rounded.History, contentDescription = null) }
-                    ) { Text("履歴") }
+                    ) { Text(stringResource(R.string.tab_history)) }
                     SegmentedButton(
                         selected = !preferredShowHistory, 
                         onClick = { preferredShowHistory = false }, 
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2), 
                         icon = { Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null) }
-                    ) { Text("グラフ") } 
+                    ) { Text(stringResource(R.string.tab_graph)) } 
                 } 
             }
 
             Box(modifier = Modifier.weight(1f)) {
-                if (records.isEmpty()) { EmptyState(message = "記録がありません", description = "右下の ＋ ボタンをタップして、\n記録を追加しましょう", icon = Icons.Outlined.Description) }
+                if (records.isEmpty()) { EmptyState(message = stringResource(R.string.empty_records), description = stringResource(R.string.empty_records_description), icon = Icons.Outlined.Description) }
                 else if (isEffectivelyShowingHistory) {
                     UnifiedHistoryList(records = records.filterIsInstance<HistoryRecord>(), category = currentCategory, conditionPhotoMap = conditionPhotoMap, onItemClick = { record -> if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, record.id) else onNavigateToHealthRecordDetail(personId, currentCategory, record.id) }, onDeleteSwipe = { record -> recordToDelete = record }, isAnyDialogOpen = recordToDelete != null)
                 } else {
@@ -181,7 +192,7 @@ fun UnifiedRecordScreen(
             // PDF共有（外部アプリ遷移）のため、戻ってきた際のアプリロックをスキップする設定を有効化
             viewModel.setLockBypassEnabled(true)
             scope.launch {
-                val allPhotos = if (currentCategory.hasOption && photos) viewModel.getAllPhotosForPerson(personId) else emptyList()
+                val allPhotos = if (currentCategory.hasOption && photos) conditionViewModel.getAllPhotosForPerson(personId) else emptyList()
                 currentPerson?.let { person ->
                     val success = PdfExporter.exportAndShare(
                         context = context,
@@ -197,7 +208,7 @@ fun UnifiedRecordScreen(
                         password = password
                     )
                     if (!success) {
-                        snackbarHostState.showSnackbar("PDFの作成に失敗したか、対象データがありません")
+                        snackbarHostState.showSnackbar(pdfExportFailedMsg)
                     }
                 }
             }
@@ -289,25 +300,27 @@ fun HistoryItemBody(category: Category, record: HistoryRecord, hasOption: Boolea
 
 @Composable
 fun HeightWeightRecordItemContent(record: HeightAndWeight) {
+    val context = LocalContext.current
     val bmi = record.calculateBMI()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.Height, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(4.dp)); Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelSmall)
         Spacer(modifier = Modifier.width(8.dp)); Icon(Icons.Rounded.Scale, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(4.dp)); Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelSmall)
-        Spacer(modifier = Modifier.width(8.dp)); Text(text = "${HealthThresholds.HEALTH_LABEL_BMI}: ${if (bmi > 0) "%.1f".format(bmi) else "---"}", style = MaterialTheme.typography.labelSmall)
-        if (bmi > 0) { val (bmiLabel, alertLevel) = record.getBmiResult(); Spacer(modifier = Modifier.width(2.dp)); Text(text = "($bmiLabel)", fontSize = 10.sp, color = if (alertLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red) }
+        Spacer(modifier = Modifier.width(8.dp)); Text(text = "${stringResource(HealthThresholds.HEALTH_LABEL_BMI)}: ${if (bmi > 0) "%.1f".format(bmi) else "---"}", style = MaterialTheme.typography.labelSmall)
+        if (bmi > 0) { val (bmiLabel, alertLevel) = record.getBmiResult(context); Spacer(modifier = Modifier.width(2.dp)); Text(text = "($bmiLabel)", fontSize = 10.sp, color = if (alertLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red) }
     }
 }
 
 @Composable
 fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
-    val (gStatus, gLevel) = record.getGlucoseResult()
-    val (hStatus, hLevel) = record.getHbA1cResult()
+    val context = LocalContext.current
+    val (gStatus, gLevel) = record.getGlucoseResult(context)
+    val (hStatus, hLevel) = record.getHbA1cResult(context)
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "${HealthThresholds.HEALTH_LABEL_GLUCOSE}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelSmall)
+        Text(text = "${stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelSmall)
         if (record.glucose != null) { Spacer(modifier = Modifier.width(2.dp)); Text(text = "($gStatus)", fontSize = 10.sp, color = if (gLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red, fontWeight = if (gLevel != HealthThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal) }
-        Spacer(modifier = Modifier.width(8.dp)); Text(text = "${HealthThresholds.HEALTH_LABEL_HBA1C}: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelSmall)
+        Spacer(modifier = Modifier.width(8.dp)); Text(text = "${stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)}: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelSmall)
         if (record.hba1c != null) { Spacer(modifier = Modifier.width(2.dp)); Text(text = "($hStatus)", fontSize = 10.sp, color = if (hLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red, fontWeight = if (hLevel != HealthThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal) }
     }
 }
@@ -388,7 +401,8 @@ fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
 
 @Composable
 fun VitalRecordItemContent(record: BpAndPulse) {
-    val results = record.getVitalResults()
+    val context = LocalContext.current
+    val results = record.getVitalResults(context)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
@@ -399,7 +413,7 @@ fun VitalRecordItemContent(record: BpAndPulse) {
             Spacer(modifier = Modifier.width(4.dp)); Text(text = "${record.bodyTemperature?.let { "%.1f".format(it) } ?: "---"} ℃", style = MaterialTheme.typography.labelMedium)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_HIGH_BP, isActive = results.any { it.first == HealthThresholds.VITAL_LABEL_HIGH_BP }); VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_LOW_BP, isActive = results.any { it.first == HealthThresholds.VITAL_LABEL_LOW_BP }); VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_TACHYCARDIA, isActive = results.any { it.first == HealthThresholds.VITAL_LABEL_TACHYCARDIA }); VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_BRADYCARDIA, isActive = results.any { it.first == HealthThresholds.VITAL_LABEL_BRADYCARDIA }); VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_FEVER, isActive = results.any { it.first == HealthThresholds.VITAL_LABEL_FEVER }); VitalStatusIndicator(label = HealthThresholds.VITAL_LABEL_HYPOTHERMIA, isActive = results.any { it.first == HealthThresholds.VITAL_LABEL_HYPOTHERMIA })
+            VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_HIGH_BP), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_HIGH_BP) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_LOW_BP), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_LOW_BP) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_TACHYCARDIA), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_TACHYCARDIA) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_BRADYCARDIA), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_BRADYCARDIA) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_FEVER), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_FEVER) }); VitalStatusIndicator(label = stringResource(HealthThresholds.VITAL_LABEL_HYPOTHERMIA), isActive = results.any { it.first == context.getString(HealthThresholds.VITAL_LABEL_HYPOTHERMIA) })
         }
     }
 }

@@ -13,11 +13,13 @@ import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionPhotoPreviewScreen(
     viewModel: PersonDetailViewModel,
+    conditionViewModel: PersonConditionViewModel,
     uri: Uri,
     personId: Int,
     conditionId: Int,
@@ -25,7 +27,7 @@ fun ConditionPhotoPreviewScreen(
     onSaved: () -> Unit,
 ) {
     val context = LocalContext.current
-    val isProcessing by viewModel.isProcessing.collectAsState()
+    val isProcessing by conditionViewModel.isProcessing.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
@@ -86,7 +88,7 @@ fun ConditionPhotoPreviewScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            viewModel.deleteTempFile(context, uri)
+                            conditionViewModel.deleteTempFile(context, uri)
                             onBack()
                         },
                         modifier = Modifier.weight(1f)
@@ -95,7 +97,7 @@ fun ConditionPhotoPreviewScreen(
                     }
                     Button(
                         onClick = {
-                            viewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
+                            conditionViewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
                             onSaved()
                         },
                         modifier = Modifier.weight(1f)

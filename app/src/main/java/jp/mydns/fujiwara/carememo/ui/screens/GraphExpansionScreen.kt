@@ -18,10 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.LineChart
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -29,13 +32,14 @@ import kotlin.time.Duration.Companion.milliseconds
 @Composable
 fun GraphExpansionScreen(
     viewModel: PersonDetailViewModel,
+    healthViewModel: HealthRecordViewModel,
     personId: Int,
     category: Category,
     initialGraphIndex: Int,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val records by viewModel.filteredRecords.collectAsState()
+    val records by healthViewModel.getHealthRecords(category).collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
@@ -51,6 +55,7 @@ fun GraphExpansionScreen(
 
     LaunchedEffect(personId, category) {
         viewModel.loadPerson(personId)
+        healthViewModel.loadPerson(personId)
         viewModel.setCategory(category)
     }
 
@@ -81,10 +86,10 @@ fun GraphExpansionScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る", modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back), modifier = Modifier.size(20.dp))
                     }
                     Text(
-                        text = "${currentPerson?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${category.displayName}",
+                        text = "${currentPerson?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${stringResource(category.displayNameRes)}",
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1
                     )
@@ -136,13 +141,14 @@ fun GraphExpansionScreen(
  */
 @Composable
 fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
+    val context = LocalContext.current
     // 共通のX軸範囲計算
     val (globalMinX, globalMaxX) = remember(records) {
         HealthChartHelper.calculateGlobalXRange(records)
     }
 
-    val config = remember(category, index, records) {
-        HealthChartHelper.getChartConfig(category, index, records)
+    val config = remember(category, index, records, context) {
+        HealthChartHelper.getChartConfig(context, category, index, records)
     }
 
     if (config != null) {
@@ -161,7 +167,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("データがありません")
+                    Text(stringResource(R.string.empty_records))
                 }
             }
         }

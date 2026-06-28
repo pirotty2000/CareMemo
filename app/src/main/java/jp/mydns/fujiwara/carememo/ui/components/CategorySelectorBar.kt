@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 
@@ -57,7 +58,7 @@ fun CategorySelectorBar(
             FilterChip(
                 selected = currentCategory == category,
                 onClick = { onCategoryClick(category) },
-                label = { Text(category.displayName) },
+                label = { Text(stringResource(category.displayNameRes)) },
                 leadingIcon = if (currentCategory == category) {
                     {
                         Icon(

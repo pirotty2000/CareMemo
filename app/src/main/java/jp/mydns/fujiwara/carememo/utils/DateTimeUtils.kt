@@ -100,6 +100,16 @@ object DateTimeUtils {
     }
 
     /**
+     * インスタントを和暦形式でフォーマットする (例: 昭和25年1月1日)
+     */
+    fun formatDateJapaneseEra(instant: Instant): String {
+        val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+        val japaneseDate = JapaneseDate.from(localDate)
+        val formatter = DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)
+        return japaneseDate.format(formatter)
+    }
+
+    /**
      * 写真のキャプション用のデフォルト日時フォーマット (yyyy/MM/dd HH:mm)
      */
     fun formatPhotoCaption(instant: Instant): String {

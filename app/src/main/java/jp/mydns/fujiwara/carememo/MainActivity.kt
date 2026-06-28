@@ -36,6 +36,8 @@ import jp.mydns.fujiwara.carememo.ui.screens.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
@@ -261,7 +263,10 @@ fun CareMemoApp(activity: FragmentActivity) {
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
-            
+            val conditionViewModel: PersonConditionViewModel = viewModel(
+                factory = PersonConditionViewModel.Factory(repository, userSettingsRepository)
+            )
+
             // 検索キーワードの初期セット
             LaunchedEffect(initialQuery) {
                 if (initialQuery.isNotBlank()) {
@@ -271,6 +276,7 @@ fun CareMemoApp(activity: FragmentActivity) {
 
             UnifiedRecordScreen(
                 viewModel = detailViewModel,
+                conditionViewModel = conditionViewModel,
                 initialCategoryType = category,
                 personId = personId,
                 onBack = { navController.popBackStack("main", inclusive = false) },
@@ -301,11 +307,15 @@ fun CareMemoApp(activity: FragmentActivity) {
         ) { backStackEntry ->
             val personId = backStackEntry.arguments?.getInt("personId") ?: 0
             val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
+            val conditionViewModel: PersonConditionViewModel = viewModel(
+                factory = PersonConditionViewModel.Factory(repository, userSettingsRepository)
+            )
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             ConditionDetailScreen(
                 viewModel = detailViewModel,
+                conditionViewModel = conditionViewModel,
                 personId = personId,
                 conditionId = conditionId,
                 onBack = { navController.popBackStack() },
@@ -331,11 +341,15 @@ fun CareMemoApp(activity: FragmentActivity) {
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
             val category = Category.valueOf(categoryName)
             val recordId = backStackEntry.arguments?.getInt("recordId") ?: 0
+            val healthViewModel: HealthRecordViewModel = viewModel(
+                factory = HealthRecordViewModel.Factory(repository, userSettingsRepository)
+            )
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             HealthRecordDetailScreen(
                 viewModel = detailViewModel,
+                healthViewModel = healthViewModel,
                 personId = personId,
                 category = category,
                 recordId = recordId,
@@ -354,11 +368,15 @@ fun CareMemoApp(activity: FragmentActivity) {
             val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
             val category = Category.valueOf(categoryName)
             val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+            val healthViewModel: HealthRecordViewModel = viewModel(
+                factory = HealthRecordViewModel.Factory(repository, userSettingsRepository)
+            )
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             GraphExpansionScreen(
                 viewModel = detailViewModel,
+                healthViewModel = healthViewModel,
                 personId = personId,
                 category = category,
                 initialGraphIndex = initialIndex,
@@ -376,11 +394,15 @@ fun CareMemoApp(activity: FragmentActivity) {
             val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
             val personId = backStackEntry.arguments?.getInt("personId") ?: 0
             val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
+            val conditionViewModel: PersonConditionViewModel = viewModel(
+                factory = PersonConditionViewModel.Factory(repository, userSettingsRepository)
+            )
             val detailViewModel: PersonDetailViewModel = viewModel(
                 factory = PersonDetailViewModel.Factory(repository, userSettingsRepository)
             )
             ConditionPhotoPreviewScreen(
                 viewModel = detailViewModel,
+                conditionViewModel = conditionViewModel,
                 uri = uri,
                 personId = personId,
                 conditionId = conditionId,

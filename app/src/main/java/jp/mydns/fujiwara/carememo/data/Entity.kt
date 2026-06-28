@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.data
 
+import android.content.Context
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -316,27 +317,39 @@ fun HeightAndWeight.calculateBMI(): Double {
     return w / (heightM * heightM)
 }
 
-fun HeightAndWeight.getBmiResult(): Pair<String, HealthThresholds.AlertLevel> =
-    HealthThresholds.evaluateBMI(calculateBMI())
+fun HeightAndWeight.getBmiResult(context: Context): Pair<String, HealthThresholds.AlertLevel> {
+    val (resId, alert) = HealthThresholds.evaluateBMI(calculateBMI())
+    return (resId?.let { context.getString(it) } ?: "---") to alert
+}
 
-fun BpAndPulse.getVitalResults(): List<Pair<String, HealthThresholds.AlertLevel>> =
-    HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
+fun BpAndPulse.getVitalResults(context: Context): List<Pair<String, HealthThresholds.AlertLevel>> =
+    HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature).map {
+        context.getString(it.first) to it.second
+    }
 
 fun BpAndPulse.getWorstAlertLevel(): HealthThresholds.AlertLevel =
-    getVitalResults().maxByOrNull { it.second.severity }?.second ?: HealthThresholds.AlertLevel.NORMAL
+    HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
+        .maxByOrNull { it.second.severity }?.second ?: HealthThresholds.AlertLevel.NORMAL
 
-fun GlucoseAndHbA1c.getGlucoseResult(): Pair<String, HealthThresholds.AlertLevel> =
-    HealthThresholds.evaluateGlucose(glucose)
+fun GlucoseAndHbA1c.getGlucoseResult(context: Context): Pair<String, HealthThresholds.AlertLevel> {
+    val (resId, alert) = HealthThresholds.evaluateGlucose(glucose)
+    return (resId?.let { context.getString(it) } ?: "---") to alert
+}
 
-fun GlucoseAndHbA1c.getHbA1cResult(): Pair<String, HealthThresholds.AlertLevel> =
-    HealthThresholds.evaluateHbA1c(hba1c)
+fun GlucoseAndHbA1c.getHbA1cResult(context: Context): Pair<String, HealthThresholds.AlertLevel> {
+    val (resId, alert) = HealthThresholds.evaluateHbA1c(hba1c)
+    return (resId?.let { context.getString(it) } ?: "---") to alert
+}
 
 fun GlucoseAndHbA1c.getWorstAlertLevel(): HealthThresholds.AlertLevel =
-    maxOfBySeverity(getGlucoseResult().second, getHbA1cResult().second)
+    maxOfBySeverity(
+        HealthThresholds.evaluateGlucose(glucose).second,
+        HealthThresholds.evaluateHbA1c(hba1c).second
+    )
 
-fun GlucoseAndHbA1c.getCombinedResultText(): String {
-    val g = getGlucoseResult().first
-    val h = getHbA1cResult().first
+fun GlucoseAndHbA1c.getCombinedResultText(context: Context): String {
+    val g = getGlucoseResult(context).first
+    val h = getHbA1cResult(context).first
     return if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
 }
 

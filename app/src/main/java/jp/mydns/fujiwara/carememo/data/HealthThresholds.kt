@@ -1,6 +1,8 @@
 package jp.mydns.fujiwara.carememo.data
 
+import android.content.Context
 import android.graphics.Color
+import jp.mydns.fujiwara.carememo.R
 
 /**
  * 健康指標の判定基準と判定ロジックを管理する基軸オブジェクト
@@ -26,42 +28,42 @@ object HealthThresholds {
     const val BMI_OBESITY_2 = 35.0
     const val BMI_OBESITY_3 = 40.0
 
-    // --- ラベル定義 ---
-    const val VITAL_LABEL_NORMAL = "正常"
-    const val VITAL_LABEL_HIGH_BP = "高血圧"
-    const val VITAL_LABEL_LOW_BP = "低血圧"
-    const val VITAL_LABEL_TACHYCARDIA = "頻脈"
-    const val VITAL_LABEL_BRADYCARDIA = "徐脈"
-    const val VITAL_LABEL_FEVER = "発熱"
-    const val VITAL_LABEL_HYPOTHERMIA = "低体温"
-    const val GLUCOSE_LABEL_LOW = "低血糖"
-    const val GLUCOSE_LABEL_NORMAL = "良好"
-    const val GLUCOSE_LABEL_HIGH = "高血糖"
-    const val HBA1C_LABEL_NORMAL = "正常"
-    const val HBA1C_LABEL_NORMAL_HIGH = "正常高値"
-    const val HBA1C_LABEL_PREDIABETES = "糖尿病予備軍"
-    const val HBA1C_LABEL_DIABETES = "糖尿病型"
-    const val BMI_LABEL_UNDERWEIGHT = "低体重"
-    const val BMI_LABEL_NORMAL = "普通体重"
-    const val BMI_LABEL_OBESITY_1 = "肥満(１度)"
-    const val BMI_LABEL_OBESITY_2 = "肥満(２度)"
-    const val BMI_LABEL_OBESITY_3 = "肥満(３度)"
-    const val BMI_LABEL_OBESITY_4 = "肥満(４度)"
+    // --- ラベル定義（Resource ID） ---
+    val VITAL_LABEL_NORMAL = R.string.vital_label_normal
+    val VITAL_LABEL_HIGH_BP = R.string.vital_label_high_bp
+    val VITAL_LABEL_LOW_BP = R.string.vital_label_low_bp
+    val VITAL_LABEL_TACHYCARDIA = R.string.vital_label_tachycardia
+    val VITAL_LABEL_BRADYCARDIA = R.string.vital_label_bradycardia
+    val VITAL_LABEL_FEVER = R.string.vital_label_fever
+    val VITAL_LABEL_HYPOTHERMIA = R.string.vital_label_hypothermia
+    val GLUCOSE_LABEL_LOW = R.string.glucose_label_low
+    val GLUCOSE_LABEL_NORMAL = R.string.glucose_label_normal
+    val GLUCOSE_LABEL_HIGH = R.string.glucose_label_high
+    val HBA1C_LABEL_NORMAL = R.string.hba1c_label_normal
+    val HBA1C_LABEL_NORMAL_HIGH = R.string.hba1c_label_normal_high
+    val HBA1C_LABEL_PREDIABETES = R.string.hba1c_label_prediabetes
+    val HBA1C_LABEL_DIABETES = R.string.hba1c_label_diabetes
+    val BMI_LABEL_UNDERWEIGHT = R.string.bmi_label_underweight
+    val BMI_LABEL_NORMAL = R.string.bmi_label_normal
+    val BMI_LABEL_OBESITY_1 = R.string.bmi_label_obesity_1
+    val BMI_LABEL_OBESITY_2 = R.string.bmi_label_obesity_2
+    val BMI_LABEL_OBESITY_3 = R.string.bmi_label_obesity_3
+    val BMI_LABEL_OBESITY_4 = R.string.bmi_label_obesity_4
 
-    const val HEALTH_LABEL_HEIGHT = "身長"
-    const val HEALTH_LABEL_WEIGHT = "体重"
-    const val HEALTH_LABEL_BMI = "BMI"
-    const val HEALTH_LABEL_BP = "血圧"
-    const val HEALTH_LABEL_BP_SYSTOLIC = "血圧(上)"
-    const val HEALTH_LABEL_BP_DIASTOLIC = "血圧(下)"
-    const val HEALTH_LABEL_SYSTOLIC_SHORT = "上"
-    const val HEALTH_LABEL_DIASTOLIC_SHORT = "下"
-    const val HEALTH_LABEL_PULSE = "脈拍"
-    const val HEALTH_LABEL_PULSE_SHORT = "脈"
-    const val HEALTH_LABEL_BODY_TEMP = "体温"
-    const val HEALTH_LABEL_GLUCOSE = "血糖値"
-    const val HEALTH_LABEL_HBA1C = "HbA1c"
-    const val HEALTH_LABEL_STATUS = "判定"
+    val HEALTH_LABEL_HEIGHT = R.string.health_label_height
+    val HEALTH_LABEL_WEIGHT = R.string.health_label_weight
+    val HEALTH_LABEL_BMI = R.string.health_label_bmi
+    val HEALTH_LABEL_BP = R.string.health_label_bp
+    val HEALTH_LABEL_BP_SYSTOLIC = R.string.health_label_bp_systolic
+    val HEALTH_LABEL_BP_DIASTOLIC = R.string.health_label_bp_diastolic
+    val HEALTH_LABEL_SYSTOLIC_SHORT = R.string.health_label_systolic_short
+    val HEALTH_LABEL_DIASTOLIC_SHORT = R.string.health_label_diastolic_short
+    val HEALTH_LABEL_PULSE = R.string.health_label_pulse
+    val HEALTH_LABEL_PULSE_SHORT = R.string.health_label_pulse_short
+    val HEALTH_LABEL_BODY_TEMP = R.string.health_label_body_temp
+    val HEALTH_LABEL_GLUCOSE = R.string.health_label_glucose
+    val HEALTH_LABEL_HBA1C = R.string.health_label_hba1c
+    val HEALTH_LABEL_STATUS = R.string.health_label_status
 
     /**
      * アラートレベルの定義
@@ -77,9 +79,9 @@ object HealthThresholds {
     /**
      * BMIの判定
      */
-    fun evaluateBMI(bmi: Double): Pair<String, AlertLevel> {
+    fun evaluateBMI(bmi: Double): Pair<Int?, AlertLevel> {
         return when {
-            bmi <= 0.0 -> "---" to AlertLevel.NORMAL
+            bmi <= 0.0 -> null to AlertLevel.NORMAL
             bmi < BMI_NORMAL_LOW -> BMI_LABEL_UNDERWEIGHT to AlertLevel.WARNING
             bmi < BMI_NORMAL_HIGH -> BMI_LABEL_NORMAL to AlertLevel.NORMAL
             bmi < BMI_OBESITY_1 -> BMI_LABEL_OBESITY_1 to AlertLevel.WARNING
@@ -92,8 +94,8 @@ object HealthThresholds {
     /**
      * バイタルの判定
      */
-    fun evaluateVital(systolic: Int?, diastolic: Int?, pulse: Int?, temp: Double?): List<Pair<String, AlertLevel>> {
-        val results = mutableListOf<Pair<String, AlertLevel>>()
+    fun evaluateVital(systolic: Int?, diastolic: Int?, pulse: Int?, temp: Double?): List<Pair<Int, AlertLevel>> {
+        val results = mutableListOf<Pair<Int, AlertLevel>>()
         
         systolic?.let {
             if (it >= BP_HIGH_SYSTOLIC) results.add(VITAL_LABEL_HIGH_BP to AlertLevel.ALERT)
@@ -119,8 +121,8 @@ object HealthThresholds {
     /**
      * 血糖値の判定
      */
-    fun evaluateGlucose(glucose: Int?): Pair<String, AlertLevel> {
-        val g = glucose ?: return "---" to AlertLevel.NORMAL
+    fun evaluateGlucose(glucose: Int?): Pair<Int?, AlertLevel> {
+        val g = glucose ?: return null to AlertLevel.NORMAL
         return when {
             g < GLUCOSE_NORMAL_LOW -> GLUCOSE_LABEL_LOW to AlertLevel.ALERT
             g <= GLUCOSE_NORMAL_HIGH -> GLUCOSE_LABEL_NORMAL to AlertLevel.NORMAL
@@ -131,8 +133,8 @@ object HealthThresholds {
     /**
      * HbA1cの判定
      */
-    fun evaluateHbA1c(hba1c: Double?): Pair<String, AlertLevel> {
-        val h = hba1c ?: return "---" to AlertLevel.NORMAL
+    fun evaluateHbA1c(hba1c: Double?): Pair<Int?, AlertLevel> {
+        val h = hba1c ?: return null to AlertLevel.NORMAL
         return when {
             h >= HBA1C_DIABETES -> HBA1C_LABEL_DIABETES to AlertLevel.ALERT
             h >= HBA1C_PREDIABETES -> HBA1C_LABEL_PREDIABETES to AlertLevel.ALERT
@@ -142,10 +144,10 @@ object HealthThresholds {
     }
 
     // --- 説明文（グラフ補助用） ---
-    const val BP_EXPLANATION = "血圧グラフの見方：\n・${BP_LOW_SYSTOLIC.toInt()}〜${BP_HIGH_SYSTOLIC.toInt()}（上）、${BP_LOW_DIASTOLIC.toInt()}〜${BP_HIGH_DIASTOLIC.toInt()}（下）が正常範囲です。"
-    const val PULSE_EXPLANATION = "脈拍グラフの見方：\n・${PULSE_LOW.toInt()}〜${PULSE_HIGH.toInt()} が正常範囲です。"
-    const val TEMP_EXPLANATION = "体温グラフの見方：\n・$TEMP_LOW〜$TEMP_HIGH が平熱の目安です。"
-    const val GLUCOSE_EXPLANATION = "血糖値グラフの見方：\n・${GLUCOSE_NORMAL_LOW.toInt()}〜${GLUCOSE_NORMAL_HIGH.toInt()} mg/dL が良好な範囲です。"
-    const val HBA1C_EXPLANATION = "HbA1cグラフの見方：\n・$HBA1C_GOOD％以下が正常範囲です。"
-    const val BMI_EXPLANATION = "BMIグラフの見方：\n・${BMI_NORMAL_LOW}〜${BMI_NORMAL_HIGH}未満が普通体重です。"
+    fun getBpExplanation(context: Context): String = context.getString(R.string.bp_explanation, BP_LOW_SYSTOLIC.toInt(), BP_HIGH_SYSTOLIC.toInt(), BP_LOW_DIASTOLIC.toInt(), BP_HIGH_DIASTOLIC.toInt())
+    fun getPulseExplanation(context: Context): String = context.getString(R.string.pulse_explanation, PULSE_LOW.toInt(), PULSE_HIGH.toInt())
+    fun getTempExplanation(context: Context): String = context.getString(R.string.temp_explanation, TEMP_LOW, TEMP_HIGH)
+    fun getGlucoseExplanation(context: Context): String = context.getString(R.string.glucose_explanation, GLUCOSE_NORMAL_LOW.toInt(), GLUCOSE_NORMAL_HIGH.toInt())
+    fun getHbA1cExplanation(context: Context): String = context.getString(R.string.hba1c_explanation, HBA1C_GOOD)
+    fun getBmiExplanation(context: Context): String = context.getString(R.string.bmi_explanation, BMI_NORMAL_LOW, BMI_NORMAL_HIGH)
 }

@@ -10,6 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 
 @Composable
@@ -25,14 +28,16 @@ fun HealthGraphView(
         HealthChartHelper.calculateGlobalXRange(records)
     }
 
+    val context = LocalContext.current
+
     if (showHelpDialog != null) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = null },
-            title = { Text("数値の目安") },
+            title = { Text(stringResource(R.string.menu_help)) }, // "数値の目安" is usually help
             text = { Text(showHelpDialog!!) },
             confirmButton = {
                 TextButton(onClick = { showHelpDialog = null }) {
-                    Text("閉じる")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -49,8 +54,8 @@ fun HealthGraphView(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         repeat(graphCount) { index ->
-            val config = remember(categoryType, index, records) {
-                HealthChartHelper.getChartConfig(categoryType, index, records)
+            val config = remember(categoryType, index, records, context) {
+                HealthChartHelper.getChartConfig(context, categoryType, index, records)
             }
 
             if (config != null) {
@@ -73,7 +78,7 @@ fun HealthGraphView(
                             fixedMaxX = globalMaxX
                         )
                     } else {
-                        Text("データがありません", modifier = Modifier.align(Alignment.Center))
+                        Text(stringResource(R.string.empty_records), modifier = Modifier.align(Alignment.Center))
                     }
                 }
                 if (index < graphCount - 1) {

@@ -1,5 +1,7 @@
 package jp.mydns.fujiwara.carememo.data
 
+import jp.mydns.fujiwara.carememo.R
+
 /**
  * 記録カテゴリの定義（アプリの設計原則）
  * 
@@ -22,6 +24,7 @@ package jp.mydns.fujiwara.carememo.data
  */
 enum class Category(
     val displayName: String,
+    val displayNameRes: Int,
     val hasGraph: Boolean = true,   // (A)の性質
     val hasSearch: Boolean = false, // (B)の性質
     val hasOption: Boolean = false, // (B)の拡張性
@@ -29,22 +32,26 @@ enum class Category(
 ) {
     /** 身長・体重 (A) */
     HEIGHT_AND_WEIGHT(
-        displayName = "身長・体重"
+        displayName = "身長・体重",
+        displayNameRes = R.string.category_height_weight
     ),
 
     /** バイタル (A) */
     BP_AND_PULSE(
-        displayName = "バイタル"
+        displayName = "バイタル",
+        displayNameRes = R.string.category_vital
     ),
 
     /** 血糖値・HbA1c (A) */
     GLUCOSE_AND_HBA1C(
-        displayName = "血糖値・HbA1c"
+        displayName = "血糖値・HbA1c",
+        displayNameRes = R.string.category_glucose
     ),
 
     /** 所見メモ (B) */
     CONDITION_AT_VISIT(
         displayName = "所見メモ",
+        displayNameRes = R.string.category_condition,
         hasGraph = false,
         hasSearch = true,
         hasOption = true
@@ -53,6 +60,7 @@ enum class Category(
     /** 服薬管理 (C) */
     MEDICATION(
         displayName = "服薬管理",
+        displayNameRes = R.string.category_medication,
         hasGraph = false,
         hasCalendar = true
     )

@@ -20,23 +20,25 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-enum class ExportRange(val displayName: String) {
-    ALL("全ての記録"),
-    LATEST("最新の1件のみ"),
-    ONE_MONTH("直近 1ヶ月分"),
-    THREE_MONTHS("直近 3ヶ月分"),
-    SIX_MONTHS("直近 半年分"),
-    CUSTOM("期間を指定する")
+enum class ExportRange(val displayNameRes: Int) {
+    ALL(R.string.export_range_all),
+    LATEST(R.string.export_range_latest),
+    ONE_MONTH(R.string.export_range_one_month),
+    THREE_MONTHS(R.string.export_range_three_months),
+    SIX_MONTHS(R.string.export_range_six_months),
+    CUSTOM(R.string.export_range_custom)
 }
 
-enum class ExportOrder(val displayName: String) {
-    NEWEST_FIRST("新しい順"),
-    OLDEST_FIRST("古い順")
+enum class ExportOrder(val displayNameRes: Int) {
+    NEWEST_FIRST(R.string.export_order_newest),
+    OLDEST_FIRST(R.string.export_order_oldest)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,7 +73,7 @@ fun PdfSettingsDialog(
                         showStartDatePicker = false
                     }
                 ) {
-                    Text("決定")
+                    Text(stringResource(R.string.decision))
                 }
             }
         ) {
@@ -89,7 +91,7 @@ fun PdfSettingsDialog(
                         showEndDatePicker = false
                     }
                 ) {
-                    Text("決定")
+                    Text(stringResource(R.string.decision))
                 }
             }
         ) {
@@ -98,7 +100,7 @@ fun PdfSettingsDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("PDF出力設定 (${category.displayName})") },
+        title = { Text(stringResource(R.string.pdf_settings_title, stringResource(category.displayNameRes))) },
         text = {
             val scrollState = rememberScrollState()
             val showScrollIndicator by remember {
@@ -110,7 +112,7 @@ fun PdfSettingsDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // --- セキュリティ（最上位に移動） ---
-                    Text("セキュリティ", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.security), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -119,7 +121,7 @@ fun PdfSettingsDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("PDFをパスワードで保護する")
+                        Text(stringResource(R.string.protect_pdf_with_password))
                         Switch(checked = protectWithPassword, onCheckedChange = { protectWithPassword = it })
                     }
 
@@ -127,13 +129,13 @@ fun PdfSettingsDialog(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            label = { Text("PDF閲覧用パスワード") },
-                            placeholder = { Text("6桁以上の数字を推奨") },
+                            label = { Text(stringResource(R.string.pdf_password_label)) },
+                            placeholder = { Text(stringResource(R.string.pdf_password_placeholder)) },
                             supportingText = {
                                 if (!isPasswordValid && password.isNotEmpty()) {
-                                    Text("パスワードは6文字以上で入力してください", color = MaterialTheme.colorScheme.error)
+                                    Text(stringResource(R.string.pdf_password_error), color = MaterialTheme.colorScheme.error)
                                 } else {
-                                    Text("PDFを開く際に必要になります")
+                                    Text(stringResource(R.string.pdf_password_hint))
                                 }
                             },
                             isError = !isPasswordValid && password.isNotEmpty(),
@@ -145,7 +147,7 @@ fun PdfSettingsDialog(
                                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                                     Icon(
                                         imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
-                                        contentDescription = if (isPasswordVisible) "非表示" else "表示"
+                                        contentDescription = if (isPasswordVisible) stringResource(R.string.hide_password) else stringResource(R.string.show_password)
                                     )
                                 }
                             }
@@ -155,7 +157,7 @@ fun PdfSettingsDialog(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     // --- 抽出範囲 ---
-                    Text("抽出範囲", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.extract_range), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     ExportRange.entries.forEach { range ->
                         Row(
                             Modifier
@@ -170,7 +172,7 @@ fun PdfSettingsDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(selected = (range == selectedRange), onClick = { selectedRange = range })
-                            Text(text = range.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
+                            Text(text = stringResource(range.displayNameRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                     if (selectedRange == ExportRange.CUSTOM) {
@@ -182,11 +184,11 @@ fun PdfSettingsDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedButton(onClick = { showStartDatePicker = true }, modifier = Modifier.weight(1f)) {
-                                Text(startDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "開始日")
+                                Text(startDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: stringResource(R.string.start_date))
                             }
                             Text("〜")
                             OutlinedButton(onClick = { showEndDatePicker = true }, modifier = Modifier.weight(1f)) {
-                                Text(endDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: "終了日")
+                                Text(endDate?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yy/MM/dd")) } ?: stringResource(R.string.end_date))
                             }
                         }
                     }
@@ -201,7 +203,7 @@ fun PdfSettingsDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("写真を印刷に含める")
+                            Text(stringResource(R.string.include_photos))
                             Switch(checked = includePhotos, onCheckedChange = { includePhotos = it })
                         }
                     }
@@ -209,7 +211,7 @@ fun PdfSettingsDialog(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     // --- 並び順 ---
-                    Text("並び順", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.export_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     ExportOrder.entries.forEach { order ->
                         Row(
                             Modifier
@@ -224,7 +226,7 @@ fun PdfSettingsDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(selected = (order == selectedOrder), onClick = { selectedOrder = order })
-                            Text(text = order.displayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
+                            Text(text = stringResource(order.displayNameRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                 }
@@ -233,7 +235,7 @@ fun PdfSettingsDialog(
                 if (showScrollIndicator) {
                     Icon(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = "さらに下に項目があります",
+                        contentDescription = stringResource(R.string.more_items),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 4.dp)
@@ -261,14 +263,14 @@ fun PdfSettingsDialog(
                     isCustomRangeValid && isPasswordSetupValid
                 }
             ) {
-                Text("PDFを作成")
+                Text(stringResource(R.string.create_pdf))
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss
             ) {
-                Text("キャンセル")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

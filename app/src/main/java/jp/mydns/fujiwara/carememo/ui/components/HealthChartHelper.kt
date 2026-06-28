@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.components
 
+import android.content.Context
 import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.data.*
 
@@ -52,27 +53,27 @@ object HealthChartHelper {
     /**
      * 指定されたカテゴリーとインデックスに対応するグラフ設定を生成します
      */
-    fun getChartConfig(category: Category, index: Int, records: List<Any>): HealthChartConfig? {
+    fun getChartConfig(context: Context, category: Category, index: Int, records: List<Any>): HealthChartConfig? {
         return when (category) {
-            Category.BP_AND_PULSE -> getBpAndPulseConfig(index, records.filterIsInstance<BpAndPulse>())
-            Category.GLUCOSE_AND_HBA1C -> getGlucoseAndHbA1cConfig(index, records.filterIsInstance<GlucoseAndHbA1c>())
-            Category.HEIGHT_AND_WEIGHT -> getHeightAndWeightConfig(index, records.filterIsInstance<HeightAndWeight>())
+            Category.BP_AND_PULSE -> getBpAndPulseConfig(context, index, records.filterIsInstance<BpAndPulse>())
+            Category.GLUCOSE_AND_HBA1C -> getGlucoseAndHbA1cConfig(context, index, records.filterIsInstance<GlucoseAndHbA1c>())
+            Category.HEIGHT_AND_WEIGHT -> getHeightAndWeightConfig(context, index, records.filterIsInstance<HeightAndWeight>())
             Category.CONDITION_AT_VISIT, Category.MEDICATION -> null
         }
     }
 
-    private fun getBpAndPulseConfig(index: Int, data: List<BpAndPulse>): HealthChartConfig? {
+    private fun getBpAndPulseConfig(context: Context, index: Int, data: List<BpAndPulse>): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }
         return when (index) {
             0 -> { // 血圧
                 val sysPoints = sortedData.filter { it.bpSystolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpSystolic!!.toDouble() }
                 val diaPoints = sortedData.filter { it.bpDiastolic != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bpDiastolic!!.toDouble() }
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_BP,
-                    helpContent = HealthThresholds.BP_EXPLANATION,
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_BP),
+                    helpContent = HealthThresholds.getBpExplanation(context),
                     dataList = listOf(
-                        ChartLineData("${HealthThresholds.HEALTH_LABEL_BP}(上)", sysPoints, Color.Red),
-                        ChartLineData("${HealthThresholds.HEALTH_LABEL_BP}(下)", diaPoints, Color.Blue)
+                        ChartLineData("${context.getString(HealthThresholds.HEALTH_LABEL_BP)}(${context.getString(HealthThresholds.HEALTH_LABEL_SYSTOLIC_SHORT)})", sysPoints, Color.Red),
+                        ChartLineData("${context.getString(HealthThresholds.HEALTH_LABEL_BP)}(${context.getString(HealthThresholds.HEALTH_LABEL_DIASTOLIC_SHORT)})", diaPoints, Color.Blue)
                     ),
                     ranges = listOf(
                         ChartRangeHighlight(HealthThresholds.BP_LOW_SYSTOLIC, HealthThresholds.BP_HIGH_SYSTOLIC, Color(0xFFE8F5E9)),
@@ -86,9 +87,9 @@ object HealthChartHelper {
             1 -> { // 脈拍
                 val pulsePoints = sortedData.filter { it.pulse != null }.map { it.recordTime.toEpochMilli().toDouble() to it.pulse!!.toDouble() }
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_PULSE,
-                    helpContent = HealthThresholds.PULSE_EXPLANATION,
-                    dataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_PULSE, pulsePoints, Color(0xFF4CAF50))),
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_PULSE),
+                    helpContent = HealthThresholds.getPulseExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_PULSE), pulsePoints, Color(0xFF4CAF50))),
                     ranges = listOf(ChartRangeHighlight(HealthThresholds.PULSE_LOW, HealthThresholds.PULSE_HIGH, Color(0xFFE8F5E9))),
                     stepY = 10.0,
                     minYConstraint = 40.0,
@@ -98,9 +99,9 @@ object HealthChartHelper {
             2 -> { // 体温
                 val tempPoints = sortedData.filter { it.bodyTemperature != null }.map { it.recordTime.toEpochMilli().toDouble() to it.bodyTemperature!! }
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_BODY_TEMP,
-                    helpContent = HealthThresholds.TEMP_EXPLANATION,
-                    dataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_BODY_TEMP, tempPoints, Color(0xFFFF9800))),
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_BODY_TEMP),
+                    helpContent = HealthThresholds.getTempExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_BODY_TEMP), tempPoints, Color(0xFFFF9800))),
                     ranges = listOf(ChartRangeHighlight(HealthThresholds.TEMP_LOW, HealthThresholds.TEMP_HIGH, Color(0xFFE8F5E9))),
                     stepY = 0.5,
                     minYConstraint = 35.0,
@@ -112,7 +113,7 @@ object HealthChartHelper {
         }
     }
 
-    private fun getGlucoseAndHbA1cConfig(index: Int, data: List<GlucoseAndHbA1c>): HealthChartConfig? {
+    private fun getGlucoseAndHbA1cConfig(context: Context, index: Int, data: List<GlucoseAndHbA1c>): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }
         return when (index) {
             0 -> { // 血糖値
@@ -121,9 +122,9 @@ object HealthChartHelper {
                 val minG = glucoses.minOrNull() ?: 70.0
                 val maxG = glucoses.maxOrNull() ?: 110.0
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_GLUCOSE,
-                    helpContent = HealthThresholds.GLUCOSE_EXPLANATION,
-                    dataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_GLUCOSE, glucosePoints, Color.Magenta)),
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_GLUCOSE),
+                    helpContent = HealthThresholds.getGlucoseExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_GLUCOSE), glucosePoints, Color.Magenta)),
                     ranges = listOf(ChartRangeHighlight(HealthThresholds.GLUCOSE_NORMAL_LOW, HealthThresholds.GLUCOSE_NORMAL_HIGH, Color(0xFFE8F5E9))),
                     stepY = 50.0,
                     minYConstraint = minG - 10.0,
@@ -136,9 +137,9 @@ object HealthChartHelper {
                 val minH = hba1cs.minOrNull() ?: 5.0
                 val maxH = hba1cs.maxOrNull() ?: 6.0
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_HBA1C,
-                    helpContent = HealthThresholds.HBA1C_EXPLANATION,
-                    dataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_HBA1C, hba1cPoints, Color.Red)),
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_HBA1C),
+                    helpContent = HealthThresholds.getHbA1cExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_HBA1C), hba1cPoints, Color.Red)),
                     ranges = listOf(
                         ChartRangeHighlight(0.0, HealthThresholds.HBA1C_GOOD, Color(0xFFE8F5E9)),
                         ChartRangeHighlight(HealthThresholds.HBA1C_PREDIABETES, HealthThresholds.HBA1C_DIABETES, Color(0xFFFFFDE7)),
@@ -154,7 +155,7 @@ object HealthChartHelper {
         }
     }
 
-    private fun getHeightAndWeightConfig(index: Int, data: List<HeightAndWeight>): HealthChartConfig? {
+    private fun getHeightAndWeightConfig(context: Context, index: Int, data: List<HeightAndWeight>): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }
         return when (index) {
             0 -> { // 体重
@@ -163,8 +164,8 @@ object HealthChartHelper {
                 val minW = weights.minOrNull() ?: 50.0
                 val maxW = weights.maxOrNull() ?: 60.0
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_WEIGHT,
-                    dataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_WEIGHT, weightPoints, Color.Blue)),
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_WEIGHT),
+                    dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_WEIGHT), weightPoints, Color.Blue)),
                     stepY = 5.0,
                     minYConstraint = minW - 2.0,
                     maxYConstraint = maxW + 2.0,
@@ -177,9 +178,9 @@ object HealthChartHelper {
                 val minB = bmis.minOrNull() ?: 20.0
                 val maxB = bmis.maxOrNull() ?: 25.0
                 HealthChartConfig(
-                    title = HealthThresholds.HEALTH_LABEL_BMI,
-                    helpContent = HealthThresholds.BMI_EXPLANATION,
-                    dataList = listOf(ChartLineData(HealthThresholds.HEALTH_LABEL_BMI, bmiPoints, Color.Red)),
+                    title = context.getString(HealthThresholds.HEALTH_LABEL_BMI),
+                    helpContent = HealthThresholds.getBmiExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(HealthThresholds.HEALTH_LABEL_BMI), bmiPoints, Color.Red)),
                     ranges = listOf(
                         ChartRangeHighlight(0.0, HealthThresholds.BMI_NORMAL_LOW, Color(0xFFE3F2FD)),
                         ChartRangeHighlight(HealthThresholds.BMI_NORMAL_LOW, HealthThresholds.BMI_NORMAL_HIGH, Color(0xFFE8F5E9)),

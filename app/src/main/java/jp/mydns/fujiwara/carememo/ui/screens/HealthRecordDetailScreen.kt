@@ -15,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputState
@@ -26,18 +29,20 @@ import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HealthRecordDetailScreen(
     viewModel: PersonDetailViewModel,
+    healthViewModel: HealthRecordViewModel,
     personId: Int,
     category: Category,
     recordId: Int,
     onBack: () -> Unit,
 ) {
-    val records by viewModel.records.collectAsState()
+    val records by healthViewModel.getHealthRecords(category).collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
@@ -119,6 +124,7 @@ fun HealthRecordDetailScreen(
 
     LaunchedEffect(personId, category) {
         viewModel.loadPerson(personId)
+        healthViewModel.loadPerson(personId)
         viewModel.setCategory(category)
     }
 
@@ -134,18 +140,18 @@ fun HealthRecordDetailScreen(
                     PersonHeaderTitle(
                         person = currentPerson,
                         isNameMaskingEnabled = isNameMaskingEnabled,
-                        defaultTitle = "${category.displayName}記録"
+                        defaultTitle = stringResource(R.string.record_suffix, stringResource(category.displayNameRes))
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { if (isEditing && recordId != 0) isEditing = false else onBack() }) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (!isEditing) {
                         IconButton(onClick = { isEditing = true }) {
-                            Icon(Icons.Rounded.EditNote, contentDescription = "編集")
+                            Icon(Icons.Rounded.EditNote, contentDescription = stringResource(R.string.edit))
                         }
                     }
                 }
@@ -241,7 +247,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = heightText,
                                 onValueChange = { onHeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text(HealthThresholds.HEALTH_LABEL_HEIGHT) }, suffix = { Text("cm") },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HEIGHT)) }, suffix = { Text("cm") },
                                 modifier = Modifier.weight(1f).focusRequester(firstFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { secondFieldFocusRequester.requestFocus() })
@@ -249,7 +255,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = weightText,
                                 onValueChange = { onWeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text(HealthThresholds.HEALTH_LABEL_WEIGHT) }, suffix = { Text("kg") },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_WEIGHT)) }, suffix = { Text("kg") },
                                 modifier = Modifier.weight(1f).focusRequester(secondFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -261,7 +267,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = bpSystolicText,
                                 onValueChange = { onBpSystolicChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text(HealthThresholds.HEALTH_LABEL_BP_SYSTOLIC) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
                                 modifier = Modifier.weight(1f).focusRequester(firstFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { secondFieldFocusRequester.requestFocus() })
@@ -269,7 +275,7 @@ fun HealthRecordEditForm(
                             OutlinedTextField(
                                 value = bpDiastolicText,
                                 onValueChange = { onBpDiastolicChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text(HealthThresholds.HEALTH_LABEL_BP_DIASTOLIC) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
                                 modifier = Modifier.weight(1f).focusRequester(secondFieldFocusRequester),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { thirdFieldFocusRequester.requestFocus() })
@@ -278,7 +284,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = pulseText,
                             onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text(HealthThresholds.HEALTH_LABEL_PULSE) }, suffix = { Text("bpm") },
+                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_PULSE)) }, suffix = { Text("bpm") },
                             modifier = Modifier.fillMaxWidth().focusRequester(thirdFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { fourthFieldFocusRequester.requestFocus() })
@@ -286,7 +292,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = bodyTemperatureText,
                             onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text(HealthThresholds.HEALTH_LABEL_BODY_TEMP) }, suffix = { Text("℃") },
+                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BODY_TEMP)) }, suffix = { Text("℃") },
                             modifier = Modifier.fillMaxWidth().focusRequester(fourthFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -296,7 +302,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = glucoseText,
                             onValueChange = { onGlucoseChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text(HealthThresholds.HEALTH_LABEL_GLUCOSE) }, suffix = { Text("mg/dL") },
+                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)) }, suffix = { Text("mg/dL") },
                             modifier = Modifier.fillMaxWidth().focusRequester(firstFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { secondFieldFocusRequester.requestFocus() })
@@ -304,7 +310,7 @@ fun HealthRecordEditForm(
                         OutlinedTextField(
                             value = hba1cText,
                             onValueChange = { onHba1cChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text(HealthThresholds.HEALTH_LABEL_HBA1C) }, suffix = { Text("%") },
+                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)) }, suffix = { Text("%") },
                             modifier = Modifier.fillMaxWidth().focusRequester(secondFieldFocusRequester),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
@@ -314,7 +320,7 @@ fun HealthRecordEditForm(
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("キャンセル") }
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.cancel)) }
                     Button(
                         onClick = onSave,
                         modifier = Modifier.weight(1f),
@@ -324,7 +330,7 @@ fun HealthRecordEditForm(
                             Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
                             Category.CONDITION_AT_VISIT, Category.MEDICATION -> true
                         }
-                    ) { Text("保存") }
+                    ) { Text(stringResource(R.string.save)) }
                 }
             }
         }
@@ -333,6 +339,7 @@ fun HealthRecordEditForm(
 
 @Composable
 fun HealthRecordDisplayCard(record: Any) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
@@ -353,28 +360,27 @@ fun HealthRecordDisplayCard(record: Any) {
 
             when (record) {
                 is HeightAndWeight -> {
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_HEIGHT, value = record.height?.let { "$it cm" } ?: "---")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_WEIGHT, value = record.weight?.let { "$it kg" } ?: "---")
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_HEIGHT), value = record.height?.let { "$it cm" } ?: "---")
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_WEIGHT), value = record.weight?.let { "$it kg" } ?: "---")
                     val bmi = record.calculateBMI()
                     if (bmi > 0) {
-                        val (label, _) = record.getBmiResult()
-                        DetailItem(label = HealthThresholds.HEALTH_LABEL_BMI, value = "%.1f ($label)".format(bmi))
+                        val (resId, _) = HealthThresholds.evaluateBMI(bmi)
+                        val label = resId?.let { stringResource(it) } ?: "---"
+                        DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_BMI), value = "%.1f ($label)".format(bmi))
                     }
                 }
                 is BpAndPulse -> {
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_BP, value = "${record.bpSystolic ?: "---"} / ${record.bpDiastolic ?: "---"} mmHg")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_PULSE, value = record.pulse?.let { "$it bpm" } ?: "---")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_BODY_TEMP, value = record.bodyTemperature?.let { "$it ℃" } ?: "---")
-                    val statusText = record.getVitalResults().joinToString("・") { it.first }
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = statusText)
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_BP), value = "${record.bpSystolic ?: "---"} / ${record.bpDiastolic ?: "---"} mmHg")
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_PULSE), value = record.pulse?.let { "$it bpm" } ?: "---")
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_BODY_TEMP), value = record.bodyTemperature?.let { "$it ℃" } ?: "---")
+                    val statusText = record.getVitalResults(context).joinToString("・") { it.first }
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_STATUS), value = statusText)
                 }
                 is GlucoseAndHbA1c -> {
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_GLUCOSE, value = record.glucose?.let { "$it mg/dL" } ?: "---")
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_HBA1C, value = record.hba1c?.let { "$it %" } ?: "---")
-                    val g = record.getGlucoseResult().first
-                    val h = record.getHbA1cResult().first
-                    val statusText = if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
-                    DetailItem(label = HealthThresholds.HEALTH_LABEL_STATUS, value = statusText)
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE), value = record.glucose?.let { "$it mg/dL" } ?: "---")
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_HBA1C), value = record.hba1c?.let { "$it %" } ?: "---")
+                    val statusText = record.getCombinedResultText(context)
+                    DetailItem(label = stringResource(HealthThresholds.HEALTH_LABEL_STATUS), value = statusText)
                 }
             }
         }
