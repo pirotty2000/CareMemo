@@ -39,7 +39,7 @@ interface PersonDao {
     @Query("DELETE FROM person_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<Person>)
 }
 
@@ -48,7 +48,7 @@ interface HeightAndWeightDao {
     @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<HeightAndWeight>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(item: HeightAndWeight)
 
     @Query("UPDATE height_and_weight_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -67,7 +67,7 @@ interface HeightAndWeightDao {
     @Query("DELETE FROM height_and_weight_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<HeightAndWeight>)
 
     @Query("SELECT DISTINCT person_id FROM height_and_weight_db WHERE (height IS NOT NULL OR weight IS NOT NULL) AND deleted_at IS NULL")
@@ -82,7 +82,7 @@ interface BpAndPulseDao {
     @Query("SELECT * FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<BpAndPulse>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(item: BpAndPulse)
 
     @Query("UPDATE bp_and_pulse_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -101,7 +101,7 @@ interface BpAndPulseDao {
     @Query("DELETE FROM bp_and_pulse_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<BpAndPulse>)
 
     @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE (bp_systolic IS NOT NULL OR bp_diastolic IS NOT NULL OR pulse IS NOT NULL OR body_temperature IS NOT NULL) AND deleted_at IS NULL")
@@ -116,7 +116,7 @@ interface GlucoseAndHbA1cDao {
     @Query("SELECT * FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<GlucoseAndHbA1c>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(item: GlucoseAndHbA1c)
 
     @Query("UPDATE glucose_and_hba1c_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -135,7 +135,7 @@ interface GlucoseAndHbA1cDao {
     @Query("DELETE FROM glucose_and_hba1c_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<GlucoseAndHbA1c>)
 
     @Query("SELECT DISTINCT person_id FROM glucose_and_hba1c_db WHERE (glucose IS NOT NULL OR hba1c IS NOT NULL) AND deleted_at IS NULL")
@@ -150,7 +150,7 @@ interface ConditionAtVisitDao {
     @Query("SELECT * FROM condition_at_visit_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<ConditionAtVisit>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(item: ConditionAtVisit)
 
     @Query("UPDATE condition_at_visit_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -169,7 +169,7 @@ interface ConditionAtVisitDao {
     @Query("DELETE FROM condition_at_visit_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<ConditionAtVisit>)
 
     @Query("SELECT DISTINCT person_id FROM condition_at_visit_db WHERE deleted_at IS NULL")
@@ -191,7 +191,7 @@ interface ConditionPhotoDao {
     @Query("SELECT * FROM condition_photo_db WHERE condition_id = :conditionId AND deleted_at IS NULL ORDER BY captured_at ASC")
     fun getByConditionId(conditionId: Int): Flow<List<ConditionPhoto>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(item: ConditionPhoto)
 
 //    @Update
@@ -228,7 +228,7 @@ interface ConditionPhotoDao {
     @Query("DELETE FROM condition_photo_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<ConditionPhoto>)
 }
 
@@ -243,7 +243,7 @@ interface MedicationRecordDao {
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date LIKE :month || '%' AND deleted_at IS NULL")
     fun getByMonth(personId: Int, month: String): Flow<List<MedicationRecord>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insert(item: MedicationRecord)
 
     @Query("UPDATE medication_record_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -262,7 +262,7 @@ interface MedicationRecordDao {
     @Query("DELETE FROM medication_record_db")
     suspend fun deleteAll()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertAll(items: List<MedicationRecord>)
 
     @Query("SELECT EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL)")

@@ -3,14 +3,15 @@ package jp.mydns.fujiwara.carememo.data
 import androidx.room.TypeConverter
 import java.time.Instant
 
+@Suppress("unused")
 class Converters {
     @TypeConverter
-    fun fromTimestamp(value: Long?): Instant? {
+    fun timestampToInstant(value: Long?): Instant? {
         return value?.let { Instant.ofEpochMilli(it) }
     }
 
     @TypeConverter
-    fun dateToTimestamp(date: Instant?): Long? {
+    fun instantToTimestamp(date: Instant?): Long? {
         return date?.toEpochMilli()
     }
 }
