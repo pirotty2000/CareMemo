@@ -56,7 +56,7 @@ class PersonConditionViewModel(
                 flowOf(emptyMap())
             } else {
                 repository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
-                    (recs as List<ConditionAtVisit>).associate { memo ->
+                    recs.filterIsInstance<ConditionAtVisit>().associate { memo ->
                         memo.id to photos.any { it.conditionId == memo.id }
                     }
                 }
