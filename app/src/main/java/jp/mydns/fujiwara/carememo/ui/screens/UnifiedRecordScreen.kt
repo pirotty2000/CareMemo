@@ -60,10 +60,7 @@ fun UnifiedRecordScreen(
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     
     // ユーザーの表示モード設定（初期値は履歴: true）
-    var preferredShowHistory by rememberSaveable { mutableStateOf(value = true) }
-    
-    // 実際の表示判定：カテゴリがグラフを持たない場合は強制的に履歴。そうでなければユーザーの好みに従う
-    val isEffectivelyShowingHistory = preferredShowHistory || !currentCategory.hasGraph
+    var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
     
     val records by viewModel.filteredRecords.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -78,9 +75,9 @@ fun UnifiedRecordScreen(
     val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf)
     val pdfExportFailedMsg = stringResource(R.string.error_pdf_export_failed)
 
-    var showPdfSettingsDialog by remember { mutableStateOf(value = false) }
-    var dialogTitle by remember { mutableStateOf<String?>(value = null) }
-    var dialogMessage by remember { mutableStateOf<String?>(value = null) }
+    var showPdfSettingsDialog by remember { mutableStateOf(false) }
+    var dialogTitle by remember { mutableStateOf<String?>(null) }
+    var dialogMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
@@ -185,7 +182,7 @@ fun UnifiedRecordScreen(
 
             Box(modifier = Modifier.weight(1f)) {
                 if (records.isEmpty()) { EmptyState(message = stringResource(R.string.empty_records), description = stringResource(R.string.empty_records_description), icon = Icons.Outlined.Description) }
-                else if (isEffectivelyShowingHistory) {
+                else if (preferredShowHistory || !currentCategory.hasGraph) {
                     UnifiedHistoryList(records = records.filterIsInstance<HistoryRecord>(), category = currentCategory, conditionPhotoMap = conditionPhotoMap, onItemClick = { record -> if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, record.id) else onNavigateToHealthRecordDetail(personId, currentCategory, record.id) }, onDeleteSwipe = { record -> recordToDelete = record }, isAnyDialogOpen = recordToDelete != null)
                 } else {
                     val scrollState = rememberScrollState()
