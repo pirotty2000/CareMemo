@@ -1,27 +1,45 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# CareMemo ProGuard Rules
 
 # SQLCipher rules
 -keep class net.zetetic.** { *; }
 -keep class androidx.sqlite.** { *; }
 
-# Room rules (standard)
+# Room rules
 -keepclassmembers class * extends androidx.room.RoomDatabase {
     <init>(...);
 }
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- セキュリティ対策 (SecurityEvaluation.md 3.2 対応) ---
+# ログ出力 (android.util.Log) を完全に削除し、機密情報の漏洩を防ぎます
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# --- ライブラリの動作保証設定 ---
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# kotlinx.serialization: JSON保存やエクスポート時にクラス名が消えてエラーになるのを防ぎます
+-keepattributes *Annotation*, EnclosingMethod, InnerClasses
+-keepclassmembers class ** {
+    @kotlinx.serialization.Serializable *;
+    public static ** Companion;
+    public static ** $serializer;
+}
+
+# Zip4j: バックアップ作成時に使用
+-keep class net.lingala.zip4j.** { *; }
+
+# PDFBox-Android: PDF生成時に使用
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.gemalto.jp2.JP2Decoder
+-dontwarn com.gemalto.jp2.JP2Encoder
+
+# Google ErrorProne annotations (SQLCipherやRoomなどが内部で使用)
+-dontwarn com.google.errorprone.annotations.**
+
+# クラッシュレポートで意味のあるスタックトレースを得るために、
+# 行番号の情報だけは保持しておくことを推奨します
+-keepattributes SourceFile,LineNumberTable
