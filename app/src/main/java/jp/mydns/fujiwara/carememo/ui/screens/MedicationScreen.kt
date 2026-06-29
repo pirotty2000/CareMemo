@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -83,9 +84,11 @@ import java.time.YearMonth
 fun MedicationScreen(
     viewModel: MedicationViewModel,
     personId: Int,
+    widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit
 ) {
+    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val currentPerson by viewModel.currentPerson.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val recordsByDate by viewModel.recordsByDate.collectAsState()
@@ -166,63 +169,135 @@ fun MedicationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 月の選択
-            MonthSelector(
-                selectedMonth = selectedMonth,
-                onPreviousMonth = { viewModel.previousMonth() },
-                onNextMonth = { viewModel.nextMonth() }
-            )
+            // 月の選択 (ヘッダーへ移動したためここでは非表示)
+            // MonthSelector(...)
 
-            // 表示切り替え
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = !isHistoryMode,
-                    onClick = { isHistoryMode = false },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    icon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null) }
-                ) {
-                    Text("カレンダー")
+            if (isExpanded) {
+                // --- タブレット・横向き: 2カラムレイアウト ---
+                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // 左側: カレンダー
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        //Text("カレンダー入力", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        CalendarGrid(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate,
+                            onDayClick = { date -> showDialog = date }
+                        )
+                        Text(
+                            text = "※ 日付をタップして編集",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // 右側: 履歴（テーブル）
+                    Column(modifier = Modifier.weight(1.2f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // 年月セレクタを履歴の表の上に配置
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { viewModel.previousMonth() }) {
+                                Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
+                            }
+                            Text(
+                                text = formatYearMonthHeader(selectedMonth),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            IconButton(onClick = { viewModel.nextMonth() }) {
+                                Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+                            }
+                        }
+                        
+                        Box(modifier = Modifier.weight(1f)) {
+                            MedicationHistoryTable(
+                                yearMonth = selectedMonth,
+                                recordsByDate = recordsByDate
+                            )
+                        }
+                    }
                 }
-                SegmentedButton(
-                    selected = isHistoryMode,
-                    onClick = { isHistoryMode = true },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    icon = { Icon(Icons.Rounded.History, contentDescription = null) }
-                ) {
-                    Text("履歴")
-                }
-            }
-
-            if (isHistoryMode) {
-                Text(
-                    text = "※ ここでは記録の編集はできません",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             } else {
-                Text(
-                    text = "※ 日付のセルをタップして記録を追加／編集しましょう",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                // --- スマホ: 1カラム・切り替えレイアウト ---
+                // 月の選択
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { viewModel.previousMonth() }) {
+                        Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
+                    }
+                    Text(
+                        text = formatYearMonthHeader(selectedMonth),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = { viewModel.nextMonth() }) {
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+                    }
+                }
 
-            // コンテンツ
-            Box(modifier = Modifier.weight(1f)) {
+                // 表示切り替え
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = !isHistoryMode,
+                        onClick = { isHistoryMode = false },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        icon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null) },
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Text("カレンダー")
+                    }
+                    SegmentedButton(
+                        selected = isHistoryMode,
+                        onClick = { isHistoryMode = true },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        icon = { Icon(Icons.Rounded.History, contentDescription = null) },
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Text("履歴")
+                    }
+                }
+
                 if (isHistoryMode) {
-                    MedicationHistoryTable(
-                        yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate
+                    Text(
+                        text = "※ ここでは記録の編集はできません",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    CalendarGrid(
-                        yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate,
-                        onDayClick = { date -> showDialog = date }
+                    Text(
+                        text = "※ 日付のセルをタップして記録を追加／編集しましょう",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                // コンテンツ
+                Box(modifier = Modifier.weight(1f)) {
+                    if (isHistoryMode) {
+                        MedicationHistoryTable(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate
+                        )
+                    } else {
+                        CalendarGrid(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate,
+                            onDayClick = { date -> showDialog = date }
+                        )
+                    }
                 }
             }
         }
@@ -271,31 +346,6 @@ fun MedicationScreen(
                 viewModel.deleteMedicationRecord(record)
             }
         )
-    }
-}
-
-@Composable
-fun MonthSelector(
-    selectedMonth: YearMonth,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onPreviousMonth) {
-            Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
-        }
-        Text(
-            text = formatYearMonthHeader(selectedMonth),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        IconButton(onClick = onNextMonth) {
-            Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
-        }
     }
 }
 
@@ -358,11 +408,11 @@ fun MedicationHistoryTable(
                 val dayOfWeek = date.dayOfWeek
                 val dayOfWeekText = formatShortDayOfWeek(date)
 
-                // 曜日による背景色の設定（平日:白、土曜:薄い青、日曜:薄い赤）
+                // 曜日による背景色の設定
                 val rowBgColor = when (dayOfWeek) {
-                    DayOfWeek.SUNDAY -> Color(0xFFFFEBEE) // 薄い赤
-                    DayOfWeek.SATURDAY -> Color(0xFFE3F2FD) // 薄い青
-                    else -> MaterialTheme.colorScheme.surface // 白（サーフェスカラー）
+                    DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                    DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                    else -> MaterialTheme.colorScheme.surface
                 }
 
                 // 曜日による文字色
@@ -439,8 +489,8 @@ fun CalendarGrid(
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelMedium,
                     color = when (index) {
-                        0 -> Color.Red
-                        6 -> Color.Blue
+                        0 -> MaterialTheme.colorScheme.error
+                        6 -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
@@ -480,7 +530,7 @@ fun DayCell(
 
     Column(
         modifier = Modifier
-            .aspectRatio(0.8f)
+            .aspectRatio(0.9f) // 1.2f -> 0.9f に戻して 2x2 アイコンを収める
             .padding(1.dp)
             .border(
                 width = if (isToday) 2.dp else 0.5.dp,
@@ -748,8 +798,8 @@ fun MedicationRow(
 @Composable
 private fun getDayOfWeekColor(dayOfWeek: DayOfWeek): Color {
     return when (dayOfWeek) {
-        DayOfWeek.SUNDAY -> Color.Red
-        DayOfWeek.SATURDAY -> Color.Blue
+        DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.error
+        DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurface
     }
 }

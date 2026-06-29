@@ -68,12 +68,17 @@ fun CategorySelectorBar(
                         )
                     }
                 } else null,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = currentCategory == category,
                     borderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                     borderWidth = if (hasData) 1.5.dp else 1.0.dp,
-                    selectedBorderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    selectedBorderColor = MaterialTheme.colorScheme.primary
                 )
             )
         }

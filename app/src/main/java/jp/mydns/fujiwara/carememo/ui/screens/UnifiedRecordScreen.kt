@@ -62,6 +62,7 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -98,13 +99,18 @@ fun UnifiedRecordScreen(
     conditionViewModel: PersonConditionViewModel,
     initialCategoryType: Category,
     personId: Int,
+    widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
     onNavigateToConditionDetail: (Int, Int) -> Unit,
     onNavigateToHealthRecordDetail: (Int, Category, Int) -> Unit,
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
     onNavigateToMedication: (Int) -> Unit,
 ) {
+    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
+    
+    // タブレット用：現在選択されている所見メモのID (-1: 未選択, 0: 新規作成)
+    var selectedConditionId by rememberSaveable { mutableIntStateOf(-1) }
     
     // ユーザーの表示モード設定（初期値は履歴: true）
     var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
@@ -145,6 +151,8 @@ fun UnifiedRecordScreen(
         viewModel.loadPerson(personId)
         conditionViewModel.loadPerson(personId)
         viewModel.setCategory(currentCategory)
+        // カテゴリが切り替わったら選択をリセット
+        selectedConditionId = -1
         val index = Category.entries.indexOf(currentCategory)
         if (index >= 0) categoryListState.animateScrollToItem(index)
     }
@@ -170,6 +178,11 @@ fun UnifiedRecordScreen(
                     ),
                     actions = {
                         val categoryName = stringResource(currentCategory.displayNameRes)
+                        if (isExpanded && currentCategory == Category.CONDITION_AT_VISIT) {
+                            IconButton(onClick = { selectedConditionId = 0 }) {
+                                Icon(Icons.Rounded.Add, contentDescription = "新規追加")
+                            }
+                        }
                         IconButton(onClick = {
                             if (records.isEmpty()) {
                                 scope.launch {
@@ -210,32 +223,126 @@ fun UnifiedRecordScreen(
             .padding(paddingValues)
             .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Spacer(modifier = Modifier.height(4.dp))
-            if (currentCategory.hasSearch) { 
+            
+            // 検索・絞り込みバー (スマホ時、またはタブレットの非所見メモ時)
+            if (currentCategory.hasSearch && !(isExpanded && currentCategory == Category.CONDITION_AT_VISIT)) { 
                 val categoryName = stringResource(currentCategory.displayNameRes)
                 OutlinedTextField(value = searchQuery, onValueChange = { viewModel.updateSearchQuery(it) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.search_placeholder, categoryName)) }, leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }, trailingIcon = { if (searchQuery.isNotEmpty()) { IconButton(onClick = { viewModel.updateSearchQuery("") }) { Icon(Icons.Rounded.Clear, contentDescription = stringResource(R.string.clear)) } } }, singleLine = true, shape = MaterialTheme.shapes.medium) 
             }
             
-            // グラフを持つカテゴリのみ表示切り替えボタンを出す
-            if (currentCategory.hasGraph) { 
+            // グラフを持つカテゴリのみ表示切り替えボタンを出す（スマホサイズのみ）
+            if (currentCategory.hasGraph && !isExpanded) { 
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) { 
                     SegmentedButton(
                         selected = preferredShowHistory, 
                         onClick = { preferredShowHistory = true }, 
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2), 
-                        icon = { Icon(Icons.Rounded.History, contentDescription = null) }
+                        icon = { Icon(Icons.Rounded.History, contentDescription = null) },
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) { Text(stringResource(R.string.tab_history)) }
                     SegmentedButton(
                         selected = !preferredShowHistory, 
                         onClick = { preferredShowHistory = false }, 
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2), 
-                        icon = { Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null) }
+                        icon = { Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null) },
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) { Text(stringResource(R.string.tab_graph)) } 
                 } 
             }
 
             Box(modifier = Modifier.weight(1f)) {
-                if (records.isEmpty()) { EmptyState(message = stringResource(R.string.empty_records), description = stringResource(R.string.empty_records_description), icon = Icons.Outlined.Description) }
-                else if (preferredShowHistory || !currentCategory.hasGraph) {
+                if (records.isEmpty()) { 
+                    EmptyState(message = stringResource(R.string.empty_records), description = stringResource(R.string.empty_records_description), icon = Icons.Outlined.Description) 
+                } else if (isExpanded && currentCategory.hasGraph) {
+                    // --- タブレット・横向き（数値データ系）: 2カラムレイアウト ---
+                    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // 左側: 履歴リスト (比率 1)
+                        Box(modifier = Modifier.weight(1f)) {
+                            UnifiedHistoryList(
+                                records = records.filterIsInstance<HistoryRecord>(),
+                                category = currentCategory,
+                                conditionPhotoMap = conditionPhotoMap,
+                                onItemClick = { record -> 
+                                    if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, record.id) 
+                                    else onNavigateToHealthRecordDetail(personId, currentCategory, record.id) 
+                                },
+                                onDeleteSwipe = { record -> recordToDelete = record },
+                                isAnyDialogOpen = recordToDelete != null
+                            )
+                        }
+                        // 右側: グラフ (比率 1.5)
+                        val scrollState = rememberScrollState()
+                        Box(modifier = Modifier.weight(1.5f)) {
+                            Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(end = 12.dp)) {
+                                HealthGraphView(
+                                    records = records,
+                                    categoryType = currentCategory,
+                                    onExpandGraph = { index -> onNavigateToGraphExpansion(personId, currentCategory, index) }
+                                )
+                            }
+                            if (scrollState.maxValue > 0) {
+                                VerticalScrollIndicator(scrollState)
+                            }
+                        }
+                    }
+                } else if (isExpanded && currentCategory == Category.CONDITION_AT_VISIT) {
+                    // --- タブレット・横向き（所見メモ）: リスト・詳細レイアウト ---
+                    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // 左側: 簡易履歴リスト (比率 1)
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // タブレット時のみ、検索ボックスをここに配置
+                            val categoryName = stringResource(currentCategory.displayNameRes)
+                            OutlinedTextField(
+                                value = searchQuery, 
+                                onValueChange = { viewModel.updateSearchQuery(it) }, 
+                                modifier = Modifier.fillMaxWidth(), 
+                                placeholder = { Text(stringResource(R.string.search_placeholder, categoryName)) }, 
+                                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) }, 
+                                trailingIcon = { if (searchQuery.isNotEmpty()) { IconButton(onClick = { viewModel.updateSearchQuery("") }) { Icon(Icons.Rounded.Clear, contentDescription = stringResource(R.string.clear)) } } }, 
+                                singleLine = true, 
+                                shape = MaterialTheme.shapes.medium
+                            )
+                            
+                            Box(modifier = Modifier.weight(1f)) {
+                                UnifiedHistoryList(
+                                    records = records.filterIsInstance<HistoryRecord>(),
+                                    category = currentCategory,
+                                    conditionPhotoMap = conditionPhotoMap,
+                                    selectedRecordId = selectedConditionId, // 選択状態を渡す
+                                    onItemClick = { record -> selectedConditionId = record.id },
+                                    onDeleteSwipe = { record -> 
+                                        if (selectedConditionId == record.id) selectedConditionId = -1
+                                        recordToDelete = record 
+                                    },
+                                    isAnyDialogOpen = recordToDelete != null
+                                )
+                            }
+                        }
+                        // 右側: 詳細表示・編集 (比率 2)
+                        Box(modifier = Modifier.weight(2f)) {
+                            ConditionDetailPane(
+                                viewModel = viewModel,
+                                conditionViewModel = conditionViewModel,
+                                personId = personId,
+                                conditionId = selectedConditionId,
+                                onNavigateToPhotoPreview = { uri, pId, cId ->
+                                    onNavigateToConditionDetail(pId, cId) // プレビュー用の遷移は既存流用
+                                },
+                                onNavigateToFullScreen = { fileName, caption ->
+                                    val encodedCaption = caption?.let { java.net.URLEncoder.encode(it, "UTF-8") } ?: ""
+                                    // 既存のナビゲーションルートに合わせる必要があるが、
+                                    // 現状は一旦ログ出力のみ、または既存遷移を流用
+                                }
+                            )
+                        }
+                    }
+                } else if (preferredShowHistory || !currentCategory.hasGraph) {
                     UnifiedHistoryList(records = records.filterIsInstance<HistoryRecord>(), category = currentCategory, conditionPhotoMap = conditionPhotoMap, onItemClick = { record -> if (currentCategory == Category.CONDITION_AT_VISIT) onNavigateToConditionDetail(personId, record.id) else onNavigateToHealthRecordDetail(personId, currentCategory, record.id) }, onDeleteSwipe = { record -> recordToDelete = record }, isAnyDialogOpen = recordToDelete != null)
                 } else {
                     val scrollState = rememberScrollState()
@@ -287,6 +394,7 @@ fun UnifiedHistoryList(
     records: List<HistoryRecord>,
     category: Category,
     conditionPhotoMap: Map<Int, Boolean>,
+    selectedRecordId: Int = -1, // 選択中IDを受け取れるように拡張
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     isAnyDialogOpen: Boolean,
@@ -307,7 +415,15 @@ fun UnifiedHistoryList(
             }
             items(items.size) { index ->
                 val record = items[index]
-                HistoryItemWrapper(record = record, showTime = !isSingle, onItemClick = { onItemClick(record) }, onDeleteSwipe = { onDeleteSwipe(record) }, isAnyDialogOpen = isAnyDialogOpen) {
+                val isSelected = record.id == selectedRecordId // 選択判定
+                HistoryItemWrapper(
+                    record = record, 
+                    showTime = !isSingle, 
+                    isSelected = isSelected, // ラッパーに渡す
+                    onItemClick = { onItemClick(record) }, 
+                    onDeleteSwipe = { onDeleteSwipe(record) }, 
+                    isAnyDialogOpen = isAnyDialogOpen
+                ) {
                     val hasOptionData = (category.hasOption && conditionPhotoMap[record.id] == true)
                     HistoryItemBody(category, record, hasOptionData)
                 }
@@ -322,6 +438,7 @@ fun UnifiedHistoryList(
 fun HistoryItemWrapper(
     record: HistoryRecord,
     showTime: Boolean,
+    isSelected: Boolean = false, // 追加
     onItemClick: () -> Unit,
     onDeleteSwipe: () -> Unit,
     isAnyDialogOpen: Boolean,
@@ -334,6 +451,14 @@ fun HistoryItemWrapper(
             dismissState.snapTo(SwipeToDismissBoxValue.Settled)
         }
     }
+    
+    // 選択状態に応じた色
+    val containerColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier
         .fillMaxSize()
         .background(color)
@@ -341,7 +466,7 @@ fun HistoryItemWrapper(
         Card(modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onItemClick)
-            .padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            .padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = containerColor)) {
             Column(modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)) {
@@ -550,6 +675,184 @@ fun VitalStatusIndicator(label: String, isActive: Boolean) { Text(text = label, 
 @Composable
 fun EmptyState(message: String, description: String? = null, icon: ImageVector) { Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)); Spacer(modifier = Modifier.height(16.dp)); Text(text = message, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline); if (description != null) { Spacer(modifier = Modifier.height(8.dp)); Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f), textAlign = TextAlign.Center) } } }
 
-@Preview(showBackground = true)
 @Composable
 fun UnifiedRecordScreenPreview() { MaterialTheme { Text("Preview") } }
+
+/**
+ * タブレット・横向き時に右側に表示する所見メモ詳細ペイン
+ */
+@Composable
+fun ConditionDetailPane(
+    viewModel: PersonDetailViewModel,
+    conditionViewModel: PersonConditionViewModel,
+    personId: Int,
+    conditionId: Int,
+    onNavigateToPhotoPreview: (android.net.Uri, Int, Int) -> Unit,
+    onNavigateToFullScreen: (String, String?) -> Unit,
+) {
+    val context = LocalContext.current
+    val records by viewModel.records.collectAsState()
+    val photos by conditionViewModel.currentConditionPhotos.collectAsState()
+    val isProcessing by conditionViewModel.isProcessing.collectAsState()
+    val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
+
+    val dateTimeState = rememberDateTimeInputState()
+
+    // 編集モードの状態
+    var isEditing by remember { mutableStateOf(false) }
+
+    // 選択されたIDが変わったら編集モードを解除し、初期化をリセット
+    LaunchedEffect(conditionId) {
+        isEditing = conditionId == 0
+    }
+
+    val memo = remember(records, conditionId) { 
+        records.asSequence().filterIsInstance<ConditionAtVisit>().find { it.id == conditionId }
+    }
+
+    // 入力用状態
+    var title by remember { mutableStateOf("") }
+    var condition by remember { mutableStateOf("") }
+    var author by remember { mutableStateOf("") }
+
+    // 初期値セット
+    LaunchedEffect(memo, defaultRecorderName, conditionId) {
+        if (memo != null) {
+            title = memo.title ?: ""
+            condition = memo.condition ?: ""
+            author = memo.author
+            dateTimeState.setFromInstant(memo.recordTime)
+        } else if (conditionId == 0) {
+            title = ""
+            condition = ""
+            author = defaultRecorderName
+            dateTimeState.setFromInstant(java.time.Instant.now())
+        }
+    }
+
+    // データのロード
+    LaunchedEffect(personId, conditionId) {
+        conditionViewModel.loadPerson(personId)
+        conditionViewModel.setSelectedConditionId(if (conditionId != 0) conditionId else null)
+    }
+
+    var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
+    var tempPhotoUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    
+    val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture(),
+    ) { success ->
+        if (success && tempPhotoUri != null) {
+            onNavigateToPhotoPreview(tempPhotoUri!!, personId, conditionId)
+        }
+    }
+
+    if (conditionId == -1) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Rounded.Description,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("左のリストから記録を選択してください", color = MaterialTheme.colorScheme.outline)
+                Text("右上の「＋」から新しい記録を追加できます", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (conditionId == 0) "新規作成" else "記録の詳細",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            if (!isEditing && conditionId != 0) {
+                IconButton(onClick = { isEditing = true }) {
+                    Icon(Icons.Rounded.EditNote, contentDescription = "編集")
+                }
+            }
+        }
+
+        if (isEditing) {
+            // 編集モード
+            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DateTimeInputFields(state = dateTimeState)
+                    HorizontalDivider(thickness = 0.5.dp)
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("タイトル (任意)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("記録者") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = condition, onValueChange = { condition = it }, label = { Text("所見メモ") }, modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { if (conditionId == 0) { /* nop */ } else isEditing = false }, modifier = Modifier.weight(1f)) { Text("キャンセル") }
+                        Button(
+                            onClick = {
+                                val recordTime = dateTimeState.toInstant() ?: java.time.Instant.now()
+                                val newMemo = ConditionAtVisit(id = conditionId, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)
+                                viewModel.saveRecord(newMemo)
+                                isEditing = false
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = author.isNotBlank() && condition.isNotBlank()
+                        ) { Text("保存") }
+                    }
+                }
+            }
+        } else {
+            // 参照モード
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    memo?.let { m ->
+                        Text(text = formatTime(m.recordTime), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (!m.title.isNullOrBlank()) {
+                            Text(text = m.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        }
+                        Text(text = m.condition ?: "", style = MaterialTheme.typography.bodyLarge)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = "記録者: ${m.author}", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.End), color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
+        }
+
+        // 写真セクション
+        Text(text = "写真 (${photos.size}/3)", style = MaterialTheme.typography.titleMedium)
+        if (photos.isEmpty()) {
+            Text("写真はありません", color = MaterialTheme.colorScheme.outline)
+        } else {
+            PhotoGrid(photos = photos, isEditable = isEditing, onPhotoClick = { onNavigateToFullScreen(it.photoFileName, it.caption) }, onDeletePhoto = { photoToDelete = it })
+        }
+        
+        if (isEditing && photos.size < 3 && conditionId != 0) {
+            Button(onClick = {
+                val tempFile = java.io.File(context.cacheDir, "temp_${System.currentTimeMillis()}.jpg")
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
+                tempPhotoUri = uri
+                cameraLauncher.launch(uri)
+            }, enabled = !isProcessing) {
+                Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("撮影")
+            }
+        }
+    }
+
+    if (photoToDelete != null) {
+        AlertDialog(onDismissRequest = { photoToDelete = null }, title = { Text("写真の削除") }, text = { Text("この写真を削除してもよろしいですか？") }, confirmButton = { TextButton(onClick = { photoToDelete?.let { conditionViewModel.deletePhoto(context, it) }; photoToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("削除") } }, dismissButton = { TextButton(onClick = { photoToDelete = null }) { Text("キャンセル") } })
+    }
+}
