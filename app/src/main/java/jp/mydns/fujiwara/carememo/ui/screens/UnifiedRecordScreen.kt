@@ -75,7 +75,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -331,13 +330,11 @@ fun UnifiedRecordScreen(
                                 conditionViewModel = conditionViewModel,
                                 personId = personId,
                                 conditionId = selectedConditionId,
-                                onNavigateToPhotoPreview = { uri, pId, cId ->
-                                    onNavigateToConditionDetail(pId, cId) // プレビュー用の遷移は既存流用
+                                onNavigateToPhotoPreview = { _, pId, cId ->
+                                    onNavigateToConditionDetail(pId, cId)
                                 },
-                                onNavigateToFullScreen = { fileName, caption ->
-                                    val encodedCaption = caption?.let { java.net.URLEncoder.encode(it, "UTF-8") } ?: ""
-                                    // 既存のナビゲーションルートに合わせる必要があるが、
-                                    // 現状は一旦ログ出力のみ、または既存遷移を流用
+                                onNavigateToFullScreen = { _, _ ->
+                                    // タブレット版でのフルスクリーン表示は必要に応じて実装
                                 }
                             )
                         }
@@ -459,18 +456,47 @@ fun HistoryItemWrapper(
         MaterialTheme.colorScheme.surface
     }
 
-    SwipeToDismissBox(state = dismissState, enableDismissFromStartToEnd = false, backgroundContent = { val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) MaterialTheme.colorScheme.error else Color.Transparent; Box(modifier = Modifier
-        .fillMaxSize()
-        .background(color)
-        .padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White) } }) {
-        Card(modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onItemClick)
-            .padding(vertical = 1.dp), shape = androidx.compose.ui.graphics.RectangleShape, colors = CardDefaults.cardColors(containerColor = containerColor)) {
-            Column(modifier = Modifier
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                MaterialTheme.colorScheme.error
+            } else {
+                Color.Transparent
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(Icons.Rounded.Delete, contentDescription = null, tint = Color.White)
+            }
+        }
+    ) {
+        Card(
+            modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)) {
-                if (showTime) { Text(text = formatTime(record.recordTime), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary); Spacer(modifier = Modifier.height(4.dp)) }
+                .clickable(onClick = onItemClick)
+                .padding(vertical = 1.dp),
+            shape = androidx.compose.ui.graphics.RectangleShape,
+            colors = CardDefaults.cardColors(containerColor = containerColor)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                if (showTime) {
+                    Text(
+                        text = formatTime(record.recordTime),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
                 content()
             }
         }
@@ -493,12 +519,43 @@ fun HeightWeightRecordItemContent(record: HeightAndWeight) {
     val context = LocalContext.current
     val bmi = record.calculateBMI()
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.Height, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.width(4.dp)); Text(text = record.height?.let { "${it}cm" } ?: "---", style = MaterialTheme.typography.labelSmall)
-        Spacer(modifier = Modifier.width(8.dp)); Icon(Icons.Rounded.Scale, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.width(4.dp)); Text(text = record.weight?.let { "${it}kg" } ?: "---", style = MaterialTheme.typography.labelSmall)
-        Spacer(modifier = Modifier.width(8.dp)); Text(text = "${stringResource(HealthThresholds.HEALTH_LABEL_BMI)}: ${if (bmi > 0) "%.1f".format(bmi) else "---"}", style = MaterialTheme.typography.labelSmall)
-        if (bmi > 0) { val (bmiLabel, alertLevel) = record.getBmiResult(context); Spacer(modifier = Modifier.width(2.dp)); Text(text = "($bmiLabel)", fontSize = 10.sp, color = if (alertLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red) }
+        Icon(
+            Icons.Rounded.Height,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = record.height?.let { "${it}cm" } ?: "---",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            Icons.Rounded.Scale,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = record.weight?.let { "${it}kg" } ?: "---",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "${stringResource(HealthThresholds.HEALTH_LABEL_BMI)}: ${if (bmi > 0) "%.1f".format(bmi) else "---"}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        if (bmi > 0) {
+            val (bmiLabel, alertLevel) = record.getBmiResult(context)
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = "($bmiLabel)",
+                fontSize = 10.sp,
+                color = if (alertLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red
+            )
+        }
     }
 }
 
@@ -508,32 +565,79 @@ fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
     val (gStatus, gLevel) = record.getGlucoseResult(context)
     val (hStatus, hLevel) = record.getHbA1cResult(context)
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "${stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}", style = MaterialTheme.typography.labelSmall)
-        if (record.glucose != null) { Spacer(modifier = Modifier.width(2.dp)); Text(text = "($gStatus)", fontSize = 10.sp, color = if (gLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red, fontWeight = if (gLevel != HealthThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal) }
-        Spacer(modifier = Modifier.width(8.dp)); Text(text = "${stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)}: ${record.hba1c?.let { "$it%" } ?: "---"}", style = MaterialTheme.typography.labelSmall)
-        if (record.hba1c != null) { Spacer(modifier = Modifier.width(2.dp)); Text(text = "($hStatus)", fontSize = 10.sp, color = if (hLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red, fontWeight = if (hLevel != HealthThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal) }
+        Text(
+            text = "${stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)}: ${record.glucose?.let { "$it mg/dL" } ?: "---"}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        if (record.glucose != null) {
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = "($gStatus)",
+                fontSize = 10.sp,
+                color = if (gLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red,
+                fontWeight = if (gLevel != HealthThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "${stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)}: ${record.hba1c?.let { "$it%" } ?: "---"}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        if (record.hba1c != null) {
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = "($hStatus)",
+                fontSize = 10.sp,
+                color = if (hLevel == HealthThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red,
+                fontWeight = if (hLevel != HealthThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal
+            )
+        }
     }
 }
 
 @Composable
 fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
     Column {
-        if (!record.title.isNullOrBlank()) Text(text = record.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(modifier = Modifier.height(4.dp)); Text(text = record.condition ?: "", style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        if (!record.title.isNullOrBlank()) {
+            Text(
+                text = record.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            if (hasPhoto) { Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真あり", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)); Spacer(modifier = Modifier.width(4.dp)) }
-            Text(text = "記録者: ${record.author}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(
+            text = record.condition ?: "",
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (hasPhoto) {
+                Icon(
+                    imageVector = Icons.Rounded.AddAPhoto,
+                    contentDescription = "写真あり",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+            Text(
+                text = "記録者: ${record.author}",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.Gray
+            )
         }
     }
 }
 
-//@Composable
-//fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
-//    val barHeight = 60.dp; val density = LocalDensity.current; val viewportHeight = with(density) { scrollState.viewportSize.toDp() }; val maxOffset = viewportHeight - barHeight; val scrollFraction by remember { derivedStateOf { if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f } }; val isBottomSelected by remember { derivedStateOf { scrollState.value > (scrollState.maxValue / 2) } }
-//    Column(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) { repeat(2) { index -> val isSelected = if (index == 0) !isBottomSelected else isBottomSelected; Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))) } }; Box(modifier = Modifier.width(4.dp).height(barHeight).align(Alignment.TopEnd).offset(y = maxOffset * scrollFraction).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
-//
-//}
 @Composable
 fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
     val barHeight = 60.dp
@@ -670,13 +774,47 @@ fun VitalRecordItemContent(record: BpAndPulse) {
 }
 
 @Composable
-fun VitalStatusIndicator(label: String, isActive: Boolean) { Text(text = label, style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal), color = if (isActive) MaterialTheme.colorScheme.error else Color.LightGray.copy(alpha = 0.6f)) }
+fun VitalStatusIndicator(label: String, isActive: Boolean) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal
+        ),
+        color = if (isActive) MaterialTheme.colorScheme.error else Color.LightGray.copy(alpha = 0.6f)
+    )
+}
 
 @Composable
-fun EmptyState(message: String, description: String? = null, icon: ImageVector) { Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)); Spacer(modifier = Modifier.height(16.dp)); Text(text = message, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline); if (description != null) { Spacer(modifier = Modifier.height(8.dp)); Text(text = description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f), textAlign = TextAlign.Center) } } }
-
-@Composable
-fun UnifiedRecordScreenPreview() { MaterialTheme { Text("Preview") } }
+fun EmptyState(message: String, description: String? = null, icon: ImageVector) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+        if (description != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
 
 /**
  * タブレット・横向き時に右側に表示する所見メモ詳細ペイン

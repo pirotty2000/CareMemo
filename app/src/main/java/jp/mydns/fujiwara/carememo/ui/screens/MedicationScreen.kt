@@ -172,25 +172,21 @@ fun MedicationScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 月の選択 (ヘッダーへ移動したためここでは非表示)
-            // MonthSelector(...)
-
             if (isExpanded) {
                 // --- タブレット・横向き: 2カラムレイアウト ---
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     // 左側: カレンダー
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        //Text("カレンダー入力", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         CalendarGrid(
                             yearMonth = selectedMonth,
                             recordsByDate = recordsByDate,
                             onDayClick = { date -> showDialog = date }
                         )
-                        Text(
-                            text = "※ 日付をタップして編集",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+//                        Text(
+//                            text = "※ 日付をタップして編集",
+//                            style = MaterialTheme.typography.bodySmall,
+//                            color = MaterialTheme.colorScheme.onSurfaceVariant
+//                        )
                     }
                     // 右側: 履歴（テーブル）
                     Column(modifier = Modifier.weight(1.2f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -427,7 +423,7 @@ fun MedicationHistoryTable(
                 ) {
                     // 日(曜日)
                     Text(
-                        text = "${day}日(${dayOfWeekText})",
+                        text = "${day}日($dayOfWeekText)",
                         modifier = Modifier.weight(1.5f),
                         textAlign = TextAlign.Center,
                         color = textColor,
