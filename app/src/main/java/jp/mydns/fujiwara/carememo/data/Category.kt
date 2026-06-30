@@ -23,32 +23,27 @@ import jp.mydns.fujiwara.carememo.R
  *    - グラフ表示や文字列検索は行わない
  */
 enum class Category(
-    val displayName: String,
     val displayNameRes: Int,
     val hasGraph: Boolean = true,
     val hasOption: Boolean = false
 ) {
     /** 身長・体重 (A) */
     HEIGHT_AND_WEIGHT(
-        displayName = "身長・体重",
         displayNameRes = R.string.category_height_weight
     ),
 
     /** バイタル (A) */
     BP_AND_PULSE(
-        displayName = "バイタル",
         displayNameRes = R.string.category_vital
     ),
 
     /** 血糖値・HbA1c (A) */
     GLUCOSE_AND_HBA1C(
-        displayName = "血糖値・HbA1c",
         displayNameRes = R.string.category_glucose
     ),
 
     /** 所見メモ (B) */
     CONDITION_AT_VISIT(
-        displayName = "所見メモ",
         displayNameRes = R.string.category_condition,
         hasGraph = false,
         hasOption = true
@@ -56,7 +51,6 @@ enum class Category(
 
     /** 服薬管理 (C) */
     MEDICATION(
-        displayName = "服薬管理",
         displayNameRes = R.string.category_medication,
         hasGraph = false
     );
