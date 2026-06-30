@@ -145,7 +145,7 @@ class PersonConditionViewModel(
                 if (uri.scheme == "file" || uri.scheme == "content") {
                     try {
                         context.contentResolver.delete(uri, null, null)
-                    } catch (ignore: Exception) {
+                    } catch (_: Exception) {
                         uri.path?.let { File(it).delete() }
                     }
                 }
@@ -179,7 +179,7 @@ class PersonConditionViewModel(
                     if (uri.scheme == "file" || uri.scheme == "content") {
                         try {
                             context.contentResolver.delete(uri, null, null)
-                        } catch (ignore: Exception) {
+                        } catch (_: Exception) {
                             uri.path?.let { File(it).delete() }
                         }
                     }

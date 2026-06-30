@@ -15,7 +15,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -32,9 +31,6 @@ class HealthRecordViewModel(
     personRepository: PersonRepository,
     userSettingsRepository: UserSettingsRepository
 ) : PersonBaseViewModel(personRepository, userSettingsRepository) {
-
-    private val _isProcessing = MutableStateFlow(false)
-    val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
     private val _currentCategory = MutableStateFlow<Category?>(null)
 
@@ -82,14 +78,11 @@ class HealthRecordViewModel(
         if (record == null) return
         viewModelScope.launch {
             try {
-                _isProcessing.value = true
                 val isUpdate = if (record is HistoryRecord) record.id != 0 else false
                 performSave(record)
                 showSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました")
             } catch (e: Exception) {
                 showError("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}")
-            } finally {
-                _isProcessing.value = false
             }
         }
     }

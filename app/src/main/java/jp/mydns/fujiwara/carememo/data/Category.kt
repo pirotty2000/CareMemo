@@ -25,10 +25,8 @@ import jp.mydns.fujiwara.carememo.R
 enum class Category(
     val displayName: String,
     val displayNameRes: Int,
-    val hasGraph: Boolean = true,   // (A)の性質
-    val hasSearch: Boolean = false, // (B)の性質
-    val hasOption: Boolean = false, // (B)の拡張性
-    val hasCalendar: Boolean = false // (C)の性質
+    val hasGraph: Boolean = true,
+    val hasOption: Boolean = false
 ) {
     /** 身長・体重 (A) */
     HEIGHT_AND_WEIGHT(
@@ -53,7 +51,6 @@ enum class Category(
         displayName = "所見メモ",
         displayNameRes = R.string.category_condition,
         hasGraph = false,
-        hasSearch = true,
         hasOption = true
     ),
 
@@ -61,8 +58,7 @@ enum class Category(
     MEDICATION(
         displayName = "服薬管理",
         displayNameRes = R.string.category_medication,
-        hasGraph = false,
-        hasCalendar = true
+        hasGraph = false
     );
 
     /**

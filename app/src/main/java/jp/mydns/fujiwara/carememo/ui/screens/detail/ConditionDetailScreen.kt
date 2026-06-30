@@ -38,7 +38,6 @@ fun ConditionDetailScreen(
     // データの監視
     val records by conditionViewModel.filteredRecords.collectAsState()
     val searchQuery by conditionViewModel.searchQuery.collectAsState()
-    val isProcessing by conditionViewModel.isProcessing.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()

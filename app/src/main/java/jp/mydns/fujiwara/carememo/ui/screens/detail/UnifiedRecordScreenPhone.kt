@@ -16,18 +16,13 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.*
 import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnifiedRecordScreenPhone(
-    viewModel: PersonDetailViewModel,
-    conditionViewModel: PersonConditionViewModel,
     healthViewModel: HealthRecordViewModel,
     personId: Int,
     currentCategory: Category,
-    onCategoryChange: (Category) -> Unit,
     records: List<Any>,
     conditionPhotoMap: Map<Int, Boolean>,
     currentPerson: Person?,
@@ -152,7 +147,6 @@ fun UnifiedRecordScreenPhone(
                     onExpandGraph = { index ->
                         onNavigateToGraphExpansion(personId, currentCategory, index)
                     },
-                    viewModel = viewModel,
                     healthViewModel = healthViewModel,
                     isAnyDialogOpen = recordToDelete != null
                 )

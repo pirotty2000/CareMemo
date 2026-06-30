@@ -40,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +92,7 @@ fun BatchInputScreen(
                         launch { scrollState.animateScrollTo(0) }
                         focusManager.clearFocus()
                         
-                        delay(400)
+                        delay(400.milliseconds)
                         showSuccessEffect = false
                     }
                 }

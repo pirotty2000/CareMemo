@@ -81,12 +81,9 @@ fun UnifiedRecordScreen(
 
     if (isExpanded) {
         UnifiedRecordScreenTablet(
-            viewModel = viewModel,
-            conditionViewModel = conditionViewModel,
             healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
-            onCategoryChange = { currentCategory = it },
             records = records,
             conditionPhotoMap = conditionPhotoMap,
             currentPerson = currentPerson,
@@ -116,12 +113,9 @@ fun UnifiedRecordScreen(
         )
     } else {
         UnifiedRecordScreenPhone(
-            viewModel = viewModel,
-            conditionViewModel = conditionViewModel,
             healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
-            onCategoryChange = { currentCategory = it },
             records = records,
             conditionPhotoMap = conditionPhotoMap,
             currentPerson = currentPerson,

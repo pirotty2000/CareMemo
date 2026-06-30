@@ -34,7 +34,6 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import java.time.Instant
 import java.time.ZoneId
 
@@ -455,7 +454,6 @@ fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
  */
 @Composable
 fun HealthRecordDetailPane(
-    viewModel: PersonDetailViewModel,
     healthViewModel: HealthRecordViewModel,
     personId: Int,
     category: Category,

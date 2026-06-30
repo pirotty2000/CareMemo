@@ -20,7 +20,6 @@ import jp.mydns.fujiwara.carememo.ui.components.HealthRecordDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.UnifiedHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 
 @Composable
 fun UnifiedRecordContent(
@@ -36,7 +35,6 @@ fun UnifiedRecordContent(
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
-    viewModel: PersonDetailViewModel,
     healthViewModel: HealthRecordViewModel,
     isAnyDialogOpen: Boolean
 ) {
@@ -59,7 +57,6 @@ fun UnifiedRecordContent(
             Box(modifier = Modifier.weight(1.5f)) {
                 if (selectedRecordId != -1) {
                     HealthRecordDetailPane(
-                        viewModel = viewModel,
                         healthViewModel = healthViewModel,
                         personId = personId,
                         category = currentCategory,
@@ -94,7 +91,6 @@ fun UnifiedRecordContent(
         if (selectedRecordId != -1) {
             BackHandler { onSelectedRecordIdChange(-1) }
             HealthRecordDetailPane(
-                viewModel = viewModel,
                 healthViewModel = healthViewModel,
                 personId = personId,
                 category = currentCategory,
