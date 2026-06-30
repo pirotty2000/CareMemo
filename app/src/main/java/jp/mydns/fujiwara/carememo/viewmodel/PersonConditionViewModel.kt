@@ -5,10 +5,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
-import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
-import jp.mydns.fujiwara.carememo.data.ConditionPhoto
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,22 +25,51 @@ import java.io.File
 import java.time.Instant
 
 /**
- * 所見メモ（体調記録）固有のロジック（写真処理など）を扱う ViewModel
+ * 所見メモ（体調記録）固有のロジック(B系統)を扱う ViewModel。
+ * 所見テキストデータの取得・保存・削除と、付随する写真処理を担当します。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonConditionViewModel(
-    repository: CareMemoRepository,
+    private val conditionRepository: ConditionRepository,
+    personRepository: PersonRepository,
     userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(repository, userSettingsRepository) {
+) : PersonBaseViewModel(personRepository, userSettingsRepository) {
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
+
+    /**
+     * 現在の利用者に紐づく所見メモ一覧
+     */
+    val records: StateFlow<List<ConditionAtVisit>> = _currentPerson
+        .flatMapLatest { person ->
+            if (person == null) flowOf(emptyList())
+            else conditionRepository.getConditionAtVisitByPersonId(person.id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /**
+     * 検索クエリでフィルタリングされた所見メモ一覧
+     */
+    val filteredRecords: StateFlow<List<ConditionAtVisit>> = combine(records, _searchQuery) { recs, query ->
+        if (query.isBlank()) recs
+        else {
+            recs.filter { record ->
+                val titleMatch = record.title?.contains(query, ignoreCase = true) == true
+                val conditionMatch = record.condition?.contains(query, ignoreCase = true) == true
+                titleMatch || conditionMatch
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * 選択された所見メモに紐づく写真一覧
      */
     val currentConditionPhotos: StateFlow<List<ConditionPhoto>> = _selectedConditionId
         .flatMapLatest { id ->
-            if (id != null) repository.getConditionPhotosByConditionId(id)
+            if (id != null) conditionRepository.getConditionPhotosByConditionId(id)
             else flowOf(emptyList())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -48,14 +77,14 @@ class PersonConditionViewModel(
     /**
      * 所見メモIDと「写真の有無」のマップ（一覧表示でのアイコン制御用）
      */
-    fun getConditionPhotoMap(records: StateFlow<List<Any>>): StateFlow<Map<Int, Boolean>> {
-        return combine(_currentPerson, records) { person, recs ->
+    fun getConditionPhotoMap(recordsFlow: StateFlow<List<*>>): StateFlow<Map<Int, Boolean>> {
+        return combine(_currentPerson, recordsFlow) { person, recs ->
             person to recs
         }.flatMapLatest { (person, recs) ->
-            if (person == null || recs.isEmpty() || recs.first() !is ConditionAtVisit) {
+            if (person == null || recs.isEmpty()) {
                 flowOf(emptyMap())
             } else {
-                repository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
+                conditionRepository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
                     recs.filterIsInstance<ConditionAtVisit>().associate { memo ->
                         memo.id to photos.any { it.conditionId == memo.id }
                     }
@@ -69,6 +98,42 @@ class PersonConditionViewModel(
 
     fun setSelectedConditionId(id: Int?) {
         _selectedConditionId.value = id
+    }
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    /**
+     * 所見メモを保存または更新します。
+     */
+    fun saveRecord(record: ConditionAtVisit) {
+        viewModelScope.launch {
+            try {
+                _isProcessing.value = true
+                val isUpdate = record.id != 0
+                conditionRepository.insertConditionAtVisit(record)
+                showSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました")
+            } catch (e: Exception) {
+                showError("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}")
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 所見メモを削除します。
+     */
+    fun deleteRecord(record: ConditionAtVisit) {
+        viewModelScope.launch {
+            try {
+                conditionRepository.deleteConditionAtVisit(record)
+                showSnackbar("記録を削除しました")
+            } catch (e: Exception) {
+                showError("削除エラー", "データの削除に失敗しました: ${e.localizedMessage}")
+            }
+        }
     }
 
     /**
@@ -108,7 +173,7 @@ class PersonConditionViewModel(
                         capturedAt = Instant.now(),
                         caption = caption
                     )
-                    repository.insertConditionPhoto(photo)
+                    conditionRepository.insertConditionPhoto(photo)
                     
                     // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
                     if (uri.scheme == "file" || uri.scheme == "content") {
@@ -137,7 +202,7 @@ class PersonConditionViewModel(
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
         viewModelScope.launch {
             try {
-                repository.deleteConditionPhotoById(photo.id)
+                conditionRepository.deleteConditionPhotoById(photo.id)
                 ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
                 showSnackbar("写真を削除しました")
             } catch (e: Exception) {
@@ -147,17 +212,18 @@ class PersonConditionViewModel(
     }
 
     suspend fun getAllPhotosForPerson(personId: Int): List<ConditionPhoto> {
-        return repository.getAllPhotosByPersonId(personId)
+        return conditionRepository.getAllPhotosByPersonId(personId)
     }
 
     class Factory(
-        private val repository: CareMemoRepository,
+        private val personRepository: PersonRepository,
+        private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonConditionViewModel::class.java)) {
-                return PersonConditionViewModel(repository, userSettingsRepository) as T
+                return PersonConditionViewModel(conditionRepository, personRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

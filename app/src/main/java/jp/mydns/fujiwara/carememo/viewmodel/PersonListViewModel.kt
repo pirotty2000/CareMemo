@@ -4,10 +4,11 @@ import android.database.sqlite.SQLiteConstraintException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ import kotlinx.coroutines.launch
  * 利用者一覧画面用の ViewModel
  */
 class PersonListViewModel(
-    private val repository: CareMemoRepository,
+    private val repository: PersonRepository,
+    private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
@@ -51,7 +53,7 @@ class PersonListViewModel(
     private val _personsWithMatchedConditions = _searchQuery
         .flatMapLatest { query ->
             if (query.isBlank()) flowOf(null)
-            else repository.getPersonIdsByConditionKeyword(query)
+            else conditionRepository.getPersonIdsByConditionKeyword(query)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -145,13 +147,14 @@ class PersonListViewModel(
     }
 
     class Factory(
-        private val repository: CareMemoRepository,
+        private val repository: PersonRepository,
+        private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonListViewModel::class.java)) {
-                return PersonListViewModel(repository, userSettingsRepository) as T
+                return PersonListViewModel(repository, conditionRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

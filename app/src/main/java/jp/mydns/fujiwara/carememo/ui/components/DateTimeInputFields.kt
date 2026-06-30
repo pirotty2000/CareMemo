@@ -83,7 +83,8 @@ fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputSt
 
 @Composable
 fun DateTimeInputFields(
-    state: DateTimeInputState
+    state: DateTimeInputState,
+    autoFocusHour: Boolean = true
 ) {
     DateTimeInputFields(
         year = state.year.value,
@@ -99,7 +100,8 @@ fun DateTimeInputFields(
         monthFocusRequester = state.monthFocusRequester,
         dayFocusRequester = state.dayFocusRequester,
         hourFocusRequester = state.hourFocusRequester,
-        minuteFocusRequester = state.minuteFocusRequester
+        minuteFocusRequester = state.minuteFocusRequester,
+        autoFocusHour = autoFocusHour
     )
 }
 
@@ -118,7 +120,8 @@ fun DateTimeInputFields(
     monthFocusRequester: FocusRequester,
     dayFocusRequester: FocusRequester,
     hourFocusRequester: FocusRequester,
-    minuteFocusRequester: FocusRequester
+    minuteFocusRequester: FocusRequester,
+    autoFocusHour: Boolean = true
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -155,7 +158,7 @@ fun DateTimeInputFields(
                 maxLength = 2,
                 label = "日",
                 modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
-                nextFocusRequester = hourFocusRequester
+                nextFocusRequester = if (autoFocusHour) hourFocusRequester else null
             )
             DateTimeUnitField(
                 value = hour,

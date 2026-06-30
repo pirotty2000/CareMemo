@@ -1,9 +1,8 @@
 package jp.mydns.fujiwara.carememo
 
 import android.app.Application
-import jp.mydns.fujiwara.carememo.data.AppDatabase
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.repository.*
 
 class CareMemoApplication : Application() {
     // データベースのインスタンス取得
@@ -14,9 +13,9 @@ class CareMemoApplication : Application() {
         UserSettingsRepository(this)
     }
 
-    // リポジトリのインスタンス取得
-    val repository: CareMemoRepository by lazy { 
-        CareMemoRepository(
+    // (共通) 利用者情報リポジトリ
+    val personRepository: PersonRepository by lazy {
+        PersonRepository(
             database,
             database.personDao(),
             database.heightAndWeightDao(),
@@ -25,6 +24,31 @@ class CareMemoApplication : Application() {
             database.conditionAtVisitDao(),
             database.conditionPhotoDao(),
             database.medicationRecordDao()
-        ) 
+        )
+    }
+
+    // (A系統) 健康記録リポジトリ
+    val healthRepository: HealthRepository by lazy {
+        HealthRepository(
+            database,
+            database.heightAndWeightDao(),
+            database.bpAndPulseDao(),
+            database.glucoseAndHbA1cDao()
+        )
+    }
+
+    // (B系統) 所見メモ・写真リポジトリ
+    val conditionRepository: ConditionRepository by lazy {
+        ConditionRepository(
+            database.conditionAtVisitDao(),
+            database.conditionPhotoDao()
+        )
+    }
+
+    // (C系統) 服薬管理リポジトリ
+    val medicationRepository: MedicationRepository by lazy {
+        MedicationRepository(
+            database.medicationRecordDao()
+        )
     }
 }

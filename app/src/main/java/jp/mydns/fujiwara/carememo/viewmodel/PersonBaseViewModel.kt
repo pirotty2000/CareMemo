@@ -1,10 +1,10 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
  * 詳細画面や服薬画面など、特定の利用者をコンテキストに持つ画面で使用します。
  */
 abstract class PersonBaseViewModel(
-    protected val repository: CareMemoRepository,
+    protected val repository: PersonRepository,
     userSettingsRepository: UserSettingsRepository
 ) : BaseViewModel(userSettingsRepository) {
 

@@ -6,9 +6,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -26,7 +28,8 @@ import java.time.Instant
 class PersonListViewModelTest {
 
     // Mockオブジェクトの作成
-    private val repository = mockk<CareMemoRepository>(relaxed = true)
+    private val personRepository = mockk<PersonRepository>(relaxed = true)
+    private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
 
     private lateinit var viewModel: PersonListViewModel
@@ -48,16 +51,13 @@ class PersonListViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         // Repositoryの各メソッドが返すFlowのデフォルト値を設定
-        every { repository.getAllPersons() } returns flowOf(emptyList())
-        every { repository.getDeletedPersons() } returns flowOf(emptyList())
-        every { repository.getPersonIdsWithHeightWeight() } returns flowOf(emptyList())
-        every { repository.getPersonIdsWithPulse() } returns flowOf(emptyList())
-        every { repository.getPersonIdsWithBp() } returns flowOf(emptyList())
-        every { repository.getPersonIdsWithGlucose() } returns flowOf(emptyList())
-        every { repository.getPersonIdsWithCondition() } returns flowOf(emptyList())
+        every { personRepository.getAllPersons() } returns flowOf(emptyList())
+        every { personRepository.getDeletedPersons() } returns flowOf(emptyList())
+        every { personRepository.getPersonCategorySummaries() } returns flowOf(emptyMap())
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
+        every { conditionRepository.getPersonIdsByConditionKeyword(any()) } returns flowOf(emptyList())
 
-        viewModel = PersonListViewModel(repository, userSettingsRepository)
+        viewModel = PersonListViewModel(personRepository, conditionRepository, userSettingsRepository)
     }
 
     @After
@@ -72,24 +72,23 @@ class PersonListViewModelTest {
         viewModel.addPerson(testPerson)
 
         // 検証: insertPersonが呼ばれたか
-        coVerify { repository.insertPerson(testPerson) }
+        coVerify { personRepository.insertPerson(testPerson) }
     }
 
     @Test
-    fun `既に登録済みの名前を追加しようとした場合、errorFlowにエラーメッセージがセットされること`() = runTest {
+    fun `既に登録済みの名前を追加しようとした場合、uiEventFlowにErrorDialogイベントが流れること`() = runTest {
         // insertPersonが呼ばれたらSQLiteConstraintExceptionを投げるように設定
-        coEvery { repository.insertPerson(any()) } throws SQLiteConstraintException()
+        coEvery { personRepository.insertPerson(any()) } throws SQLiteConstraintException()
 
-        // Turbineライブラリを使用してStateFlowをテスト
-        viewModel.errorFlow.test {
-            // 初期値はnull
-            assertEquals(null, awaitItem())
-
+        // Turbineライブラリを使用してSharedFlowをテスト
+        viewModel.uiEventFlow.test {
             // 実行
             viewModel.addPerson(testPerson)
 
-            // エラーメッセージがセットされることを確認
-            assertEquals("この利用者は既に登録されています。", awaitItem())
+            // エラーイベントが流れることを確認
+            val event = awaitItem()
+            assertTrue(event is BaseViewModel.UiEvent.ShowErrorDialog)
+            assertEquals("登録エラー", (event as BaseViewModel.UiEvent.ShowErrorDialog).title)
         }
     }
 
@@ -99,15 +98,6 @@ class PersonListViewModelTest {
         viewModel.logicalDeletePerson(testPerson)
 
         // 検証
-        coVerify { repository.logicalDeletePerson(testPerson.id) }
-    }
-
-    @Test
-    fun `setNameMaskingEnabledを実行したとき、UserSettingsRepositoryのメソッドが呼ばれること`() = runTest {
-        // 実行
-        viewModel.setNameMaskingEnabled(true)
-
-        // 検証
-        coVerify { userSettingsRepository.setNameMaskingEnabled(true) }
+        coVerify { personRepository.logicalDeletePerson(testPerson.id) }
     }
 }

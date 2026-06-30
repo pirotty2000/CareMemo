@@ -1,4 +1,4 @@
-package jp.mydns.fujiwara.carememo.ui.screens
+package jp.mydns.fujiwara.carememo.ui.screens.detail.sub
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

@@ -3,9 +3,10 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.repository.MedicationRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,9 +25,10 @@ import java.time.YearMonth
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MedicationViewModel(
-    repository: CareMemoRepository,
+    private val medicationRepository: MedicationRepository,
+    personRepository: PersonRepository,
     userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(repository, userSettingsRepository) {
+) : PersonBaseViewModel(personRepository, userSettingsRepository) {
 
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
@@ -41,7 +43,7 @@ class MedicationViewModel(
         person to month
     }.flatMapLatest { (person, month) ->
         if (person != null) {
-            repository.getMedicationRecordsByMonth(person.id, month.toString())
+            medicationRepository.getMedicationRecordsByMonth(person.id, month.toString())
         } else {
             flowOf(emptyList())
         }
@@ -51,7 +53,7 @@ class MedicationViewModel(
      * 利用者の全服薬記録 (PDF出力用)
      */
     val allRecords: StateFlow<List<MedicationRecord>> = _currentPerson.flatMapLatest { person ->
-        person?.let { repository.getMedicationRecords(it.id) } ?: flowOf(emptyList())
+        person?.let { medicationRepository.getMedicationRecords(it.id) } ?: flowOf(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
@@ -80,7 +82,7 @@ class MedicationViewModel(
     fun saveMedicationRecord(record: MedicationRecord) {
         viewModelScope.launch {
             try {
-                repository.insertMedicationRecord(record)
+                medicationRepository.insertMedicationRecord(record)
             } catch (e: Exception) {
                 showError("保存エラー", "服薬記録の保存に失敗しました: ${e.localizedMessage}")
             }
@@ -93,7 +95,7 @@ class MedicationViewModel(
     fun deleteMedicationRecord(record: MedicationRecord) {
         viewModelScope.launch {
             try {
-                repository.deleteMedicationRecord(record)
+                medicationRepository.deleteMedicationRecord(record)
             } catch (e: Exception) {
                 showError("削除エラー", "服薬記録の削除に失敗しました: ${e.localizedMessage}")
             }
@@ -101,13 +103,14 @@ class MedicationViewModel(
     }
 
     class Factory(
-        private val repository: CareMemoRepository,
+        private val personRepository: PersonRepository,
+        private val medicationRepository: MedicationRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MedicationViewModel::class.java)) {
-                return MedicationViewModel(repository, userSettingsRepository) as T
+                return MedicationViewModel(medicationRepository, personRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

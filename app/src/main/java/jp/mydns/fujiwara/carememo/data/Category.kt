@@ -63,5 +63,16 @@ enum class Category(
         displayNameRes = R.string.category_medication,
         hasGraph = false,
         hasCalendar = true
-    )
+    );
+
+    /**
+     * このカテゴリを表示するためのナビゲーションルートを生成する
+     */
+    fun getRoute(personId: Int, query: String = ""): String {
+        return when (this) {
+            MEDICATION -> "medication/$personId"
+            CONDITION_AT_VISIT -> "observation/$personId?query=$query"
+            else -> "detail/$personId/${this.name}?query=$query"
+        }
+    }
 }

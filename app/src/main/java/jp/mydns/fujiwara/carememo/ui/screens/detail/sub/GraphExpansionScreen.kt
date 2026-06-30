@@ -1,4 +1,4 @@
-package jp.mydns.fujiwara.carememo.ui.screens
+package jp.mydns.fujiwara.carememo.ui.screens.detail.sub
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
@@ -61,7 +61,7 @@ fun GraphExpansionScreen(
     }
 
     val listState = rememberLazyListState()
-    var highlightedIndex by remember { mutableIntStateOf(initialGraphIndex) }
+    var highlightedIndex by remember { mutableStateOf(initialGraphIndex) }
 
     // 初期スクロールとハイライト
     LaunchedEffect(records) {

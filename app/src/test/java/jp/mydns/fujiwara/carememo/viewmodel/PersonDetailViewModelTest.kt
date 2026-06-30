@@ -3,11 +3,10 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import app.cash.turbine.test
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.coVerify
-import jp.mydns.fujiwara.carememo.data.CareMemoRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -24,7 +23,7 @@ import java.time.Instant
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonDetailViewModelTest {
 
-    private val repository = mockk<CareMemoRepository>(relaxed = true)
+    private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private lateinit var viewModel: PersonDetailViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -42,9 +41,9 @@ class PersonDetailViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
-        every { repository.getPersonById(any()) } returns flowOf(testPerson)
+        every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
         
-        viewModel = PersonDetailViewModel(repository, userSettingsRepository)
+        viewModel = PersonDetailViewModel(personRepository, userSettingsRepository)
     }
 
     @After
@@ -62,10 +61,9 @@ class PersonDetailViewModelTest {
     }
 
     @Test
-    fun `loadRecordsを実行したとき、対応するカテゴリのデータ取得メソッドが呼ばれること`() = runTest {
-        viewModel.loadRecords(1, Category.BP_AND_PULSE)
-
-        // 検証: リポジトリの該当メソッドが呼ばれたか
-        coVerify { repository.getBpAndPulseByPersonId(1) }
+    fun `setCategoryを実行したとき、currentCategoryが更新されること`() = runTest {
+        viewModel.setCategory(Category.BP_AND_PULSE)
+        
+        assertEquals(Category.BP_AND_PULSE, viewModel.currentCategory.value)
     }
 }

@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -84,6 +85,7 @@ import java.time.ZoneId
 fun MainScreen(
     viewModel: PersonListViewModel,
     onNavigateToDetail: (Int, Category) -> Unit,
+    onNavigateToBatchInput: (Int) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val userList by viewModel.userList.collectAsState()
@@ -188,6 +190,10 @@ fun MainScreen(
                 onCategorySelect = { category -> 
                     showSheet = false
                     onNavigateToDetail(selectedPerson!!.id, category) 
+                },
+                onBatchInputSelect = {
+                    showSheet = false
+                    onNavigateToBatchInput(selectedPerson!!.id)
                 }
             )
         }
@@ -417,9 +423,30 @@ fun MainScreenContent(
 }
 
 @Composable
-fun CategorySelectionSheet(personName: String, onCategorySelect: (Category) -> Unit) {
+fun CategorySelectionSheet(
+    personName: String,
+    onCategorySelect: (Category) -> Unit,
+    onBatchInputSelect: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = stringResource(R.string.category_selection_title, personName), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
+        
+        // 【一括入力】ボタン
+        Button(
+            onClick = onBatchInputSelect,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            Icon(Icons.Rounded.EditNote, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("健康記録の一括入力", style = MaterialTheme.typography.titleMedium)
+        }
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
         Category.entries.forEach { category ->
             Button(onClick = { onCategorySelect(category) }, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)) {
                 Text(stringResource(category.displayNameRes), style = MaterialTheme.typography.bodyLarge)
