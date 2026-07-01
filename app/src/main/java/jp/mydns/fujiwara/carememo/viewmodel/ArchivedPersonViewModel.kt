@@ -43,20 +43,6 @@ class ArchivedPersonViewModel(
         }
     }
 
-    /**
-     * 利用終了者全員のデータを物理削除します（完全に抹消）。
-     */
-    fun deleteAllArchivedPersons() {
-        viewModelScope.launch {
-            try {
-                repository.deleteEndedPersons()
-                showSnackbar("利用終了者のデータを完全に削除しました")
-            } catch (e: Exception) {
-                showError("削除エラー", "データの完全削除に失敗しました: ${e.localizedMessage}")
-            }
-        }
-    }
-
     class Factory(
         private val repository: ArchivedPersonRepository,
         private val userSettingsRepository: UserSettingsRepository

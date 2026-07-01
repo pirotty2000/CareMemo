@@ -41,7 +41,7 @@ data class PersonUiState(
 class PersonListViewModel(
     private val repository: PersonRepository,
     private val archivedRepository: ArchivedPersonRepository,
-    private val summaryRepository: PersonSummaryRepository,
+    summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
