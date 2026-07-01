@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail.sub
 
+/**
+ * Screen : ConditionPhotoPreviewScreen
+ *
+ * 【画面名】
+ * 写真撮影・選択プレビュー画面
+ *
+ * 【役割】
+ * カメラで撮影した直後、またはギャラリーから選択した直後の写真をプレビューし、
+ * 所見メモへの保存を確定させる、あるいは再撮影・再選択を選択するための画面。
+ *
+ * 【主な機能】
+ * ・即時プレビュー：取り込まれた画像の構図やピントの最終確認。
+ * ・決定/キャンセル操作：写真の採用・不採用の選択。
+ *
+ * 【遷移】
+ * ← PersonConditionScreen（写真取得後に自動遷移）
+ *
+ * 【備考】
+ * 誤った写真を保存することを防ぐための確認ステップとして機能する。
+ */
+
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*

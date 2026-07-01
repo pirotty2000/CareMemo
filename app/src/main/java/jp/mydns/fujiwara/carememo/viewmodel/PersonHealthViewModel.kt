@@ -10,6 +10,7 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,15 +24,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * 健康記録（身長体重、バイタル、血糖値）固有のロジックを扱う ViewModel。
+ * 利用者健康記録（身長体重、バイタル、血糖値）固有のロジックを扱う ViewModel。
  * これら3つのカテゴリ(A系統)の取得・保存・削除を担当します。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class HealthRecordViewModel(
+class PersonHealthViewModel(
     private val healthRepository: HealthRepository,
     personRepository: PersonRepository,
+    summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(personRepository, userSettingsRepository) {
+) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
 
     private val _currentCategory = MutableStateFlow<Category?>(null)
 
@@ -118,13 +120,14 @@ class HealthRecordViewModel(
 
     class Factory(
         private val personRepository: PersonRepository,
+        private val summaryRepository: PersonSummaryRepository,
         private val healthRepository: HealthRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(HealthRecordViewModel::class.java)) {
-                return HealthRecordViewModel(healthRepository, personRepository, userSettingsRepository) as T
+            if (modelClass.isAssignableFrom(PersonHealthViewModel::class.java)) {
+                return PersonHealthViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

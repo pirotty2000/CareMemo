@@ -9,7 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
-import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
+import jp.mydns.fujiwara.carememo.data.repository.ArchivedPersonRepository
 import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
@@ -30,7 +31,8 @@ import java.io.OutputStream
  * 設定画面・バックアップ管理用の ViewModel
  */
 class SettingsViewModel(
-    private val personRepository: PersonRepository,
+    private val maintenanceRepository: AppMaintenanceRepository,
+    private val archivedPersonRepository: ArchivedPersonRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
@@ -75,7 +77,7 @@ class SettingsViewModel(
     private var pendingImportFile: File? = null
     private var pendingImportUri: Uri? = null
 
-    val deletedUserList: StateFlow<List<Person>> = personRepository.getDeletedPersons()
+    val deletedUserList: StateFlow<List<Person>> = archivedPersonRepository.getDeletedPersons()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -140,7 +142,7 @@ class SettingsViewModel(
     fun deleteEndedPersons() {
         viewModelScope.launch {
             try {
-                personRepository.deleteEndedPersons()
+                archivedPersonRepository.deleteEndedPersons()
                 sendUiEvent(UiEvent.ShowInfoDialog("完了", "利用終了者のデータを完全に抹消しました。"))
             } catch (e: Exception) {
                 showError("エラー", "データの抹消に失敗しました: ${e.localizedMessage}")
@@ -153,7 +155,7 @@ class SettingsViewModel(
             var tempDir: File? = null
             var tempZipFile: File? = null
             try {
-                val backup = personRepository.getBackupData()
+                val backup = maintenanceRepository.getBackupData()
                 val jsonString = json.encodeToString(backup)
                 tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
                 tempDir.mkdirs()
@@ -247,7 +249,7 @@ class SettingsViewModel(
                         // 直接JSONファイルとして処理
                         val jsonString = tempZipFile.readText()
                         val backup = json.decodeFromString<CareMemoBackup>(jsonString)
-                        personRepository.replaceAllData(backup)
+                        maintenanceRepository.replaceAllData(backup)
                         tempDir.deleteRecursively()
                         sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました。"))
                     }
@@ -279,7 +281,7 @@ class SettingsViewModel(
             
             val jsonString = jsonFile.readText()
             val backup = json.decodeFromString<CareMemoBackup>(jsonString)
-            personRepository.replaceAllData(backup)
+            maintenanceRepository.replaceAllData(backup)
             
             // 写真データの復元
             ImageUtils.clearPhotosDir(context)
@@ -307,7 +309,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 // データベースの全消去
-                personRepository.clearAllData()
+                maintenanceRepository.clearAllData()
                 // 写真ファイルの全消去
                 ImageUtils.clearPhotosDir(context)
 
@@ -319,13 +321,14 @@ class SettingsViewModel(
     }
 
     class Factory(
-        private val personRepository: PersonRepository,
+        private val maintenanceRepository: AppMaintenanceRepository,
+        private val archivedPersonRepository: ArchivedPersonRepository,
         private val userSettingsRepository: UserSettingsRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-                return SettingsViewModel(personRepository, userSettingsRepository) as T
+                return SettingsViewModel(maintenanceRepository, archivedPersonRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

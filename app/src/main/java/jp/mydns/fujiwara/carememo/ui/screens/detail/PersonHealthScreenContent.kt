@@ -1,5 +1,23 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail
 
+/**
+ * Screen : PersonHealthScreenContent
+ *
+ * 【画面名】
+ * 利用者健康記録画面（共通コンテンツ）
+ *
+ * 【役割】
+ * 健康記録（カテゴリA/C/D）で共通して使用されるUI部品や、カテゴリごとの入力・表示ロジックを管理する。
+ *
+ * 【主な機能】
+ * ・カテゴリ別表示：バイタル、血糖値、身体計測の各記録項目に応じた入力フォームの動的生成。
+ * ・グラフ統合：HealthGraphViewを用いた統計データの可視化。
+ * ・履歴統合：PersonHistoryListによる時系列データの表示と編集・削除アクションの提供。
+ *
+ * 【備考】
+ * Phone版とTablet版のレイアウトの差異を吸収し、記録データのハンドリングと表示ロジックを共通化している。
+ */
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,18 +34,18 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
+import jp.mydns.fujiwara.carememo.ui.components.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.HealthRecordDetailPane
-import jp.mydns.fujiwara.carememo.ui.components.UnifiedHistoryList
+import jp.mydns.fujiwara.carememo.ui.components.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
-import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @Composable
-fun UnifiedRecordContent(
+fun PersonHealthScreenContent(
     isExpanded: Boolean,
     personId: Int,
     records: List<Any>,
     currentCategory: Category,
-    conditionPhotoMap: Map<Int, Boolean>,
     preferredShowHistory: Boolean,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
     selectedRecordId: Int,
@@ -35,7 +53,7 @@ fun UnifiedRecordContent(
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
-    healthViewModel: HealthRecordViewModel,
+    healthViewModel: PersonHealthViewModel,
     isAnyDialogOpen: Boolean
 ) {
     if (isExpanded) {
@@ -43,15 +61,15 @@ fun UnifiedRecordContent(
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: 履歴リスト (比率 1)
             Box(modifier = Modifier.weight(1f)) {
-                UnifiedHistoryList(
+                PersonHistoryList(
                     records = records.filterIsInstance<HistoryRecord>(),
-                    category = currentCategory,
-                    conditionPhotoMap = conditionPhotoMap,
                     selectedRecordId = selectedRecordId,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = onDeleteSwipe,
                     isAnyDialogOpen = isAnyDialogOpen
-                )
+                ) { record ->
+                    HealthHistoryItemBody(category = currentCategory, record = record)
+                }
             }
             // 右側: グラフ または 詳細入力 (比率 1.5)
             Box(modifier = Modifier.weight(1.5f)) {
@@ -127,14 +145,14 @@ fun UnifiedRecordContent(
                 // コンテンツ表示
                 Box(modifier = Modifier.weight(1f)) {
                     if (preferredShowHistory) {
-                        UnifiedHistoryList(
+                        PersonHistoryList(
                             records = records.filterIsInstance<HistoryRecord>(),
-                            category = currentCategory,
-                            conditionPhotoMap = conditionPhotoMap,
                             onItemClick = onItemClick,
                             onDeleteSwipe = onDeleteSwipe,
                             isAnyDialogOpen = isAnyDialogOpen
-                        )
+                        ) { record ->
+                            HealthHistoryItemBody(category = currentCategory, record = record)
+                        }
                     } else {
                         val scrollState = rememberScrollState()
                         Box(modifier = Modifier.fillMaxSize()) {

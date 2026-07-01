@@ -33,20 +33,22 @@ import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
-import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import java.time.Instant
 import java.time.ZoneId
 
+/**
+ * 利用者情報の履歴リストを表示する汎用コンポーネント
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun UnifiedHistoryList(
+fun PersonHistoryList(
     records: List<HistoryRecord>,
-    category: Category,
-    conditionPhotoMap: Map<Int, Boolean>,
     selectedRecordId: Int = -1,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     isAnyDialogOpen: Boolean,
+    itemContent: @Composable (HistoryRecord) -> Unit
 ) {
     val groupedRecords = remember(records) {
         records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }
@@ -94,8 +96,7 @@ fun UnifiedHistoryList(
                     onDeleteSwipe = { onDeleteSwipe(record) },
                     isAnyDialogOpen = isAnyDialogOpen
                 ) {
-                    val hasOptionData = (category.hasOption && conditionPhotoMap[record.id] == true)
-                    HistoryItemBody(category, record, hasOptionData)
+                    itemContent(record)
                 }
                 HorizontalDivider(
                     thickness = 0.5.dp,
@@ -106,6 +107,9 @@ fun UnifiedHistoryList(
     }
 }
 
+/**
+ * 履歴アイテムの枠組み（スワイプ削除、選択状態の背景管理）
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryItemWrapper(
@@ -180,14 +184,16 @@ fun HistoryItemWrapper(
     }
 }
 
+/**
+ * カテゴリAの履歴内容の分岐描画
+ */
 @Composable
-fun HistoryItemBody(category: Category, record: HistoryRecord, hasOption: Boolean) {
+fun HealthHistoryItemBody(category: Category, record: HistoryRecord) {
     when (category) {
         Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalRecordItemContent(it) }
         Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseRecordItemContent(it) }
         Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightRecordItemContent(it) }
-        Category.CONDITION_AT_VISIT -> (record as? ConditionAtVisit)?.let { ConditionMemoContent(it, hasOption) }
-        Category.MEDICATION -> { /* 統合画面では表示しない */ }
+        else -> { /* カテゴリA以外はここでは扱わない */ }
     }
 }
 
@@ -454,7 +460,7 @@ fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
  */
 @Composable
 fun HealthRecordDetailPane(
-    healthViewModel: HealthRecordViewModel,
+    healthViewModel: PersonHealthViewModel,
     personId: Int,
     category: Category,
     recordId: Int,
@@ -707,7 +713,7 @@ private fun HealthRecordEditForm(
 }
 
 @Composable
-private fun HealthRecordDisplayCard(record: Any) {
+private fun HealthHistoryRecordDisplayCard(record: Any) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -754,6 +760,11 @@ private fun HealthRecordDisplayCard(record: Any) {
             }
         }
     }
+}
+
+@Composable
+private fun HealthRecordDisplayCard(record: Any) {
+    HealthHistoryRecordDisplayCard(record)
 }
 
 @Composable

@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.launch
  */
 abstract class PersonBaseViewModel(
     protected val repository: PersonRepository,
+    protected val summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository
 ) : BaseViewModel(userSettingsRepository) {
 
@@ -33,7 +35,7 @@ abstract class PersonBaseViewModel(
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
         .flatMapLatest { person ->
-            if (person != null) repository.getPersonCategorySummaryById(person.id)
+            if (person != null) summaryRepository.getPersonCategorySummaryById(person.id)
             else flowOf(null)
         }
         .stateIn(

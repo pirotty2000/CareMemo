@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.repository.MedicationRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,14 +23,15 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 
 /**
- * 服薬管理画面用の ViewModel
+ * 利用者服薬管理画面用の ViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class MedicationViewModel(
+class PersonMedicationViewModel(
     private val medicationRepository: MedicationRepository,
     personRepository: PersonRepository,
+    summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(personRepository, userSettingsRepository) {
+) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
 
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
@@ -64,10 +66,6 @@ class MedicationViewModel(
         .map { records ->
             records.groupBy { it.dosageDate }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
-
-//    fun selectMonth(month: YearMonth) {
-//        _selectedMonth.value = month
-//    }
 
     fun nextMonth() {
         _selectedMonth.value = _selectedMonth.value.plusMonths(1)
@@ -105,13 +103,14 @@ class MedicationViewModel(
 
     class Factory(
         private val personRepository: PersonRepository,
+        private val summaryRepository: PersonSummaryRepository,
         private val medicationRepository: MedicationRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(MedicationViewModel::class.java)) {
-                return MedicationViewModel(medicationRepository, personRepository, userSettingsRepository) as T
+            if (modelClass.isAssignableFrom(PersonMedicationViewModel::class.java)) {
+                return PersonMedicationViewModel(medicationRepository, personRepository, summaryRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

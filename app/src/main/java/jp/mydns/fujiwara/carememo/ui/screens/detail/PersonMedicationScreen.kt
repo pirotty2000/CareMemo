@@ -1,18 +1,46 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail
 
+/**
+ * Screen : PersonMedicationScreen
+ *
+ * 【画面名】
+ * 利用者服薬記録画面
+ *
+ * 【役割】
+ * 特定の利用者の服薬履歴を管理し、新規の服薬記録の登録、過去の記録の確認、
+ * および服薬状況のPDFレポート出力を行う画面。
+ *
+ * 【主な機能】
+ * ・履歴表示：日ごとの服薬状況をカレンダー形式またはリスト形式で表示。
+ * ・服薬登録：薬品名、用量、時間帯（朝・昼・夕・寝る前など）の記録。
+ * ・PDF出力：指定した期間の服薬記録をPDFとして生成し、共有・印刷可能にする。
+ * ・画面最適化：デバイスの画面幅（Phone/Tablet）に応じて最適なレイアウトを自動選択。
+ * ・カテゴリ連携：上部メニューから他の健康記録カテゴリへ直接遷移。
+ *
+ * 【遷移】
+ * ← MainScreen（戻るボタン）
+ * → PersonMedicationScreenPhone / PersonMedicationScreenTablet（画面幅に応じて内部で分岐）
+ *
+ * 【使用するViewModel】
+ * PersonMedicationViewModel
+ *
+ * 【備考】
+ * 履歴データは月単位でロードされ、カレンダーによる日別の絞り込みが可能。
+ */
+
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.*
-import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @Composable
-fun MedicationScreen(
-    viewModel: MedicationViewModel,
+fun PersonMedicationScreen(
+    viewModel: PersonMedicationViewModel,
     personId: Int,
     widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
@@ -39,7 +67,7 @@ fun MedicationScreen(
     }
 
     if (isExpanded) {
-        MedicationScreenTablet(
+        PersonMedicationScreenTablet(
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
             isLoading = isLoading,
@@ -63,7 +91,7 @@ fun MedicationScreen(
             snackbarHostState = snackbarHostState
         )
     } else {
-        MedicationScreenPhone(
+        PersonMedicationScreenPhone(
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
             isLoading = isLoading,
@@ -99,8 +127,7 @@ fun MedicationScreen(
         records = allRecords,
         isNameMaskingEnabled = isNameMaskingEnabled,
         snackbarHostState = snackbarHostState,
-        viewModel = viewModel,
-        personId = personId
+        viewModel = viewModel
     )
 
     if (showDialog != null) {

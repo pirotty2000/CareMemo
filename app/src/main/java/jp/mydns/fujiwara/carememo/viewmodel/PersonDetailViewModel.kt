@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,8 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class PersonDetailViewModel(
     repository: PersonRepository,
+    summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
-) : PersonBaseViewModel(repository, userSettingsRepository) {
+) : PersonBaseViewModel(repository, summaryRepository, userSettingsRepository) {
 
     private val _currentCategory = MutableStateFlow<Category?>(null)
     val currentCategory: StateFlow<Category?> = _currentCategory.asStateFlow()
@@ -29,12 +31,13 @@ class PersonDetailViewModel(
 
     class Factory(
         private val repository: PersonRepository,
+        private val summaryRepository: PersonSummaryRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonDetailViewModel::class.java)) {
-                return PersonDetailViewModel(repository, userSettingsRepository) as T
+                return PersonDetailViewModel(repository, summaryRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

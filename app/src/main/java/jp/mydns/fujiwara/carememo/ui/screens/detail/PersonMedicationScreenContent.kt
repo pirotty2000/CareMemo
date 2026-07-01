@@ -1,5 +1,23 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail
 
+/**
+ * Screen : PersonMedicationScreenContent
+ *
+ * 【画面名】
+ * 利用者服薬記録画面（共通コンテンツ）
+ *
+ * 【役割】
+ * Phone版とTablet版で共通して使用される、服薬記録のコアとなるUIコンポーネントを定義する。
+ *
+ * 【主な機能】
+ * ・共通UI部品：日別の服薬状況表示、薬品名入力フィールド、時間帯選択などの再利用可能なコンポーネント。
+ * ・ロジックの分離：レイアウトに依存しない表示ロジックの集約。
+ * ・一貫した操作感：異なるデバイス間でも共通の入力・閲覧ルールを適用。
+ *
+ * 【備考】
+ * デバイスごとのレイアウト（Phone/Tablet）は上位レベルで切り分け、本ファイルは純粋なコンテンツの構成を担当する。
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -19,7 +37,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 @Composable
-fun MedicationScreenContent(
+fun PersonMedicationScreenContent(
     isExpanded: Boolean,
     selectedMonth: YearMonth,
     isLoading: Boolean,

@@ -31,7 +31,38 @@ class CareMemoApplication : Application() {
 
     // (共通) 利用者情報リポジトリ
     val personRepository: PersonRepository by lazy {
-        PersonRepository(
+        PersonRepository(database.personDao())
+    }
+
+    // (管理) 利用終了者管理リポジトリ
+    val archivedPersonRepository: ArchivedPersonRepository by lazy {
+        ArchivedPersonRepository(
+            database,
+            database.personDao(),
+            database.heightAndWeightDao(),
+            database.bpAndPulseDao(),
+            database.glucoseAndHbA1cDao(),
+            database.conditionAtVisitDao(),
+            database.conditionPhotoDao(),
+            database.medicationRecordDao()
+        )
+    }
+
+    // (集計) 記録有無サマリーリポジトリ
+    val personSummaryRepository: PersonSummaryRepository by lazy {
+        PersonSummaryRepository(
+            database.personDao(),
+            database.heightAndWeightDao(),
+            database.bpAndPulseDao(),
+            database.glucoseAndHbA1cDao(),
+            database.conditionAtVisitDao(),
+            database.medicationRecordDao()
+        )
+    }
+
+    // (保守) システムメンテナンスリポジトリ
+    val appMaintenanceRepository: AppMaintenanceRepository by lazy {
+        AppMaintenanceRepository(
             database,
             database.personDao(),
             database.heightAndWeightDao(),

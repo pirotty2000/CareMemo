@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail
 
+/**
+ * Screen : PersonConditionScreenTablet
+ *
+ * 【画面名】
+ * 利用者所見記録画面（タブレット版）
+ *
+ * 【役割】
+ * タブレットや大画面デバイスに最適化された、所見記録（カテゴリB）のUIを提供し、効率的な情報管理を実現する。
+ *
+ * 【主な機能】
+ * ・2ペインレイアウト：左側に所見履歴リスト、右側に選択中の詳細内容と写真・入力フォームを表示。
+ * ・マルチビュー操作：過去の記録を参照しながら、新しい所見の入力や写真の確認が同時に可能。
+ * ・クイックアクセス：画面遷移なしでリストから詳細へ素早くアクセスできる。
+ *
+ * 【遷移】
+ * ← PersonConditionScreen（呼び出し元）
+ *
+ * 【備考】
+ * 広い画面を活用し、一度に多くの情報を提示することで、利用者の状態変化を俯瞰的に把握しやすくしている。
+ */
+
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -20,7 +41,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConditionDetailScreenPhone(
+fun PersonConditionScreenTablet(
     viewModel: PersonDetailViewModel,
     conditionViewModel: PersonConditionViewModel,
     personId: Int,
@@ -54,13 +75,7 @@ fun ConditionDetailScreenPhone(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            if (selectedId != -1) {
-                                onSelectedIdChange(-1)
-                            } else {
-                                onBack()
-                            }
-                        }) {
+                        IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                         }
                     },
@@ -71,27 +86,19 @@ fun ConditionDetailScreenPhone(
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     actions = {
-                        if (selectedId == -1) {
-                            IconButton(onClick = onShowPdfSettings) {
-                                Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
-                            }
+                        IconButton(onClick = { onSelectedIdChange(0) }) {
+                            Icon(Icons.Rounded.Add, contentDescription = "新規追加")
+                        }
+                        IconButton(onClick = onShowPdfSettings) {
+                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                         }
                     }
                 )
-                if (selectedId == -1) {
-                    CategorySelectorBar(
-                        currentCategory = Category.CONDITION_AT_VISIT,
-                        personCategorySummary = personCategorySummary,
-                        onCategoryClick = onNavigateToCategory
-                    )
-                }
-            }
-        },
-        floatingActionButton = {
-            if (selectedId == -1) {
-                FloatingActionButton(onClick = { onSelectedIdChange(0) }) {
-                    Icon(Icons.Rounded.Add, contentDescription = "新規追加")
-                }
+                CategorySelectorBar(
+                    currentCategory = Category.CONDITION_AT_VISIT,
+                    personCategorySummary = personCategorySummary,
+                    onCategoryClick = onNavigateToCategory
+                )
             }
         }
     ) { paddingValues ->
@@ -100,8 +107,8 @@ fun ConditionDetailScreenPhone(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            ConditionDetailScreenContent(
-                isExpanded = false,
+            PersonConditionScreenContent(
+                isExpanded = true,
                 personId = personId,
                 records = records,
                 isLoading = isLoading,

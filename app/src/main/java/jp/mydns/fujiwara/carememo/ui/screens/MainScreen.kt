@@ -19,7 +19,7 @@ package jp.mydns.fujiwara.carememo.ui.screens
  *
  * 【遷移】
  * ← （アプリ起動）
- * → UnifiedRecordScreen / MedicationScreen（カテゴリ選択シート経由）
+ * → PersonHealthScreen / PersonMedicationScreen（カテゴリ選択シート経由）
  * → SettingsScreen（オプションメニューより遷移）
  *
  * 【使用するViewModel】
@@ -73,7 +73,6 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.CategoryBadges
 import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
 import jp.mydns.fujiwara.carememo.BuildConfig

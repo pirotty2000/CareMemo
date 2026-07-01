@@ -1,5 +1,33 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail
 
+/**
+ * Screen : PersonConditionScreen
+ *
+ * 【画面名】
+ * 利用者所見記録画面
+ *
+ * 【役割】
+ * 利用者の日々の様子や気になる変化を「所見メモ（カテゴリB）」として詳細に記録・閲覧する画面。
+ * テキストによる記録に加え、写真撮影による視覚的な記録保存も行う。
+ *
+ * 【主な機能】
+ * ・所見一覧：時系列での所見履歴表示。
+ * ・詳細登録：タイトル、内容、記録者、日時の登録。
+ * ・写真管理：カメラ撮影またはギャラリーからの画像取り込み、および写真のフルスクリーン表示。
+ * ・PDF出力：所見履歴と写真をまとめたPDFレポートの作成。
+ * ・レスポンシブUI：画面サイズに応じたPhone用・Tablet用レイアウトの切り替え。
+ *
+ * 【遷移】
+ * ← MainScreen（戻るボタン）
+ * → ConditionPhotoFullScreen / ConditionPhotoPreviewScreen
+ *
+ * 【使用するViewModel】
+ * PersonDetailViewModel, PersonConditionViewModel
+ *
+ * 【備考】
+ * 文字だけでは伝わりにくい患部の状態などを写真として残すことで、より正確な情報の共有を可能にする。
+ */
+
 import android.net.Uri
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -14,12 +42,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.launch
 
-/**
- * 所見メモ画面 (Bカテゴリ トップレベル画面)
- * WindowSizeに基づいて Phone/Tablet のレイアウトに分岐する。
- */
 @Composable
-fun ConditionDetailScreen(
+fun PersonConditionScreen(
     viewModel: PersonDetailViewModel,
     conditionViewModel: PersonConditionViewModel,
     personId: Int,
@@ -61,7 +85,7 @@ fun ConditionDetailScreen(
     }
 
     if (isExpanded) {
-        ConditionDetailScreenTablet(
+        PersonConditionScreenTablet(
             viewModel = viewModel,
             conditionViewModel = conditionViewModel,
             personId = personId,
@@ -89,7 +113,7 @@ fun ConditionDetailScreen(
             snackbarHostState = snackbarHostState
         )
     } else {
-        ConditionDetailScreenPhone(
+        PersonConditionScreenPhone(
             viewModel = viewModel,
             conditionViewModel = conditionViewModel,
             personId = personId,
@@ -119,18 +143,24 @@ fun ConditionDetailScreen(
     }
 
     // PDF出力共通ハンドラー
-    PdfExportActionHandler(
-        showDialog = showPdfSettingsDialog,
-        onDismiss = { showPdfSettingsDialog = false },
-        category = Category.CONDITION_AT_VISIT,
-        person = currentPerson,
-        records = records,
-        isNameMaskingEnabled = isNameMaskingEnabled,
-        snackbarHostState = snackbarHostState,
-        viewModel = viewModel,
-        conditionViewModel = conditionViewModel,
-        personId = personId
-    )
+    if (showPdfSettingsDialog) {
+        val allPhotos = remember { mutableStateOf<List<jp.mydns.fujiwara.carememo.data.ConditionPhoto>>(emptyList()) }
+        LaunchedEffect(Unit) {
+            allPhotos.value = conditionViewModel.getAllPhotosForPerson(personId)
+        }
+        
+        PdfExportActionHandler(
+            showDialog = showPdfSettingsDialog,
+            onDismiss = { showPdfSettingsDialog = false },
+            category = Category.CONDITION_AT_VISIT,
+            person = currentPerson,
+            records = records,
+            isNameMaskingEnabled = isNameMaskingEnabled,
+            snackbarHostState = snackbarHostState,
+            viewModel = viewModel,
+            photos = allPhotos.value
+        )
+    }
 
     // 削除確認ダイアログ
     if (recordToDelete != null) {

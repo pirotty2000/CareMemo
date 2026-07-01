@@ -5,11 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -26,8 +26,7 @@ fun PdfExportActionHandler(
     isNameMaskingEnabled: Boolean,
     snackbarHostState: SnackbarHostState,
     viewModel: BaseViewModel,
-    conditionViewModel: PersonConditionViewModel? = null,
-    personId: Int
+    photos: List<ConditionPhoto> = emptyList()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -43,20 +42,13 @@ fun PdfExportActionHandler(
             viewModel.setLockBypassEnabled(true)
             
             scope.launch {
-                // 写真の取得ロジック（所見メモカテゴリの場合など）
-                val allPhotos = if (category.hasOption && includePhotos && conditionViewModel != null) {
-                    conditionViewModel.getAllPhotosForPerson(personId)
-                } else {
-                    emptyList()
-                }
-
                 val success = PdfExporter.exportAndShare(
                     context = context,
                     person = person,
                     isNameMaskingEnabled = isNameMaskingEnabled,
                     category = category,
                     records = records,
-                    allPhotos = allPhotos,
+                    allPhotos = if (includePhotos) photos else emptyList(),
                     range = range,
                     order = order,
                     customStartDate = start,

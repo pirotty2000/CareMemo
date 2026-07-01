@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.repository.ArchivedPersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +40,8 @@ data class PersonUiState(
  */
 class PersonListViewModel(
     private val repository: PersonRepository,
+    private val archivedRepository: ArchivedPersonRepository,
+    private val summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
@@ -70,7 +74,7 @@ class PersonListViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = repository.getPersonCategorySummaries()
+    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = summaryRepository.getPersonCategorySummaries()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -126,13 +130,6 @@ class PersonListViewModel(
         }
     }
 
-    val deletedUserList: StateFlow<List<Person>> = repository.getDeletedPersons()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     fun addPerson(person: Person) {
         viewModelScope.launch {
             try {
@@ -159,27 +156,29 @@ class PersonListViewModel(
 
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
-            repository.logicalDeletePerson(person.id)
+            archivedRepository.logicalDeletePerson(person.id)
             showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんをアーカイブに移動しました")
         }
     }
 
     fun restorePerson(person: Person) {
         viewModelScope.launch {
-            repository.restorePerson(person.id)
+            archivedRepository.restorePerson(person.id)
             showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを一覧に戻しました")
         }
     }
 
     class Factory(
         private val repository: PersonRepository,
+        private val archivedRepository: ArchivedPersonRepository,
+        private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonListViewModel::class.java)) {
-                return PersonListViewModel(repository, conditionRepository, userSettingsRepository) as T
+                return PersonListViewModel(repository, archivedRepository, summaryRepository, conditionRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

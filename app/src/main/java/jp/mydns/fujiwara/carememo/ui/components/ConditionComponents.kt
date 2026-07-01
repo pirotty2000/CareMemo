@@ -25,7 +25,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -126,15 +125,17 @@ fun ObservationList(
             icon = Icons.Outlined.Description
         )
     } else {
-        UnifiedHistoryList(
+        PersonHistoryList(
             records = records.filterIsInstance<HistoryRecord>(),
-            category = Category.CONDITION_AT_VISIT,
-            conditionPhotoMap = conditionPhotoMap,
             selectedRecordId = selectedId,
             onItemClick = { onSelect(it.id) },
             onDeleteSwipe = onDelete,
             isAnyDialogOpen = false
-        )
+        ) { record ->
+            (record as? ConditionAtVisit)?.let {
+                ConditionMemoContent(it, conditionPhotoMap[it.id] == true)
+            }
+        }
     }
 }
 

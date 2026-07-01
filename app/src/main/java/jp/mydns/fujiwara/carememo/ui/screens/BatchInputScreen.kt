@@ -1,5 +1,33 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
+/**
+ * Screen : BatchInputScreen
+ *
+ * 【画面名】
+ * 健康記録の一括入力画面
+ *
+ * 【役割】
+ * バイタル（血圧・体温）、血糖値、身体計測（体重）など、複数の健康指標を
+ * 一つの画面で効率的に同時入力・登録するための画面。
+ *
+ * 【主な機能】
+ * ・記録日時設定：カレンダーと時刻選択による記録日時の指定。
+ * ・バイタル入力：最高血圧、最低血圧、脈拍、体温の入力。
+ * ・血糖値入力：血糖値、HbA1cの入力。
+ * ・身体計測入力：身長、体重の入力。
+ * ・入力補助：数値キーボードの自動表示、IMEアクションによるフォーカス移動、入力値のバリデーション。
+ * ・即時反映：保存成功時のフィードバックと自動画面遷移。
+ *
+ * 【遷移】
+ * ← MainScreen（戻るボタンまたは保存完了時に遷移）
+ *
+ * 【使用するViewModel】
+ * BatchInputViewModel
+ *
+ * 【備考】
+ * 多くの項目を一度に扱うため、スクロール位置の管理や各項目のエラー状態の可視化に配慮している。
+ */
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
@@ -52,7 +80,7 @@ fun BatchInputScreen(
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val isProcessing by viewModel.isProcessing.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
 
     val recordTime by viewModel.recordTime.collectAsState()
     val dateTimeState = rememberDateTimeInputState(initialInstant = recordTime)
@@ -111,7 +139,7 @@ fun BatchInputScreen(
         currentPerson = currentPerson,
         isLoading = isLoading,
         isNameMaskingEnabled = isNameMaskingEnabled,
-        isProcessing = isProcessing,
+        isProcessing = isSaving,
         height = height,
         onHeightChange = { viewModel.height.value = it },
         weight = weight,

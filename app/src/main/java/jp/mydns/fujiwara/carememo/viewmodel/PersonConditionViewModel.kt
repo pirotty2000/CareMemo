@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,8 +34,9 @@ import java.time.Instant
 class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
     personRepository: PersonRepository,
+    summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(personRepository, userSettingsRepository) {
+) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
 
@@ -217,13 +219,14 @@ class PersonConditionViewModel(
 
     class Factory(
         private val personRepository: PersonRepository,
+        private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonConditionViewModel::class.java)) {
-                return PersonConditionViewModel(conditionRepository, personRepository, userSettingsRepository) as T
+                return PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

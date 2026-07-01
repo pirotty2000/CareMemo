@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail.sub
 
+/**
+ * Screen : ConditionPhotoFullScreen
+ *
+ * 【画面名】
+ * 写真フル画面表示画面
+ *
+ * 【役割】
+ * 所見メモに関連付けられた写真を画面全体に表示し、拡大・縮小（ピンチズーム）等の操作で詳細を確認するための画面。
+ *
+ * 【主な機能】
+ * ・フルスクリーン閲覧：ナビゲーションバー等を隠し、画像のみを全面に表示。
+ * ・ジェスチャー操作：ダブルタップやピンチアウトによるズーム、ドラッグによる移動。
+ * ・情報オーバーレイ：必要に応じてタイトルや説明文を画像の上に重ねて表示。
+ *
+ * 【遷移】
+ * ← PersonConditionScreen（写真タップ時に遷移）
+ *
+ * 【備考】
+ * 患部の微細な変化などを正確に確認するため、Coilを用いた高効率な画像読み込みとスムーズなズーム体験を提供している。
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons

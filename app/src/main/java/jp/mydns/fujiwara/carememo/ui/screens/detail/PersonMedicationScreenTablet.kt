@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail
 
+/**
+ * Screen : PersonMedicationScreenTablet
+ *
+ * 【画面名】
+ * 利用者服薬記録画面（タブレット版）
+ *
+ * 【役割】
+ * タブレットや折りたたみデバイスなどの横長画面（Expandedクラス）に最適化された服薬記録UIを提供する。
+ *
+ * 【主な機能】
+ * ・2ペインレイアウト：左側に履歴、右側に入力フォームや統計情報を配置し、大画面を有効活用。
+ * ・固定ナビゲーション：画面遷移を抑えた効率的な操作感。
+ * ・同時表示：リストと詳細を同時に閲覧できるため、過去の記録を参照しながらの入力が容易。
+ *
+ * 【遷移】
+ * ← PersonMedicationScreen（呼び出し元）
+ *
+ * 【備考】
+ * 広い画面スペースを活かし、情報の視認性と操作効率を最大化するレイアウトを採用している。
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,7 +38,7 @@ import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicationScreenTablet(
+fun PersonMedicationScreenTablet(
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     isLoading: Boolean,
@@ -79,7 +100,7 @@ fun MedicationScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            MedicationScreenContent(
+            PersonMedicationScreenContent(
                 isExpanded = true,
                 selectedMonth = selectedMonth,
                 isLoading = isLoading,

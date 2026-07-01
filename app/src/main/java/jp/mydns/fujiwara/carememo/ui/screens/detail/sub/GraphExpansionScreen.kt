@@ -1,5 +1,30 @@
 package jp.mydns.fujiwara.carememo.ui.screens.detail.sub
 
+/**
+ * Screen : GraphExpansionScreen
+ *
+ * 【画面名】
+ * グラフ拡大表示画面
+ *
+ * 【役割】
+ * バイタル、血糖値、身体計測などの各統計グラフを全画面で詳細に閲覧するための画面。
+ * 画面を横向き（ランドスケープ）に固定することで、より長い期間のデータ推移を詳細に分析可能にする。
+ *
+ * 【主な機能】
+ * ・全画面表示：端末の画面全体を使用した高精細なグラフ表示。
+ * ・画面回転制御：表示開始時に横画面へ、終了時に元の向きへ自動制御。
+ * ・対話型グラフ：グラフ上のタップによる詳細値（ツールチップ）の表示。
+ *
+ * 【遷移】
+ * ← PersonHealthScreen（グラフタップ時に遷移）
+ *
+ * 【使用するViewModel】
+ * PersonHealthViewModel
+ *
+ * 【備考】
+ * 医療従事者やケアマネージャーが利用者の状態変化を時系列で精密に確認することを目的としている。
+ */
+
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import androidx.compose.animation.animateColorAsState
@@ -25,7 +50,7 @@ import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.LineChart
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -33,7 +58,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Composable
 fun GraphExpansionScreen(
     viewModel: PersonDetailViewModel,
-    healthViewModel: HealthRecordViewModel,
+    healthViewModel: PersonHealthViewModel,
     personId: Int,
     category: Category,
     initialGraphIndex: Int,

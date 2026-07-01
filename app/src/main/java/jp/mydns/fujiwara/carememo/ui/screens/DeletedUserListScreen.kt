@@ -1,5 +1,31 @@
 package jp.mydns.fujiwara.carememo.ui.screens
 
+/**
+ * Screen : DeletedUserListScreen
+ *
+ * 【画面名】
+ * 利用終了者一覧画面
+ *
+ * 【役割】
+ * 「サービス終了（論理削除）」とされた利用者のリストを表示し、
+ * 誤って削除した利用者の復元や、不要になったデータの完全抹消（物理削除）を行う管理画面。
+ *
+ * 【主な機能】
+ * ・一覧表示：名前（マスキング対応）、ふりがな、備考、およびサービス終了日時の表示。
+ * ・利用者復元：選択した利用者をアクティブな状態に戻し、再度記録可能にする。
+ * ・完全抹消：利用者のすべての記録（写真を含む）をデータベースから完全に削除する（警告ダイアログ付き）。
+ * ・一括選択：複数の利用者を選択して一括で復元または抹消する機能。
+ *
+ * 【遷移】
+ * ← SettingsScreen（戻るボタン）
+ *
+ * 【使用するViewModel】
+ * PersonListViewModel
+ *
+ * 【備考】
+ * 重要なデータの抹消を扱うため、物理削除実行前には必ず確認ダイアログを表示する。
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,15 +37,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.ArchivedPersonViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeletedUserListScreen(
-    viewModel: PersonListViewModel,
+    viewModel: ArchivedPersonViewModel,
     onBack: () -> Unit,
 ) {
-    val endedUsers by viewModel.deletedUserList.collectAsState()
+    val endedUsers by viewModel.archivedPersonList.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val selectedUserIds = remember { mutableStateListOf<Int>() }
     
