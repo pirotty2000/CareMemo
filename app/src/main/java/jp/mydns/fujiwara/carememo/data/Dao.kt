@@ -83,9 +83,6 @@ interface HeightAndWeightDao {
     @Upsert
     suspend fun insertAll(items: List<HeightAndWeight>)
 
-    @Query("SELECT DISTINCT person_id FROM height_and_weight_db WHERE (height IS NOT NULL OR weight IS NOT NULL) AND deleted_at IS NULL")
-    fun getPersonIdsWithHeightWeight(): Flow<List<Int>>
-
     @Query("SELECT EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
 }
@@ -116,9 +113,6 @@ interface BpAndPulseDao {
 
     @Upsert
     suspend fun insertAll(items: List<BpAndPulse>)
-
-    @Query("SELECT DISTINCT person_id FROM bp_and_pulse_db WHERE (bp_systolic IS NOT NULL OR bp_diastolic IS NOT NULL OR pulse IS NOT NULL OR body_temperature IS NOT NULL) AND deleted_at IS NULL")
-    fun getPersonIdsWithVital(): Flow<List<Int>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
@@ -151,9 +145,6 @@ interface GlucoseAndHbA1cDao {
     @Upsert
     suspend fun insertAll(items: List<GlucoseAndHbA1c>)
 
-    @Query("SELECT DISTINCT person_id FROM glucose_and_hba1c_db WHERE (glucose IS NOT NULL OR hba1c IS NOT NULL) AND deleted_at IS NULL")
-    fun getPersonIdsWithGlucose(): Flow<List<Int>>
-
     @Query("SELECT EXISTS(SELECT 1 FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
 }
@@ -184,9 +175,6 @@ interface ConditionAtVisitDao {
 
     @Upsert
     suspend fun insertAll(items: List<ConditionAtVisit>)
-
-    @Query("SELECT DISTINCT person_id FROM condition_at_visit_db WHERE deleted_at IS NULL")
-    fun getPersonIdsWithCondition(): Flow<List<Int>>
 
     @Query("""
         SELECT DISTINCT person_id FROM condition_at_visit_db 
@@ -280,7 +268,4 @@ interface MedicationRecordDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
-
-    @Query("SELECT DISTINCT person_id FROM medication_record_db WHERE deleted_at IS NULL")
-    fun getPersonIdsWithMedication(): Flow<List<Int>>
 }

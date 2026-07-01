@@ -91,7 +91,6 @@ fun MainScreen(
 ) {
     val userList by viewModel.userList.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val categorySummaries by viewModel.categorySummaries.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val selectedSection by viewModel.selectedSection.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -610,7 +609,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    val person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+    val person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant())
     val mockUserList = listOf(
         PersonUiState(
             person = person,

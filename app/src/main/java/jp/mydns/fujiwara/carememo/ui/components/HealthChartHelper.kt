@@ -85,7 +85,6 @@ object HealthChartHelper {
                 HealthThresholds.AlertLevel.WARNING -> getWarningHighlight(isDark)
                 HealthThresholds.AlertLevel.INFO -> getInfoHighlight(isDark)
                 HealthThresholds.AlertLevel.NORMAL -> if (isDark) Color.Transparent else Color.White
-                else -> Color.Transparent
             }
             ChartRangeHighlight(it.start, it.end, color)
         }
