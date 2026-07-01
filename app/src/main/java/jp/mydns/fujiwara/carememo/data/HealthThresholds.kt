@@ -8,25 +8,36 @@ import jp.mydns.fujiwara.carememo.R
  * 健康指標の判定基準と判定ロジックを管理する基軸オブジェクト
  */
 object HealthThresholds {
+
     // --- 定数定義 ---
-    const val BP_HIGH_SYSTOLIC = 140.0
-    const val BP_HIGH_DIASTOLIC = 90.0
-    const val BP_LOW_SYSTOLIC = 100.0
-    const val BP_LOW_DIASTOLIC = 60.0
-    const val PULSE_HIGH = 100.0
-    const val PULSE_LOW = 50.0
-    const val TEMP_HIGH = 37.5
-    const val TEMP_LOW = 35.5
-    const val GLUCOSE_NORMAL_HIGH = 99.0
-    const val GLUCOSE_NORMAL_LOW = 70.0
-    const val HBA1C_GOOD = 5.5
-    const val HBA1C_PREDIABETES = 6.0
-    const val HBA1C_DIABETES = 6.5
-    const val BMI_NORMAL_LOW = 18.5
-    const val BMI_NORMAL_HIGH = 25.0
-    const val BMI_OBESITY_1 = 30.0
-    const val BMI_OBESITY_2 = 35.0
-    const val BMI_OBESITY_3 = 40.0
+
+    // ***** 血圧 *****************************************************
+    const val BP_HIGH_SYSTOLIC = 140.0      // 高血圧：血圧(上)＞＝140
+    const val BP_HIGH_DIASTOLIC = 90.0      // 高血圧：血圧(下)＞＝90
+    const val BP_LOW_SYSTOLIC = 100.0       // 低血圧：血圧(上)＜100
+    const val BP_LOW_DIASTOLIC = 60.0       // 低血圧：血圧(下)＜60
+    // ***** 脈拍 *****************************************************
+    const val PULSE_HIGH = 100.0            // 頻脈：脈拍＞＝100
+    const val PULSE_LOW = 50.0              // 徐脈：脈拍＞＝50
+    // ***** 体温 *****************************************************
+    const val TEMP_HIGH = 37.5              // 発熱：体温＞＝37．5
+    const val TEMP_LOW = 35.5               // 低体温：体温＜35.5
+    // ***** 血糖値 ****************************************************
+                                                    // 125 ＜　 高血糖
+    const val GLUCOSE_NORMAL_PREDIABETES = 125.0    // 100 ＜＝ 予備群  ＜＝ 125
+    const val GLUCOSE_NORMAL_HIGH = 100.0           //  70 ＜＝ 正常　  ＜　 100
+    const val GLUCOSE_NORMAL_LOW = 70.0             //     　　 低血糖  ＜　 70
+    // ***** HbA1c **************************************************
+    const val HBA1C_GOOD = 5.5          //     　　 正常　　 ＜＝ 5.5 ：グラフ・ハイライトは白
+    const val HBA1C_PREDIABETES = 6.0   // 5.5 ＜　 予備群　 ＜　 6.5 ：グラフ・ハイライトは薄い黄色
+    const val HBA1C_DIABETES = 6.5      // 6.5 ＜＝ 糖尿病型 　　     ：グラフ・ハイライトは薄い赤
+    // ***** BMI ****************************************************
+                                        //      　　 低体重　　 ＜ 18.5 ：グラフ・ハイライトは薄い青
+    const val BMI_NORMAL_LOW = 18.5     // 18.5 ＜＝ 普通体重　 ＜ 25.0 ：グラフ・ハイライトは白(ハイライトなし)
+    const val BMI_NORMAL_HIGH = 25.0    // 25.0 ＜＝ 肥満(１度) ＜ 30.0 ：グラフ・ハイライトは薄い黄色
+    const val BMI_OBESITY_1 = 30.0      // 30.0 ＜＝ 肥満(２度) ＜ 35.0 ：グラフ・ハイライトは薄い赤
+    const val BMI_OBESITY_2 = 35.0      // 35.0 ＜＝ 肥満(３度) ＜ 40.0 ：グラフ・ハイライトは薄い紫
+    const val BMI_OBESITY_3 = 40.0      // 40.0 ＜＝ 肥満(４度) 　      ：グラフ・ハイライトは紫
 
     // --- ラベル定義（Resource ID） ---
     val VITAL_LABEL_NORMAL = R.string.vital_label_normal
@@ -124,9 +135,10 @@ object HealthThresholds {
     fun evaluateGlucose(glucose: Int?): Pair<Int?, AlertLevel> {
         val g = glucose ?: return null to AlertLevel.NORMAL
         return when {
-            g < GLUCOSE_NORMAL_LOW -> GLUCOSE_LABEL_LOW to AlertLevel.ALERT
-            g <= GLUCOSE_NORMAL_HIGH -> GLUCOSE_LABEL_NORMAL to AlertLevel.NORMAL
-            else -> GLUCOSE_LABEL_HIGH to AlertLevel.ALERT
+            g > GLUCOSE_NORMAL_PREDIABETES -> GLUCOSE_LABEL_HIGH to AlertLevel.ALERT
+            g >= GLUCOSE_NORMAL_HIGH -> HBA1C_LABEL_PREDIABETES to AlertLevel.WARNING
+            g >= GLUCOSE_NORMAL_LOW -> GLUCOSE_LABEL_NORMAL to AlertLevel.NORMAL
+            else -> GLUCOSE_LABEL_LOW to AlertLevel.ALERT
         }
     }
 
@@ -137,8 +149,7 @@ object HealthThresholds {
         val h = hba1c ?: return null to AlertLevel.NORMAL
         return when {
             h >= HBA1C_DIABETES -> HBA1C_LABEL_DIABETES to AlertLevel.ALERT
-            h >= HBA1C_PREDIABETES -> HBA1C_LABEL_PREDIABETES to AlertLevel.ALERT
-            h > HBA1C_GOOD -> HBA1C_LABEL_NORMAL_HIGH to AlertLevel.WARNING
+            h > HBA1C_GOOD -> HBA1C_LABEL_PREDIABETES to AlertLevel.WARNING
             else -> HBA1C_LABEL_NORMAL to AlertLevel.NORMAL
         }
     }
@@ -147,7 +158,7 @@ object HealthThresholds {
     fun getBpExplanation(context: Context): String = context.getString(R.string.bp_explanation, BP_LOW_SYSTOLIC.toInt(), BP_HIGH_SYSTOLIC.toInt(), BP_LOW_DIASTOLIC.toInt(), BP_HIGH_DIASTOLIC.toInt())
     fun getPulseExplanation(context: Context): String = context.getString(R.string.pulse_explanation, PULSE_LOW.toInt(), PULSE_HIGH.toInt())
     fun getTempExplanation(context: Context): String = context.getString(R.string.temp_explanation, TEMP_LOW, TEMP_HIGH)
-    fun getGlucoseExplanation(context: Context): String = context.getString(R.string.glucose_explanation, GLUCOSE_NORMAL_LOW.toInt(), GLUCOSE_NORMAL_HIGH.toInt())
+    fun getGlucoseExplanation(context: Context): String = context.getString(R.string.glucose_explanation, GLUCOSE_NORMAL_LOW.toInt(), 99)
     fun getHbA1cExplanation(context: Context): String = context.getString(R.string.hba1c_explanation, HBA1C_GOOD)
     fun getBmiExplanation(context: Context): String = context.getString(R.string.bmi_explanation, BMI_NORMAL_LOW, BMI_NORMAL_HIGH)
 }

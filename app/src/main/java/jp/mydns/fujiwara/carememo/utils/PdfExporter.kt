@@ -415,7 +415,7 @@ object PdfExporter {
     ): Float {
         // LineChartConfig から drawSingleGraph 用のデータに変換
         val lineDataList = config.dataList.map { lineData ->
-            lineData.points.map { it.first.toLong() to it.second } to lineData.color.toArgb()
+            lineData.points.map { it.x.toLong() to it.y } to lineData.color.toArgb()
         }
         
         val rangeList = config.ranges.map { range ->

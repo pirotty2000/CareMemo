@@ -162,6 +162,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                     dataList = config.dataList,
                     stepY = config.stepY,
                     ranges = config.ranges,
+                    limits = config.limits,
                     minYConstraint = config.minYConstraint,
                     maxYConstraint = config.maxYConstraint,
                     showDecimal = config.showDecimal,

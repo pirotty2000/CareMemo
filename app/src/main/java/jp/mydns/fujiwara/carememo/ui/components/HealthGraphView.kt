@@ -74,6 +74,7 @@ fun HealthGraphView(
                             dataList = config.dataList,
                             stepY = config.stepY,
                             ranges = config.ranges,
+                            limits = config.limits,
                             minYConstraint = config.minYConstraint,
                             maxYConstraint = config.maxYConstraint,
                             showDecimal = config.showDecimal,
