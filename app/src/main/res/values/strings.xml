@@ -101,12 +101,12 @@
     <string name="bmi_label_obesity_4">肥満(４度)</string>
 
     <!-- Explanations -->
-    <string name="bp_explanation">血圧グラフの見方：\n・140/90以上：高血圧\n・100〜140/60〜90：正常\n・100/60未満：低血圧\n※「上/下」のいずれかが基準値を超えると判定されます。</string>
+    <string name="bp_explanation">血圧グラフの見方：\n・%2$d/%4$d以上：高血圧\n・%1$d〜%2$d/%3$d〜%4$d：正常\n・%1$d/%3$d未満：低血圧\n※「上/下」のいずれかが基準値を超えると判定されます。</string>
     <string name="pulse_explanation">脈拍グラフの見方：\n・%1$d〜%2$d が正常範囲です。</string>
     <string name="temp_explanation">体温グラフの見方：\n・%1$.1f〜%2$.1f が平熱の目安です。</string>
-    <string name="glucose_explanation">血糖値グラフの見方：\n・126 mg/dL以上：高血糖\n・100〜125 mg/dL：予備群\n・70〜99 mg/dL：正常\n・70 mg/dL未満：低血糖</string>
-    <string name="hba1c_explanation">HbA1cグラフの見方：\n・6.5%%以上：糖尿病型（高血糖）\n・5.6〜6.4%%：予備群\n・5.5%%以下：正常</string>
-    <string name="bmi_explanation">BMIグラフの見方：\n・40.0以上：肥満(4度)\n・35.0〜39.9：肥満(3度)\n・30.0〜34.9：肥満(2度)\n・25.0〜29.9：肥満(1度)\n・18.5〜24.9：普通体重\n・18.5未満：低体重</string>
+    <string name="glucose_explanation">血糖値グラフの見方：\n・126 mg/dL以上：高血糖\n・100〜125 mg/dL：予備群\n・%1$d〜%2$d mg/dL：正常\n・%1$d mg/dL未満：低血糖</string>
+    <string name="hba1c_explanation">HbA1cグラフの見方：\n・6.5%%以上：糖尿病型（高血糖）\n・5.6〜6.4%%：予備群\n・%1$.1f%%以下：正常</string>
+    <string name="bmi_explanation">BMIグラフの見方：\n・40.0以上：肥満(4度)\n・35.0〜39.9：肥満(3度)\n・30.0〜34.9：肥満(2度)\n・%2$.1f〜29.9：肥満(1度)\n・%1$.1f〜%2$.1f：普通体重\n・%1$.1f未満：低体重</string>
     <string name="pdf_title">利用者記録 (%1$s)</string>
     <string name="pdf_user_name">利用者名: %1$s 様</string>
     <string name="pdf_output_date">出力日時: %1$s</string>

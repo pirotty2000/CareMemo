@@ -29,7 +29,6 @@ object HealthThresholds {
     const val GLUCOSE_NORMAL_LOW = 70.0             //     　　 低血糖  ＜　 70
     // ***** HbA1c **************************************************
     const val HBA1C_GOOD = 5.5          //     　　 正常　　 ＜＝ 5.5 ：グラフ・ハイライトは白
-    const val HBA1C_PREDIABETES = 6.0   // 5.5 ＜　 予備群　 ＜　 6.5 ：グラフ・ハイライトは薄い黄色
     const val HBA1C_DIABETES = 6.5      // 6.5 ＜＝ 糖尿病型 　　     ：グラフ・ハイライトは薄い赤
     // ***** BMI ****************************************************
                                         //      　　 低体重　　 ＜ 18.5 ：グラフ・ハイライトは薄い青
@@ -51,7 +50,6 @@ object HealthThresholds {
     val GLUCOSE_LABEL_NORMAL = R.string.glucose_label_normal
     val GLUCOSE_LABEL_HIGH = R.string.glucose_label_high
     val HBA1C_LABEL_NORMAL = R.string.hba1c_label_normal
-    val HBA1C_LABEL_NORMAL_HIGH = R.string.hba1c_label_normal_high
     val HBA1C_LABEL_PREDIABETES = R.string.hba1c_label_prediabetes
     val HBA1C_LABEL_DIABETES = R.string.hba1c_label_diabetes
     val BMI_LABEL_UNDERWEIGHT = R.string.bmi_label_underweight

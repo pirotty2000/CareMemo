@@ -70,7 +70,6 @@ object HealthChartHelper {
     }
 
     // --- ハイライト色の定義 ---
-    private fun getNormalHighlight(isDark: Boolean) = if (isDark) Color(0xFF1B2E1D) else Color(0xFFE8F5E9)
     private fun getWarningHighlight(isDark: Boolean) = if (isDark) Color(0xFF333112) else Color(0xFFFFFDE7)
     private fun getAlertHighlight(isDark: Boolean) = if (isDark) Color(0xFF3D1F1F) else Color(0xFFFFEBEE)
     private fun getInfoHighlight(isDark: Boolean) = if (isDark) Color(0xFF1A213D) else Color(0xFFE3F2FD)
