@@ -36,7 +36,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 
 data class ChartPoint(val x: Double, val y: Double, val note: String? = null)
-data class ChartLineData(val label: String, val points: List<ChartPoint>, val color: Color)
+data class ChartLineData(val label: String, val points: List<ChartPoint>, val color: Color, val unit: String = "")
 data class ChartLimitLine(val label: String, val value: Double, val color: Color, val isLabelAbove: Boolean)
 data class ChartRangeHighlight(val startValue: Double, val endValue: Double, val color: Color)
 data class SelectedPoint(val x: Double, val y: Double, val color: Color, val label: String, val note: String? = null)
@@ -338,16 +338,9 @@ fun LineChart(
                                 }
 
                                 pointsAtX.forEach { (label, p, color) ->
+                                    val lineData = dataList.find { it.label == label && it.color == color }
+                                    val unit = lineData?.unit ?: ""
                                     val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(p.y) else p.y.toInt().toString()
-                                    val unit = when {
-                                        label.contains("血圧") -> "mmHg"
-                                        label.contains("脈拍") -> "bpm"
-                                        label.contains("体温") -> "℃"
-                                        label.contains("血糖値") -> "mg/dL"
-                                        label.contains("HbA1c") -> "%"
-                                        label.contains("体重") -> "kg"
-                                        else -> ""
-                                    }
                                     
                                     // 判定結果がある場合は、値の横に括弧書きで表示
                                     val noteSuffix = if (!p.note.isNullOrBlank()) " (${p.note})" else ""

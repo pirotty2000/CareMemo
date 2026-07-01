@@ -75,6 +75,7 @@ import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
 import jp.mydns.fujiwara.carememo.BuildConfig
 import java.time.LocalDate
 import java.time.YearMonth
@@ -140,8 +141,6 @@ fun MainScreen(
     MainScreenContent(
         userList = userList,
         isLoading = isLoading,
-        categorySummaries = categorySummaries,
-        isNameMaskingEnabled = isNameMaskingEnabled,
         searchQuery = searchQuery,
         selectedSection = selectedSection,
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
@@ -214,10 +213,8 @@ fun MainScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
-    userList: List<Person>,
+    userList: List<PersonUiState>,
     isLoading: Boolean,
-    categorySummaries: Map<Int, PersonCategorySummary>,
-    isNameMaskingEnabled: Boolean,
     searchQuery: String,
     selectedSection: String,
     onSearchQueryChange: (String) -> Unit,
@@ -373,26 +370,24 @@ fun MainScreenContent(
                     state = lazyListState,
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(userList, key = { it.id }) { user ->
-                        val age = DateTimeUtils.calculateAge(user.birthday)
-                        val birthdayStr = DateTimeUtils.formatDateJapaneseEra(user.birthday)
+                    items(userList, key = { it.person.id }) { userUiState ->
                         var showItemMenu by remember { mutableStateOf(false) }
                         Column(modifier = Modifier.animateItem()) {
                             ListItem(
                                 leadingContent = {
-                                    CategoryBadges(summary = categorySummaries[user.id] ?: PersonCategorySummary())
+                                    CategoryBadges(summary = userUiState.summary)
                                 },
                                 headlineContent = { 
                                     Column { 
                                         Text(
-                                            text = user.getMaskedFurigana(isNameMaskingEnabled), 
+                                            text = userUiState.maskedFurigana, 
                                             style = MaterialTheme.typography.labelSmall, 
                                             color = MaterialTheme.colorScheme.secondary
                                         )
                                         Text(
                                             text = buildString { 
-                                                append(user.getMaskedName(isNameMaskingEnabled))
-                                                if (user.note.isNotBlank()) append(" (${user.note})") 
+                                                append(userUiState.maskedName)
+                                                if (userUiState.person.note.isNotBlank()) append(" (${userUiState.person.note})") 
                                             }, 
                                             style = MaterialTheme.typography.titleMedium, 
                                             fontWeight = FontWeight.Bold, 
@@ -401,17 +396,17 @@ fun MainScreenContent(
                                         ) 
                                     } 
                                 },
-                                supportingContent = { Text(text = stringResource(R.string.birthday_summary_format, birthdayStr, stringResource(R.string.age_suffix, age)), style = MaterialTheme.typography.bodySmall) },
+                                supportingContent = { Text(text = stringResource(R.string.birthday_summary_format, userUiState.formattedBirthday, stringResource(R.string.age_suffix, userUiState.age)), style = MaterialTheme.typography.bodySmall) },
                                 trailingContent = {
                                     Box {
                                         IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
                                         DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
-                                            DropdownMenuItem(text = { Text(stringResource(R.string.edit_user_info)) }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(user) })
-                                            DropdownMenuItem(text = { Text(stringResource(R.string.end_user_service), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(user) })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.edit_user_info)) }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(userUiState.person) })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.end_user_service), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(userUiState.person) })
                                         }
                                     }
                                 },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface).clickable { onUserClick(user) }
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface).clickable { onUserClick(userUiState.person) }
                             )
                             HorizontalDivider()
                         }
@@ -615,13 +610,21 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    val mockUserList = listOf(Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()))
+    val person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+    val mockUserList = listOf(
+        PersonUiState(
+            person = person,
+            maskedName = "山○\u3000太○",
+            maskedFurigana = "ヤ○ダ\u3000タ○ウ",
+            age = 75,
+            formattedBirthday = "昭和25年1月1日",
+            summary = PersonCategorySummary(hasBpAndPulse = true)
+        )
+    )
     CareMemoTheme { 
         MainScreenContent(
             userList = mockUserList, 
             isLoading = false,
-            categorySummaries = emptyMap(), 
-            isNameMaskingEnabled = false, 
             searchQuery = "",
             selectedSection = "全",
             onSearchQueryChange = {},

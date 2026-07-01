@@ -5,13 +5,11 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.ui.components.PdfSettingsDialog
-import jp.mydns.fujiwara.carememo.utils.PdfExporter
+import jp.mydns.fujiwara.carememo.ui.components.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.launch
@@ -32,16 +30,16 @@ fun ConditionDetailScreen(
     onNavigateToFullScreen: (String, String?) -> Unit,
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     // データの監視
     val records by conditionViewModel.filteredRecords.collectAsState()
+    val isLoading by conditionViewModel.isLoading.collectAsState()
     val searchQuery by conditionViewModel.searchQuery.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
-    val conditionPhotoMap by conditionViewModel.getConditionPhotoMap(conditionViewModel.records).collectAsState()
+    val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -71,6 +69,7 @@ fun ConditionDetailScreen(
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = personCategorySummary,
             records = records,
+            isLoading = isLoading,
             searchQuery = searchQuery,
             conditionPhotoMap = conditionPhotoMap,
             selectedId = selectedId,
@@ -98,6 +97,7 @@ fun ConditionDetailScreen(
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = personCategorySummary,
             records = records,
+            isLoading = isLoading,
             searchQuery = searchQuery,
             conditionPhotoMap = conditionPhotoMap,
             selectedId = selectedId,
@@ -118,34 +118,19 @@ fun ConditionDetailScreen(
         )
     }
 
-    // PDF出力設定ダイアログ
-    if (showPdfSettingsDialog) {
-        PdfSettingsDialog(
-            category = Category.CONDITION_AT_VISIT,
-            onDismiss = { showPdfSettingsDialog = false }
-        ) { r, o, start, end, photos, password ->
-            showPdfSettingsDialog = false
-            viewModel.setLockBypassEnabled(true)
-            scope.launch {
-                val allPhotos = if (photos) conditionViewModel.getAllPhotosForPerson(personId) else emptyList()
-                currentPerson?.let { person ->
-                    PdfExporter.exportAndShare(
-                        context = context,
-                        person = person,
-                        isNameMaskingEnabled = isNameMaskingEnabled,
-                        category = Category.CONDITION_AT_VISIT,
-                        records = records,
-                        allPhotos = allPhotos,
-                        range = r,
-                        order = o,
-                        customStartDate = start,
-                        customEndDate = end,
-                        password = password
-                    )
-                }
-            }
-        }
-    }
+    // PDF出力共通ハンドラー
+    PdfExportActionHandler(
+        showDialog = showPdfSettingsDialog,
+        onDismiss = { showPdfSettingsDialog = false },
+        category = Category.CONDITION_AT_VISIT,
+        person = currentPerson,
+        records = records,
+        isNameMaskingEnabled = isNameMaskingEnabled,
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        conditionViewModel = conditionViewModel,
+        personId = personId
+    )
 
     // 削除確認ダイアログ
     if (recordToDelete != null) {

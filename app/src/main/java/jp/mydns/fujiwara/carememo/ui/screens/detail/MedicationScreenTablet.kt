@@ -20,6 +20,7 @@ import java.time.YearMonth
 fun MedicationScreenTablet(
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
+    isLoading: Boolean,
     selectedMonth: YearMonth,
     recordsByDate: Map<String, List<MedicationRecord>>,
     personCategorySummary: jp.mydns.fujiwara.carememo.data.PersonCategorySummary?,
@@ -81,6 +82,7 @@ fun MedicationScreenTablet(
             MedicationScreenContent(
                 isExpanded = true,
                 selectedMonth = selectedMonth,
+                isLoading = isLoading,
                 recordsByDate = recordsByDate,
                 isHistoryMode = false, // Tabletでは使用しない（両方表示するため）
                 onHistoryModeChange = {},

@@ -3,9 +3,15 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.ObservationList
@@ -18,6 +24,7 @@ fun ConditionDetailScreenContent(
     isExpanded: Boolean,
     personId: Int,
     records: List<Any>,
+    isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     selectedId: Int,
@@ -29,7 +36,22 @@ fun ConditionDetailScreenContent(
     onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
     onNavigateToFullScreen: (String, String?) -> Unit,
 ) {
-    if (isExpanded) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    } else if (isExpanded) {
         // タブレット用レイアウト (2ペイン)
         Row(
             modifier = Modifier

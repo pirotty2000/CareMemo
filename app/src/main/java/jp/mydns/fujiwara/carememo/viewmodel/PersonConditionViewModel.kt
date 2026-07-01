@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -45,6 +46,7 @@ class PersonConditionViewModel(
             if (person == null) flowOf(emptyList())
             else conditionRepository.getConditionAtVisitByPersonId(person.id)
         }
+        .onEach { _isLoading.value = false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
@@ -77,21 +79,19 @@ class PersonConditionViewModel(
     /**
      * 所見メモIDと「写真の有無」のマップ（一覧表示でのアイコン制御用）
      */
-    fun getConditionPhotoMap(recordsFlow: StateFlow<List<*>>): StateFlow<Map<Int, Boolean>> {
-        return combine(_currentPerson, recordsFlow) { person, recs ->
-            person to recs
-        }.flatMapLatest { (person, recs) ->
-            if (person == null || recs.isEmpty()) {
-                flowOf(emptyMap())
-            } else {
-                conditionRepository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
-                    recs.filterIsInstance<ConditionAtVisit>().associate { memo ->
-                        memo.id to photos.any { it.conditionId == memo.id }
-                    }
+    val conditionPhotoMap: StateFlow<Map<Int, Boolean>> = combine(_currentPerson, records) { person, recs ->
+        person to recs
+    }.flatMapLatest { (person, recs) ->
+        if (person == null || recs.isEmpty()) {
+            flowOf(emptyMap())
+        } else {
+            conditionRepository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
+                recs.associate { memo ->
+                    memo.id to photos.any { it.conditionId == memo.id }
                 }
             }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
-    }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()

@@ -24,6 +24,7 @@ fun UnifiedRecordScreenPhone(
     personId: Int,
     currentCategory: Category,
     records: List<Any>,
+    isLoading: Boolean,
     conditionPhotoMap: Map<Int, Boolean>,
     currentPerson: Person?,
     personCategorySummary: jp.mydns.fujiwara.carememo.data.PersonCategorySummary?,
@@ -125,7 +126,22 @@ fun UnifiedRecordScreenPhone(
                 .padding(paddingValues)
                 .padding(horizontal = if (selectedRecordId == -1) 16.dp else 0.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId == -1) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            } else if (records.isEmpty() && selectedRecordId == -1) {
                 EmptyState(
                     message = stringResource(R.string.empty_records),
                     description = stringResource(R.string.empty_records_description),

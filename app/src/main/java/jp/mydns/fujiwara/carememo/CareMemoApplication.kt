@@ -3,11 +3,27 @@ package jp.mydns.fujiwara.carememo
 import android.app.Application
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class CareMemoApplication : Application() {
     // データベースのインスタンス取得
     val database: AppDatabase by lazy { AppDatabase.getDatabase(this) }
     
+    override fun onCreate() {
+        super.onCreate()
+        // データベースの早期初期化（バックグラウンドで接続を確立しておく）
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // queryを発行することで物理的にDBファイルを開き、SQLCipherの復号化処理を走らせる
+                database.openHelper.writableDatabase
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     // 設定リポジトリのインスタンス取得
     val userSettingsRepository: UserSettingsRepository by lazy {
         UserSettingsRepository(this)

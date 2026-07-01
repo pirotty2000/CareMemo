@@ -2,16 +2,15 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.ui.components.CalendarGrid
 import jp.mydns.fujiwara.carememo.ui.components.MedicationHistoryTable
@@ -23,6 +22,7 @@ import java.time.YearMonth
 fun MedicationScreenContent(
     isExpanded: Boolean,
     selectedMonth: YearMonth,
+    isLoading: Boolean,
     recordsByDate: Map<String, List<MedicationRecord>>,
     isHistoryMode: Boolean,
     onHistoryModeChange: (Boolean) -> Unit,
@@ -30,7 +30,22 @@ fun MedicationScreenContent(
     onNextMonth: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
 ) {
-    if (isExpanded) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: カレンダー

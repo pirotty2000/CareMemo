@@ -422,6 +422,13 @@ object PdfExporter {
             (range.startValue to range.endValue) to range.color.toArgb()
         }
 
+        val limitLines = config.limits.map { limit ->
+            Triple(limit.value, DashPathEffect(floatArrayOf(5f, 5f), 0f), limit.label)
+        }
+
+        // 単位をタイトルに含めるか、別途表示する
+        val unit = config.dataList.firstOrNull()?.unit ?: ""
+
         return drawSingleGraph(
             canvas = canvas,
             title = "${config.title} 推移",
@@ -430,9 +437,10 @@ object PdfExporter {
             height = height,
             yStep = config.stepY,
             ranges = rangeList,
-            limitLines = emptyList(), // しきい値線は現在 range（背景色）に統合
+            limitLines = limitLines,
             isInteger = !config.showDecimal,
             subtitles = config.getSubtitleLines(),
+            unit = unit,
             fixedMinX = fixedMinX,
             fixedMaxX = fixedMaxX
         )
@@ -449,6 +457,7 @@ object PdfExporter {
         limitLines: List<Triple<Double, DashPathEffect, String>> = emptyList(),
         isInteger: Boolean = false,
         subtitles: List<String> = emptyList(),
+        unit: String = "",
         fixedMinX: Double? = null,
         fixedMaxX: Double? = null
     ): Float {
@@ -456,7 +465,8 @@ object PdfExporter {
         
         // 1. タイトルの描画
         paint.color = Color.BLACK; paint.textSize = 10f; paint.isFakeBoldText = true
-        canvas.drawText(title, MARGIN, startY + 10f, paint)
+        val fullTitle = if (unit.isNotEmpty()) "$title ($unit)" else title
+        canvas.drawText(fullTitle, MARGIN, startY + 10f, paint)
         
         // 2. サブタイトル（目安・ヒント）の描画
         var currentSubY = startY + 22f
@@ -472,7 +482,8 @@ object PdfExporter {
         val graphTop = if (subtitles.isEmpty()) startY + 20f else currentSubY + 5f
         val graphArea = RectF(MARGIN + 35f, graphTop, PAGE_WIDTH - MARGIN - 10f, graphTop + height - 20f)
 
-        paint.color = Color.rgb(248, 248, 248); paint.style = Paint.Style.FILL
+        // 背景を少し濃い目のグレーにして、正常値の白を際立たせる
+        paint.color = Color.rgb(240, 240, 240); paint.style = Paint.Style.FILL
         canvas.drawRect(graphArea, paint)
 
         if (lineDataList.all { it.first.isEmpty() } && (fixedMinX == null || fixedMaxX == null)) {
@@ -586,7 +597,14 @@ object PdfExporter {
                 header = context.getString(HealthThresholds.HEALTH_LABEL_STATUS),
                 width = 130f,
                 getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
-            ) { rec, _ -> rec.getVitalResults(context).joinToString("・") { it.first } }
+            ) { rec, _ -> 
+                val results = rec.getVitalResults(context)
+                if (results.all { it.second == HealthThresholds.AlertLevel.NORMAL }) {
+                    context.getString(HealthThresholds.VITAL_LABEL_NORMAL)
+                } else {
+                    results.filter { it.second != HealthThresholds.AlertLevel.NORMAL }.joinToString("・") { it.first }
+                }
+            }
         )
         drawGenericTable(document, initialPage, records, columns, startY, onNewPage)
     }

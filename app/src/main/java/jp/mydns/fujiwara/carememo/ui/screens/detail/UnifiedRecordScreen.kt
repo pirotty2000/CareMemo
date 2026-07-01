@@ -4,12 +4,10 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.ui.components.PdfSettingsDialog
-import jp.mydns.fujiwara.carememo.utils.PdfExporter
+import jp.mydns.fujiwara.carememo.ui.components.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.viewmodel.HealthRecordViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -37,16 +35,15 @@ fun UnifiedRecordScreen(
     var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
 
     val records by healthViewModel.records.collectAsState()
-    val conditionPhotoMap by conditionViewModel.getConditionPhotoMap(healthViewModel.records).collectAsState()
+    val isLoading by healthViewModel.isLoading.collectAsState()
+    val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf)
-    val pdfExportFailedMsg = stringResource(R.string.error_pdf_export_failed)
 
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
     var dialogTitle by remember { mutableStateOf<String?>(null) }
@@ -85,6 +82,7 @@ fun UnifiedRecordScreen(
             personId = personId,
             currentCategory = currentCategory,
             records = records,
+            isLoading = isLoading,
             conditionPhotoMap = conditionPhotoMap,
             currentPerson = currentPerson,
             personCategorySummary = personCategorySummary,
@@ -117,6 +115,7 @@ fun UnifiedRecordScreen(
             personId = personId,
             currentCategory = currentCategory,
             records = records,
+            isLoading = isLoading,
             conditionPhotoMap = conditionPhotoMap,
             currentPerson = currentPerson,
             personCategorySummary = personCategorySummary,
@@ -164,37 +163,17 @@ fun UnifiedRecordScreen(
         )
     }
 
-    if (showPdfSettingsDialog) {
-        PdfSettingsDialog(
-            category = currentCategory,
-            onDismiss = { showPdfSettingsDialog = false }
-        ) { r, o, start, end, photos, password ->
-            showPdfSettingsDialog = false
-            viewModel.setLockBypassEnabled(true)
-            scope.launch {
-                val allPhotos =
-                    if (currentCategory.hasOption && photos) conditionViewModel.getAllPhotosForPerson(
-                        personId
-                    ) else emptyList()
-                currentPerson?.let { person ->
-                    val success = PdfExporter.exportAndShare(
-                        context = context,
-                        person = person,
-                        isNameMaskingEnabled = isNameMaskingEnabled,
-                        category = currentCategory,
-                        records = records,
-                        allPhotos = allPhotos,
-                        range = r,
-                        order = o,
-                        customStartDate = start,
-                        customEndDate = end,
-                        password = password
-                    )
-                    if (!success) {
-                        snackbarHostState.showSnackbar(pdfExportFailedMsg)
-                    }
-                }
-            }
-        }
-    }
+    // PDF出力共通ハンドラー
+    PdfExportActionHandler(
+        showDialog = showPdfSettingsDialog,
+        onDismiss = { showPdfSettingsDialog = false },
+        category = currentCategory,
+        person = currentPerson,
+        records = records,
+        isNameMaskingEnabled = isNameMaskingEnabled,
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        conditionViewModel = conditionViewModel,
+        personId = personId
+    )
 }

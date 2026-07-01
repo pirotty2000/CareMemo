@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -37,7 +38,7 @@ class HealthRecordViewModel(
     /**
      * 現在の数値系カテゴリの履歴データを取得します。
      */
-    val records: StateFlow<List<Any>> = combine(_currentPerson, _currentCategory) { person, category ->
+    val records: StateFlow<List<HistoryRecord>> = combine(_currentPerson, _currentCategory) { person, category ->
         person to category
     }.flatMapLatest { (person, category) ->
         if (person == null || category == null) flowOf(emptyList())
@@ -47,7 +48,7 @@ class HealthRecordViewModel(
             Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
             else -> flowOf(emptyList())
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.onEach { _isLoading.value = false }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * 表示するカテゴリを設定します。
@@ -59,7 +60,7 @@ class HealthRecordViewModel(
     /**
      * 指定された数値系カテゴリの履歴データを取得します(拡大表示画面などで使用)。
      */
-    fun getHealthRecords(category: Category): StateFlow<List<Any>> {
+    fun getHealthRecords(category: Category): StateFlow<List<HistoryRecord>> {
         return _currentPerson.flatMapLatest { person ->
             if (person == null) flowOf(emptyList())
             else when (category) {

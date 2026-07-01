@@ -50,6 +50,7 @@ fun BatchInputScreen(
     onBack: () -> Unit
 ) {
     val currentPerson by viewModel.currentPerson.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val isProcessing by viewModel.isProcessing.collectAsState()
 
@@ -108,6 +109,7 @@ fun BatchInputScreen(
 
     BatchInputScreenContent(
         currentPerson = currentPerson,
+        isLoading = isLoading,
         isNameMaskingEnabled = isNameMaskingEnabled,
         isProcessing = isProcessing,
         height = height,
@@ -142,6 +144,7 @@ fun BatchInputScreen(
 @Composable
 fun BatchInputScreenContent(
     currentPerson: Person?,
+    isLoading: Boolean = false,
     isNameMaskingEnabled: Boolean,
     isProcessing: Boolean,
     height: String,
@@ -197,126 +200,143 @@ fun BatchInputScreenContent(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(flashColor)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                // 1. 記録日時 (オートフォーカスを日で止める)
-                InputSectionCard(title = "") {
-                    DateTimeInputFields(state = dateTimeState, autoFocusHour = false)
-                }
-
-                // 2. 身長・体重
-                InputSectionCard(title = "身長・体重") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = height,
-                            onValueChange = { onHeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HEIGHT)) },
-                            suffix = { Text("cm") },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[0]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[1].requestFocus() })
-                        )
-                        OutlinedTextField(
-                            value = weight,
-                            onValueChange = { onWeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_WEIGHT)) },
-                            suffix = { Text("kg") },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[1]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[2].requestFocus() })
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // 1. 記録日時 (オートフォーカスを日で止める)
+                    InputSectionCard(title = "") {
+                        DateTimeInputFields(state = dateTimeState, autoFocusHour = false)
+                    }
 
-                // 3. バイタル
-                InputSectionCard(title = "バイタル") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = bpSystolic,
-                            onValueChange = { onBpSystolicChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[2]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[3].requestFocus() })
-                        )
-                        OutlinedTextField(
-                            value = bpDiastolic,
-                            onValueChange = { onBpDiastolicChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[3]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[4].requestFocus() })
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = pulse,
-                            onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_PULSE)) },
-                            suffix = { Text("bpm") },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[4]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[5].requestFocus() })
-                        )
-                        OutlinedTextField(
-                            value = bodyTemperature,
-                            onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BODY_TEMP)) },
-                            suffix = { Text("℃") },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[5]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[6].requestFocus() })
-                        )
-                    }
-                }
-
-                // 4. 血糖値・HbA1c
-                InputSectionCard(title = "血糖値・HbA1c") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = glucose,
-                            onValueChange = { onGlucoseChange(it.filter { c -> c.isDigit() }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)) },
-                            suffix = { Text("mg/dL") },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[6]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { focusRequesters[7].requestFocus() })
-                        )
-                        OutlinedTextField(
-                            value = hba1c,
-                            onValueChange = { onHba1cChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                            label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)) },
-                            suffix = { Text("%") },
-                            modifier = Modifier.weight(1f).focusRequester(focusRequesters[7]),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                        )
-                    }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f), enabled = !isProcessing) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                    Button(
-                        onClick = onSave,
-                        modifier = Modifier.weight(1f),
-                        enabled = !isProcessing
-                    ) {
-                        if (isProcessing) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                            Spacer(Modifier.width(8.dp))
+                    // 2. 身長・体重
+                    InputSectionCard(title = "身長・体重") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = height,
+                                onValueChange = { onHeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HEIGHT)) },
+                                suffix = { Text("cm") },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[0]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[1].requestFocus() })
+                            )
+                            OutlinedTextField(
+                                value = weight,
+                                onValueChange = { onWeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_WEIGHT)) },
+                                suffix = { Text("kg") },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[1]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[2].requestFocus() })
+                            )
                         }
-                        Text(stringResource(R.string.save))
                     }
-                }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                    // 3. バイタル
+                    InputSectionCard(title = "バイタル") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = bpSystolic,
+                                onValueChange = { onBpSystolicChange(it.filter { c -> c.isDigit() }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[2]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[3].requestFocus() })
+                            )
+                            OutlinedTextField(
+                                value = bpDiastolic,
+                                onValueChange = { onBpDiastolicChange(it.filter { c -> c.isDigit() }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[3]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[4].requestFocus() })
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = pulse,
+                                onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_PULSE)) },
+                                suffix = { Text("bpm") },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[4]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[5].requestFocus() })
+                            )
+                            OutlinedTextField(
+                                value = bodyTemperature,
+                                onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BODY_TEMP)) },
+                                suffix = { Text("℃") },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[5]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[6].requestFocus() })
+                            )
+                        }
+                    }
+
+                    // 4. 血糖値・HbA1c
+                    InputSectionCard(title = "血糖値・HbA1c") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = glucose,
+                                onValueChange = { onGlucoseChange(it.filter { c -> c.isDigit() }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)) },
+                                suffix = { Text("mg/dL") },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[6]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusRequesters[7].requestFocus() })
+                            )
+                            OutlinedTextField(
+                                value = hba1c,
+                                onValueChange = { onHba1cChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)) },
+                                suffix = { Text("%") },
+                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[7]),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                            )
+                        }
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f), enabled = !isProcessing) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                        Button(
+                            onClick = onSave,
+                            modifier = Modifier.weight(1f),
+                            enabled = !isProcessing
+                        ) {
+                            if (isProcessing) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(stringResource(R.string.save))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(40.dp))
+                }
             }
 
             // スクロールインジケーター (上向きV, 下向きV)
@@ -366,6 +386,7 @@ fun BatchInputScreenPreview() {
     CareMemoTheme {
         BatchInputScreenContent(
             currentPerson = mockPerson,
+            isLoading = false,
             isNameMaskingEnabled = false,
             isProcessing = false,
             height = "165.5",

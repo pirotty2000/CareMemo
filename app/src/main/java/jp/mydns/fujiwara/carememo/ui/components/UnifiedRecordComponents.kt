@@ -83,7 +83,7 @@ fun UnifiedHistoryList(
                     }
                 }
             }
-            items(items.size) { index ->
+            items(items.size, key = { items[it].id }) { index ->
                 val record = items[index]
                 val isSelected = record.id == selectedRecordId
                 HistoryItemWrapper(

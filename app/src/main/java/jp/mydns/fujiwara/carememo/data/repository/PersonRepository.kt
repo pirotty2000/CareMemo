@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.data.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 /**
  * 利用者情報およびアプリ全体のデータ管理を担当するリポジトリ
@@ -91,21 +92,14 @@ class PersonRepository(
      * 全利用者のサマリー情報を取得します。
      */
     fun getPersonCategorySummaries(): Flow<Map<Int, PersonCategorySummary>> {
-        return combine(
-            heightAndWeightDao.getPersonIdsWithHeightWeight(),
-            bpAndPulseDao.getPersonIdsWithVital(),
-            glucoseAndHbA1cDao.getPersonIdsWithGlucose(),
-            conditionAtVisitDao.getPersonIdsWithCondition(),
-            medicationRecordDao.getPersonIdsWithMedication()
-        ) { hw, vital, glucose, condition, medication ->
-            val allIds = (hw + vital + glucose + condition + medication).distinct()
-            allIds.associateWith { id ->
-                PersonCategorySummary(
-                    hasHeightWeight = hw.contains(id),
-                    hasBpAndPulse = vital.contains(id),
-                    hasGlucoseAndHbA1c = glucose.contains(id),
-                    hasCondition = condition.contains(id),
-                    hasMedication = medication.contains(id)
+        return personDao.getPersonCategorySummaries().map { list ->
+            list.associate { result ->
+                result.id to PersonCategorySummary(
+                    hasHeightWeight = result.hasHeightWeight,
+                    hasBpAndPulse = result.hasBpAndPulse,
+                    hasGlucoseAndHbA1c = result.hasGlucoseAndHbA1c,
+                    hasCondition = result.hasCondition,
+                    hasMedication = result.hasMedication
                 )
             }
         }

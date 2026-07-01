@@ -24,6 +24,9 @@ abstract class PersonBaseViewModel(
     userSettingsRepository: UserSettingsRepository
 ) : BaseViewModel(userSettingsRepository) {
 
+    protected val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     protected val _currentPerson = MutableStateFlow<Person?>(null)
     val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
 
@@ -46,6 +49,8 @@ abstract class PersonBaseViewModel(
         viewModelScope.launch {
             repository.getPersonById(personId).collectLatest {
                 _currentPerson.value = it
+                // 基本情報がロードされたら一旦ロード中を解除（サブクラスでデータロードがある場合は、そちらでさらに制御される）
+                _isLoading.value = false
             }
         }
     }

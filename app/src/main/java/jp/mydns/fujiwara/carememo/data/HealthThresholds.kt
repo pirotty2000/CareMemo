@@ -80,8 +80,77 @@ object HealthThresholds {
     enum class AlertLevel(val color: Int, val pdfBgColor: Int?, val severity: Int) {
         NORMAL(Color.BLUE, null, 0),
         WARNING(Color.BLACK, 0xFFF0F0F0.toInt(), 1),
-        ALERT(Color.RED, 0xFFD8D8D8.toInt(), 2)
+        ALERT(Color.RED, 0xFFD8D8D8.toInt(), 2),
+        INFO(Color.CYAN, null, -1) // 低血圧や低体重などの「低め」の状態用
     }
+
+    /**
+     * グラフ描画用の範囲定義
+     */
+    data class VisualRange(val start: Double, val end: Double, val level: AlertLevel)
+
+    /**
+     * グラフ描画用の閾値線定義
+     */
+    data class VisualLimit(val label: String, val value: Double, val isAbove: Boolean)
+
+    // --- グラフ用メタデータ取得 ---
+
+    fun getBpRanges(): List<VisualRange> = listOf(
+        VisualRange(BP_HIGH_SYSTOLIC, 300.0, AlertLevel.ALERT),
+        VisualRange(100.0, BP_HIGH_SYSTOLIC, AlertLevel.NORMAL), // 正常(上)
+        VisualRange(90.0, 100.0, AlertLevel.WARNING),
+        VisualRange(BP_LOW_DIASTOLIC, 90.0, AlertLevel.NORMAL),  // 正常(下)
+        VisualRange(0.0, BP_LOW_DIASTOLIC, AlertLevel.INFO)
+    )
+
+    fun getPulseRanges(): List<VisualRange> = listOf(
+        VisualRange(PULSE_HIGH, 300.0, AlertLevel.ALERT),
+        VisualRange(PULSE_LOW, PULSE_HIGH, AlertLevel.NORMAL), // 正常
+        VisualRange(0.0, PULSE_LOW, AlertLevel.INFO)
+    )
+
+    fun getTempRanges(): List<VisualRange> = listOf(
+        VisualRange(TEMP_HIGH, 50.0, AlertLevel.ALERT),
+        VisualRange(TEMP_LOW, TEMP_HIGH, AlertLevel.NORMAL), // 正常
+        VisualRange(0.0, TEMP_LOW, AlertLevel.INFO)
+    )
+
+    fun getGlucoseRanges(): List<VisualRange> = listOf(
+        VisualRange(0.0, GLUCOSE_NORMAL_LOW, AlertLevel.INFO),
+        VisualRange(GLUCOSE_NORMAL_LOW, GLUCOSE_NORMAL_HIGH, AlertLevel.NORMAL), // 正常
+        VisualRange(GLUCOSE_NORMAL_HIGH, GLUCOSE_NORMAL_PREDIABETES, AlertLevel.WARNING),
+        VisualRange(GLUCOSE_NORMAL_PREDIABETES + 0.1, 1000.0, AlertLevel.ALERT)
+    )
+
+    fun getGlucoseLimits(): List<VisualLimit> = listOf(
+        VisualLimit("正常(下限)", GLUCOSE_NORMAL_LOW, false),
+        VisualLimit("正常(上限)", GLUCOSE_NORMAL_HIGH, true)
+    )
+
+    fun getHbA1cRanges(): List<VisualRange> = listOf(
+        VisualRange(0.0, HBA1C_GOOD, AlertLevel.NORMAL), // 正常
+        VisualRange(HBA1C_GOOD + 0.01, HBA1C_DIABETES - 0.01, AlertLevel.WARNING),
+        VisualRange(HBA1C_DIABETES, 20.0, AlertLevel.ALERT)
+    )
+
+    fun getHbA1cLimits(): List<VisualLimit> = listOf(
+        VisualLimit("正常(上限)", HBA1C_GOOD, true)
+    )
+
+    fun getBmiRanges(): List<VisualRange> = listOf(
+        VisualRange(0.0, BMI_NORMAL_LOW, AlertLevel.INFO),
+        VisualRange(BMI_NORMAL_LOW, BMI_NORMAL_HIGH, AlertLevel.NORMAL), // 正常
+        VisualRange(BMI_NORMAL_HIGH, BMI_OBESITY_1, AlertLevel.WARNING),
+        VisualRange(BMI_OBESITY_1, BMI_OBESITY_2, AlertLevel.ALERT),
+        VisualRange(BMI_OBESITY_2, BMI_OBESITY_3, AlertLevel.ALERT),
+        VisualRange(BMI_OBESITY_3, 100.0, AlertLevel.ALERT)
+    )
+
+    fun getBmiLimits(): List<VisualLimit> = listOf(
+        VisualLimit("正常(下限)", BMI_NORMAL_LOW, false),
+        VisualLimit("正常(上限)", BMI_NORMAL_HIGH, true)
+    )
 
     // --- 判定ロジック ---
 

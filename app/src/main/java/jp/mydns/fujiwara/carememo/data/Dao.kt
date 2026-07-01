@@ -41,6 +41,19 @@ interface PersonDao {
 
     @Upsert
     suspend fun insertAll(items: List<Person>)
+
+    @Query("""
+        SELECT 
+            p.id,
+            EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = p.id AND deleted_at IS NULL) AS hasHeightWeight,
+            EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = p.id AND deleted_at IS NULL) AS hasBpAndPulse,
+            EXISTS(SELECT 1 FROM glucose_and_hba1c_db WHERE person_id = p.id AND deleted_at IS NULL) AS hasGlucoseAndHbA1c,
+            EXISTS(SELECT 1 FROM condition_at_visit_db WHERE person_id = p.id AND deleted_at IS NULL) AS hasCondition,
+            EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = p.id AND deleted_at IS NULL) AS hasMedication
+        FROM person_db p
+        WHERE p.deleted_at IS NULL
+    """)
+    fun getPersonCategorySummaries(): Flow<List<PersonSummaryQueryResult>>
 }
 
 @Dao

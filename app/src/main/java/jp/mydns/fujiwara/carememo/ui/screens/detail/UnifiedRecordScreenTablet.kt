@@ -25,6 +25,7 @@ fun UnifiedRecordScreenTablet(
     personId: Int,
     currentCategory: Category,
     records: List<Any>,
+    isLoading: Boolean,
     conditionPhotoMap: Map<Int, Boolean>,
     currentPerson: Person?,
     personCategorySummary: jp.mydns.fujiwara.carememo.data.PersonCategorySummary?,
@@ -117,7 +118,22 @@ fun UnifiedRecordScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (records.isEmpty() && selectedConditionId == -1) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            } else if (records.isEmpty() && selectedConditionId == -1) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.empty_records),

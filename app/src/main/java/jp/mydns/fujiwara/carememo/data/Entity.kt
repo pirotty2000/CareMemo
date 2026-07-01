@@ -307,6 +307,18 @@ data class PersonCategorySummary(
     val hasMedication: Boolean = false
 )
 
+/**
+ * データベースクエリから直接サマリーを取得するための射影クラス
+ */
+data class PersonSummaryQueryResult(
+    val id: Int,
+    val hasHeightWeight: Boolean,
+    val hasBpAndPulse: Boolean,
+    val hasGlucoseAndHbA1c: Boolean,
+    val hasCondition: Boolean,
+    val hasMedication: Boolean
+)
+
 // --- 計算・判定用拡張関数（基軸となる HealthThresholds を使用） ---
 
 fun HeightAndWeight.calculateBMI(): Double {

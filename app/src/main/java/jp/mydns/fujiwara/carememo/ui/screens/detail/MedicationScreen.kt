@@ -4,10 +4,8 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.*
-import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.MedicationViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -22,6 +20,7 @@ fun MedicationScreen(
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val currentPerson by viewModel.currentPerson.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val recordsByDate by viewModel.recordsByDate.collectAsState()
     val allRecords by viewModel.allRecords.collectAsState()
@@ -30,7 +29,6 @@ fun MedicationScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var showDialog by remember { mutableStateOf<LocalDate?>(null) }
@@ -44,6 +42,7 @@ fun MedicationScreen(
         MedicationScreenTablet(
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
+            isLoading = isLoading,
             selectedMonth = selectedMonth,
             recordsByDate = recordsByDate,
             personCategorySummary = personCategorySummary,
@@ -67,6 +66,7 @@ fun MedicationScreen(
         MedicationScreenPhone(
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
+            isLoading = isLoading,
             selectedMonth = selectedMonth,
             recordsByDate = recordsByDate,
             personCategorySummary = personCategorySummary,
@@ -90,34 +90,18 @@ fun MedicationScreen(
         )
     }
 
-    if (showPdfSettingsDialog) {
-        PdfSettingsDialog(
-            category = Category.MEDICATION,
-            onDismiss = { showPdfSettingsDialog = false }
-        ) { range, order, start, end, _, password ->
-            showPdfSettingsDialog = false
-            viewModel.setLockBypassEnabled(true)
-            scope.launch {
-                currentPerson?.let { person ->
-                    val success = PdfExporter.exportAndShare(
-                        context = context,
-                        person = person,
-                        isNameMaskingEnabled = isNameMaskingEnabled,
-                        category = Category.MEDICATION,
-                        records = allRecords,
-                        range = range,
-                        order = order,
-                        customStartDate = start,
-                        customEndDate = end,
-                        password = password
-                    )
-                    if (!success) {
-                        snackbarHostState.showSnackbar("PDFの作成に失敗したか、対象データがありません")
-                    }
-                }
-            }
-        }
-    }
+    // PDF出力共通ハンドラー
+    PdfExportActionHandler(
+        showDialog = showPdfSettingsDialog,
+        onDismiss = { showPdfSettingsDialog = false },
+        category = Category.MEDICATION,
+        person = currentPerson,
+        records = allRecords,
+        isNameMaskingEnabled = isNameMaskingEnabled,
+        snackbarHostState = snackbarHostState,
+        viewModel = viewModel,
+        personId = personId
+    )
 
     if (showDialog != null) {
         MedicationInputDialog(

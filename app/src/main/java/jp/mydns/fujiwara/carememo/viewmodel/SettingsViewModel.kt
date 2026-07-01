@@ -150,24 +150,26 @@ class SettingsViewModel(
 
     fun exportData(context: Context, uri: Uri) {
         viewModelScope.launch {
+            var tempDir: File? = null
+            var tempZipFile: File? = null
             try {
                 val backup = personRepository.getBackupData()
                 val jsonString = json.encodeToString(backup)
-                val tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
+                tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
                 tempDir.mkdirs()
                 val jsonFile = File(tempDir, "backup.json")
                 jsonFile.writeText(jsonString)
+
                 val photosDir = ImageUtils.getPhotosDir(context)
                 val filesToZip = mutableListOf<File>()
                 filesToZip.add(jsonFile)
                 if (photosDir.exists() && (photosDir.list()?.isNotEmpty() == true)) {
                     filesToZip.add(photosDir)
                 }
-                val tempZipFile = File(context.cacheDir, "temp_backup.zip")
+                
+                tempZipFile = File(context.cacheDir, "temp_backup_${System.currentTimeMillis()}.zip")
 
                 // 暗号化パスワードの決定
-                // 1. ユーザー指定パスワード
-                // 2. 指定なしの場合はデータベースのパスワード（Base64）をデフォルトで使用
                 val password = if (isBackupPasswordEnabled.value) {
                     backupPassword.value
                 } else {
@@ -181,12 +183,13 @@ class SettingsViewModel(
                         input.copyTo(output)
                     }
                 }
-                jsonFile.delete()
-                tempDir.delete()
-                tempZipFile.delete()
                 sendUiEvent(UiEvent.ShowInfoDialog("エクスポート完了", "データと写真のエクスポートが完了しました。"))
             } catch (e: Exception) {
                 showError("エラー", "エクスポートに失敗しました: ${e.localizedMessage}")
+            } finally {
+                // 一時ファイルの確実な削除
+                tempDir?.deleteRecursively()
+                tempZipFile?.delete()
             }
         }
     }
@@ -194,13 +197,9 @@ class SettingsViewModel(
     fun importData(context: Context, uri: Uri, passwordOverride: String? = null) {
         viewModelScope.launch {
             try {
-                // 初回呼び出し（passwordOverrideがnull）の場合、ファイルを一時保存してチェック
                 if (passwordOverride == null) {
-                    // 以前の中断データがあれば削除
-                    pendingImportFile?.parentFile?.deleteRecursively()
-                    pendingImportFile = null
-                    pendingImportUri = null
-
+                    // 初回試行：一時ディレクトリの作成とファイルのコピー
+                    clearPendingImport()
                     val tempDir = File(context.cacheDir, "import_check_${System.currentTimeMillis()}")
                     tempDir.mkdirs()
                     val tempZipFile = File(tempDir, "temp_import.zip")
@@ -209,7 +208,7 @@ class SettingsViewModel(
                         tempZipFile.outputStream().use { output -> input.copyTo(output) }
                     }
 
-                    // Zipかどうかチェック
+                    // ファイル形式チェック (Zipマジックナンバー)
                     val isZip = tempZipFile.inputStream().use { input ->
                         val header = ByteArray(4)
                         val read = input.read(header)
@@ -222,14 +221,14 @@ class SettingsViewModel(
 
                     if (isZip) {
                         if (ZipUtils.isEncrypted(tempZipFile)) {
-                            // 1. ユーザー設定のバックアップパスワードで試行
+                            // 1. アプリ設定のパスワードで試行
                             val userPw = backupPassword.value
                             if (userPw.isNotEmpty() && ZipUtils.isValidPassword(tempZipFile, userPw)) {
                                 proceedImportZip(context, tempZipFile, userPw)
                                 return@launch
                             }
 
-                            // 2. データベースのパスワード（Base64）で試行（デフォルト暗号化対応）
+                            // 2. 現在のデバイスのDBキー（Base64）で試行（同じ端末内での移行）
                             val dbKey = DatabaseKeyManager(context).getOrCreatePassphrase()
                             val dbPw = Base64.encodeToString(dbKey, Base64.NO_WRAP)
                             if (ZipUtils.isValidPassword(tempZipFile, dbPw)) {
@@ -237,7 +236,7 @@ class SettingsViewModel(
                                 return@launch
                             }
 
-                            // 3. いずれも失敗した場合はパスワード入力を求める
+                            // 3. 自動一致しなかった場合はパスワード入力を求める（エラーは出さない）
                             pendingImportFile = tempZipFile
                             pendingImportUri = uri
                             sendUiEvent(UiEvent.RequestPassword)
@@ -245,7 +244,7 @@ class SettingsViewModel(
                             proceedImportZip(context, tempZipFile, null)
                         }
                     } else {
-                        // JSONファイルとして処理
+                        // 直接JSONファイルとして処理
                         val jsonString = tempZipFile.readText()
                         val backup = json.decodeFromString<CareMemoBackup>(jsonString)
                         personRepository.replaceAllData(backup)
@@ -253,43 +252,55 @@ class SettingsViewModel(
                         sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました。"))
                     }
                 } else {
-                    // パスワード入力後の再開
+                    // パスワード入力後の再試行
                     val file = pendingImportFile ?: throw Exception("一時ファイルが見つかりません。")
                     if (ZipUtils.isValidPassword(file, passwordOverride)) {
                         proceedImportZip(context, file, passwordOverride)
-                        pendingImportFile = null
-                        pendingImportUri = null
+                        clearPendingImport()
                     } else {
                         showError("エラー", "パスワードが違います。")
+                        // パスワードが違う場合はダイアログを閉じるか再入力を促す（ここでは再度RequestPasswordを送るのも手だが、UI側で制御）
+                        sendUiEvent(UiEvent.RequestPassword)
                     }
                 }
             } catch (e: Exception) {
                 showError("エラー", "復元に失敗しました: ${e.localizedMessage}")
-                pendingImportFile?.parentFile?.deleteRecursively()
-                pendingImportFile = null
+                clearPendingImport()
             }
         }
     }
 
     private suspend fun proceedImportZip(context: Context, zipFile: File, password: String?) {
         val tempDir = zipFile.parentFile ?: File(context.cacheDir, "import_exec")
-        ZipUtils.unzip(zipFile, tempDir, password)
-        val jsonFile = File(tempDir, "backup.json")
-        if (!jsonFile.exists()) throw Exception("バックアップファイル(backup.json)が見つかりません。")
-        val jsonString = jsonFile.readText()
-        val backup = json.decodeFromString<CareMemoBackup>(jsonString)
-        personRepository.replaceAllData(backup)
-        
-        ImageUtils.clearPhotosDir(context)
-        val extractedPhotosDir = File(tempDir, "photos")
-        if (extractedPhotosDir.exists() && extractedPhotosDir.isDirectory) {
-            val appPhotosDir = ImageUtils.getPhotosDir(context)
-            extractedPhotosDir.listFiles()?.forEach { file ->
-                file.copyTo(File(appPhotosDir, file.name), overwrite = true)
+        try {
+            ZipUtils.unzip(zipFile, tempDir, password)
+            val jsonFile = File(tempDir, "backup.json")
+            if (!jsonFile.exists()) throw Exception("バックアップファイル(backup.json)が見つかりません。")
+            
+            val jsonString = jsonFile.readText()
+            val backup = json.decodeFromString<CareMemoBackup>(jsonString)
+            personRepository.replaceAllData(backup)
+            
+            // 写真データの復元
+            ImageUtils.clearPhotosDir(context)
+            val extractedPhotosDir = File(tempDir, "photos")
+            if (extractedPhotosDir.exists() && extractedPhotosDir.isDirectory) {
+                val appPhotosDir = ImageUtils.getPhotosDir(context)
+                extractedPhotosDir.listFiles()?.forEach { file ->
+                    file.copyTo(File(appPhotosDir, file.name), overwrite = true)
+                }
             }
+            sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データと写真の復元が完了しました。"))
+        } finally {
+            // 解凍に使用した一時ディレクトリのクリーンアップ
+            tempDir.deleteRecursively()
         }
-        tempDir.deleteRecursively()
-        sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データと写真の復元が完了しました。"))
+    }
+
+    private fun clearPendingImport() {
+        pendingImportFile?.parentFile?.deleteRecursively()
+        pendingImportFile = null
+        pendingImportUri = null
     }
 
     fun clearAllData(context: Context) {
@@ -299,7 +310,7 @@ class SettingsViewModel(
                 personRepository.clearAllData()
                 // 写真ファイルの全消去
                 ImageUtils.clearPhotosDir(context)
-                
+
                 sendUiEvent(UiEvent.ShowInfoDialog("完了", "全てのデータと写真を削除しました。"))
             } catch (e: Exception) {
                 showError("エラー", "データの削除に失敗しました: ${e.localizedMessage}")

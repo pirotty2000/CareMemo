@@ -9,6 +9,7 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,18 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/**
+ * 利用者一覧の各項目の表示状態を保持するクラス
+ */
+data class PersonUiState(
+    val person: Person,
+    val maskedName: String,
+    val maskedFurigana: String,
+    val age: Int,
+    val formattedBirthday: String,
+    val summary: PersonCategorySummary
+)
 
 /**
  * 利用者一覧画面用の ViewModel
@@ -57,12 +70,21 @@ class PersonListViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = repository.getPersonCategorySummaries()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val userList: StateFlow<List<Person>> = combine(
+    val userList: StateFlow<List<PersonUiState>> = combine(
         repository.getAllPersons().onEach { _isLoading.value = false },
         _selectedSection,
-        _personsWithMatchedConditions
-    ) { allPersons, section, matchedIds ->
+        _personsWithMatchedConditions,
+        isNameMaskingEnabled,
+        categorySummaries
+    ) { allPersons, section, matchedIds, isMasking, summaries ->
         var filtered = allPersons
         if (section != "全") {
             filtered = filtered.filter { person ->
@@ -74,7 +96,17 @@ class PersonListViewModel(
                 matchedIds.contains(person.id)
             }
         }
-        filtered
+        
+        filtered.map { person ->
+            PersonUiState(
+                person = person,
+                maskedName = person.getMaskedName(isMasking),
+                maskedFurigana = person.getMaskedFurigana(isMasking),
+                age = DateTimeUtils.calculateAge(person.birthday),
+                formattedBirthday = DateTimeUtils.formatDateJapaneseEra(person.birthday),
+                summary = summaries[person.id] ?: PersonCategorySummary()
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun getSectionForName(furigana: String): String {
@@ -99,13 +131,6 @@ class PersonListViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
-        )
-
-    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = repository.getPersonCategorySummaries()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyMap()
         )
 
     fun addPerson(person: Person) {

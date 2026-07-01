@@ -61,7 +61,7 @@ jp.mydns.fujiwara.carememo
 - (3) `UnifiedRecordScreenTablet.kt`：(A)タブレット向けスクリーン。
 - (4) `UnifiedRecordScreenContent.kt`：(A)数値系カテゴリのコンテントで、Phone/Tablet各々が使用。
 
-##### 1.2.3.2. (A)(B)サブ画面：`ui/screens/detail/sub/`
+##### 1.2.3.2. (A)サブ画面：`ui/screens/detail/sub/`
 - (sub-1) `GraphExpansionScreen.kt`: (A)バイタルデータ等のグラフを拡大して詳細に確認・操作するための画面。
  
 #### 1.2.4. (B)カテゴリ「所見メモ」
@@ -98,6 +98,7 @@ jp.mydns.fujiwara.carememo
 - `DateTimeInputFields.kt`: 日時入力（日付選択・時刻選択）用のカスタムフィールド。
 - `PersonHeaderTitle.kt`: 画面上部に表示される利用者の名前や基本情報を表示するヘッダー部品。
 - `PdfSettingsDialog.kt`: PDF出力時の出力期間や項目を設定するためのダイアログUI。
+- `PdfExportActionHandler.kt`: 各画面で共通のPDF出力処理（ダイアログ表示〜PDF生成〜共有）を制御する非表示のロジックコンポーネント。
 ### 2.2. 利用者一覧画面の部品
 - `CategoryBadges.kt`: 各カテゴリの状態やラベルを視覚的に表示するバッジコンポーネント。
 ### 2.3. 利用者詳細画面
