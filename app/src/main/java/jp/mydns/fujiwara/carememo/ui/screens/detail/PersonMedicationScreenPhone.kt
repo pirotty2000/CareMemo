@@ -33,16 +33,12 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.*
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonMedicationScreenPhone(
-    viewModel: PersonDetailViewModel,
-    medicationViewModel: PersonMedicationViewModel,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     isLoading: Boolean,
@@ -115,9 +111,7 @@ fun PersonMedicationScreenPhone(
                 onHistoryModeChange = onHistoryModeChange,
                 onPreviousMonth = onPreviousMonth,
                 onNextMonth = onNextMonth,
-                onDayClick = onDayClick,
-                viewModel = viewModel,
-                medicationViewModel = medicationViewModel
+                onDayClick = onDayClick
             )
         }
     }

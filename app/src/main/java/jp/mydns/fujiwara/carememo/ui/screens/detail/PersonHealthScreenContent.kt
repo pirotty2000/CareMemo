@@ -39,7 +39,6 @@ import jp.mydns.fujiwara.carememo.ui.components.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.HealthRecordDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @Composable
@@ -55,7 +54,6 @@ fun PersonHealthScreenContent(
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
-    viewModel: PersonDetailViewModel,
     healthViewModel: PersonHealthViewModel,
     isAnyDialogOpen: Boolean
 ) {

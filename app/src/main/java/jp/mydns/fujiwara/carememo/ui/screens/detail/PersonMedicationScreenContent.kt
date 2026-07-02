@@ -33,8 +33,6 @@ import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.ui.components.CalendarGrid
 import jp.mydns.fujiwara.carememo.ui.components.MedicationHistoryTable
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -49,8 +47,6 @@ fun PersonMedicationScreenContent(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
-    viewModel: PersonDetailViewModel,
-    medicationViewModel: PersonMedicationViewModel,
 ) {
     if (isLoading) {
         Box(

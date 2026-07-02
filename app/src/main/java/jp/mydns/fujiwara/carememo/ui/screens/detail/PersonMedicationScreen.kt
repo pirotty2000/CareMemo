@@ -72,8 +72,6 @@ fun PersonMedicationScreen(
 
     if (isExpanded) {
         PersonMedicationScreenTablet(
-            viewModel = viewModel,
-            medicationViewModel = medicationViewModel,
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
             isLoading = isLoading,
@@ -98,8 +96,6 @@ fun PersonMedicationScreen(
         )
     } else {
         PersonMedicationScreenPhone(
-            viewModel = viewModel,
-            medicationViewModel = medicationViewModel,
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
             isLoading = isLoading,

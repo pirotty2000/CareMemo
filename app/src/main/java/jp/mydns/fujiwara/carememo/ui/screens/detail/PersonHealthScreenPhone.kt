@@ -36,13 +36,11 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.*
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenPhone(
-    viewModel: PersonDetailViewModel,
     healthViewModel: PersonHealthViewModel,
     personId: Int,
     currentCategory: Category,
@@ -184,7 +182,6 @@ fun PersonHealthScreenPhone(
                     onExpandGraph = { index ->
                         onNavigateToGraphExpansion(personId, currentCategory, index)
                     },
-                    viewModel = viewModel,
                     healthViewModel = healthViewModel,
                     isAnyDialogOpen = recordToDelete != null
                 )

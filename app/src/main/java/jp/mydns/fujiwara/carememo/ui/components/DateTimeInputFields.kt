@@ -49,18 +49,6 @@ class DateTimeInputState(
             null
         }
     }
-
-    /**
-     * 指定された Instant で各フィールドの値を更新する
-     */
-    fun setFromInstant(instant: Instant) {
-        val zdt = instant.atZone(ZoneId.systemDefault())
-        year.value = zdt.year.toString()
-        month.value = zdt.monthValue.toString()
-        day.value = zdt.dayOfMonth.toString()
-        hour.value = "%02d".format(zdt.hour)
-        minute.value = "%02d".format(zdt.minute)
-    }
 }
 
 /**

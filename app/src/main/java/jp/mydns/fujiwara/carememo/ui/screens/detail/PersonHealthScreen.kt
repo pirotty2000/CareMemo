@@ -103,7 +103,6 @@ fun PersonHealthScreen(
 
     if (isExpanded) {
         PersonHealthScreenTablet(
-            viewModel = viewModel,
             healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
@@ -136,7 +135,6 @@ fun PersonHealthScreen(
         )
     } else {
         PersonHealthScreenPhone(
-            viewModel = viewModel,
             healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
