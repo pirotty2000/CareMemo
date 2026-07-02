@@ -32,7 +32,6 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
-import java.time.Instant
 
 /**
  * 所見メモの内容表示 (リストアイテム用)
