@@ -202,6 +202,10 @@ fun ConditionDetailPane(
         }
     }
 
+    val isDateTimeValid by remember(dateTimeState) {
+        derivedStateOf { dateTimeState.toInstant() != null }
+    }
+
     if (conditionId == -1) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -254,13 +258,14 @@ fun ConditionDetailPane(
                         OutlinedButton(onClick = { if (conditionId == 0) { /* nop */ } else isEditing = false }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.cancel)) }
                         Button(
                             onClick = {
-                                val recordTime = dateTimeState.toInstant() ?: Instant.now()
-                                val newMemo = ConditionAtVisit(id = conditionId, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)
-                                conditionViewModel.saveRecord(newMemo)
-                                isEditing = false
+                                dateTimeState.toInstant()?.let { recordTime ->
+                                    val newMemo = ConditionAtVisit(id = conditionId, personId = personId, title = title, condition = condition, author = author, recordTime = recordTime)
+                                    conditionViewModel.saveRecord(newMemo)
+                                    isEditing = false
+                                }
                             },
                             modifier = Modifier.weight(1f),
-                            enabled = author.isNotBlank() && condition.isNotBlank()
+                            enabled = author.isNotBlank() && condition.isNotBlank() && isDateTimeValid
                         ) { Text(stringResource(R.string.save)) }
                     }
                 }

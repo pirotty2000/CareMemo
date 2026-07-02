@@ -161,8 +161,10 @@ fun BatchInputScreen(
         snackbarHostState = snackbarHostState,
         scrollState = scrollState,
         onSave = {
-            viewModel.setRecordTime(dateTimeState.toInstant() ?: Instant.now())
-            viewModel.saveBatch()
+            dateTimeState.toInstant()?.let { instant ->
+                viewModel.setRecordTime(instant)
+                viewModel.saveBatch()
+            }
         },
         onBack = onBack
     )
@@ -200,6 +202,9 @@ fun BatchInputScreenContent(
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequesters = remember { List(8) { FocusRequester() } }
+    val isDateTimeValid by remember(dateTimeState) {
+        derivedStateOf { dateTimeState.toInstant() != null }
+    }
 
     Scaffold(
         topBar = {
@@ -353,7 +358,7 @@ fun BatchInputScreenContent(
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f),
-                            enabled = !isProcessing
+                            enabled = !isProcessing && isDateTimeValid
                         ) {
                             if (isProcessing) {
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)

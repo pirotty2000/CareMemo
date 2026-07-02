@@ -37,15 +37,24 @@ class DateTimeInputState(
 ) {
     /**
      * 入力値から Instant を生成する。不正な入力の場合は null を返す。
+     * 年・月・日は必須。時・分が未入力（空文字）の場合は 00 として扱う。
      */
     fun toInstant(): Instant? {
+        val y = year.value.toIntOrNull() ?: return null
+        val m = month.value.toIntOrNull() ?: return null
+        val d = day.value.toIntOrNull() ?: return null
+
+        // 時・分は空文字の場合 00 とみなす。数値変換できない場合は null。
+        val h = if (hour.value.isBlank()) 0 else hour.value.toIntOrNull() ?: return null
+        val min = if (minute.value.isBlank()) 0 else minute.value.toIntOrNull() ?: return null
+
         return try {
             ZonedDateTime.of(
-                year.value.toInt(), month.value.toInt(), day.value.toInt(),
-                hour.value.toInt(), minute.value.toInt(), 0, 0,
+                y, m, d, h, min, 0, 0,
                 ZoneId.systemDefault()
             ).toInstant()
         } catch (_: Exception) {
+            // 日付の妥当性（例：2月30日など）で失敗した場合は null を返す
             null
         }
     }
@@ -195,7 +204,6 @@ private fun DateTimeUnitField(
             }
         },
         modifier = modifier,
-        onFocusChanged = { if (it.isFocused) onValueChange("") },
         suffix = { Text(label, style = MaterialTheme.typography.bodySmall) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = imeAction),
         keyboardActions = KeyboardActions(

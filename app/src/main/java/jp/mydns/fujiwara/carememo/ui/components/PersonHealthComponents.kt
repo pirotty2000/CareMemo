@@ -564,15 +564,16 @@ fun HealthRecordDetailPane(
                 hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
                 onCancel = onCancel,
                 onSave = {
-                    val recordTime = dateTimeState.toInstant() ?: Instant.now()
-                    val newRecord: Any = when (category) {
-                        Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
-                        Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
-                        Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
-                        else -> throw IllegalStateException("Not supported category")
+                    dateTimeState.toInstant()?.let { recordTime ->
+                        val newRecord: Any = when (category) {
+                            Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
+                            Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
+                            Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
+                            else -> throw IllegalStateException("Not supported category")
+                        }
+                        healthViewModel.saveRecord(newRecord)
+                        onSaveSuccess()
                     }
-                    healthViewModel.saveRecord(newRecord)
-                    onSaveSuccess()
                 }
             )
         } else {
@@ -601,6 +602,9 @@ private fun HealthRecordEditForm(
     val secondFieldFocusRequester = remember { FocusRequester() }
     val thirdFieldFocusRequester = remember { FocusRequester() }
     val fourthFieldFocusRequester = remember { FocusRequester() }
+    val isDateTimeValid by remember(dateTimeState) {
+        derivedStateOf { dateTimeState.toInstant() != null }
+    }
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -694,12 +698,12 @@ private fun HealthRecordEditForm(
                     Button(
                         onClick = onSave,
                         modifier = Modifier.weight(1f),
-                        enabled = when (category) {
+                        enabled = (when (category) {
                             Category.HEIGHT_AND_WEIGHT -> weightText.isNotBlank()
                             Category.BP_AND_PULSE -> bpSystolicText.isNotBlank() || bpDiastolicText.isNotBlank() || pulseText.isNotBlank() || bodyTemperatureText.isNotBlank()
                             Category.GLUCOSE_AND_HBA1C -> glucoseText.isNotBlank() || hba1cText.isNotBlank()
                             else -> true
-                        }
+                        }) && isDateTimeValid
                     ) { Text(stringResource(R.string.save)) }
                 }
             }

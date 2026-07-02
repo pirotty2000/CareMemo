@@ -49,27 +49,30 @@ fun PersonMedicationScreen(
     onNavigateToCategory: (Category) -> Unit
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
-    val currentPerson by viewModel.currentPerson.collectAsState()
+    val scope = rememberCoroutineScope()
+
     val isLoading by medicationViewModel.isLoading.collectAsState()
+    val currentPerson by viewModel.currentPerson.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showPdfSettingsDialog by remember { mutableStateOf(false) }
+
     val selectedMonth by medicationViewModel.selectedMonth.collectAsState()
     val recordsByDate by medicationViewModel.recordsByDate.collectAsState()
     val allRecords by medicationViewModel.allRecords.collectAsState()
-    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var showPdfSettingsDialog by remember { mutableStateOf(false) }
-
     var showDialog by remember { mutableStateOf<LocalDate?>(null) }
     var isHistoryMode by rememberSaveable { mutableStateOf(false) }
 
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
         medicationViewModel.loadPerson(personId)
         viewModel.setCategory(Category.MEDICATION)
     }
 
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (isExpanded) {
         PersonMedicationScreenTablet(
             currentPerson = currentPerson,

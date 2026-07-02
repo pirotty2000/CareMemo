@@ -56,23 +56,24 @@ fun PersonConditionScreen(
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
 
-    // データの監視
     val records by conditionViewModel.filteredRecords.collectAsState()
+
     val isLoading by conditionViewModel.isLoading.collectAsState()
-    val searchQuery by conditionViewModel.searchQuery.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
-    val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // 選択中のID管理
-    var selectedId by rememberSaveable { mutableIntStateOf(-1) }
-    var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
-    // 初期ロード
+    var selectedId by rememberSaveable { mutableIntStateOf(-1) }
+
+
+    val searchQuery by conditionViewModel.searchQuery.collectAsState()
+    val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsState()
+    var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
+
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
         viewModel.setCategory(Category.CONDITION_AT_VISIT)
@@ -81,8 +82,7 @@ fun PersonConditionScreen(
         selectedId = -1
     }
 
-    // IDが選択された際の処理は、詳細ペイン（Component）側の LaunchedEffect に任せるため削除
-
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (isExpanded) {
         PersonConditionScreenTablet(
             viewModel = viewModel,

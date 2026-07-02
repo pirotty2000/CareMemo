@@ -53,28 +53,27 @@ fun PersonHealthScreen(
     onNavigateToCategory: (Category) -> Unit,
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
-    var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
-
-    // ユーザーの表示モード設定（初期値は履歴: true）
-    var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
-
-    // タブレット用／編集用：現在選択されている記録のID (-1: 未選択, 0: 新規作成)
-    var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
+    val scope = rememberCoroutineScope()
 
     val records by healthViewModel.records.collectAsState()
+
     val isLoading by healthViewModel.isLoading.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
-    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf)
-
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
+
+    var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
+
+    var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
+    var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
+    val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf)
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -101,6 +100,7 @@ fun PersonHealthScreen(
 
     val currentCategoryName = stringResource(currentCategory.displayNameRes)
 
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (isExpanded) {
         PersonHealthScreenTablet(
             healthViewModel = healthViewModel,
