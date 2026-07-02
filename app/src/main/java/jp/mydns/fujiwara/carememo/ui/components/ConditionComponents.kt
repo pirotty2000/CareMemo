@@ -112,12 +112,17 @@ fun SearchBox(
 @Composable
 fun ObservationList(
     records: List<Any>,
+    isLoading: Boolean,
     selectedId: Int,
     conditionPhotoMap: Map<Int, Boolean>,
     onSelect: (Int) -> Unit,
     onDelete: (HistoryRecord) -> Unit
 ) {
-    if (records.isEmpty()) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (records.isEmpty()) {
         EmptyState(
             message = stringResource(R.string.empty_records),
             description = stringResource(R.string.empty_records_description),

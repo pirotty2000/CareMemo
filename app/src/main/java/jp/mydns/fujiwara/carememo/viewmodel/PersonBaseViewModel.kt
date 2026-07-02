@@ -48,6 +48,7 @@ abstract class PersonBaseViewModel(
      * 利用者情報をロードします。
      */
     fun loadPerson(personId: Int) {
+        _isLoading.value = true
         viewModelScope.launch {
             repository.getPersonById(personId).collectLatest {
                 _currentPerson.value = it

@@ -166,6 +166,7 @@ fun PersonHealthScreenTablet(
                     isExpanded = true,
                     personId = personId,
                     records = records,
+                    isLoading = isLoading,
                     currentCategory = currentCategory,
                     preferredShowHistory = true,
                     onPreferredShowHistoryChange = {},

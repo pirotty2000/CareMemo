@@ -50,13 +50,20 @@ class PersonHealthViewModel(
             Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
             else -> flowOf(emptyList())
         }
-    }.onEach { _isLoading.value = false }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.onEach { 
+        if (_currentPerson.value != null && _currentCategory.value != null) {
+            _isLoading.value = false
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * 表示するカテゴリを設定します。
      */
     fun setCategory(category: Category) {
-        _currentCategory.value = category
+        if (_currentCategory.value != category) {
+            _isLoading.value = true
+            _currentCategory.value = category
+        }
     }
 
     /**

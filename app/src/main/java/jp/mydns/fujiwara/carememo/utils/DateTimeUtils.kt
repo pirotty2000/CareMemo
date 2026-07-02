@@ -122,4 +122,40 @@ object DateTimeUtils {
      * 現在時刻を写真のキャプション用にフォーマットして返す
      */
     fun getCurrentPhotoCaption(): String = formatPhotoCaption(Instant.now())
+
+    /**
+     * 誕生日が現在から指定された日数以内（誕生日を含む）かどうかを判定する
+     * @param birthday 誕生日
+     * @param daysIn 判定する日数 (デフォルト30日)
+     * @return 期間内であれば true
+     */
+    fun isBirthdaySoon(birthday: Instant, daysIn: Int = 30): Boolean {
+        val zoneId = ZoneId.systemDefault()
+        val today = LocalDate.now(zoneId)
+        val birthDate = birthday.atZone(zoneId).toLocalDate()
+
+        // 今年の誕生日を求める
+        var nextBirthday = birthDate.withYear(today.year)
+
+        // 今年の誕生日が既に過ぎている場合は来年の誕生日で判定する
+        if (nextBirthday.isBefore(today)) {
+            nextBirthday = nextBirthday.plusYears(1)
+        }
+
+        // 今日から次の誕生日までの日数を計算
+        val daysUntil = java.time.temporal.ChronoUnit.DAYS.between(today, nextBirthday)
+
+        return daysUntil in 0..daysIn.toLong()
+    }
+
+    /**
+     * 今日が誕生日かどうかを判定する
+     */
+    fun isBirthdayToday(birthday: Instant): Boolean {
+        val zoneId = ZoneId.systemDefault()
+        val today = LocalDate.now(zoneId)
+        val birthDate = birthday.atZone(zoneId).toLocalDate()
+        
+        return today.monthValue == birthDate.monthValue && today.dayOfMonth == birthDate.dayOfMonth
+    }
 }

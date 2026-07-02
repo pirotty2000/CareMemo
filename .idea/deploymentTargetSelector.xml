@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-02T13:11:53.907910300Z">
+        <DropdownSelection timestamp="2026-07-02T14:19:18.411686Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\pirotty.galaxy\.android\avd\TORQUE_G06_KYG03.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=57080112140" />
             </handle>
           </Target>
         </DropdownSelection>

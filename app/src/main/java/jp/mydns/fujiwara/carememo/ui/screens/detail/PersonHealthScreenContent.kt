@@ -46,6 +46,7 @@ fun PersonHealthScreenContent(
     isExpanded: Boolean,
     personId: Int,
     records: List<Any>,
+    isLoading: Boolean,
     currentCategory: Category,
     preferredShowHistory: Boolean,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
@@ -62,7 +63,22 @@ fun PersonHealthScreenContent(
         records.filterIsInstance<HistoryRecord>()
     }
 
-    if (isExpanded) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: 履歴リスト (比率 1)

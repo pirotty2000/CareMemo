@@ -50,7 +50,11 @@ class PersonMedicationViewModel(
         } else {
             flowOf(emptyList())
         }
-    }.onEach { _isLoading.value = false }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.onEach { 
+        if (_currentPerson.value != null) {
+            _isLoading.value = false 
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * 利用者の全服薬記録 (PDF出力用)
@@ -68,10 +72,12 @@ class PersonMedicationViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun nextMonth() {
+        _isLoading.value = true
         _selectedMonth.value = _selectedMonth.value.plusMonths(1)
     }
 
     fun previousMonth() {
+        _isLoading.value = true
         _selectedMonth.value = _selectedMonth.value.minusMonths(1)
     }
 

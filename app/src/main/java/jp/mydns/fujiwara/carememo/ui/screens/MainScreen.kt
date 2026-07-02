@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
@@ -76,6 +77,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
 import jp.mydns.fujiwara.carememo.BuildConfig
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -370,10 +372,36 @@ fun MainScreenContent(
                 ) {
                     items(userList, key = { it.person.id }) { userUiState ->
                         var showItemMenu by remember { mutableStateOf(false) }
+                        val isBirthdayToday = remember(userUiState.person.birthday) {
+                            DateTimeUtils.isBirthdayToday(userUiState.person.birthday)
+                        }
+                        val isBirthdaySoon = remember(userUiState.person.birthday) {
+                            DateTimeUtils.isBirthdaySoon(userUiState.person.birthday)
+                        }
                         Column(modifier = Modifier.animateItem()) {
                             ListItem(
                                 leadingContent = {
-                                    CategoryBadges(summary = userUiState.summary)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        CategoryBadges(summary = userUiState.summary)
+                                        
+                                        // ケーキアイコン領域をさらにコンパクト化
+                                        Box(
+                                            modifier = Modifier.width(20.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isBirthdaySoon || isBirthdayToday) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Cake,
+                                                    contentDescription = "もうすぐ誕生日",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = Color(0xFFE91E63)
+                                                )
+                                            }
+                                        }
+                                    }
                                 },
                                 headlineContent = { 
                                     Column { 
@@ -392,9 +420,15 @@ fun MainScreenContent(
                                             maxLines = 1, 
                                             overflow = TextOverflow.Ellipsis
                                         ) 
+                                        Text(
+                                            text = stringResource(R.string.birthday_summary_format, userUiState.formattedBirthday, stringResource(R.string.age_suffix, userUiState.age)),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     } 
                                 },
-                                supportingContent = { Text(text = stringResource(R.string.birthday_summary_format, userUiState.formattedBirthday, stringResource(R.string.age_suffix, userUiState.age)), style = MaterialTheme.typography.bodySmall) },
                                 trailingContent = {
                                     Box {
                                         IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
@@ -404,7 +438,14 @@ fun MainScreenContent(
                                         }
                                     }
                                 },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface).clickable { onUserClick(userUiState.person) }
+                                colors = ListItemDefaults.colors(
+                                    containerColor = when {
+                                        isBirthdayToday -> Color(0xFFFFC0CB) // Pink (今日: 濃いめ)
+                                        isBirthdaySoon -> Color(0xFFFFF0F5)  // LavenderBlush (もうすぐ: 薄め)
+                                        else -> MaterialTheme.colorScheme.surface
+                                    }
+                                ),
+                                modifier = Modifier.clickable { onUserClick(userUiState.person) }
                             )
                             HorizontalDivider()
                         }
@@ -608,15 +649,44 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    val person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant())
+    val zoneId = ZoneId.systemDefault()
+    val today = LocalDate.now(zoneId)
+    
+    // 通常の利用者
+    val person1 = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(zoneId).toInstant())
+    
+    // もうすぐ誕生日の利用者 (明日が誕生日と仮定)
+    val birthdaySoon = today.plusDays(1).minusYears(70)
+    val person2 = Person(id = 2, lastName = "佐藤", firstName = "花子", lastNameFurigana = "サトウ", firstNameFurigana = "ハナコ", birthday = birthdaySoon.atStartOfDay(zoneId).toInstant())
+    
+    // 今日が誕生日の利用者
+    val birthdayToday = today.minusYears(80)
+    val person3 = Person(id = 3, lastName = "田中", firstName = "梅", lastNameFurigana = "タナカ", firstNameFurigana = "ウメ", birthday = birthdayToday.atStartOfDay(zoneId).toInstant())
+
     val mockUserList = listOf(
         PersonUiState(
-            person = person,
+            person = person1,
             maskedName = "山○\u3000太○",
             maskedFurigana = "ヤ○ダ\u3000タ○ウ",
             age = 75,
             formattedBirthday = "昭和25年1月1日",
             summary = PersonCategorySummary(hasBpAndPulse = true)
+        ),
+        PersonUiState(
+            person = person2,
+            maskedName = "佐○\u3000花○",
+            maskedFurigana = "サ○ウ\u3000ハ○コ",
+            age = 70,
+            formattedBirthday = "昭和30年10月10日",
+            summary = PersonCategorySummary(hasCondition = true)
+        ),
+        PersonUiState(
+            person = person3,
+            maskedName = "田○\u3000梅",
+            maskedFurigana = "タ○カ\u3000ウメ",
+            age = 80,
+            formattedBirthday = "昭和20年2月10日",
+            summary = PersonCategorySummary(hasMedication = true)
         )
     )
     CareMemoTheme { 

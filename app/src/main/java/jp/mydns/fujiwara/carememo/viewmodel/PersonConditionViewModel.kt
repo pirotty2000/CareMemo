@@ -48,7 +48,11 @@ class PersonConditionViewModel(
             if (person == null) flowOf(emptyList())
             else conditionRepository.getConditionAtVisitByPersonId(person.id)
         }
-        .onEach { _isLoading.value = false }
+        .onEach { 
+            if (_currentPerson.value != null) {
+                _isLoading.value = false
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")

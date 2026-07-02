@@ -172,6 +172,7 @@ fun PersonHealthScreenPhone(
                     isExpanded = false,
                     personId = personId,
                     records = records,
+                    isLoading = isLoading,
                     currentCategory = currentCategory,
                     preferredShowHistory = preferredShowHistory,
                     onPreferredShowHistoryChange = onPreferredShowHistoryChange,
