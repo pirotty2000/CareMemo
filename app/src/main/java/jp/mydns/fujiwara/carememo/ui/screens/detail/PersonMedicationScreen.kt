@@ -34,13 +34,15 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.*
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @Composable
 fun PersonMedicationScreen(
-    viewModel: PersonMedicationViewModel,
+    viewModel: PersonDetailViewModel,
+    medicationViewModel: PersonMedicationViewModel,
     personId: Int,
     widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
@@ -48,10 +50,10 @@ fun PersonMedicationScreen(
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val currentPerson by viewModel.currentPerson.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val selectedMonth by viewModel.selectedMonth.collectAsState()
-    val recordsByDate by viewModel.recordsByDate.collectAsState()
-    val allRecords by viewModel.allRecords.collectAsState()
+    val isLoading by medicationViewModel.isLoading.collectAsState()
+    val selectedMonth by medicationViewModel.selectedMonth.collectAsState()
+    val recordsByDate by medicationViewModel.recordsByDate.collectAsState()
+    val allRecords by medicationViewModel.allRecords.collectAsState()
     val personCategorySummary by viewModel.personCategorySummary.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
 
@@ -64,18 +66,22 @@ fun PersonMedicationScreen(
 
     LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
+        medicationViewModel.loadPerson(personId)
+        viewModel.setCategory(Category.MEDICATION)
     }
 
     if (isExpanded) {
         PersonMedicationScreenTablet(
+            viewModel = viewModel,
+            medicationViewModel = medicationViewModel,
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
             isLoading = isLoading,
             selectedMonth = selectedMonth,
             recordsByDate = recordsByDate,
             personCategorySummary = personCategorySummary,
-            onPreviousMonth = { viewModel.previousMonth() },
-            onNextMonth = { viewModel.nextMonth() },
+            onPreviousMonth = { medicationViewModel.previousMonth() },
+            onNextMonth = { medicationViewModel.nextMonth() },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = {
@@ -92,6 +98,8 @@ fun PersonMedicationScreen(
         )
     } else {
         PersonMedicationScreenPhone(
+            viewModel = viewModel,
+            medicationViewModel = medicationViewModel,
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
             isLoading = isLoading,
@@ -100,8 +108,8 @@ fun PersonMedicationScreen(
             personCategorySummary = personCategorySummary,
             isHistoryMode = isHistoryMode,
             onHistoryModeChange = { isHistoryMode = it },
-            onPreviousMonth = { viewModel.previousMonth() },
-            onNextMonth = { viewModel.nextMonth() },
+            onPreviousMonth = { medicationViewModel.previousMonth() },
+            onNextMonth = { medicationViewModel.nextMonth() },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = {
@@ -137,10 +145,10 @@ fun PersonMedicationScreen(
             records = recordsByDate[showDialog.toString()] ?: emptyList(),
             onDismiss = { showDialog = null },
             onSave = { record ->
-                viewModel.saveMedicationRecord(record)
+                medicationViewModel.saveMedicationRecord(record)
             },
             onDelete = { record ->
-                viewModel.deleteMedicationRecord(record)
+                medicationViewModel.deleteMedicationRecord(record)
             }
         )
     }

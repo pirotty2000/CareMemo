@@ -51,8 +51,8 @@ abstract class PersonBaseViewModel(
         viewModelScope.launch {
             repository.getPersonById(personId).collectLatest {
                 _currentPerson.value = it
-                // 基本情報がロードされたら一旦ロード中を解除（サブクラスでデータロードがある場合は、そちらでさらに制御される）
-                _isLoading.value = false
+                // loadPerson 自体は基本情報のロード完了のみを扱う。
+                // データのロード中フラグの解除は、各サブクラスのデータ取得 Flow (flatMapLatest) 側で行う。
             }
         }
     }

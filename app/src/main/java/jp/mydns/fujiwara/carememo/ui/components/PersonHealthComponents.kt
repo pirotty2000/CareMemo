@@ -464,22 +464,10 @@ fun HealthRecordDetailPane(
     personId: Int,
     category: Category,
     recordId: Int,
+    records: List<HistoryRecord>,
     onCancel: () -> Unit,
     onSaveSuccess: () -> Unit,
 ) {
-    val records by healthViewModel.getHealthRecords(category).collectAsState()
-    var isEditing by remember { mutableStateOf(recordId == 0) }
-    val dateTimeState = rememberDateTimeInputState()
-
-    var heightText by remember { mutableStateOf("") }
-    var weightText by remember { mutableStateOf("") }
-    var bpSystolicText by remember { mutableStateOf("") }
-    var bpDiastolicText by remember { mutableStateOf("") }
-    var pulseText by remember { mutableStateOf("") }
-    var bodyTemperatureText by remember { mutableStateOf("") }
-    var glucoseText by remember { mutableStateOf("") }
-    var hba1cText by remember { mutableStateOf("") }
-
     val record = remember(records, recordId) {
         when (category) {
             Category.HEIGHT_AND_WEIGHT -> records.asSequence().filterIsInstance<HeightAndWeight>().find { it.id == recordId }
@@ -489,47 +477,54 @@ fun HealthRecordDetailPane(
         }
     }
 
-    LaunchedEffect(recordId) { isEditing = (recordId == 0) }
-
-    LaunchedEffect(record, category, recordId) {
-        if (record != null) {
-            dateTimeState.setFromInstant(record.recordTime)
-            when (record) {
-                is HeightAndWeight -> {
-                    heightText = record.height?.toString() ?: ""
-                    weightText = record.weight?.toString() ?: ""
-                }
-                is BpAndPulse -> {
-                    bpSystolicText = record.bpSystolic?.toString() ?: ""
-                    bpDiastolicText = record.bpDiastolic?.toString() ?: ""
-                    pulseText = record.pulse?.toString() ?: ""
-                    bodyTemperatureText = record.bodyTemperature?.toString() ?: ""
-                }
-                is GlucoseAndHbA1c -> {
-                    glucoseText = record.glucose?.toString() ?: ""
-                    hba1cText = record.hba1c?.toString() ?: ""
-                }
-            }
-        } else if (recordId == 0) {
-            dateTimeState.setFromInstant(Instant.now())
-            if (category == Category.HEIGHT_AND_WEIGHT) {
-                val latestHeight = records.filterIsInstance<HeightAndWeight>()
-                    .filter { it.height != null }
-                    .maxByOrNull { it.recordTime }?.height
-                heightText = latestHeight?.toString() ?: ""
-                weightText = ""
-            } else {
-                bpSystolicText = ""; bpDiastolicText = ""; pulseText = ""; bodyTemperatureText = ""
-                glucoseText = ""; hba1cText = ""
-            }
-        }
-    }
-
+    // 記録が見つからない場合の待機画面（新規作成時は除く）
     if (record == null && recordId != 0) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
+    }
+
+    var isEditing by remember(recordId) { mutableStateOf(recordId == 0) }
+    
+    // 状態の初期化を LaunchedEffect から remember(recordId) に移動してブランキングを抑制
+    val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
+
+    var heightText by remember(recordId) {
+        mutableStateOf(if (record is HeightAndWeight) record.height?.toString() ?: "" else "")
+    }
+    var weightText by remember(recordId) {
+        mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "")
+    }
+    var bpSystolicText by remember(recordId) {
+        mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "")
+    }
+    var bpDiastolicText by remember(recordId) {
+        mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "")
+    }
+    var pulseText by remember(recordId) {
+        mutableStateOf(if (record is BpAndPulse) record.pulse?.toString() ?: "" else "")
+    }
+    var bodyTemperatureText by remember(recordId) {
+        mutableStateOf(if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "")
+    }
+    var glucoseText by remember(recordId) {
+        mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "")
+    }
+    var hba1cText by remember(recordId) {
+        mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "")
+    }
+
+    // 新規作成時の前回値補完ロジックのみ LaunchedEffect で継続（副作用のため）
+    LaunchedEffect(recordId, category) {
+        if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
+            val latestHeight = records.filterIsInstance<HeightAndWeight>()
+                .filter { it.height != null }
+                .maxByOrNull { it.recordTime }?.height
+            if (latestHeight != null) {
+                heightText = latestHeight.toString()
+            }
+        }
     }
 
     Column(

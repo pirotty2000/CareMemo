@@ -196,8 +196,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
                 composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
                     val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository))
-                    PersonMedicationScreen(viewModel = medicationViewModel, personId = personId, widthSizeClass = widthSizeClass, onBack = { navController.popBackStack("main", inclusive = false) }, onNavigateToCategory = { category ->
+                    PersonMedicationScreen(viewModel = detailViewModel, medicationViewModel = medicationViewModel, personId = personId, widthSizeClass = widthSizeClass, onBack = { navController.popBackStack("main", inclusive = false) }, onNavigateToCategory = { category ->
                         navController.navigate(category.getRoute(personId)) { popUpTo("main") { saveState = true }; launchSingleTop = true; restoreState = true }
                     })
                 }

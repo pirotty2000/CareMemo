@@ -37,11 +37,13 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.*
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenTablet(
+    viewModel: PersonDetailViewModel,
     healthViewModel: PersonHealthViewModel,
     personId: Int,
     currentCategory: Category,
@@ -50,8 +52,8 @@ fun PersonHealthScreenTablet(
     currentPerson: Person?,
     personCategorySummary: jp.mydns.fujiwara.carememo.data.PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    selectedConditionId: Int,
-    onSelectedConditionIdChange: (Int) -> Unit,
+    selectedRecordId: Int,
+    onSelectedRecordIdChange: (Int) -> Unit,
     onBack: () -> Unit,
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
@@ -85,7 +87,7 @@ fun PersonHealthScreenTablet(
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     actions = {
-                        IconButton(onClick = { onSelectedConditionIdChange(0) }) {
+                        IconButton(onClick = { onSelectedRecordIdChange(0) }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
                         IconButton(onClick = onShowPdfSettings) {
@@ -114,7 +116,7 @@ fun PersonHealthScreenTablet(
                     TextButton(
                         onClick = {
                             recordToDelete?.let {
-                                if (selectedConditionId == it.id) onSelectedConditionIdChange(-1)
+                                if (selectedRecordId == it.id) onSelectedRecordIdChange(-1)
                                 healthViewModel.deleteRecord(it)
                             }
                             recordToDelete = null
@@ -153,7 +155,7 @@ fun PersonHealthScreenTablet(
                         )
                     }
                 }
-            } else if (records.isEmpty() && selectedConditionId == -1) {
+            } else if (records.isEmpty() && selectedRecordId == -1) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.empty_records),
@@ -169,13 +171,14 @@ fun PersonHealthScreenTablet(
                     currentCategory = currentCategory,
                     preferredShowHistory = true,
                     onPreferredShowHistoryChange = {},
-                    selectedRecordId = selectedConditionId,
-                    onSelectedRecordIdChange = onSelectedConditionIdChange,
-                    onItemClick = { record -> onSelectedConditionIdChange(record.id) },
+                    selectedRecordId = selectedRecordId,
+                    onSelectedRecordIdChange = onSelectedRecordIdChange,
+                    onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = { record -> recordToDelete = record },
                     onExpandGraph = { index ->
                         onNavigateToGraphExpansion(personId, currentCategory, index)
                     },
+                    viewModel = viewModel,
                     healthViewModel = healthViewModel,
                     isAnyDialogOpen = recordToDelete != null
                 )

@@ -297,9 +297,13 @@ fun MedicationInputDialog(
     onSave: (MedicationRecord) -> Unit,
     onDelete: (MedicationRecord) -> Unit
 ) {
-    var tempRecords by remember { mutableStateOf(records.associateBy { it.timeSlot }) }
+    var tempRecords by remember(records) { mutableStateOf(records.associateBy { it.timeSlot }) }
     var editingSlot by remember { mutableStateOf<Int?>(null) }
-    val dateTimeState = rememberDateTimeInputState()
+    
+    // 編集中のスロットが変わるたびに dateTimeState をリセット
+    val dateTimeState = rememberDateTimeInputState(
+        initialInstant = editingSlot?.let { tempRecords[it]?.recordTime }
+    )
 
     fun syncCurrentTimeFieldsToTemp() {
         if (editingSlot != null) {
@@ -317,8 +321,6 @@ fun MedicationInputDialog(
     fun startEditingSlot(slot: Int) {
         syncCurrentTimeFieldsToTemp()
         editingSlot = slot
-        val record = tempRecords[slot]
-        dateTimeState.setFromInstant(record?.recordTime ?: Instant.now())
     }
 
     AlertDialog(

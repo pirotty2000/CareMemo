@@ -70,13 +70,16 @@ class DateTimeInputState(
 fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
     val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
     
-    val year = rememberSaveable { mutableStateOf(zdt.year.toString()) }
-    val month = rememberSaveable { mutableStateOf(zdt.monthValue.toString()) }
-    val day = rememberSaveable { mutableStateOf(zdt.dayOfMonth.toString()) }
-    val hour = rememberSaveable { mutableStateOf("%02d".format(zdt.hour)) }
-    val minute = rememberSaveable { mutableStateOf("%02d".format(zdt.minute)) }
+    // initialInstant が変わった際に状態をリセットしたいが、rememberSaveable の性質上、
+    // 明示的なキー指定がないと以前の値を保持し続ける。
+    // ここでは、initialInstant を inputs として渡すことでリセットを促す。
+    val year = rememberSaveable(initialInstant) { mutableStateOf(zdt.year.toString()) }
+    val month = rememberSaveable(initialInstant) { mutableStateOf(zdt.monthValue.toString()) }
+    val day = rememberSaveable(initialInstant) { mutableStateOf(zdt.dayOfMonth.toString()) }
+    val hour = rememberSaveable(initialInstant) { mutableStateOf("%02d".format(zdt.hour)) }
+    val minute = rememberSaveable(initialInstant) { mutableStateOf("%02d".format(zdt.minute)) }
 
-    return remember {
+    return remember(initialInstant) {
         DateTimeInputState(year, month, day, hour, minute)
     }
 }

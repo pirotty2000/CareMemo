@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ import jp.mydns.fujiwara.carememo.ui.components.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.HealthRecordDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @Composable
@@ -53,16 +55,22 @@ fun PersonHealthScreenContent(
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
+    viewModel: PersonDetailViewModel,
     healthViewModel: PersonHealthViewModel,
     isAnyDialogOpen: Boolean
 ) {
+    // HistoryRecord のリストを安定化（再コンポーズごとに新しいリストが生成されるのを防ぐ）
+    val historyRecords = remember(records) {
+        records.filterIsInstance<HistoryRecord>()
+    }
+
     if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: 履歴リスト (比率 1)
             Box(modifier = Modifier.weight(1f)) {
                 PersonHistoryList(
-                    records = records.filterIsInstance<HistoryRecord>(),
+                    records = historyRecords,
                     selectedRecordId = selectedRecordId,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = onDeleteSwipe,
@@ -79,6 +87,7 @@ fun PersonHealthScreenContent(
                         personId = personId,
                         category = currentCategory,
                         recordId = selectedRecordId,
+                        records = historyRecords,
                         onCancel = { onSelectedRecordIdChange(-1) },
                         onSaveSuccess = { onSelectedRecordIdChange(-1) }
                     )
@@ -113,6 +122,7 @@ fun PersonHealthScreenContent(
                 personId = personId,
                 category = currentCategory,
                 recordId = selectedRecordId,
+                records = historyRecords,
                 onCancel = { onSelectedRecordIdChange(-1) },
                 onSaveSuccess = { onSelectedRecordIdChange(-1) }
             )
@@ -146,7 +156,7 @@ fun PersonHealthScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     if (preferredShowHistory) {
                         PersonHistoryList(
-                            records = records.filterIsInstance<HistoryRecord>(),
+                            records = historyRecords,
                             onItemClick = onItemClick,
                             onDeleteSwipe = onDeleteSwipe,
                             isAnyDialogOpen = isAnyDialogOpen

@@ -77,12 +77,11 @@ fun PersonConditionScreen(
         viewModel.loadPerson(personId)
         viewModel.setCategory(Category.CONDITION_AT_VISIT)
         conditionViewModel.loadPerson(personId)
+        // 画面遷移時に選択をリセット
+        selectedId = -1
     }
 
-    // IDが選択されたら写真データをロード
-    LaunchedEffect(selectedId) {
-        conditionViewModel.setSelectedConditionId(if (selectedId > 0) selectedId else null)
-    }
+    // IDが選択された際の処理は、詳細ペイン（Component）側の LaunchedEffect に任せるため削除
 
     if (isExpanded) {
         PersonConditionScreenTablet(
@@ -171,9 +170,11 @@ fun PersonConditionScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        recordToDelete?.let {
-                            if (selectedId == it.id) selectedId = -1
-                            conditionViewModel.deleteRecord(it as jp.mydns.fujiwara.carememo.data.ConditionAtVisit)
+                        recordToDelete?.let { record ->
+                            if (selectedId == record.id) selectedId = -1
+                            if (record is jp.mydns.fujiwara.carememo.data.ConditionAtVisit) {
+                                conditionViewModel.deleteRecord(record)
+                            }
                         }
                         recordToDelete = null
                     },

@@ -103,6 +103,7 @@ fun PersonHealthScreen(
 
     if (isExpanded) {
         PersonHealthScreenTablet(
+            viewModel = viewModel,
             healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
@@ -111,8 +112,8 @@ fun PersonHealthScreen(
             currentPerson = currentPerson,
             personCategorySummary = personCategorySummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            selectedConditionId = selectedRecordId,
-            onSelectedConditionIdChange = { selectedRecordId = it },
+            selectedRecordId = selectedRecordId,
+            onSelectedRecordIdChange = { selectedRecordId = it },
             onBack = onBack,
             onNavigateToGraphExpansion = onNavigateToGraphExpansion,
             onNavigateToCategory = { category ->
@@ -135,6 +136,7 @@ fun PersonHealthScreen(
         )
     } else {
         PersonHealthScreenPhone(
+            viewModel = viewModel,
             healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,

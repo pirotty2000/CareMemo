@@ -157,36 +157,38 @@ fun ConditionDetailPane(
     val isProcessing by conditionViewModel.isProcessing.collectAsState()
     val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
 
-    val dateTimeState = rememberDateTimeInputState()
-    var isEditing by remember { mutableStateOf(false) }
-
-    LaunchedEffect(conditionId) { isEditing = conditionId == 0 }
-
     val memo = remember(records, conditionId) {
         records.find { it.id == conditionId }
     }
 
-    var title by remember { mutableStateOf("") }
-    var condition by remember { mutableStateOf("") }
-    var author by remember { mutableStateOf("") }
+    // 記録が見つからない場合の待機（新規作成時は除く）
+    if (memo == null && conditionId > 0) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
-    LaunchedEffect(memo, defaultRecorderName, conditionId) {
-        if (memo != null) {
-            title = memo.title ?: ""
-            condition = memo.condition ?: ""
-            author = memo.author
-            dateTimeState.setFromInstant(memo.recordTime)
-        } else if (conditionId == 0) {
-            title = ""
-            condition = ""
+    // 状態の初期化を remember(conditionId) に集約してブランキングを抑制
+    var isEditing by remember(conditionId) { mutableStateOf(conditionId == 0) }
+    val dateTimeState = rememberDateTimeInputState(initialInstant = memo?.recordTime)
+    
+    var title by remember(conditionId) { mutableStateOf(memo?.title ?: "") }
+    var condition by remember(conditionId) { mutableStateOf(memo?.condition ?: "") }
+    var author by remember(conditionId) { 
+        mutableStateOf(memo?.author ?: defaultRecorderName) 
+    }
+
+    // デフォルトの記録者が変更された場合の補完（新規作成時のみ）
+    LaunchedEffect(defaultRecorderName) {
+        if (conditionId == 0 && author.isBlank()) {
             author = defaultRecorderName
-            dateTimeState.setFromInstant(Instant.now())
         }
     }
 
     LaunchedEffect(personId, conditionId) {
-        conditionViewModel.loadPerson(personId)
-        conditionViewModel.setSelectedConditionId(if (conditionId != 0) conditionId else null)
+        // ViewModel側で選択中IDを更新して写真をロード
+        conditionViewModel.setSelectedConditionId(if (conditionId != -1) conditionId else null)
     }
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
