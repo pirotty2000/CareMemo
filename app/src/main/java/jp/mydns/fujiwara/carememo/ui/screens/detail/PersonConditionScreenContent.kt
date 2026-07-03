@@ -89,7 +89,6 @@ fun PersonConditionScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     ObservationList(
                         records = records,
-                        isLoading = isLoading,
                         selectedId = selectedId,
                         conditionPhotoMap = conditionPhotoMap,
                         onSelect = onSelectedIdChange,
@@ -134,7 +133,6 @@ fun PersonConditionScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     ObservationList(
                         records = records,
-                        isLoading = isLoading,
                         selectedId = selectedId,
                         conditionPhotoMap = conditionPhotoMap,
                         onSelect = onSelectedIdChange,

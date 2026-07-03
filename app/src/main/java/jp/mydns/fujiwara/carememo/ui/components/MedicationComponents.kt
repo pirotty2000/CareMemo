@@ -34,17 +34,12 @@ import java.time.YearMonth
 @Composable
 fun MedicationHistoryTable(
     yearMonth: YearMonth,
-    recordsByDate: Map<String, List<MedicationRecord>>,
-    isLoading: Boolean = false
+    recordsByDate: Map<String, List<MedicationRecord>>
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
     val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    } else if (!hasAnyRecord) {
+    if (!hasAnyRecord) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

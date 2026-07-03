@@ -1,3 +1,5 @@
+@file:Suppress("NonAsciiCharacters")
+
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import app.cash.turbine.test

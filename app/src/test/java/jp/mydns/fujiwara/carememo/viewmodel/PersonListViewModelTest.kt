@@ -1,3 +1,5 @@
+@file:Suppress("NonAsciiCharacters")
+
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.database.sqlite.SQLiteConstraintException

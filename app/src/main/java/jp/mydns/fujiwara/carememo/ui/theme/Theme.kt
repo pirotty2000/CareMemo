@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.theme
 
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -56,7 +55,7 @@ private val WarmApricotColorScheme = lightColorScheme(
 private val MidnightNavyColorScheme = darkColorScheme(
     primary = Color(0xFFBCC2FF),
     onPrimary = Color(0xFF001666),
-    primaryContainer = Color(0xFF1A237E),
+    primaryContainer = MidnightNavy,
     onPrimaryContainer = Color(0xFFDDE1FF),
     secondary = Color(0xFFC3C5DD),
     tertiary = Color(0xFFE3BADA),
@@ -87,7 +86,7 @@ fun CareMemoTheme(
 ) {
     val colorScheme = when (themeSetting) {
         ThemeSetting.SYSTEM -> {
-            if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (dynamicColor) {
                 val context = LocalContext.current
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             } else {

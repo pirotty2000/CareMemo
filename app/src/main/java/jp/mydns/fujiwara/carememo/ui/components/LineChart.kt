@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -37,10 +38,11 @@ import kotlin.math.floor
 
 data class ChartPoint(val x: Double, val y: Double, val note: String? = null)
 data class ChartLineData(val label: String, val points: List<ChartPoint>, val color: Color, val unit: String = "")
-data class ChartLimitLine(val label: String, val value: Double, val color: Color, val isLabelAbove: Boolean)
+data class ChartLimitLine(val label: String, val value: Double, val color: Color = Color.Gray, val isLabelAbove: Boolean)
 data class ChartRangeHighlight(val startValue: Double, val endValue: Double, val color: Color)
 data class SelectedPoint(val x: Double, val y: Double, val color: Color, val label: String, val note: String? = null)
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun LineChart(
     dataList: List<ChartLineData>,
@@ -67,6 +69,12 @@ fun LineChart(
     var selectedPoint by remember { mutableStateOf<SelectedPoint?>(null) }
 
     val density = LocalDensity.current
+    val dateFormatter = remember {
+        DateTimeFormatter.ofPattern("yy/MM/dd")
+            .withLocale(Locale.JAPAN)
+            .withZone(ZoneId.systemDefault())
+    }
+
     val paddingLeft = 40.dp
     val paddingTop = 20.dp
     val paddingBottom = 20.dp
@@ -170,10 +178,6 @@ fun LineChart(
                                     }
                                 }
 
-                                // 操作モデルの実装:
-                                // 1. 同じ点をタップ -> 閉じる (nullにする)
-                                // 2. 別の点をタップ -> 切り替え
-                                // 3. グラフ外（どの点からも遠い場所）をタップ -> 閉じる (nullにする)
                                 selectedPoint = if (closest != null &&
                                     selectedPoint?.x == closest.x &&
                                     selectedPoint?.y == closest.y &&
@@ -186,7 +190,11 @@ fun LineChart(
                         )
                     }
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                // BoxWithConstraintsScope の constraints を直接参照して Lint エラーを回避
+                val wPx = constraints.maxWidth.toFloat()
+                val hPx = constraints.maxHeight.toFloat()
+
+                Canvas(modifier = Modifier.size(maxWidth, maxHeight)) {
                     val chartWidth = (size.width - leftBufferPx - rightBufferPx) * scaleX
                     val chartHeight = size.height - paddingTopPx - paddingBottomPx
                     val startX = leftBufferPx + offsetX
@@ -230,9 +238,7 @@ fun LineChart(
                                     end = Offset(px, paddingTopPx + chartHeight),
                                     strokeWidth = 1.dp.toPx()
                                 )
-                                val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd")
-                                    .withLocale(Locale.JAPAN)
-                                    .format(Instant.ofEpochMilli(currentX.toLong()).atZone(ZoneId.systemDefault()))
+                                val dateStr = dateFormatter.format(Instant.ofEpochMilli(currentX.toLong()))
                                 val textLayout = textMeasurer.measure(dateStr, labelStyle)
                                 drawText(textLayout, topLeft = Offset(px - textLayout.size.width / 2, paddingTopPx + chartHeight + 4.dp.toPx()))
                             }
@@ -290,28 +296,24 @@ fun LineChart(
 
                 // 吹き出し（ツールチップ）の表示
                 selectedPoint?.let { point ->
-                    val chartWidth = (constraints.maxWidth.toFloat() - leftBufferPx - rightBufferPx) * scaleX
-                    val chartHeight = constraints.maxHeight.toFloat() - paddingTopPx - paddingBottomPx
+                    val chartWidth = (wPx - leftBufferPx) * scaleX
+                    val chartHeight = hPx - paddingTopPx - paddingBottomPx
                     val startX = leftBufferPx + offsetX
                     val effectiveWidth = chartWidth - (horizontalPaddingPx * 2)
 
                     val px = startX + horizontalPaddingPx + ((point.x - minX) / duration).toFloat() * effectiveWidth
                     val py = paddingTopPx + chartHeight - ((point.y - minY) / yRange).toFloat() * chartHeight
 
-                    if (px in leftBufferPx..(constraints.maxWidth.toFloat() - rightBufferPx)) {
-                        val dateStr = DateTimeFormatter.ofPattern("yy/MM/dd")
-                            .withLocale(Locale.JAPAN)
-                            .format(Instant.ofEpochMilli(point.x.toLong()).atZone(ZoneId.systemDefault()))
+                    if (px in leftBufferPx..(wPx - rightBufferPx)) {
+                        val dateStr = dateFormatter.format(Instant.ofEpochMilli(point.x.toLong()))
 
                         Surface(
                             modifier = Modifier
                                 .offset {
-                                    // 吹き出しの幅を想定してクランプ（見切れ防止）
-                                    // 複数系列の場合は幅広になるため、右端のガードを強めにする
                                     val tooltipWidth = if (dataList.size > 1) 120.dp.toPx() else 80.dp.toPx()
                                     val xOffset = (px - tooltipWidth / 2).toInt().coerceIn(
                                         0, 
-                                        (constraints.maxWidth.toFloat() - tooltipWidth).toInt()
+                                        (wPx - tooltipWidth).toInt()
                                     )
                                     val yOffset = (py - 60.dp.toPx()).toInt().coerceAtLeast(0)
                                     IntOffset(xOffset, yOffset)

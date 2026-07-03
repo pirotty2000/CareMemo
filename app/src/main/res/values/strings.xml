@@ -53,10 +53,6 @@
     <string name="empty_records">記録がありません</string>
     <string name="empty_records_description">右下の ＋ ボタンをタップして、\n記録を追加しましょう</string>
     <string name="error_no_records_for_pdf">%1$sの記録がないため出力できません</string>
-    <string name="error_pdf_export_failed">PDFの作成に失敗したか、対象データがありません</string>
-    <string name="search_placeholder">%1$sを検索…</string>
-    <string name="edit">編集</string>
-    <string name="record_suffix">%1$s記録</string>
 
     <!-- Health Labels -->
     <string name="health_label_height">身長</string>
@@ -88,7 +84,6 @@
     <string name="glucose_label_normal">良好</string>
     <string name="glucose_label_high">高血糖</string>
     <string name="hba1c_label_normal">正常</string>
-    <string name="hba1c_label_normal_high">正常高値</string>
     <string name="hba1c_label_prediabetes">糖尿病予備軍</string>
     <string name="hba1c_label_diabetes">糖尿病型</string>
 

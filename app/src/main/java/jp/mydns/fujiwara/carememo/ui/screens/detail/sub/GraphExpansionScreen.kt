@@ -65,7 +65,7 @@ fun GraphExpansionScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val records by healthViewModel.getHealthRecords(category).collectAsState()
+    val records by remember(category) { healthViewModel.getHealthRecords(category) }.collectAsState()
     val isLoading by healthViewModel.isLoading.collectAsState()
     val currentPerson by viewModel.currentPerson.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -83,11 +83,12 @@ fun GraphExpansionScreen(
     LaunchedEffect(personId, category) {
         viewModel.loadPerson(personId)
         healthViewModel.loadPerson(personId)
+        healthViewModel.setCategory(category)
         viewModel.setCategory(category)
     }
 
     val listState = rememberLazyListState()
-    var highlightedIndex by remember { mutableStateOf(initialGraphIndex) }
+    var highlightedIndex by remember { mutableIntStateOf(initialGraphIndex) }
 
     // 初期スクロールとハイライト
     LaunchedEffect(records) {

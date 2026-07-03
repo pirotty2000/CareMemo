@@ -106,7 +106,11 @@ object ImageUtils {
         }
     }
 
-    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int = MAX_IMAGE_SIZE,
+        reqHeight: Int = MAX_IMAGE_SIZE
+    ): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1
 

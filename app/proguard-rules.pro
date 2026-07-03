@@ -1,7 +1,7 @@
 # CareMemo ProGuard Rules
 
 # SQLCipher rules
--keep class net.zetetic.** { *; }
+-keep class net.zetetic.database.** { *; }
 -keep class androidx.sqlite.** { *; }
 
 # Room rules

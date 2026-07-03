@@ -146,22 +146,7 @@ fun PersonHealthScreenPhone(
                 .padding(paddingValues)
                 .padding(horizontal = if (selectedRecordId == -1) 16.dp else 0.dp)
         ) {
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
-                ) {
-                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.loading),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            } else if (records.isEmpty() && selectedRecordId == -1) {
+            if (records.isEmpty() && selectedRecordId == -1 && !isLoading) {
                 EmptyState(
                     message = stringResource(R.string.empty_records),
                     description = stringResource(R.string.empty_records_description),

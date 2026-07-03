@@ -156,7 +156,7 @@ class SettingsViewModel(
             var tempZipFile: File? = null
             try {
                 val backup = maintenanceRepository.getBackupData()
-                val jsonString = json.encodeToString(backup)
+                val jsonString = json.encodeToString(CareMemoBackup.serializer(), backup)
                 tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
                 tempDir.mkdirs()
                 val jsonFile = File(tempDir, "backup.json")

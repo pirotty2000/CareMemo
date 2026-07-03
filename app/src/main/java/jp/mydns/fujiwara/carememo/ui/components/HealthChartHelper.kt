@@ -92,7 +92,7 @@ object HealthChartHelper {
 
     private fun mapLimits(limits: List<HealthThresholds.VisualLimit>): List<ChartLimitLine> {
         return limits.map {
-            ChartLimitLine(it.label, it.value, Color.Gray, it.isAbove)
+            ChartLimitLine(it.label, it.value, isLabelAbove = it.isAbove)
         }
     }
 
@@ -273,10 +273,10 @@ object HealthChartHelper {
                 // BMIの肥満度に応じた特殊なハイライト処理
                 val baseRanges = HealthThresholds.getBmiRanges()
                 val mappedRanges = baseRanges.map {
-                    val color = when {
-                        it.start == HealthThresholds.BMI_OBESITY_1 && it.end == HealthThresholds.BMI_OBESITY_2 -> getAlertHighlight(isDark)
-                        it.start == HealthThresholds.BMI_OBESITY_2 && it.end == HealthThresholds.BMI_OBESITY_3 -> getObesityColor2(isDark)
-                        it.start == HealthThresholds.BMI_OBESITY_3 -> getObesityColor3(isDark)
+                    val color = when (it.start) {
+                        HealthThresholds.BMI_OBESITY_1 -> getAlertHighlight(isDark)
+                        HealthThresholds.BMI_OBESITY_2 -> getObesityColor2(isDark)
+                        HealthThresholds.BMI_OBESITY_3 -> getObesityColor3(isDark)
                         else -> when (it.level) {
                             HealthThresholds.AlertLevel.ALERT -> getAlertHighlight(isDark)
                             HealthThresholds.AlertLevel.WARNING -> getWarningHighlight(isDark)

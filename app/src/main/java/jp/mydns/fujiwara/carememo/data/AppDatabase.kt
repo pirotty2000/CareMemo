@@ -1,10 +1,12 @@
 package jp.mydns.fujiwara.carememo.data
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import jp.mydns.fujiwara.carememo.BuildConfig
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 @Database(
@@ -44,6 +46,13 @@ abstract class AppDatabase : RoomDatabase() {
 
                 val keyManager = DatabaseKeyManager(context)
                 val passphrase = keyManager.getOrCreatePassphrase()
+
+                // デバッグ時のみDBキーをログ出力 (App Inspectionでの複合化に使用)
+                if (BuildConfig.DEBUG) {
+                    val hexKey = passphrase.joinToString("") { "%02x".format(it) }
+                    Log.d("AppDatabase", "Database Key for Inspector: x'$hexKey'")
+                }
+
                 val factory = SupportOpenHelperFactory(passphrase)
 
                 // 平文DBから暗号化DBへの切り替え時のクラッシュ対策

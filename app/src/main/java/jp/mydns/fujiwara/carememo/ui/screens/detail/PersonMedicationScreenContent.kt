@@ -98,8 +98,7 @@ fun PersonMedicationScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     MedicationHistoryTable(
                         yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate,
-                        isLoading = isLoading
+                        recordsByDate = recordsByDate
                     )
                 }
             }
@@ -176,8 +175,7 @@ fun PersonMedicationScreenContent(
                 if (isHistoryMode) {
                     MedicationHistoryTable(
                         yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate,
-                        isLoading = isLoading
+                        recordsByDate = recordsByDate
                     )
                 } else {
                     CalendarGrid(
