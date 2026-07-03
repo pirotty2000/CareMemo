@@ -21,21 +21,25 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
-    if (scrollState.maxValue <= 0) return
-
     val barHeight = 60.dp
     val density = LocalDensity.current
-    val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
-    val maxOffset = viewportHeight - barHeight
 
-    val scrollFraction by remember {
+    val layoutData by remember {
         derivedStateOf {
-            if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f
+            if (scrollState.maxValue <= 0) {
+                return@derivedStateOf Triple(0.dp, 0f, false)
+            }
+            val viewportHeightDp = with(density) { scrollState.viewportSize.toDp() }
+            val fraction = scrollState.value.toFloat() / scrollState.maxValue
+            val isBottom = scrollState.value > (scrollState.maxValue / 2)
+            Triple(viewportHeightDp, fraction, isBottom)
         }
     }
-    val isBottomSelected by remember {
-        derivedStateOf { scrollState.value > (scrollState.maxValue / 2) }
-    }
+
+    val (viewportHeight, scrollFraction, isBottomSelected) = layoutData
+    if (viewportHeight <= 0.dp) return
+
+    val maxOffset = viewportHeight - barHeight
 
     IndicatorContent(
         scrollFraction = scrollFraction,
@@ -50,36 +54,39 @@ fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
  */
 @Composable
 fun BoxScope.VerticalScrollIndicator(lazyListState: androidx.compose.foundation.lazy.LazyListState) {
-    val canScroll = remember {
+    val canScroll by remember {
         derivedStateOf { lazyListState.canScrollForward || lazyListState.canScrollBackward }
     }
-    if (!canScroll.value) return
+    if (!canScroll) return
 
     val barHeight = 60.dp
     val density = LocalDensity.current
-    val layoutInfo = lazyListState.layoutInfo
-    val viewportHeight = with(density) { layoutInfo.viewportSize.height.toDp() }
-    val maxOffset = viewportHeight - barHeight
 
-    val scrollFraction by remember {
+    // スクロール位置とビューポートの高さをまとめて計算 (Recompositionを抑制)
+    val layoutData by remember {
         derivedStateOf {
+            val layoutInfo = lazyListState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
-            if (totalItems == 0) return@derivedStateOf 0f
             val visibleItems = layoutInfo.visibleItemsInfo
-            if (visibleItems.isEmpty()) return@derivedStateOf 0f
+            
+            if (totalItems == 0 || visibleItems.isEmpty()) {
+                return@derivedStateOf Triple(0.dp, 0f, false)
+            }
 
+            val viewportHeightDp = with(density) { layoutInfo.viewportSize.height.toDp() }
             val firstItem = visibleItems.first()
             
             // 全体量に対する現在位置の概算
             val scrolledItems = firstItem.index.toFloat()
             val totalScrollableItems = (totalItems - visibleItems.size).coerceAtLeast(1)
-            (scrolledItems / totalScrollableItems).coerceIn(0f, 1f)
+            val fraction = (scrolledItems / totalScrollableItems).coerceIn(0f, 1f)
+            
+            Triple(viewportHeightDp, fraction, fraction > 0.5f)
         }
     }
-    
-    val isBottomSelected by remember {
-        derivedStateOf { scrollFraction > 0.5f }
-    }
+
+    val (viewportHeight, scrollFraction, isBottomSelected) = layoutData
+    val maxOffset = viewportHeight - barHeight
 
     IndicatorContent(
         scrollFraction = scrollFraction,

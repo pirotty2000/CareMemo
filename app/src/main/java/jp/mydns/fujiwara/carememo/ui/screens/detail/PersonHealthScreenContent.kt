@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.ui.components.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.HealthRecordDetailPane

@@ -30,7 +30,6 @@ package jp.mydns.fujiwara.carememo.ui.screens
  * データ操作および検索ロジックの本体は ViewModel に集約されている。
  */
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +41,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ModeEdit
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Info
@@ -57,16 +55,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
@@ -75,7 +68,6 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.components.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.CategoryBadges
-import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
 import jp.mydns.fujiwara.carememo.ui.components.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.KanaIndexBar
@@ -88,7 +80,6 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)

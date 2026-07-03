@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun EmptyState(
     message: String,
-    description: String? = null,
     icon: ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    description: String? = null
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
