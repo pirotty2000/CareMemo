@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -26,6 +27,7 @@ import java.time.Instant
 class PersonDetailViewModelTest {
 
     private val personRepository = mockk<PersonRepository>(relaxed = true)
+    private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private lateinit var viewModel: PersonDetailViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -45,7 +47,7 @@ class PersonDetailViewModelTest {
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
         
-        viewModel = PersonDetailViewModel(personRepository, userSettingsRepository)
+        viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository)
     }
 
     @After

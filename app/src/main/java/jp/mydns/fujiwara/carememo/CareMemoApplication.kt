@@ -77,7 +77,6 @@ class CareMemoApplication : Application() {
     // (A系統) 健康記録リポジトリ
     val healthRepository: HealthRepository by lazy {
         HealthRepository(
-            database,
             database.heightAndWeightDao(),
             database.bpAndPulseDao(),
             database.glucoseAndHbA1cDao()

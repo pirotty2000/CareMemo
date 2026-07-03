@@ -10,6 +10,8 @@ import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.ArchivedPersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,8 @@ class PersonListViewModelTest {
 
     // Mockオブジェクトの作成
     private val personRepository = mockk<PersonRepository>(relaxed = true)
+    private val archivedRepository = mockk<ArchivedPersonRepository>(relaxed = true)
+    private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
 
@@ -54,12 +58,12 @@ class PersonListViewModelTest {
 
         // Repositoryの各メソッドが返すFlowのデフォルト値を設定
         every { personRepository.getAllPersons() } returns flowOf(emptyList())
-        every { personRepository.getDeletedPersons() } returns flowOf(emptyList())
-        every { personRepository.getPersonCategorySummaries() } returns flowOf(emptyMap())
+        every { archivedRepository.getDeletedPersons() } returns flowOf(emptyList())
+        every { summaryRepository.getPersonCategorySummaries() } returns flowOf(emptyMap())
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { conditionRepository.getPersonIdsByConditionKeyword(any()) } returns flowOf(emptyList())
 
-        viewModel = PersonListViewModel(personRepository, conditionRepository, userSettingsRepository)
+        viewModel = PersonListViewModel(personRepository, archivedRepository, summaryRepository, conditionRepository, userSettingsRepository)
     }
 
     @After
@@ -95,11 +99,11 @@ class PersonListViewModelTest {
     }
 
     @Test
-    fun `logicalDeletePersonを実行したとき、RepositoryのlogicalDeletePersonが呼ばれること`() = runTest {
+    fun `logicalDeletePersonを実行したとき、ArchivedRepositoryのlogicalDeletePersonが呼ばれること`() = runTest {
         // 実行
         viewModel.logicalDeletePerson(testPerson)
 
         // 検証
-        coVerify { personRepository.logicalDeletePerson(testPerson.id) }
+        coVerify { archivedRepository.logicalDeletePerson(testPerson.id) }
     }
 }
