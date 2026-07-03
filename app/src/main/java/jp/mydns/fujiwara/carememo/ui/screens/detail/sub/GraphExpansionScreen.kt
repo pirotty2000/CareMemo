@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.ui.components.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.LineChart
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import kotlinx.coroutines.delay
@@ -127,21 +130,12 @@ fun GraphExpansionScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.loading),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                LoadingScreen()
             } else if (records.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.empty_records), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                EmptyState(
+                    message = stringResource(R.string.empty_records),
+                    icon = Icons.AutoMirrored.Rounded.ShowChart
+                )
             } else {
                 LazyColumn(
                     state = listState,

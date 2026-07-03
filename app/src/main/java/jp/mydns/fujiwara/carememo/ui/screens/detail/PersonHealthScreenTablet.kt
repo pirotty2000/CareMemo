@@ -36,7 +36,10 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.*
+import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
+import jp.mydns.fujiwara.carememo.ui.components.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,27 +109,12 @@ fun PersonHealthScreenTablet(
     ) { paddingValues ->
         var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
         if (recordToDelete != null) {
-            AlertDialog(
-                onDismissRequest = { recordToDelete = null },
-                title = { Text(stringResource(R.string.delete_data_title)) },
-                text = { Text(stringResource(R.string.delete_confirm_message)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            recordToDelete?.let {
-                                if (selectedRecordId == it.id) onSelectedRecordIdChange(-1)
-                                healthViewModel.deleteRecord(it)
-                            }
-                            recordToDelete = null
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(stringResource(R.string.delete))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { recordToDelete = null }) {
-                        Text(stringResource(R.string.cancel))
+            DeleteConfirmDialog(
+                onDismiss = { recordToDelete = null },
+                onDelete = {
+                    recordToDelete?.let {
+                        if (selectedRecordId == it.id) onSelectedRecordIdChange(-1)
+                        healthViewModel.deleteRecord(it)
                     }
                 }
             )

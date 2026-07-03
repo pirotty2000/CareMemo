@@ -110,6 +110,15 @@ class PersonConditionViewModel(
         _searchQuery.value = query
     }
 
+    override fun loadPerson(personId: Int) {
+        val isDifferentPerson = currentPerson.value?.id != personId
+        super.loadPerson(personId)
+        if (isDifferentPerson) {
+            _searchQuery.value = ""
+            _selectedConditionId.value = null
+        }
+    }
+
     /**
      * 所見メモを保存または更新します。
      */

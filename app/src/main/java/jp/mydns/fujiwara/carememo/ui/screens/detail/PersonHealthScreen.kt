@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.ui.components.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
@@ -170,18 +171,12 @@ fun PersonHealthScreen(
     }
 
     if (dialogMessage != null) {
-        AlertDialog(
-            onDismissRequest = {
+        InfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = {
                 dialogMessage = null
                 dialogTitle = null
-            },
-            title = { dialogTitle?.let { Text(it) } },
-            text = { Text(dialogMessage!!) },
-            confirmButton = {
-                TextButton(onClick = {
-                    dialogMessage = null
-                    dialogTitle = null
-                }) { Text("閉じる") }
             }
         )
     }

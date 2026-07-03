@@ -79,21 +79,22 @@
     <string name="vital_label_fever">発熱</string>
     <string name="vital_label_hypothermia">低体温</string>
 
-    <!-- Glucose/HbA1c Labels -->
+    <!-- Glucose Labels -->
     <string name="glucose_label_low">低血糖</string>
-    <string name="glucose_label_normal">良好</string>
+    <string name="glucose_label_normal">正常</string>
     <string name="glucose_label_high">高血糖</string>
+    <!-- HbA1c Labels -->
     <string name="hba1c_label_normal">正常</string>
-    <string name="hba1c_label_prediabetes">糖尿病予備軍</string>
+    <string name="hba1c_label_prediabetes">予備軍</string>
     <string name="hba1c_label_diabetes">糖尿病型</string>
 
     <!-- BMI Labels -->
     <string name="bmi_label_underweight">低体重</string>
     <string name="bmi_label_normal">普通体重</string>
-    <string name="bmi_label_obesity_1">肥満(１度)</string>
-    <string name="bmi_label_obesity_2">肥満(２度)</string>
-    <string name="bmi_label_obesity_3">肥満(３度)</string>
-    <string name="bmi_label_obesity_4">肥満(４度)</string>
+    <string name="bmi_label_obesity_1">肥満(1度)</string>
+    <string name="bmi_label_obesity_2">肥満(2度)</string>
+    <string name="bmi_label_obesity_3">肥満(3度)</string>
+    <string name="bmi_label_obesity_4">肥満(4度)</string>
 
     <!-- Explanations -->
     <string name="bp_explanation">血圧グラフの見方：\n・%2$d/%4$d以上：高血圧\n・%1$d〜%2$d/%3$d〜%4$d：正常\n・%1$d/%3$d未満：低血圧\n※「上/下」のいずれかが基準値を超えると判定されます。</string>

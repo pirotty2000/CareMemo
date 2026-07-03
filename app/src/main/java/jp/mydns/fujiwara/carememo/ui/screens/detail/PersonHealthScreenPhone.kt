@@ -35,7 +35,11 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.*
+import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
+import jp.mydns.fujiwara.carememo.ui.components.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
+import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,12 +83,7 @@ fun PersonHealthScreenPhone(
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
+                    colors = appTopAppBarColors(),
                     actions = {
                         if (selectedRecordId == -1) {
                             IconButton(onClick = onShowPdfSettings) {
@@ -117,26 +116,9 @@ fun PersonHealthScreenPhone(
     ) { paddingValues ->
         var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
         if (recordToDelete != null) {
-            AlertDialog(
-                onDismissRequest = { recordToDelete = null },
-                title = { Text(stringResource(R.string.delete_data_title)) },
-                text = { Text(stringResource(R.string.delete_confirm_message)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            recordToDelete?.let { healthViewModel.deleteRecord(it) }
-                            recordToDelete = null
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(stringResource(R.string.delete))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { recordToDelete = null }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                }
+            DeleteConfirmDialog(
+                onDismiss = { recordToDelete = null },
+                onDelete = { recordToDelete?.let { healthViewModel.deleteRecord(it) } }
             )
         }
 

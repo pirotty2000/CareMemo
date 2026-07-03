@@ -1,6 +1,6 @@
 # CareMemo プロジェクト構造定義書
 
-このドキュメントでは、CareMemo プロジェクトのソースコード構造とその役割について説明します。仕様変更や不具合修正の際に対象ファイルを探すガイドとして利用してください。
+このドキュメントでは、CareMemo プロジェクトのソースコード構造とその役割について説明します。仕様変更や不具合修正の際に対対象ファイルを探すガイドとして利用してください。
 
 # 設計思想
 
@@ -15,12 +15,20 @@ CareMemoでは画面をデータベーステーブル単位ではなく、「画
 
 # 共通基盤
 
-以下は全画面で利用されるため、変更時は影響範囲を十分確認すること。
+以下は全画面で共通利用される基盤部品であるため、変更時は影響範囲を十分に確認すること。
 
-- PersonHeaderTitle
-- CategorySelectorBar
-- DateTimeInputFields
-- PersonHistoryList
+- `PersonHeaderTitle.kt`: 利用者情報ヘッダー
+- `CategorySelectorBar.kt`: カテゴリ切替バー
+- `LoadingScreen.kt`: 共通ローディング表示
+- `SearchBox.kt`: 共通検索バー
+- `InfoDialog.kt`: 共通通知ダイアログ
+- `DeleteConfirmDialog.kt`: 共通削除確認ダイアログ
+- `AppTopAppBarColors.kt`: トップバー共通配色設定
+- `DateTimeInputFields.kt`: 共通日時入力
+- `BirthdayInputFields.kt`: 共通生年月日入力（和暦対応）
+- `KanaIndexBar.kt`: 五十音インデックス
+- `EmptyState.kt`: 共通空状態表示
+- `VerticalScrollIndicator.kt`: 垂直スクロール補助
 
 
 # 共通化の原則
@@ -70,18 +78,18 @@ jp.mydns.fujiwara.carememo
 
 # Repository - ViewModel - Screen 依存関係
 
-各機能層における垂直方向の依存関係の概要です。
+各機能層における垂直方向の依存関係の概要です。コンポーネントを修正する際は、右記の「使用コンポーネント」欄を参照して影響範囲を確認してください。
 
-| 分類       | 画面 (Screen)              | 主要コンポーネント (関数/ファイル名)                                                                                                                                                      | ViewModel                                              | 主要Repository                                                                         |
-|:---------|:-------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------|:-------------------------------------------------------------------------------------|
-| 利用者一覧    | `MainScreen`             | `CategoryBadges()`<br>`SearchBar()` <br> (CategoryBadges.kt)                                                                                                              | `PersonListViewModel`                                  | `PersonRepository`<br>`ArchivedPersonRepository`<br>`PersonSummaryRepository`        |
-| (A) 健康記録 | `PersonHealthScreen`     | `HealthRecordDetailPane()`<br>`PersonHistoryList()` <br> (PersonHealthComponents.kt)<br>`HealthGraphView()` <br> (HealthGraphView.kt)                                     | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                |
-| (B) 所見メモ | `PersonConditionScreen`  | `ConditionDetailPane()`<br>`ObservationList()`<br>`SearchBox()` <br> (ConditionComponents.kt)                                                                             | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`             |
-| (C) 服薬管理 | `PersonMedicationScreen` | `CalendarGrid()`<br>`MedicationHistoryTable()`<br>`MedicationInputDialog()` <br> (MedicationComponents.kt)                                                                | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`            |
-| 健康一括入力   | `BatchInputScreen`       | `DateTimeInputFields()` <br> (DateTimeInputFields.kt)<br>`VerticalScrollIndicator()` <br> (PersonHealthComponents.kt)                                                     | `BatchInputViewModel`                                  | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                |
-| アーカイブ管理  | `DeletedUserListScreen`  | `LazyColumn` (Compose公式)<br>`ListItem` (Compose公式)                                                                                                                        | `ArchivedPersonViewModel`                              | `ArchivedPersonRepository`                                                           |
-| アプリ設定    | `SettingsScreen`         | `SettingsSection()` <br> (共通UI部品無し/Screen内定義)<br>バックアップ・リストア処理                                                                                                            | `SettingsViewModel`                                    | `AppMaintenanceRepository`<br>`ArchivedPersonRepository`<br>`UserSettingsRepository` |
-| 共通基盤     | (詳細画面全体)                 | `PersonHeaderTitle()` <br> (PersonHeaderTitle.kt)<br>`CategorySelectorBar()` <br> (CategorySelectorBar.kt)<br>`PdfExportActionHandler()` <br> (PdfExportActionHandler.kt) | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                      |
+ 分類       | 画面 (Screen)              | 使用コンポーネント (ファイル名)                                                                                                                                                                                                                                                                                                | ViewModel                                              | 主要Repository                                                                         |
+:---------|:-------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------|:-------------------------------------------------------------------------------------|
+ 利用者一覧    | `MainScreen`             | `SearchBox.kt`<br>`KanaIndexBar.kt`<br>`CategoryBadges.kt`<br>`BirthdayInputFields.kt`<br>`LoadingScreen.kt`<br>`EmptyState.kt`<br>`InfoDialog.kt`<br>`AppTopAppBarColors.kt`<br>`CompactTextField.kt`                                                                                                                       | `PersonListViewModel`                                  | `PersonRepository`<br>`ArchivedPersonRepository`<br>`PersonSummaryRepository`        |
+ (A) 健康記録 | `PersonHealthScreen`     | `PersonHeaderTitle.kt`<br>`CategorySelectorBar.kt`<br>`PersonHealthComponents.kt`<br>`EmptyState.kt`<br>`VerticalScrollIndicator.kt`<br>`HealthGraphView.kt`<br>`LoadingScreen.kt`<br>`InfoDialog.kt`<br>`DeleteConfirmDialog.kt`<br>`AppTopAppBarColors.kt`<br>`PdfExportActionHandler.kt`                                   | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                |
+ (B) 所見メモ | `PersonConditionScreen`  | `PersonHeaderTitle.kt`<br>`CategorySelectorBar.kt`<br>`ConditionComponents.kt`<br>`SearchBox.kt`<br>`LoadingScreen.kt`<br>`EmptyState.kt`<br>`InfoDialog.kt`<br>`DeleteConfirmDialog.kt`<br>`AppTopAppBarColors.kt`<br>`PdfExportActionHandler.kt`                                                                            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`             |
+ (C) 服薬管理 | `PersonMedicationScreen` | `PersonHeaderTitle.kt`<br>`CategorySelectorBar.kt`<br>`MedicationComponents.kt`<br>`LoadingScreen.kt`<br>`EmptyState.kt`<br>`VerticalScrollIndicator.kt`<br>`AppTopAppBarColors.kt`<br>`PdfExportActionHandler.kt`<br>`DateTimeInputFields.kt`                                                                               | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`            |
+ 健康一括入力   | `BatchInputScreen`       | `PersonHeaderTitle.kt`<br>`DateTimeInputFields.kt`<br>`LoadingScreen.kt`<br>`VerticalScrollIndicator.kt`<br>`AppTopAppBarColors.kt`                                                                                                                                                                                           | `BatchInputViewModel`                                  | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                |
+ アーカイブ管理  | `DeletedUserListScreen`  | `EmptyState.kt`<br>`VerticalScrollIndicator.kt`<br>`AppTopAppBarColors.kt`                                                                                                                                                                                                                                                   | `ArchivedPersonViewModel`                              | `ArchivedPersonRepository`                                                           |
+ アプリ設定    | `SettingsScreen`         | `InfoDialog.kt`<br>`DeleteConfirmDialog.kt`<br>`VerticalScrollIndicator.kt`<br>`AppTopAppBarColors.kt`                                                                                                                                                                                                                       | `SettingsViewModel`                                    | `AppMaintenanceRepository`<br>`ArchivedPersonRepository`<br>`UserSettingsRepository` |
+ 共通基盤     | (詳細画面全体)                 | `PersonHeaderTitle.kt`<br>`CategorySelectorBar.kt`<br>`PdfExportActionHandler.kt`<br>`LoadingScreen.kt`<br>`SearchBox.kt`<br>`InfoDialog.kt`<br>`DeleteConfirmDialog.kt`<br>`AppTopAppBarColors.kt`<br>`DateTimeInputFields.kt`<br>`BirthdayInputFields.kt`<br>`KanaIndexBar.kt`<br>`EmptyState.kt`<br>`VerticalScrollIndicator.kt` | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                      |
 
 # ディレクトリ詳細
 
@@ -101,20 +109,23 @@ jp.mydns.fujiwara.carememo
 ### 2.1. 共通・基盤部品
 - `PersonHeaderTitle.kt`: 利用者の氏名、年齢等を表示する全カテゴリ共通の最上部ヘッダー。
 - `CategorySelectorBar.kt`: 詳細画面上部で(A)(B)(C)を切り替えるバー。
-- `PersonHistoryList`: 履歴表示の基盤。日付グループ化、スワイプ削除等の基本機能を備える汎用部品。
-- `DateTimeInputFields.kt`: `rememberDateTimeInputState` により、不連続な入力やブランキングを抑制する共通日時入力部品。
+- `LoadingScreen.kt`: プロジェクト共通のローディング表示UI。
+- `SearchBox.kt`: `OutlinedTextField` をベースとしたプロジェクト共通検索バー。
+- `InfoDialog.kt`: タイトルとメッセージを表示して閉じるだけの共通通知ダイアログ。
+- `DeleteConfirmDialog.kt`: 破壊的アクションを警告する共通削除確認ダイアログ。
+- `AppTopAppBarColors.kt`: プロジェクト標準の TopAppBar 配色を一括管理する設定。
+- `DateTimeInputFields.kt`: `rememberDateTimeInputState` により日時を扱う共通入力部品。
+- `BirthdayInputFields.kt`: 和暦選択とバリデーションを備えた生年月日専用入力部品。
+- `KanaIndexBar.kt`: 五十音による絞り込みを行う水平スクロールバー。
+- `EmptyState.kt`: 記録なし等の「空状態」をアイコン付きで表示する共通コンポーネント。
+- `VerticalScrollIndicator.kt`: 画面が縦に長い場合にのみ出現するスクロール補助（`ScrollState` および `LazyListState` の両方に対応）。
 
 ### 2.2. ドメイン特化部品
-- `PersonHealthComponents.kt`: (A)専用の表示アイテム、詳細編集ペイン。
-- `ConditionComponents.kt`: (B)専用の表示アイテム、詳細編集ペイン、検索ボックス。
+- `PersonHealthComponents.kt`: (A)専用の表示アイテム、詳細編集ペイン、および履歴リスト基盤 (`PersonHistoryList`)。
+- `ConditionComponents.kt`: (B)専用の表示アイテム、詳細編集ペイン。
 - `MedicationComponents.kt`: (C)専用のカレンダー、履歴テーブル、入力ダイアログ。
 
-## 3. `viewmodel/`
-### 3.1. 基底クラス
-- `BaseViewModel.kt`: UI通知（Snackbar/Dialog）や共通設定を保持。
-- `PersonBaseViewModel.kt`: 利用者情報の保持・ロードを担う、詳細画面系 ViewModel の共通基底クラス。
-
-# 実装上の重要指針（保守ガイド）
+# 実送上の重要指針（保守ガイド）
 
 不具合修正や機能追加の際は、以下の指針を遵守してください。
 
@@ -138,4 +149,4 @@ ViewModel から取得したリストを Composable 内で加工（フィルタ�
 - Material3の標準的な扱いに極力準拠すること。必要な場面で準拠されている実装から逸脱する場合は、その旨を明示して修正の是非の判断を求めること。
 
 ---
-最終更新日: 2025/02/10
+最終更新日: 2025/02/11

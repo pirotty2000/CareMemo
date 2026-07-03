@@ -199,7 +199,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
                     val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository))
                     PersonMedicationScreen(viewModel = detailViewModel, medicationViewModel = medicationViewModel, personId = personId, widthSizeClass = widthSizeClass, onBack = { navController.popBackStack("main", inclusive = false) }, onNavigateToCategory = { category ->
-                        navController.navigate(category.getRoute(personId)) { popUpTo("main") { saveState = true }; launchSingleTop = true; restoreState = true }
+                        navController.navigate(category.getRoute(personId)) { 
+                            popUpTo("main")
+                            launchSingleTop = true
+                        }
                     })
                 }
                 composable("observation/{personId}?query={query}", arguments = listOf(
@@ -219,7 +222,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         widthSizeClass = widthSizeClass,
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToCategory = { category ->
-                            navController.navigate(category.getRoute(personId)) { popUpTo("main") { saveState = true }; launchSingleTop = true; restoreState = true }
+                            navController.navigate(category.getRoute(personId)) { 
+                                popUpTo("main")
+                                launchSingleTop = true
+                            }
                         },
                         onNavigateToPhotoPreview = { uri, pId, cId -> 
                             val encodedUri = Uri.encode(uri.toString())
@@ -247,9 +253,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToGraphExpansion = { pId, cat, index -> navController.navigate("graphExpansion/$pId/${cat.name}/$index") },
                         onNavigateToCategory = { cat ->
                             navController.navigate(cat.getRoute(personId)) { 
-                                popUpTo("main") { saveState = true }
+                                popUpTo("main")
                                 launchSingleTop = true
-                                restoreState = true 
                             }
                         }
                     )

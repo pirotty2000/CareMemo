@@ -53,8 +53,10 @@ import jp.mydns.fujiwara.carememo.data.HealthThresholds
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.DateTimeInputState
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.components.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
@@ -222,32 +224,14 @@ fun BatchInputScreenContent(
                     }
                 },
                 actions = {},
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                colors = appTopAppBarColors()
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(flashColor)) {
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
-                ) {
-                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.loading),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                LoadingScreen()
             } else {
                 Column(
                     modifier = Modifier

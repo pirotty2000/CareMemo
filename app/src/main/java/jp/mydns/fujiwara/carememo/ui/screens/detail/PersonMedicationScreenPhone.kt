@@ -32,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.*
+import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
+import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
+import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -72,12 +74,7 @@ fun PersonMedicationScreenPhone(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
+                    colors = appTopAppBarColors(),
                     actions = {
                         IconButton(onClick = onShowPdfSettings) {
                             Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")

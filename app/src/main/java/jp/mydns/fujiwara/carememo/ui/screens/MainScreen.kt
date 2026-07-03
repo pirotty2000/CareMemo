@@ -72,8 +72,16 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.ui.components.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.CategoryBadges
 import jp.mydns.fujiwara.carememo.ui.components.CompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.KanaIndexBar
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
+import jp.mydns.fujiwara.carememo.ui.components.SearchBox
+import jp.mydns.fujiwara.carememo.ui.components.rememberBirthdayInputState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
@@ -171,14 +179,12 @@ fun MainScreen(
 
     // 通知ダイアログの表示
     if (dialogMessage != null) {
-        AlertDialog(
-            onDismissRequest = { dialogMessage = null; dialogTitle = null },
-            title = { dialogTitle?.let { Text(it) } },
-            text = { Text(dialogMessage!!) },
-            confirmButton = {
-                TextButton(onClick = { dialogMessage = null; dialogTitle = null }) {
-                    Text(stringResource(R.string.close))
-                }
+        InfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = {
+                dialogMessage = null
+                dialogTitle = null
             }
         )
     }
@@ -256,17 +262,11 @@ fun MainScreenContent(
         AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text(stringResource(R.string.dialog_help_title)) }, text = { Text(stringResource(R.string.dialog_help_content)) }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(stringResource(R.string.close)) } })
     }
 
-    val kanaGroups = listOf("全", "あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他")
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
+                colors = appTopAppBarColors(),
                 actions = {
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
@@ -293,78 +293,26 @@ fun MainScreenContent(
         floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.user_registration)) } }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SearchBar(query = searchQuery, onQueryChange = onSearchQueryChange)
+            SearchBox(
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange,
+                label = stringResource(R.string.search_memo_placeholder)
+            )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                kanaGroups.forEach { title ->
-                    Box(
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(48.dp)
-                            .clickable { onSectionSelect(title) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxHeight(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (selectedSection == title) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (selectedSection == title) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = 4.dp)
-                                        .width(24.dp)
-                                        .height(2.dp)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            KanaIndexBar(
+                selectedSection = selectedSection,
+                onSectionSelect = onSectionSelect
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.loading),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                LoadingScreen()
             } else if (userList.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (searchQuery.isNotEmpty()) stringResource(R.string.no_user_found) else stringResource(R.string.no_user_registered),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
+                EmptyState(
+                    message = if (searchQuery.isNotEmpty()) stringResource(R.string.no_user_found) else stringResource(R.string.no_user_registered),
+                    icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -505,13 +453,6 @@ fun CategorySelectionSheet(
     }
 }
 
-enum class BirthEra(val displayNameRes: Int) { 
-    AD(R.string.era_ad), 
-    SHOWA(R.string.era_showa), 
-    HEISEI(R.string.era_heisei), 
-    REIWA(R.string.era_reiwa) 
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> Unit) {
@@ -521,23 +462,10 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
     var firstNameFurigana by remember { mutableStateOf(person?.firstNameFurigana ?: "") }
     var note by remember { mutableStateOf(person?.note ?: "") }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val yearFocusRequester = remember { FocusRequester() }
-    val monthFocusRequester = remember { FocusRequester() }
-    val dayFocusRequester = remember { FocusRequester() }
-    val initialDate = person?.birthday?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.now()
-    var selectedEra by remember { mutableStateOf(if (person == null) BirthEra.SHOWA else when { initialDate.year in 1926..1989 -> BirthEra.SHOWA; initialDate.year in 1990..2019 -> BirthEra.HEISEI; initialDate.year >= 2020 -> BirthEra.REIWA; else -> BirthEra.AD }) }
-    var yearText by remember { mutableStateOf(if (person == null) "" else { val y = initialDate.year; when (selectedEra) { BirthEra.SHOWA -> (y - 1925).toString(); BirthEra.HEISEI -> (y - 1988).toString(); BirthEra.REIWA -> (y - 2018).toString(); BirthEra.AD -> y.toString() } }) }
-    var monthText by remember { mutableStateOf(if (person == null) "" else initialDate.monthValue.toString()) }
-    var dayText by remember { mutableStateOf(if (person == null) "" else initialDate.dayOfMonth.toString()) }
-    var eraExpanded by remember { mutableStateOf(false) }
-    val yInput = yearText.toIntOrNull()
-    val m = monthText.toIntOrNull()
-    val d = dayText.toIntOrNull()
-    val westernYear = yInput?.let { when (selectedEra) { BirthEra.SHOWA -> it + 1925; BirthEra.HEISEI -> it + 1988; BirthEra.REIWA -> it + 2018; BirthEra.AD -> it } }
-    val isYearError = yInput == null || when (selectedEra) { BirthEra.SHOWA -> yInput !in 1..64; BirthEra.HEISEI -> yInput !in 1..31; BirthEra.REIWA -> yInput !in 1..99; BirthEra.AD -> yInput !in 1900..2100 }
-    val isMonthError = m == null || m !in 1..12
-    val isDayError = try { if (westernYear != null && m != null && d != null) d < 1 || d > YearMonth.of(westernYear, m).lengthOfMonth() else true } catch (_: Exception) { true }
-    val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && !isYearError && !isMonthError && !isDayError
+
+    val birthdayState = rememberBirthdayInputState(initialInstant = person?.birthday)
+    val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && birthdayState.isValid
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (person == null) stringResource(R.string.user_registration) else stringResource(R.string.user_edit)) },
@@ -587,87 +515,39 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
+                
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(R.string.birthday), style = MaterialTheme.typography.labelMedium)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ExposedDropdownMenuBox(expanded = eraExpanded, onExpandedChange = { eraExpanded = !eraExpanded }, modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = stringResource(selectedEra.displayNameRes),
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) },
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium
-                        )
-                        ExposedDropdownMenu(expanded = eraExpanded, onDismissRequest = { eraExpanded = false }) { BirthEra.entries.forEach { era -> DropdownMenuItem(text = { Text(stringResource(era.displayNameRes), style = MaterialTheme.typography.bodyMedium) }, onClick = { selectedEra = era; eraExpanded = false }) } }
-                    }
-                    CompactTextField(value = yearText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; val maxLength = if (selectedEra == BirthEra.AD) 4 else 2; if (filtered.length <= maxLength) { yearText = filtered; if (filtered.length == maxLength) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(yearFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isYearError, suffix = { Text(stringResource(R.string.year_suffix), style = MaterialTheme.typography.labelSmall) })
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CompactTextField(value = monthText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) { monthText = filtered; if (filtered.length == 2) dayFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(monthFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isMonthError, suffix = { Text(stringResource(R.string.month_suffix), style = MaterialTheme.typography.labelSmall) })
-                    CompactTextField(value = dayText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; if (filtered.length <= 2) dayText = filtered }, modifier = Modifier.weight(1f).focusRequester(dayFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isDayError, suffix = { Text(stringResource(R.string.day_suffix), style = MaterialTheme.typography.labelSmall) })
-                }
+
+                BirthdayInputFields(state = birthdayState)
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    westernYear?.let { y ->
-                        m?.let { month ->
-                            d?.let { day ->
-                                keyboardController?.hide()
-                                val birthday = LocalDate.of(y, month, day)
-                                    .atStartOfDay(ZoneId.systemDefault())
-                                    .toInstant()
-                                val newPerson = person?.copy(
-                                    lastName = lastName,
-                                    firstName = firstName,
-                                    lastNameFurigana = lastNameFurigana,
-                                    firstNameFurigana = firstNameFurigana,
-                                    birthday = birthday,
-                                    note = note
-                                ) ?: Person(
-                                    lastName = lastName,
-                                    firstName = firstName,
-                                    lastNameFurigana = lastNameFurigana,
-                                    firstNameFurigana = firstNameFurigana,
-                                    birthday = birthday,
-                                    note = note
-                                )
-                                onSave(newPerson)
-                            }
-                        }
+                    birthdayState.toInstant()?.let { birthday ->
+                        keyboardController?.hide()
+                        val newPerson = person?.copy(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        ) ?: Person(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        )
+                        onSave(newPerson)
                     }
                 },
                 enabled = isInputValid
             ) { Text(stringResource(R.string.save)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
-    )
-}
-
-
-
-@Composable
-fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = { onQueryChange(it) },
-        label = { Text(stringResource(R.string.search_memo_placeholder)) },
-        placeholder = { Text(stringResource(R.string.search_memo_hint), style = MaterialTheme.typography.bodyMedium, color = Color.Gray) },
-        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear))
-                }
-            }
-        },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     )
 }
 

@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.ui.components.CalendarGrid
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.MedicationHistoryTable
+import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
 import java.time.LocalDate
 import java.time.YearMonth
@@ -49,20 +51,7 @@ fun PersonMedicationScreenContent(
     onDayClick: (LocalDate) -> Unit,
 ) {
     if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+        LoadingScreen()
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -96,10 +85,13 @@ fun PersonMedicationScreenContent(
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
+                    val historyTableState = androidx.compose.foundation.lazy.rememberLazyListState()
                     MedicationHistoryTable(
                         yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate
+                        recordsByDate = recordsByDate,
+                        lazyListState = historyTableState
                     )
+                    VerticalScrollIndicator(lazyListState = historyTableState)
                 }
             }
         }
@@ -173,10 +165,13 @@ fun PersonMedicationScreenContent(
             // コンテンツ
             Box(modifier = Modifier.weight(1f)) {
                 if (isHistoryMode) {
+                    val historyTableState = androidx.compose.foundation.lazy.rememberLazyListState()
                     MedicationHistoryTable(
                         yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate
+                        recordsByDate = recordsByDate,
+                        lazyListState = historyTableState
                     )
+                    VerticalScrollIndicator(lazyListState = historyTableState)
                 } else {
                     CalendarGrid(
                         yearMonth = selectedMonth,

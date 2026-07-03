@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,22 +36,17 @@ import java.time.YearMonth
 @Composable
 fun MedicationHistoryTable(
     yearMonth: YearMonth,
-    recordsByDate: Map<String, List<MedicationRecord>>
+    recordsByDate: Map<String, List<MedicationRecord>>,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
     val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
 
     if (!hasAnyRecord) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "記録がありません",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        EmptyState(
+            message = "記録がありません",
+            icon = Icons.Outlined.Description
+        )
         return
     }
 
@@ -76,7 +73,8 @@ fun MedicationHistoryTable(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            state = lazyListState
         ) {
             items(count = daysInMonth) { index ->
                 val day = index + 1

@@ -34,9 +34,11 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.ui.components.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.HealthRecordDetailPane
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
@@ -64,20 +66,7 @@ fun PersonHealthScreenContent(
     }
 
     if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = androidx.compose.ui.Alignment.Center
-        ) {
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+        LoadingScreen()
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

@@ -370,91 +370,6 @@ fun VitalStatusIndicator(label: String, isActive: Boolean) {
     )
 }
 
-@Composable
-fun EmptyState(message: String, description: String? = null, icon: ImageVector) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.outline
-        )
-        if (description != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
-    val barHeight = 60.dp
-    val density = LocalDensity.current
-    val viewportHeight = with(density) { scrollState.viewportSize.toDp() }
-    val maxOffset = viewportHeight - barHeight
-
-    val scrollFraction by remember {
-        derivedStateOf {
-            if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue else 0f
-        }
-    }
-    val isBottomSelected by remember {
-        derivedStateOf { scrollState.value > (scrollState.maxValue / 2) }
-    }
-
-    Column(
-        modifier = Modifier
-            .align(Alignment.CenterEnd)
-            .padding(end = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        repeat(2) { index ->
-            val isSelected = if (index == 0) !isBottomSelected else isBottomSelected
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
-                            alpha = 0.3f
-                        )
-                    )
-            )
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .width(4.dp)
-            .height(barHeight)
-            .align(Alignment.TopEnd)
-            .offset {
-                IntOffset(
-                    x = 0,
-                    y = (maxOffset * scrollFraction).roundToPx()
-                )
-            }
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-    )
-}
-
 /**
  * 数値系健康記録詳細ペイン
  */
@@ -479,9 +394,7 @@ fun HealthRecordDetailPane(
 
     // 記録が見つからない場合の待機画面（新規作成時は除く）
     if (record == null && recordId != 0) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        LoadingScreen()
         return
     }
 

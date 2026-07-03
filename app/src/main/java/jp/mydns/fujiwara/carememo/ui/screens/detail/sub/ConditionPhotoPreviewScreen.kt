@@ -31,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -97,11 +98,7 @@ fun ConditionPhotoPreviewScreen(
             )
 
             if (isProcessing) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("画像を保存用に最適化しています...")
-                }
+                LoadingScreen(message = "画像を保存用に最適化しています...")
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),

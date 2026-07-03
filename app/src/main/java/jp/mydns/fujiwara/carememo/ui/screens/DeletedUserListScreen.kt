@@ -31,12 +31,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.PersonOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import jp.mydns.fujiwara.carememo.ui.components.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.viewmodel.ArchivedPersonViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,35 +122,38 @@ fun DeletedUserListScreen(
         }
     ) { paddingValues ->
         if (endedUsers.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("利用終了した利用者はいません", style = MaterialTheme.typography.bodyLarge)
-            }
+            EmptyState(
+                message = "利用終了した利用者はいません",
+                icon = Icons.Outlined.PersonOff
+            )
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues)
-            ) {
-                items(endedUsers, key = { it.id }) { user ->
-                    ListItem(
-                        headlineContent = { Text(user.getMaskedName(isNameMaskingEnabled)) },
-                        supportingContent = { Text(user.getMaskedFurigana(isNameMaskingEnabled)) },
-                        leadingContent = {
-                            Checkbox(
-                                checked = selectedUserIds.contains(user.id),
-                                onCheckedChange = { checked ->
-                                    if (checked) {
-                                        selectedUserIds.add(user.id)
-                                    } else {
-                                        selectedUserIds.remove(user.id)
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState
+                ) {
+                    items(endedUsers, key = { it.id }) { user ->
+                        ListItem(
+                            headlineContent = { Text(user.getMaskedName(isNameMaskingEnabled)) },
+                            supportingContent = { Text(user.getMaskedFurigana(isNameMaskingEnabled)) },
+                            leadingContent = {
+                                Checkbox(
+                                    checked = selectedUserIds.contains(user.id),
+                                    onCheckedChange = { checked ->
+                                        if (checked) {
+                                            selectedUserIds.add(user.id)
+                                        } else {
+                                            selectedUserIds.remove(user.id)
+                                        }
                                     }
-                                }
-                            )
-                        }
-                    )
-                    HorizontalDivider()
+                                )
+                            }
+                        )
+                        HorizontalDivider()
+                    }
                 }
+                VerticalScrollIndicator(lazyListState = listState)
             }
         }
     }

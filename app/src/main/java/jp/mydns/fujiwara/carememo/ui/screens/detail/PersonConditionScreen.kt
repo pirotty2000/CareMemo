@@ -37,6 +37,8 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.ui.components.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -163,29 +165,14 @@ fun PersonConditionScreen(
 
     // 削除確認ダイアログ
     if (recordToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { recordToDelete = null },
-            title = { Text(stringResource(R.string.delete_data_title)) },
-            text = { Text(stringResource(R.string.delete_confirm_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        recordToDelete?.let { record ->
-                            if (selectedId == record.id) selectedId = -1
-                            if (record is jp.mydns.fujiwara.carememo.data.ConditionAtVisit) {
-                                conditionViewModel.deleteRecord(record)
-                            }
-                        }
-                        recordToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { recordToDelete = null }) {
-                    Text(stringResource(R.string.cancel))
+        DeleteConfirmDialog(
+            onDismiss = { recordToDelete = null },
+            onDelete = {
+                recordToDelete?.let { record ->
+                    if (selectedId == record.id) selectedId = -1
+                    if (record is jp.mydns.fujiwara.carememo.data.ConditionAtVisit) {
+                        conditionViewModel.deleteRecord(record)
+                    }
                 }
             }
         )

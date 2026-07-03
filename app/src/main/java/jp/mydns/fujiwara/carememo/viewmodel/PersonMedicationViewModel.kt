@@ -81,6 +81,14 @@ class PersonMedicationViewModel(
         _selectedMonth.value = _selectedMonth.value.minusMonths(1)
     }
 
+    override fun loadPerson(personId: Int) {
+        val isDifferentPerson = currentPerson.value?.id != personId
+        super.loadPerson(personId)
+        if (isDifferentPerson) {
+            _selectedMonth.value = YearMonth.now()
+        }
+    }
+
     /**
      * 服薬記録を保存または更新する
      */

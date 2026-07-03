@@ -46,6 +46,15 @@ class BatchInputViewModel(
         _recordTime.value = time
     }
 
+    override fun loadPerson(personId: Int) {
+        val isDifferentPerson = currentPerson.value?.id != personId
+        super.loadPerson(personId)
+        if (isDifferentPerson) {
+            resetInputs()
+            _recordTime.value = Instant.now()
+        }
+    }
+
     /**
      * 入力された全データを一括保存します。
      * 値が入力されているカテゴリのみが保存対象となります。

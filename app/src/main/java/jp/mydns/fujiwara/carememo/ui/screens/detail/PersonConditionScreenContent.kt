@@ -22,7 +22,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.ConditionDetailPane
+import jp.mydns.fujiwara.carememo.ui.components.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.ObservationList
 import jp.mydns.fujiwara.carememo.ui.components.SearchBox
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
@@ -56,20 +56,7 @@ fun PersonConditionScreenContent(
     onNavigateToFullScreen: (String, String?) -> Unit,
 ) {
     if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+        LoadingScreen()
     } else if (isExpanded) {
         // タブレット用レイアウト (2ペイン)
         Row(
@@ -83,8 +70,8 @@ fun PersonConditionScreenContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SearchBox(
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = onSearchQueryChange
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     ObservationList(
@@ -127,8 +114,8 @@ fun PersonConditionScreenContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SearchBox(
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = onSearchQueryChange
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     ObservationList(

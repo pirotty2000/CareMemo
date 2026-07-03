@@ -80,33 +80,6 @@ fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
 }
 
 /**
- * 検索ボックス (所見メモ用)
- */
-@Composable
-fun SearchBox(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    placeholder: String = "所見メモを検索..."
-) {
-    OutlinedTextField(
-        value = searchQuery,
-        onValueChange = onSearchQueryChange,
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder) },
-        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-        trailingIcon = {
-            if (searchQuery.isNotEmpty()) {
-                IconButton(onClick = { onSearchQueryChange("") }) {
-                    Icon(Icons.Rounded.Clear, contentDescription = "クリア")
-                }
-            }
-        },
-        singleLine = true,
-        shape = MaterialTheme.shapes.medium
-    )
-}
-
-/**
  * 所見メモ用の履歴リスト (EmptyState管理込み)
  */
 @Composable
@@ -162,9 +135,7 @@ fun ConditionDetailPane(
 
     // 記録が見つからない場合の待機（新規作成時は除く）
     if (memo == null && conditionId > 0) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        LoadingScreen()
         return
     }
 
@@ -309,7 +280,12 @@ fun ConditionDetailPane(
     }
 
     if (photoToDelete != null) {
-        AlertDialog(onDismissRequest = { photoToDelete = null }, title = { Text("写真の削除") }, text = { Text("この写真を削除してもよろしいですか？") }, confirmButton = { TextButton(onClick = { photoToDelete?.let { conditionViewModel.deletePhoto(context, it) }; photoToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("削除") } }, dismissButton = { TextButton(onClick = { photoToDelete = null }) { Text("キャンセル") } })
+        DeleteConfirmDialog(
+            onDismiss = { photoToDelete = null },
+            onDelete = { photoToDelete?.let { conditionViewModel.deletePhoto(context, it) } },
+            title = "写真の削除",
+            message = "この写真を削除してもよろしいですか？"
+        )
     }
 }
 

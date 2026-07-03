@@ -6,6 +6,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +33,8 @@ abstract class PersonBaseViewModel(
     protected val _currentPerson = MutableStateFlow<Person?>(null)
     val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
 
+    private var loadPersonJob: Job? = null
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
         .flatMapLatest { person ->
@@ -47,13 +50,16 @@ abstract class PersonBaseViewModel(
     /**
      * 利用者情報をロードします。
      */
-    fun loadPerson(personId: Int) {
+    open fun loadPerson(personId: Int) {
         // すでに同じ利用者がロードされている場合は、不必要に _isLoading を true にしない。
         // これにより、画面回転等による再コンポーズ時に「読み込み中」で固まるのを防ぐ。
         if (_currentPerson.value?.id == personId) return
 
         _isLoading.value = true
-        viewModelScope.launch {
+        _currentPerson.value = null // 新しい利用者をロードする前に、現在の情報をクリアして「忘れる」
+
+        loadPersonJob?.cancel() // 既存のロード処理がある場合はキャンセルし、重複を防ぐ
+        loadPersonJob = viewModelScope.launch {
             repository.getPersonById(personId).collectLatest {
                 _currentPerson.value = it
                 // loadPerson 自体は基本情報のロード完了のみを扱う。

@@ -36,6 +36,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.PersonHeaderTitle
+import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 
@@ -85,12 +86,7 @@ fun PersonConditionScreenPhone(
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
+                    colors = appTopAppBarColors(),
                     actions = {
                         if (selectedId == -1) {
                             IconButton(onClick = onShowPdfSettings) {

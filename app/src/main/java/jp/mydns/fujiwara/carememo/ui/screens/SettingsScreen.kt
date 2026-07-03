@@ -57,6 +57,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import jp.mydns.fujiwara.carememo.ui.components.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,7 +131,15 @@ fun SettingsScreen(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { showImportUri = it } }
 
     if (dialogMessage != null) {
-        AlertDialog(onDismissRequest = { dialogMessage = null; dialogTitle = null }, title = { dialogTitle?.let { Text(it) } }, text = { Text(dialogMessage!!) }, confirmButton = { TextButton(onClick = { dialogMessage = null; dialogTitle = null }) { Text("OK") } })
+        InfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = {
+                dialogMessage = null
+                dialogTitle = null
+            },
+            confirmButtonText = "OK"
+        )
     }
 
     if (showImportUri != null) {
@@ -135,19 +147,39 @@ fun SettingsScreen(
     }
 
     if (showEraseConfirm) {
-        AlertDialog(onDismissRequest = { showEraseConfirm = false }, title = { Text("個人情報の完全抹消", color = MaterialTheme.colorScheme.error) }, text = { Text("現在「利用終了」となっている ${endedUserList.size} 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？", color = MaterialTheme.colorScheme.error) }, confirmButton = { Button(onClick = { viewModel.deleteEndedPersons(); showEraseConfirm = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("対象者 (${endedUserList.size}名) を抹消する") } }, dismissButton = { TextButton(onClick = { showEraseConfirm = false }) { Text("キャンセル") } })
+        DeleteConfirmDialog(
+            onDismiss = { showEraseConfirm = false },
+            onDelete = { viewModel.deleteEndedPersons() },
+            title = "個人情報の完全抹消",
+            message = "現在「利用終了」となっている ${endedUserList.size} 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？",
+            confirmButtonText = "対象者 (${endedUserList.size}名) を抹消する"
+        )
     }
 
     if (showDevClearConfirm) {
-        AlertDialog(onDismissRequest = { showDevClearConfirm = false }, title = { Text("(開発用) 全データ消去", color = MaterialTheme.colorScheme.error) }, text = { Text("すべてのデータおよび写真を物理削除します。取り消せません。", color = MaterialTheme.colorScheme.error) }, confirmButton = { Button(onClick = { viewModel.clearAllData(context); showDevClearConfirm = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("実行する") } }, dismissButton = { TextButton(onClick = { showDevClearConfirm = false }) { Text("キャンセル") } })
+        DeleteConfirmDialog(
+            onDismiss = { showDevClearConfirm = false },
+            onDelete = { viewModel.clearAllData(context) },
+            title = "(開発用) 全データ消去",
+            message = "すべてのデータおよび写真を物理削除します。取り消せません。",
+            confirmButtonText = "実行する"
+        )
     }
 
     if (showVersionDialog) {
-        AlertDialog(onDismissRequest = { showVersionDialog = false }, title = { Text("バージョン情報") }, text = { Text("CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy") }, confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text("閉じる") } })
+        InfoDialog(
+            title = "バージョン情報",
+            message = "CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy",
+            onDismiss = { showVersionDialog = false }
+        )
     }
 
     if (showHelpDialog) {
-        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text("ヘルプ") }, text = { Text("・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「利用者管理」から復帰できます。\n・データは定期的にバックアップすることをお勧めします。") }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text("閉じる") } })
+        InfoDialog(
+            title = "ヘルプ",
+            message = "・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「利用者管理」から復帰できます。\n・データは定期的にバックアップすることをお勧めします。",
+            onDismiss = { showHelpDialog = false }
+        )
     }
 
     if (showTimeoutDialog) {
@@ -221,78 +253,89 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("設定・管理", fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer, titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer, actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer, navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+                colors = appTopAppBarColors(),
             )
         },
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            // --- 1. 表示・記録設定 ---
-            SettingsSection(title = "表示・記録設定") {
-                ListItem(headlineContent = { Text("氏名の伏せ字表示") }, supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") }, trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = { viewModel.setNameMaskingEnabled(it) }) })
-                OutlinedTextField(value = localRecorderName, onValueChange = { localRecorderName = it; viewModel.setDefaultRecorderName(it) }, label = { Text("記録者の名前(デフォルト)") }, placeholder = { Text("例: 山田") }, supportingText = { Text("所見メモ作成時に自動入力されます") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // --- 2. 利用者管理 ---
-            SettingsSection(title = "利用者管理") {
-                ListItem(headlineContent = { Text("利用終了者の復帰") }, supportingContent = { Text("現在 ${endedUserList.size} 名が利用終了となっています") }, trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } }, modifier = Modifier.clickable { onNavigateToRestore() })
-                ListItem(headlineContent = { Text("利用終了者のデータを完全抹消", color = MaterialTheme.colorScheme.error) }, supportingContent = { Text("「利用終了」の方のデータを物理削除します") }, trailingContent = { IconButton(onClick = { if (endedUserList.isNotEmpty()) showEraseConfirm = true }, enabled = endedUserList.isNotEmpty()) { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = if (endedUserList.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline) } }, modifier = Modifier.clickable(enabled = endedUserList.isNotEmpty()) { showEraseConfirm = true })
-            }
-
-            // --- 3. データ管理 ---
-            SettingsSection(title = "データ管理") {
-                ListItem(headlineContent = { Text("バックアップにパスワードを設定") }, supportingContent = { Text("Zipファイルを暗号化して保護します") }, trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = { viewModel.setBackupPasswordEnabled(it) }) })
-                if (isBackupPasswordEnabled) {
-                    OutlinedTextField(value = localBackupPassword, onValueChange = { localBackupPassword = it; if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it) }, label = { Text("デフォルトのパスワード") }, placeholder = { Text("6桁以上の数字を推奨") }, supportingText = { if (!isPasswordValid && localBackupPassword.isNotEmpty()) Text("6文字以上で入力してください", color = MaterialTheme.colorScheme.error) else Text("バックアップ作成時に使用されます") }, isError = !isPasswordValid && localBackupPassword.isNotEmpty(), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) { Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) } })
+        val scrollState = rememberScrollState()
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // --- 1. 表示・記録設定 ---
+                SettingsSection(title = "表示・記録設定") {
+                    ListItem(headlineContent = { Text("氏名の伏せ字表示") }, supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") }, trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = { viewModel.setNameMaskingEnabled(it) }) })
+                    OutlinedTextField(value = localRecorderName, onValueChange = { localRecorderName = it; viewModel.setDefaultRecorderName(it) }, label = { Text("記録者の名前(デフォルト)") }, placeholder = { Text("例: 山田") }, supportingText = { Text("所見メモ作成時に自動入力されます") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                val canExport = !isBackupPasswordEnabled || isPasswordValid
-                ListItem(headlineContent = { Text("データのバックアップ (保存)") }, supportingContent = { Text("全データと写真をZip書き出しします") }, trailingContent = { IconButton(onClick = { viewModel.setLockBypassEnabled(true); exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }, enabled = canExport) { Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) } }, modifier = Modifier.clickable(enabled = canExport) { viewModel.setLockBypassEnabled(true); exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") })
-                ListItem(headlineContent = { Text("データの復元 (読込)") }, supportingContent = { Text("バックアップからデータを読み込みます") }, trailingContent = { IconButton(onClick = { viewModel.setLockBypassEnabled(true); importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } }, modifier = Modifier.clickable { viewModel.setLockBypassEnabled(true); importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) })
-            }
 
-            // --- 4. セキュリティ ---
-            SettingsSection(title = "セキュリティ") {
-                ListItem(headlineContent = { Text("アプリのロック") }, supportingContent = { Text("起動時・復帰時に認証を求めます") }, trailingContent = { Switch(checked = isBiometricEnabled, onCheckedChange = { viewModel.setBiometricEnabled(context, it) }) })
-                val timeoutLabel = when (lockTimeoutMinutes) { 0 -> "即時"; -1 -> "ロックしない"; else -> "${lockTimeoutMinutes}分" }
-                ListItem(headlineContent = { Text("再ロックまでの時間", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) }, supportingContent = { Text("指定時間が経過するとロックがかかります", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) }, trailingContent = { Text(text = timeoutLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) }, modifier = Modifier.clickable(enabled = isBiometricEnabled) { showTimeoutDialog = true })
-                Text(text = "※画面消灯設定を短くするとより安全です", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
-
-            // --- 5. テーマ ---
-            SettingsSection(title = "テーマ") {
-                Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { showThemeDialog = true }) {
-                    OutlinedTextField(
-                        value = themeSetting.label,
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = { Text("配色とモード") },
-                        trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
-                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
+                // --- 2. 利用者管理 ---
+                SettingsSection(title = "利用者管理") {
+                    ListItem(headlineContent = { Text("利用終了者の復帰") }, supportingContent = { Text("現在 ${endedUserList.size} 名が利用終了となっています") }, trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } }, modifier = Modifier.clickable { onNavigateToRestore() })
+                    ListItem(headlineContent = { Text("利用終了者のデータを完全抹消", color = MaterialTheme.colorScheme.error) }, supportingContent = { Text("「利用終了」の方のデータを物理削除します") }, trailingContent = { IconButton(onClick = { if (endedUserList.isNotEmpty()) showEraseConfirm = true }, enabled = endedUserList.isNotEmpty()) { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = if (endedUserList.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline) } }, modifier = Modifier.clickable(enabled = endedUserList.isNotEmpty()) { showEraseConfirm = true })
                 }
-                Text(text = "※ ${themeSetting.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
-            }
 
-            // --- 6. その他 ---
-            SettingsSection(title = "その他") {
-                ListItem(headlineContent = { Text("ヘルプ") }, leadingContent = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) }, modifier = Modifier.clickable { showHelpDialog = true })
-                ListItem(headlineContent = { Text("バージョン情報") }, leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) }, modifier = Modifier.clickable { showVersionDialog = true })
-            }
+                // --- 3. データ管理 ---
+                SettingsSection(title = "データ管理") {
+                    ListItem(headlineContent = { Text("バックアップにパスワードを設定") }, supportingContent = { Text("Zipファイルを暗号化して保護します") }, trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = { viewModel.setBackupPasswordEnabled(it) }) })
+                    if (isBackupPasswordEnabled) {
+                        OutlinedTextField(value = localBackupPassword, onValueChange = { localBackupPassword = it; if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it) }, label = { Text("デフォルトのパスワード") }, placeholder = { Text("6桁以上の数字を推奨") }, supportingText = { if (!isPasswordValid && localBackupPassword.isNotEmpty()) Text("6文字以上で入力してください", color = MaterialTheme.colorScheme.error) else Text("バックアップ作成時に使用されます") }, isError = !isPasswordValid && localBackupPassword.isNotEmpty(), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) { Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) } })
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    val canExport = !isBackupPasswordEnabled || isPasswordValid
+                    ListItem(headlineContent = { Text("データのバックアップ (保存)") }, supportingContent = { Text("全データと写真をZip書き出しします") }, trailingContent = { IconButton(onClick = { viewModel.setLockBypassEnabled(true); exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }, enabled = canExport) { Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) } }, modifier = Modifier.clickable(enabled = canExport) { viewModel.setLockBypassEnabled(true); exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") })
+                    ListItem(headlineContent = { Text("データの復元 (読込)") }, supportingContent = { Text("バックアップからデータを読み込みます") }, trailingContent = { IconButton(onClick = { viewModel.setLockBypassEnabled(true); importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } }, modifier = Modifier.clickable { viewModel.setLockBypassEnabled(true); importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) })
+                }
 
-            // --- 7. リセット ---
-            SettingsSection(title = "リセット") {
-                Text(text = "※ 全データと写真が消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                ListItem(headlineContent = { Text("■要注意■ 全データ消去", color = MaterialTheme.colorScheme.error) }, leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, modifier = Modifier.clickable { showDevClearConfirm = true })
+                // --- 4. セキュリティ ---
+                SettingsSection(title = "セキュリティ") {
+                    ListItem(headlineContent = { Text("アプリのロック") }, supportingContent = { Text("起動時・復帰時に認証を求めます") }, trailingContent = { Switch(checked = isBiometricEnabled, onCheckedChange = { viewModel.setBiometricEnabled(context, it) }) })
+                    val timeoutLabel = when (lockTimeoutMinutes) { 0 -> "即時"; -1 -> "ロックしない"; else -> "${lockTimeoutMinutes}分" }
+                    ListItem(headlineContent = { Text("再ロックまでの時間", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) }, supportingContent = { Text("指定時間が経過するとロックがかかります", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) }, trailingContent = { Text(text = timeoutLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) }, modifier = Modifier.clickable(enabled = isBiometricEnabled) { showTimeoutDialog = true })
+                    Text(text = "※画面消灯設定を短くするとより安全です", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+
+                // --- 5. テーマ ---
+                SettingsSection(title = "テーマ") {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { showThemeDialog = true }) {
+                        OutlinedTextField(
+                            value = themeSetting.label,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            label = { Text("配色とモード") },
+                            trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                    Text(text = "※ ${themeSetting.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+                }
+
+                // --- 6. その他 ---
+                SettingsSection(title = "その他") {
+                    ListItem(headlineContent = { Text("ヘルプ") }, leadingContent = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) }, modifier = Modifier.clickable { showHelpDialog = true })
+                    ListItem(headlineContent = { Text("バージョン情報") }, leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) }, modifier = Modifier.clickable { showVersionDialog = true })
+                }
+
+                // --- 7. リセット ---
+                SettingsSection(title = "リセット") {
+                    Text(text = "※ 全データと写真が消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    ListItem(headlineContent = { Text("■要注意■ 全データ消去", color = MaterialTheme.colorScheme.error) }, leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, modifier = Modifier.clickable { showDevClearConfirm = true })
+                }
+                Spacer(modifier = Modifier.height(32.dp))
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            
+            VerticalScrollIndicator(scrollState = scrollState)
         }
     }
 }
