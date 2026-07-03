@@ -575,7 +575,16 @@ fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> U
                 Text(stringResource(R.string.birthday), style = MaterialTheme.typography.labelMedium)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     ExposedDropdownMenuBox(expanded = eraExpanded, onExpandedChange = { eraExpanded = !eraExpanded }, modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(value = stringResource(selectedEra.displayNameRes), onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor(), singleLine = true, textStyle = MaterialTheme.typography.bodyMedium)
+                        OutlinedTextField(
+                            value = stringResource(selectedEra.displayNameRes),
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
                         ExposedDropdownMenu(expanded = eraExpanded, onDismissRequest = { eraExpanded = false }) { BirthEra.entries.forEach { era -> DropdownMenuItem(text = { Text(stringResource(era.displayNameRes), style = MaterialTheme.typography.bodyMedium) }, onClick = { selectedEra = era; eraExpanded = false }) } }
                     }
                     CompactTextField(value = yearText, onValueChange = { val filtered = it.filter { char -> char.isDigit() }; val maxLength = if (selectedEra == BirthEra.AD) 4 else 2; if (filtered.length <= maxLength) { yearText = filtered; if (filtered.length == maxLength) monthFocusRequester.requestFocus() } }, modifier = Modifier.weight(1f).focusRequester(yearFocusRequester), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), isError = isYearError, suffix = { Text(stringResource(R.string.year_suffix), style = MaterialTheme.typography.labelSmall) })
