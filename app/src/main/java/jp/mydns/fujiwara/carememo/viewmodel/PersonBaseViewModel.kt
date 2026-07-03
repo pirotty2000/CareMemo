@@ -48,6 +48,10 @@ abstract class PersonBaseViewModel(
      * 利用者情報をロードします。
      */
     fun loadPerson(personId: Int) {
+        // すでに同じ利用者がロードされている場合は、不必要に _isLoading を true にしない。
+        // これにより、画面回転等による再コンポーズ時に「読み込み中」で固まるのを防ぐ。
+        if (_currentPerson.value?.id == personId) return
+
         _isLoading.value = true
         viewModelScope.launch {
             repository.getPersonById(personId).collectLatest {

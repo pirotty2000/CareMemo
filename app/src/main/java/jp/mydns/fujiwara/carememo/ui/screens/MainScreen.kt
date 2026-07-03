@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -440,8 +441,23 @@ fun MainScreenContent(
                                 },
                                 colors = ListItemDefaults.colors(
                                     containerColor = when {
-                                        isBirthdayToday -> Color(0xFFFFC0CB) // Pink (今日: 濃いめ)
-                                        isBirthdaySoon -> Color(0xFFFFF0F5)  // LavenderBlush (もうすぐ: 薄め)
+                                        isBirthdayToday -> {
+                                            // 輝度でダークテーマ判定を行う（システム設定によらず、現在のテーマ配色に合わせる）
+                                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                                            if (isDark) {
+                                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                                            } else {
+                                                Color(0xFFFFC0CB) // Pink (今日: 濃いめ)
+                                            }
+                                        }
+                                        isBirthdaySoon -> {
+                                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                                            if (isDark) {
+                                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
+                                            } else {
+                                                Color(0xFFFFF0F5)  // LavenderBlush (もうすぐ: 薄め)
+                                            }
+                                        }
                                         else -> MaterialTheme.colorScheme.surface
                                     }
                                 ),
