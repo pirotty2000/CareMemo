@@ -139,6 +139,17 @@ object DateTimeUtils {
     }
 
     /**
+     * 誕生日を表示用にフォーマットする (例: 1950年1月1日 (昭和25年))
+     */
+    fun formatBirthday(birthday: Instant): String {
+        val date = birthday.atZone(DEFAULT_ZONE).toLocalDate()
+        val japaneseDate = JapaneseDate.from(date)
+        val eraName = japaneseDate.format(ERA_NAME_FORMATTER)
+        val eraYear = japaneseDate[ChronoField.YEAR_OF_ERA]
+        return "${date.year}年${date.monthValue}月${date.dayOfMonth}日 (${eraName}${eraYear}年)"
+    }
+
+    /**
      * 西暦に和暦を添えた文字列を取得する (例: 2023(令和5)年)
      */
     private fun getYearWithEra(date: LocalDate): String {

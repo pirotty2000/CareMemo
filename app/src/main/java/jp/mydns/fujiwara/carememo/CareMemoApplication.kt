@@ -34,9 +34,9 @@ class CareMemoApplication : Application() {
         PersonRepository(database.personDao())
     }
 
-    // (管理) 利用終了者管理リポジトリ
-    val archivedPersonRepository: ArchivedPersonRepository by lazy {
-        ArchivedPersonRepository(
+    // (管理) 利用者復帰・抹消管理リポジトリ
+    val deleteOrRestorePersonRepository: DeleteOrRestorePersonRepository by lazy {
+        DeleteOrRestorePersonRepository(
             database,
             database.personDao(),
             database.heightAndWeightDao(),

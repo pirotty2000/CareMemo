@@ -10,7 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
-import jp.mydns.fujiwara.carememo.data.repository.ArchivedPersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
@@ -34,7 +34,7 @@ import java.io.OutputStream
  */
 class SettingsViewModel(
     private val maintenanceRepository: AppMaintenanceRepository,
-    private val archivedPersonRepository: ArchivedPersonRepository,
+    private val archivedPersonRepository: DeleteOrRestorePersonRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
@@ -79,7 +79,7 @@ class SettingsViewModel(
     private var pendingImportFile: File? = null
     private var pendingImportUri: Uri? = null
 
-    val deletedUserList: StateFlow<List<Person>> = archivedPersonRepository.getDeletedPersons()
+    val deletedUserList: StateFlow<List<Person>> = archivedPersonRepository.getArchivedPersons()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -150,8 +150,8 @@ class SettingsViewModel(
     fun deleteEndedPersons() {
         viewModelScope.launch {
             try {
-                archivedPersonRepository.deleteEndedPersons()
-                sendUiEvent(UiEvent.ShowInfoDialog("完了", "利用終了者のデータを完全に抹消しました。"))
+                archivedPersonRepository.deleteAllEndedPersons()
+                sendUiEvent(UiEvent.ShowInfoDialog("完了", "利用終了者のデータを一括で完全に抹消しました。"))
             } catch (e: Exception) {
                 showError("エラー", "データの抹消に失敗しました: ${e.localizedMessage}")
             }
@@ -350,7 +350,7 @@ class SettingsViewModel(
 
     class Factory(
         private val maintenanceRepository: AppMaintenanceRepository,
-        private val archivedPersonRepository: ArchivedPersonRepository,
+        private val archivedPersonRepository: DeleteOrRestorePersonRepository,
         private val userSettingsRepository: UserSettingsRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

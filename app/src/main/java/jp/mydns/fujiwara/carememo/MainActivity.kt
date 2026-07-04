@@ -37,14 +37,14 @@ import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.screens.main.MainScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.health.BatchInputScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.health.GraphExpansionScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.health.PersonHealthScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.condition.PersonConditionScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.condition.ConditionPhotoFullScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.condition.ConditionPhotoPreviewScreen
-import jp.mydns.fujiwara.carememo.ui.screens.detail.medication.PersonMedicationScreen
-import jp.mydns.fujiwara.carememo.ui.screens.settings.DeletedUserListScreen
+import jp.mydns.fujiwara.carememo.ui.screens.health.BatchInputScreen
+import jp.mydns.fujiwara.carememo.ui.screens.health.GraphExpansionScreen
+import jp.mydns.fujiwara.carememo.ui.screens.health.PersonHealthScreen
+import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionScreen
+import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoFullScreen
+import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoPreviewScreen
+import jp.mydns.fujiwara.carememo.ui.screens.medication.PersonMedicationScreen
+import jp.mydns.fujiwara.carememo.ui.screens.settings.DeleteOrRestorePersonScreen
 import jp.mydns.fujiwara.carememo.ui.screens.settings.SettingsScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
@@ -54,7 +54,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.ArchivedPersonViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -101,7 +101,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
     val context = LocalContext.current
     val application = context.applicationContext as CareMemoApplication
     val personRepository = application.personRepository
-    val archivedPersonRepository = application.archivedPersonRepository
+    val deleteOrRestorePersonRepository = application.deleteOrRestorePersonRepository
     val personSummaryRepository = application.personSummaryRepository
     val appMaintenanceRepository = application.appMaintenanceRepository
     val healthRepository = application.healthRepository
@@ -171,7 +171,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         if (isAuthenticated || isBiometricEnabled == false) {
             NavHost(navController = navController, startDestination = "main") {
                 composable("main") {
-                    val listViewModel: PersonListViewModel = viewModel(factory = PersonListViewModel.Factory(personRepository, archivedPersonRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
+                    val listViewModel: PersonListViewModel = viewModel(factory = PersonListViewModel.Factory(personRepository, deleteOrRestorePersonRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
                     MainScreen(
                         viewModel = listViewModel, 
                         onNavigateToDetail = { personId, category ->
@@ -185,9 +185,15 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToSettings = { navController.navigate("settings") }
                     )
                 }
-                composable("restore") {
-                    val archivedViewModel: ArchivedPersonViewModel = viewModel(factory = ArchivedPersonViewModel.Factory(archivedPersonRepository, userSettingsRepository))
-                    DeletedUserListScreen(viewModel = archivedViewModel, onBack = { navController.popBackStack() })
+                composable("archive_management/{mode}") { backStackEntry ->
+                    val modeName = backStackEntry.arguments?.getString("mode") ?: DeleteOrRestorePersonViewModel.OperationMode.RESTORE.name
+                    val mode = DeleteOrRestorePersonViewModel.OperationMode.valueOf(modeName)
+                    val archiveViewModel: DeleteOrRestorePersonViewModel = viewModel(factory = DeleteOrRestorePersonViewModel.Factory(deleteOrRestorePersonRepository, userSettingsRepository))
+                    DeleteOrRestorePersonScreen(
+                        viewModel = archiveViewModel, 
+                        mode = mode,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
                 composable("batch_input/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
@@ -195,8 +201,14 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     BatchInputScreen(viewModel = batchViewModel, personId = personId, onBack = { navController.popBackStack() })
                 }
                 composable("settings") {
-                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, archivedPersonRepository, userSettingsRepository))
-                    SettingsScreen(viewModel = settingsViewModel, onNavigateToRestore = { navController.navigate("restore") }, onBack = { navController.popBackStack() })
+                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, userSettingsRepository))
+                    SettingsScreen(
+                        viewModel = settingsViewModel, 
+                        onNavigateToArchiveManagement = { mode ->
+                            navController.navigate("archive_management/${mode.name}")
+                        }, 
+                        onBack = { navController.popBackStack() }
+                    )
                 }
                 composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0

@@ -108,32 +108,44 @@ class BirthdayInputState(
 
 @Composable
 fun rememberBirthdayInputState(initialInstant: Instant? = null): BirthdayInputState {
-    val initialDate = initialInstant?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.now()
+    val initialDate = initialInstant?.atZone(ZoneId.systemDefault())?.toLocalDate()
 
     val initialEra = remember(initialInstant) {
-        when {
-            initialDate.year in 1926..1989 -> BirthEra.SHOWA
-            initialDate.year in 1990..2019 -> BirthEra.HEISEI
-            initialDate.year >= 2020 -> BirthEra.REIWA
-            else -> BirthEra.AD
+        if (initialDate == null) {
+            BirthEra.SHOWA // 新規登録時はデフォルト「昭和」
+        } else {
+            when {
+                initialDate.year in 1926..1989 -> BirthEra.SHOWA
+                initialDate.year in 1990..2019 -> BirthEra.HEISEI
+                initialDate.year >= 2020 -> BirthEra.REIWA
+                else -> BirthEra.AD
+            }
         }
     }
 
     val era = rememberSaveable(initialInstant) { mutableStateOf(initialEra) }
 
     val initialYearText = remember(initialInstant) {
-        val y = initialDate.year
-        when (initialEra) {
-            BirthEra.SHOWA -> (y - 1925).toString()
-            BirthEra.HEISEI -> (y - 1988).toString()
-            BirthEra.REIWA -> (y - 2018).toString()
-            BirthEra.AD -> y.toString()
+        if (initialDate == null) {
+            "" // 新規時は空文字
+        } else {
+            val y = initialDate.year
+            when (initialEra) {
+                BirthEra.SHOWA -> (y - 1925).toString()
+                BirthEra.HEISEI -> (y - 1988).toString()
+                BirthEra.REIWA -> (y - 2018).toString()
+                BirthEra.AD -> y.toString()
+            }
         }
     }
 
     val year = rememberSaveable(initialInstant) { mutableStateOf(initialYearText) }
-    val month = rememberSaveable(initialInstant) { mutableStateOf(initialDate.monthValue.toString()) }
-    val day = rememberSaveable(initialInstant) { mutableStateOf(initialDate.dayOfMonth.toString()) }
+    val month = rememberSaveable(initialInstant) {
+        mutableStateOf(initialDate?.monthValue?.toString() ?: "")
+    }
+    val day = rememberSaveable(initialInstant) {
+        mutableStateOf(initialDate?.dayOfMonth?.toString() ?: "")
+    }
 
     return remember(initialInstant) {
         BirthdayInputState(era, year, month, day)
@@ -159,21 +171,20 @@ fun BirthdayInputFields(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 元号選択
+            // 元号選択 (CompactTextFieldのデザインに合わせる)
             ExposedDropdownMenuBox(
                 expanded = eraExpanded,
                 onExpandedChange = { eraExpanded = !eraExpanded },
                 modifier = Modifier.weight(1f)
             ) {
-                OutlinedTextField(
+                CompactTextField(
                     value = stringResource(state.era.value.displayNameRes),
                     onValueChange = {},
                     readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium
+                    suffix = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded)
+                    },
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
                 )
                 ExposedDropdownMenu(
                     expanded = eraExpanded,
@@ -205,7 +216,8 @@ fun BirthdayInputFields(
                 modifier = Modifier.weight(1f).focusRequester(state.yearFocusRequester),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 isError = state.isYearError,
-                suffix = { Text(stringResource(R.string.year_suffix), style = MaterialTheme.typography.labelSmall) }
+                suffix = { Text(stringResource(R.string.year_suffix), style = MaterialTheme.typography.labelSmall) },
+                onFocusChanged = { if (it.isFocused) state.year.value = "" }
             )
         }
 
@@ -227,7 +239,8 @@ fun BirthdayInputFields(
                 modifier = Modifier.weight(1f).focusRequester(state.monthFocusRequester),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 isError = state.isMonthError,
-                suffix = { Text(stringResource(R.string.month_suffix), style = MaterialTheme.typography.labelSmall) }
+                suffix = { Text(stringResource(R.string.month_suffix), style = MaterialTheme.typography.labelSmall) },
+                onFocusChanged = { if (it.isFocused) state.month.value = "" }
             )
 
             // 日入力
@@ -240,7 +253,8 @@ fun BirthdayInputFields(
                 modifier = Modifier.weight(1f).focusRequester(state.dayFocusRequester),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 isError = state.isDayError,
-                suffix = { Text(stringResource(R.string.day_suffix), style = MaterialTheme.typography.labelSmall) }
+                suffix = { Text(stringResource(R.string.day_suffix), style = MaterialTheme.typography.labelSmall) },
+                onFocusChanged = { if (it.isFocused) state.day.value = "" }
             )
         }
     }

@@ -8,7 +8,7 @@ import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
-import jp.mydns.fujiwara.carememo.data.repository.ArchivedPersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
@@ -40,7 +40,7 @@ data class PersonUiState(
  */
 class PersonListViewModel(
     private val repository: PersonRepository,
-    private val archivedRepository: ArchivedPersonRepository,
+    private val archivedRepository: DeleteOrRestorePersonRepository,
     summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
@@ -133,11 +133,25 @@ class PersonListViewModel(
     fun addPerson(person: Person) {
         viewModelScope.launch {
             try {
+                // 1. 保存前に論理的な重複をチェック
+                val existing = repository.findExistingPerson(person)
+                if (existing != null) {
+                    handleDuplicateError(existing, person, isUpdate = false)
+                    return@launch
+                }
+
+                // 2. データベースへ保存
                 repository.insertPerson(person)
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを登録しました")
             } catch (_: SQLiteConstraintException) {
-                showError("登録エラー", "この利用者は既に登録されています。同姓同名・同生年月日の場合は、識別用メモを入力してください。")
+                // 万が一、事前のチェックをすり抜けた場合
+                val existing = repository.findExistingPerson(person)
+                if (existing != null) {
+                    handleDuplicateError(existing, person, isUpdate = false)
+                } else {
+                    showError("登録エラー", "データベースの制約により登録できませんでした。")
+                }
             }
         }
     }
@@ -145,14 +159,53 @@ class PersonListViewModel(
     fun updatePerson(person: Person) {
         viewModelScope.launch {
             try {
+                // 1. 自分自身以外で重複している人がいないかチェック
+                val existing = repository.findExistingPerson(person)
+                if (existing != null && existing.id != person.id) {
+                    handleDuplicateError(existing, person, isUpdate = true)
+                    return@launch
+                }
+
+                // 2. データベースを更新
                 repository.updatePerson(person)
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar("利用者情報を更新しました")
             } catch (_: SQLiteConstraintException) {
-                showError("更新エラー", "変更後の内容は既に他の利用者として登録されています。")
+                val existing = repository.findExistingPerson(person)
+                if (existing != null && existing.id != person.id) {
+                    handleDuplicateError(existing, person, isUpdate = true)
+                } else {
+                    showError("更新エラー", "情報の更新に失敗しました。")
+                }
             }
         }
     }
+
+    /**
+     * 重複エラーが発生した際のメッセージ表示を共通化
+     */
+    private fun handleDuplicateError(existing: Person, input: Person, isUpdate: Boolean) {
+        val personName = input.getMaskedName(isNameMaskingEnabled.value)
+        val title = if (isUpdate) "更新エラー" else "登録エラー"
+        
+        if (existing.deletedAt == null) {
+            // アクティブな利用者に重複
+            showError(
+                title,
+                "既に同じ内容の利用者が登録されています。別人として登録したい場合は「同姓同名識別用メモ」の内容を変更して区別してください。"
+            )
+        } else {
+            // アーカイブ済みの利用者に重複
+            val errorTitle = if (isUpdate) "更新エラー（利用修了者と重複）" else "登録エラー（利用修了者に存在）"
+            val message = buildString {
+                append("入力された内容（$personName 様）は、現在「利用修了者（アーカイブ）」の中に存在します。\n\n")
+                append("●その方を復帰させたい場合：\nこの画面を閉じ、設定メニューの「利用終了者の復帰」から操作してください。\n\n")
+                append("●別人として新規登録／更新したい場合：\n「同姓同名識別用メモ」を別の内容に変更してから再度保存してください。")
+            }
+            showError(errorTitle, message)
+        }
+    }
+
 
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
@@ -170,7 +223,7 @@ class PersonListViewModel(
 
     class Factory(
         private val repository: PersonRepository,
-        private val archivedRepository: ArchivedPersonRepository,
+        private val archivedRepository: DeleteOrRestorePersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository

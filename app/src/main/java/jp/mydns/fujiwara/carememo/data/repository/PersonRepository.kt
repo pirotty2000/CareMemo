@@ -16,4 +16,10 @@ class PersonRepository(
     suspend fun insertPerson(person: Person) = personDao.insert(person)
     
     suspend fun updatePerson(person: Person) = personDao.update(person)
+
+    /**
+     * 同姓同名・同生年月日・同備考の利用者が既に存在するか（論理削除済みを含む）を確認します。
+     */
+    suspend fun findExistingPerson(person: Person): Person? =
+        personDao.findExistingPerson(person.lastName, person.firstName, person.birthday, person.note)
 }

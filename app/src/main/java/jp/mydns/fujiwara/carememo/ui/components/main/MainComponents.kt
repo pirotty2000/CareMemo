@@ -329,20 +329,28 @@ fun UserEditDialog(
                 onClick = {
                     birthdayState.toInstant()?.let { birthday ->
                         keyboardController?.hide()
+                        
+                        // 入力値のクリーンアップ（前後空白の削除）
+                        val trimmedLastName = lastName.trim()
+                        val trimmedFirstName = firstName.trim()
+                        val trimmedLastNameFurigana = lastNameFurigana.trim()
+                        val trimmedFirstNameFurigana = firstNameFurigana.trim()
+                        val trimmedNote = note.trim()
+
                         val newPerson = person?.copy(
-                            lastName = lastName,
-                            firstName = firstName,
-                            lastNameFurigana = lastNameFurigana,
-                            firstNameFurigana = firstNameFurigana,
+                            lastName = trimmedLastName,
+                            firstName = trimmedFirstName,
+                            lastNameFurigana = trimmedLastNameFurigana,
+                            firstNameFurigana = trimmedFirstNameFurigana,
                             birthday = birthday,
-                            note = note
+                            note = trimmedNote
                         ) ?: Person(
-                            lastName = lastName,
-                            firstName = firstName,
-                            lastNameFurigana = lastNameFurigana,
-                            firstNameFurigana = firstNameFurigana,
+                            lastName = trimmedLastName,
+                            firstName = trimmedFirstName,
+                            lastNameFurigana = trimmedLastNameFurigana,
+                            firstNameFurigana = trimmedFirstNameFurigana,
                             birthday = birthday,
-                            note = note
+                            note = trimmedNote
                         )
                         onSave(newPerson)
                     }

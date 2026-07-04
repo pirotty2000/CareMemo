@@ -63,13 +63,14 @@ import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onNavigateToRestore: () -> Unit,
+    onNavigateToArchiveManagement: (DeleteOrRestorePersonViewModel.OperationMode) -> Unit,
     onBack: () -> Unit,
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -261,8 +262,8 @@ fun SettingsScreen(
             viewModel.setDefaultRecorderName(it)
         },
         endedUserCount = endedUserList.size,
-        onNavigateToRestore = onNavigateToRestore,
-        onEraseClick = { if (endedUserList.isNotEmpty()) showEraseConfirm = true },
+        onNavigateToRestore = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
+        onEraseClick = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.DELETE) },
         isBackupPasswordEnabled = isBackupPasswordEnabled,
         localBackupPassword = localBackupPassword,
         isPasswordValid = isPasswordValid,
@@ -477,8 +478,8 @@ private fun UserManagementSection(
             modifier = Modifier.clickable { onNavigateToRestore() }
         )
         ListItem(
-            headlineContent = { Text("利用終了者のデータを完全抹消", color = MaterialTheme.colorScheme.error) },
-            supportingContent = { Text("「利用終了」の方のデータを物理削除します") },
+            headlineContent = { Text("利用修了者の完全抹消", color = MaterialTheme.colorScheme.error) },
+            supportingContent = { Text("「利用終了」の方のデータを個別に選択して物理削除します") },
             trailingContent = { 
                 IconButton(onClick = onEraseClick, enabled = endedUserCount > 0) { 
                     Icon(
