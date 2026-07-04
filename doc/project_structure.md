@@ -203,7 +203,7 @@ jp.mydns.fujiwara.carememo
 
 ## ui/screens
 
-```agsl
+```
 Screen :
 
 【画面名】：
@@ -224,7 +224,7 @@ Screen :
 
 ## ui/components
 
-```agsl
+```
 Component：
 
 【役割】：
