@@ -36,7 +36,6 @@ import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputFields
-import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.PersonHistoryList
 

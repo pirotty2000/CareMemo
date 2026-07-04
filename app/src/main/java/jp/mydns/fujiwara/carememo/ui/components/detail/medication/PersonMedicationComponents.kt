@@ -34,7 +34,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputFields
-import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.rememberDateTimeInputState
 
 @Composable

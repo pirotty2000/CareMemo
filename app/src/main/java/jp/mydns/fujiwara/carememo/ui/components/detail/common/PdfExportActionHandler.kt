@@ -8,7 +8,6 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.detail.common.PdfSettingsDialog
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
 import kotlinx.coroutines.launch
