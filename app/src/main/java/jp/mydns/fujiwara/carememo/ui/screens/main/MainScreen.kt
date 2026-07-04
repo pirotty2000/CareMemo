@@ -1,0 +1,605 @@
+package jp.mydns.fujiwara.carememo.ui.screens.main
+
+/**
+ * Screen : MainScreen
+ *
+ * 【画面名】
+ * 利用者一覧（メイン画面）
+ *
+ * 【役割】
+ * 登録された利用者（ケア対象者）の一覧を表示し、健康記録カテゴリへの橋渡しや、
+ * 利用者情報の管理（登録・変更・サービス終了処理）を行うアプリのメインエントランス。。
+ *
+ * 【主な機能】
+ * ・利用者一覧：名前（マスキング対応）、フリガナ、年齢、備考および最新の記録状況をバッジで表示。
+ * ・絞り込み検索：五十音順インデックスによる絞り込みと、検索バーによるフリーワード検索。
+ * ・利用者管理：ダイアログ形式での情報登録・編集、および論理削除（サービス終了）と復元（Undo）機能。
+ * ・カテゴリ連携：利用者選択時に表示されるボトムシートから、バイタルや食事等の各記録画面へ遷移。
+ * ・システムメニュー：アプリ設定、操作ヘルプ、バージョン情報の確認。
+ *
+ * 【遷移】
+ * ← （アプリ起動）
+ * → PersonHealthScreen / PersonMedicationScreen（カテゴリ選択シート経由）
+ * → SettingsScreen（オプションメニューより遷移）
+ *
+ * 【使用するViewModel】
+ * PersonListViewModel
+ *
+ * 【備考】
+ * UIの状態管理とイベント処理（Snackbar表示等）を担当。
+ * データ操作および検索ロジックの本体は ViewModel に集約されている。
+ */
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PersonAddAlt1
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ModeEdit
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.automirrored.rounded.Help
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.ui.components.base.BirthdayInputFields
+import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
+import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
+import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.ui.components.base.rememberBirthdayInputState
+import jp.mydns.fujiwara.carememo.ui.components.main.CategoryBadges
+import jp.mydns.fujiwara.carememo.ui.components.main.KanaIndexBar
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
+import jp.mydns.fujiwara.carememo.BuildConfig
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import java.time.LocalDate
+import java.time.ZoneId
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(
+    viewModel: PersonListViewModel,
+    onNavigateToDetail: (Int, Category) -> Unit,
+    onNavigateToBatchInput: (Int) -> Unit,
+    onNavigateToSettings: () -> Unit
+) {
+    val userList by viewModel.userList.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val selectedSection by viewModel.selectedSection.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
+    val userEndedFormat = stringResource(R.string.snackbar_user_ended)
+    val undoLabel = stringResource(R.string.undo)
+
+    var selectedPerson by remember { mutableStateOf<Person?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showSheet by remember { mutableStateOf(false) }
+    
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingPerson by remember { mutableStateOf<Person?>(null) }
+
+    // ダイアログ表示用の状態
+    var dialogTitle by remember { mutableStateOf<String?>(null) }
+    var dialogMessage by remember { mutableStateOf<String?>(null) }
+
+    // ViewModelからのイベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
+                    showEditDialog = false
+                }
+                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> {
+                    // MainScreenでは使用しない
+                }
+            }
+        }
+    }
+
+    MainScreenContent(
+        userList = userList,
+        isLoading = isLoading,
+        searchQuery = searchQuery,
+        selectedSection = selectedSection,
+        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+        onSectionSelect = { viewModel.setSelectedSection(it) },
+        snackbarHostState = snackbarHostState,
+        lazyListState = lazyListState,
+        onUserClick = { person -> selectedPerson = person; showSheet = true },
+        onEditUser = { person -> editingPerson = person; showEditDialog = true },
+        onAddClick = { editingPerson = null; showEditDialog = true },
+        onEndUser = { person ->
+            viewModel.logicalDeletePerson(person)
+            scope.launch {
+                val fullName = person.getMaskedName(isNameMaskingEnabled)
+                val result = snackbarHostState.showSnackbar(
+                    message = userEndedFormat.format(fullName), 
+                    actionLabel = undoLabel,
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) { 
+                    viewModel.restorePerson(person)
+                    lazyListState.animateScrollToItem(0) 
+                }
+            }
+        },
+        onNavigateToSettings = onNavigateToSettings
+    )
+
+    // 通知ダイアログの表示
+    if (dialogMessage != null) {
+        InfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = {
+                dialogMessage = null
+                dialogTitle = null
+            }
+        )
+    }
+
+    if (showSheet && selectedPerson != null) {
+        ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
+            CategorySelectionSheet(
+                personName = selectedPerson!!.getMaskedName(isNameMaskingEnabled), 
+                onCategorySelect = { category -> 
+                    showSheet = false
+                    onNavigateToDetail(selectedPerson!!.id, category) 
+                },
+                onBatchInputSelect = {
+                    showSheet = false
+                    onNavigateToBatchInput(selectedPerson!!.id)
+                }
+            )
+        }
+    }
+
+    if (showEditDialog) {
+        UserEditDialog(
+            person = editingPerson, 
+            onDismiss = { showEditDialog = false }, 
+            onSave = { person -> 
+                if (editingPerson == null) viewModel.addPerson(person) else viewModel.updatePerson(person)
+                // ここで showEditDialog = false にしない（ViewModelからの成功通知を待つ）
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenContent(
+    userList: List<PersonUiState>,
+    isLoading: Boolean,
+    searchQuery: String,
+    selectedSection: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSectionSelect: (String) -> Unit,
+    snackbarHostState: SnackbarHostState,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState,
+    onUserClick: (Person) -> Unit,
+    onEditUser: (Person) -> Unit,
+    onAddClick: () -> Unit,
+    onEndUser: (Person) -> Unit,
+    onNavigateToSettings: () -> Unit,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showVersionDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+
+    if (showVersionDialog) {
+        AlertDialog(
+            onDismissRequest = { showVersionDialog = false },
+            title = { Text(stringResource(R.string.dialog_version_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text("バージョン: ${BuildConfig.VERSION_NAME}")
+                    HorizontalDivider()
+                    Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Android 15 (API 35)")
+                    Text("KYOCERA TORQUE G06 最適化済")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("(C) 2025-2026 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text(stringResource(R.string.close)) } }
+        )
+    }
+
+    if (showHelpDialog) {
+        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text(stringResource(R.string.dialog_help_title)) }, text = { Text(stringResource(R.string.dialog_help_content)) }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(stringResource(R.string.close)) } })
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
+                colors = appTopAppBarColors(),
+                actions = {
+                    IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_settings)) },
+                            leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                            onClick = { showMenu = false; onNavigateToSettings() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_help)) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
+                            onClick = { showMenu = false; showHelpDialog = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_version)) },
+                            leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+                            onClick = { showMenu = false; showVersionDialog = true }
+                        )
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.user_registration)) } }
+    ) { paddingValues ->
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SearchBox(
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange,
+                label = stringResource(R.string.search_memo_placeholder)
+            )
+
+            KanaIndexBar(
+                selectedSection = selectedSection,
+                onSectionSelect = onSectionSelect
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isLoading) {
+                LoadingScreen()
+            } else if (userList.isEmpty()) {
+                EmptyState(
+                    message = if (searchQuery.isNotEmpty()) stringResource(R.string.no_user_found) else stringResource(R.string.no_user_registered),
+                    icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = lazyListState,
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(userList, key = { it.person.id }) { userUiState ->
+                        var showItemMenu by remember { mutableStateOf(false) }
+                        val isBirthdayToday = remember(userUiState.person.birthday) {
+                            DateTimeUtils.isBirthdayToday(userUiState.person.birthday)
+                        }
+                        val isBirthdaySoon = remember(userUiState.person.birthday) {
+                            DateTimeUtils.isBirthdaySoon(userUiState.person.birthday)
+                        }
+                        Column(modifier = Modifier.animateItem()) {
+                            ListItem(
+                                leadingContent = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        CategoryBadges(summary = userUiState.summary)
+                                        
+                                        // ケーキアイコン領域をさらにコンパクト化
+                                        Box(
+                                            modifier = Modifier.width(20.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isBirthdaySoon || isBirthdayToday) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Cake,
+                                                    contentDescription = "もうすぐ誕生日",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = Color(0xFFE91E63)
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                headlineContent = { 
+                                    Column { 
+                                        Text(
+                                            text = userUiState.maskedFurigana, 
+                                            style = MaterialTheme.typography.labelSmall, 
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                        Text(
+                                            text = buildString { 
+                                                append(userUiState.maskedName)
+                                                if (userUiState.person.note.isNotBlank()) append(" (${userUiState.person.note})") 
+                                            }, 
+                                            style = MaterialTheme.typography.titleMedium, 
+                                            fontWeight = FontWeight.Bold, 
+                                            maxLines = 1, 
+                                            overflow = TextOverflow.Ellipsis
+                                        ) 
+                                        Text(
+                                            text = stringResource(R.string.birthday_summary_format, userUiState.formattedBirthday, stringResource(R.string.age_suffix, userUiState.age)),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    } 
+                                },
+                                trailingContent = {
+                                    Box {
+                                        IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
+                                        DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.edit_user_info)) }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(userUiState.person) })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.end_user_service), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(userUiState.person) })
+                                        }
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(
+                                    containerColor = when {
+                                        isBirthdayToday -> {
+                                            // 輝度でダークテーマ判定を行う（システム設定によらず、現在のテーマ配色に合わせる）
+                                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                                            if (isDark) {
+                                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                                            } else {
+                                                Color(0xFFFFC0CB) // Pink (今日: 濃いめ)
+                                            }
+                                        }
+                                        isBirthdaySoon -> {
+                                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                                            if (isDark) {
+                                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
+                                            } else {
+                                                Color(0xFFFFF0F5)  // LavenderBlush (もうすぐ: 薄め)
+                                            }
+                                        }
+                                        else -> MaterialTheme.colorScheme.surface
+                                    }
+                                ),
+                                modifier = Modifier.clickable { onUserClick(userUiState.person) }
+                            )
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CategorySelectionSheet(
+    personName: String,
+    onCategorySelect: (Category) -> Unit,
+    onBatchInputSelect: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = stringResource(R.string.category_selection_title, personName), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
+        
+        // 【一括入力】ボタン
+        Button(
+            onClick = onBatchInputSelect,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            Icon(Icons.Rounded.EditNote, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("健康記録の一括入力", style = MaterialTheme.typography.titleMedium)
+        }
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        Category.entries.forEach { category ->
+            Button(onClick = { onCategorySelect(category) }, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)) {
+                Text(stringResource(category.displayNameRes), style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> Unit) {
+    var lastName by remember { mutableStateOf(person?.lastName ?: "") }
+    var firstName by remember { mutableStateOf(person?.firstName ?: "") }
+    var lastNameFurigana by remember { mutableStateOf(person?.lastNameFurigana ?: "") }
+    var firstNameFurigana by remember { mutableStateOf(person?.firstNameFurigana ?: "") }
+    var note by remember { mutableStateOf(person?.note ?: "") }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val birthdayState = rememberBirthdayInputState(initialInstant = person?.birthday)
+    val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && birthdayState.isValid
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (person == null) stringResource(R.string.user_registration) else stringResource(R.string.user_edit)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text(stringResource(R.string.last_name)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text(stringResource(R.string.first_name)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = lastNameFurigana,
+                        onValueChange = { lastNameFurigana = it },
+                        label = { Text(stringResource(R.string.last_name_furigana)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = firstNameFurigana,
+                        onValueChange = { firstNameFurigana = it },
+                        label = { Text(stringResource(R.string.first_name_furigana)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                }
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text(stringResource(R.string.note_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                BirthdayInputFields(state = birthdayState)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    birthdayState.toInstant()?.let { birthday ->
+                        keyboardController?.hide()
+                        val newPerson = person?.copy(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        ) ?: Person(
+                            lastName = lastName,
+                            firstName = firstName,
+                            lastNameFurigana = lastNameFurigana,
+                            firstNameFurigana = firstNameFurigana,
+                            birthday = birthday,
+                            note = note
+                        )
+                        onSave(newPerson)
+                    }
+                },
+                enabled = isInputValid
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    val zoneId = ZoneId.systemDefault()
+    val today = LocalDate.now(zoneId)
+    
+    // 通常の利用者
+    val person1 = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(zoneId).toInstant())
+    
+    // もうすぐ誕生日の利用者 (明日が誕生日と仮定)
+    val birthdaySoon = today.plusDays(1).minusYears(70)
+    val person2 = Person(id = 2, lastName = "佐藤", firstName = "花子", lastNameFurigana = "サトウ", firstNameFurigana = "ハナコ", birthday = birthdaySoon.atStartOfDay(zoneId).toInstant())
+    
+    // 今日が誕生日の利用者
+    val birthdayToday = today.minusYears(80)
+    val person3 = Person(id = 3, lastName = "田中", firstName = "梅", lastNameFurigana = "タナカ", firstNameFurigana = "ウメ", birthday = birthdayToday.atStartOfDay(zoneId).toInstant())
+
+    val mockUserList = listOf(
+        PersonUiState(
+            person = person1,
+            maskedName = "山○\u3000太○",
+            maskedFurigana = "ヤ○ダ\u3000タ○ウ",
+            age = 75,
+            formattedBirthday = "昭和25年1月1日",
+            summary = PersonCategorySummary(hasBpAndPulse = true)
+        ),
+        PersonUiState(
+            person = person2,
+            maskedName = "佐○\u3000花○",
+            maskedFurigana = "サ○ウ\u3000ハ○コ",
+            age = 70,
+            formattedBirthday = "昭和30年10月10日",
+            summary = PersonCategorySummary(hasCondition = true)
+        ),
+        PersonUiState(
+            person = person3,
+            maskedName = "田○\u3000梅",
+            maskedFurigana = "タ○カ\u3000ウメ",
+            age = 80,
+            formattedBirthday = "昭和20年2月10日",
+            summary = PersonCategorySummary(hasMedication = true)
+        )
+    )
+    CareMemoTheme { 
+        MainScreenContent(
+            userList = mockUserList, 
+            isLoading = false,
+            searchQuery = "",
+            selectedSection = "全",
+            onSearchQueryChange = {},
+            onSectionSelect = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState(), 
+            onUserClick = { }, 
+            onEditUser = { }, 
+            onAddClick = { }, 
+            onEndUser = { }, 
+            onNavigateToSettings = { }
+        ) 
+    }
+}

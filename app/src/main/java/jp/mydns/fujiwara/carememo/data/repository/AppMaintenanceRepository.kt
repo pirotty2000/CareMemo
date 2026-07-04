@@ -37,7 +37,10 @@ class AppMaintenanceRepository(
             glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
             conditionAtVisitDao.insertAll(backup.conditionAtVisits)
             conditionPhotoDao.insertAll(backup.conditionPhotos)
-            medicationRecordDao.insertAll(backup.medicationRecords)
+            
+            // 服薬記録のインポート（有効なステータスを持つものだけを保存するガード）
+            val validMedicationRecords = backup.medicationRecords.filter { it.status in 0..2 }
+            medicationRecordDao.insertAll(validMedicationRecords)
         }
     }
 

@@ -16,10 +16,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.ui.components.HealthChartConfig
-import jp.mydns.fujiwara.carememo.ui.components.HealthChartHelper
-import jp.mydns.fujiwara.carememo.ui.components.ExportOrder
-import jp.mydns.fujiwara.carememo.ui.components.ExportRange
+import jp.mydns.fujiwara.carememo.ui.components.detail.common.ExportOrder
+import jp.mydns.fujiwara.carememo.ui.components.detail.common.ExportRange
+import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthChartConfig
+import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthChartHelper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateShort
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
