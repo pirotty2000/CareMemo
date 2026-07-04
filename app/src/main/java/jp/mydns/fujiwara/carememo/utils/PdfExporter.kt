@@ -561,6 +561,7 @@ object PdfExporter {
         canvas.drawBitmap(bitmap, null, RectF(left, top, left + w, top + h), Paint(Paint.FILTER_BITMAP_FLAG))
     }
 
+    @Suppress("SameParameterValue")
     private fun splitTextIntoLines(text: String, paint: Paint, maxWidth: Float): List<String> {
         val result = mutableListOf<String>()
         for (paragraph in text.split("\n")) {
