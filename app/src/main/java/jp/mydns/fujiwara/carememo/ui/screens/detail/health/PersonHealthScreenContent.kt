@@ -59,7 +59,6 @@ import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthRecordDetailPane
-import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @Composable
 fun PersonHealthScreenContent(

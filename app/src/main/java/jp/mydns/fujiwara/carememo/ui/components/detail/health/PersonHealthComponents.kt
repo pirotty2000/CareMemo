@@ -31,9 +31,6 @@ package jp.mydns.fujiwara.carememo.ui.components.detail.health
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -52,22 +49,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.DetailItem
-import jp.mydns.fujiwara.carememo.ui.components.detail.common.HistoryItemWrapper
-import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.rememberDateTimeInputState
-import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import java.time.Instant
-import java.time.ZoneId
 
 
 /**

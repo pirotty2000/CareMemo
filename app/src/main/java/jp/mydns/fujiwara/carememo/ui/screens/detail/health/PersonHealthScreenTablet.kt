@@ -40,7 +40,6 @@ import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHeaderTitle
-import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.BpAndPulse

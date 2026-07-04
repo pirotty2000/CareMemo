@@ -21,7 +21,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.condition
  * 広い画面を活用し、一度に多くの情報を提示することで、利用者の状態変化を俯瞰的に把握しやすくしている。
  */
 
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack

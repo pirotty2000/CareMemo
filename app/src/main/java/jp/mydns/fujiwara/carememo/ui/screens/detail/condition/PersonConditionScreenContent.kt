@@ -36,7 +36,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.condition
  * 最終更新日: 2026/07/04
  */
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
