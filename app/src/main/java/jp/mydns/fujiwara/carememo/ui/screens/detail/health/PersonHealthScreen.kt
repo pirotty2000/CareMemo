@@ -3,30 +3,39 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.health
 /**
  * Screen : PersonHealthScreen
  *
- * 【画面名】
+ * 【画面名】：
  * 利用者健康記録画面
  *
- * 【役割】
- * バイタル、血糖値、身体計測、受診記録の各健康カテゴリを統合的に管理・閲覧するための画面。
+ * 【役割】：
+ * 「身長・体重」「バイタル」「血糖値・HbA1c」の各健康カテゴリを統合的に管理・閲覧するための画面。
  * 複数のViewModelを横断的に使用し、利用者の最新の健康状態を可視化する。
  *
- * 【主な機能】
- * ・カテゴリ切替：画面上部のタブまたはメニューからカテゴリを自在に切り替え。
- * ・データ入力：各カテゴリ（血圧、体温、血糖値、体重、受診メモ）に応じた専用の登録フォームを提供。
- * ・統計閲覧：記録データの推移をグラフで表示し、異常値の早期発見をサポート。
- * ・PDFエクスポート：カテゴリごとの記録履歴をPDFとして出力。
- * ・マルチレイアウト：PhoneとTabletの双方に最適化されたUIを提供。
+ * 【主な機能】：
+ * ・カテゴリ切替（画面上部のタブまたはメニューからカテゴリを自在に切り替え）
+ * ・データ入力（各カテゴリに応じた専用の登録フォームを提供：血圧、体温、血糖値、体重、受診メモ）
+ * ・統計閲覧（記録データの推移をグラフで表示し、異常値の早期発見をサポート）
+ * ・PDFエクスポート（カテゴリごとの記録履歴をPDFとして出力）
+ * ・マルチレイアウト（PhoneとTabletの双方に最適化されたUIを提供）
  *
- * 【遷移】
- * ← MainScreen（戻るボタン）
- * → PersonHealthScreenPhone / PersonHealthScreenTablet（内部分岐）
- * → GraphExpansionScreen（グラフ拡大表示）
+ * 【遷移】：
+ * ← MainScreen (戻るボタン)
+ * → PersonHealthScreenPhone / PersonHealthScreenTablet (デバイスサイズによる内部分岐)
+ * → GraphExpansionScreen (グラフ拡大表示)
  *
- * 【使用するViewModel】
+ * 【使用するViewModel】：
  * PersonDetailViewModel, PersonHealthViewModel
  *
- * 【備考】
+ * 【使用するComponents】：
+ * ・detail/health/PersonHealthScreenPhone.kt
+ * ・detail/health/PersonHealthScreenTablet.kt
+ * ・detail/common/PdfExportActionHandler.kt
+ * ・base/InfoDialog.kt
+ *
+ * 【備考】：
  * カテゴリ間の移動がスムーズに行えるよう、共通のヘッダーUIとナビゲーション構造を採用している。
+ *
+ * ---
+ * 最終更新日: 2026/07/04
  */
 
 import androidx.compose.material3.*
@@ -42,6 +51,11 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * 利用者健康記録画面のメインエントランス。
+ * デバイスの画面サイズ（Phone/Tablet）に応じて最適なレイアウトを選択し、
+ * 健康データの読み込み、表示、およびPDF出力などのアクションを統合管理する。
+ */
 @Composable
 fun PersonHealthScreen(
     viewModel: PersonDetailViewModel,
@@ -53,28 +67,28 @@ fun PersonHealthScreen(
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
 ) {
-    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
-    val scope = rememberCoroutineScope()
+    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded // 画面が拡張レイアウト（タブレット等）かどうか
+    val scope = rememberCoroutineScope() // コルーチンスコープ
 
-    val records by healthViewModel.records.collectAsState()
+    val records by healthViewModel.records.collectAsState() // 記録データのリスト
 
-    val isLoading by healthViewModel.isLoading.collectAsState()
-    val currentPerson by viewModel.currentPerson.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
+    val isLoading by healthViewModel.isLoading.collectAsState() // ローディング状態
+    val currentPerson by viewModel.currentPerson.collectAsState() // 現在選択されている利用者情報
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState() // 名前マスキング設定の有効状態
+    val personCategorySummary by viewModel.personCategorySummary.collectAsState() // 各カテゴリの記録有無サマリー
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() } // スナックバー制御用
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
 
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
-    val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf)
+    val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf) // PDF出力時のデータ無しメッセージ用フォーマット
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
-    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // アプリからの通知を受け付ける窓口
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -90,6 +104,7 @@ fun PersonHealthScreen(
         }
     }
 
+    // 表示内容を最新に保つための更新処理
     LaunchedEffect(currentCategory, personId) {
         viewModel.loadPerson(personId)
         healthViewModel.loadPerson(personId)
@@ -104,7 +119,6 @@ fun PersonHealthScreen(
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (isExpanded) {
         PersonHealthScreenTablet(
-            healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
             records = records,
@@ -132,11 +146,12 @@ fun PersonHealthScreen(
                     showPdfSettingsDialog = true
                 }
             },
+            onDeleteRecord = { healthViewModel.deleteRecord(it) },
+            onSaveRecord = { healthViewModel.saveRecord(it) },
             snackbarHostState = snackbarHostState
         )
     } else {
         PersonHealthScreenPhone(
-            healthViewModel = healthViewModel,
             personId = personId,
             currentCategory = currentCategory,
             records = records,
@@ -166,6 +181,8 @@ fun PersonHealthScreen(
                     showPdfSettingsDialog = true
                 }
             },
+            onDeleteRecord = { healthViewModel.deleteRecord(it) },
+            onSaveRecord = { healthViewModel.saveRecord(it) },
             snackbarHostState = snackbarHostState
         )
     }

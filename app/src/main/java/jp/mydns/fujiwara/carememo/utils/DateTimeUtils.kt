@@ -1,86 +1,81 @@
 package jp.mydns.fujiwara.carememo.utils
 
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.chrono.JapaneseDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoField
 import java.util.Locale
 
+/**
+ * アプリ全体で使用される日時操作・フォーマット用のユーティリティ。
+ * 和暦（令和など）の表示に標準で対応している。
+ */
 object DateTimeUtils {
+    private val DEFAULT_ZONE = ZoneId.systemDefault()
+    private val ERA_NAME_FORMATTER = DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN)
+    private val DOW_FORMATTER = DateTimeFormatter.ofPattern("(E)", Locale.JAPANESE)
+    private val SHORT_DOW_FORMATTER = DateTimeFormatter.ofPattern("E", Locale.JAPANESE)
+    private val SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yy/MM/dd").withZone(DEFAULT_ZONE)
+    private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm").withZone(DEFAULT_ZONE)
+    private val JAPANESE_ERA_FULL_FORMATTER = DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)
+    private val PHOTO_CAPTION_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm").withZone(DEFAULT_ZONE)
+
     /**
      * 日付を和暦・曜日付きでフォーマットする (例: 2023(令和5)年10月27日(金))
      */
     fun formatDateHeader(date: LocalDate): String {
-        val eraDate = JapaneseDate.from(date)
-        val eraName = eraDate.format(DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN))
-        val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
-        val dayOfWeek = date.format(DateTimeFormatter.ofPattern("(E)", Locale.JAPANESE))
-        return "%d(%s%d)年%d月%d日%s".format(date.year, eraName, eraYear, date.monthValue, date.dayOfMonth, dayOfWeek)
+        val yearWithEra = getYearWithEra(date)
+        val dayOfWeek = date.format(DOW_FORMATTER)
+        return "${yearWithEra}${date.monthValue}月${date.dayOfMonth}日${dayOfWeek}"
     }
 
     /**
      * 年月を和暦付きでフォーマットする (例: 2023(令和5)年10月)
      */
-    fun formatYearMonthHeader(yearMonth: java.time.YearMonth): String {
-        val localDate = yearMonth.atDay(1)
-        val eraDate = JapaneseDate.from(localDate)
-        val eraName = eraDate.format(DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN))
-        val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
-        return "%d(%s%d)年%02d月".format(yearMonth.year, eraName, eraYear, yearMonth.monthValue)
+    fun formatYearMonthHeader(yearMonth: YearMonth): String {
+        val date = yearMonth.atDay(1)
+        val yearWithEra = getYearWithEra(date)
+        return "${yearWithEra}%02d月".format(yearMonth.monthValue)
     }
 
     /**
      * 短い曜日名のリストを取得する (日, 月, ..., 土)
      */
-    fun getShortDayOfWeekNames(): List<String> =
-        listOf("日", "月", "火", "水", "木", "金", "土")
+    fun getShortDayOfWeekNames(): List<String> {
+        return listOf(
+            DayOfWeek.SUNDAY, DayOfWeek.MONDAY, DayOfWeek.TUESDAY,
+            DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY
+        ).map { it.getDisplayName(java.time.format.TextStyle.SHORT, Locale.JAPANESE) }
+    }
 
     /**
      * 日付から短い曜日名を取得する (例: 金)
      */
-    fun formatShortDayOfWeek(date: LocalDate): String =
-        date.format(DateTimeFormatter.ofPattern("E", Locale.JAPANESE))
+    fun formatShortDayOfWeek(date: LocalDate): String = date.format(SHORT_DOW_FORMATTER)
 
     /**
      * グラフのX軸表示用 (例: 23/10/27)
      */
-    fun formatDateShort(instant: Instant): String =
-        DateTimeFormatter.ofPattern("yy/MM/dd")
-            .withZone(ZoneId.systemDefault())
-            .format(instant)
+    fun formatDateShort(instant: Instant): String = SHORT_DATE_FORMATTER.format(instant)
 
     /**
      * 時刻のみをフォーマットする (例: 14:30)
      */
-    fun formatTime(instant: Instant): String =
-        DateTimeFormatter.ofPattern("HH:mm")
-            .withZone(ZoneId.systemDefault())
-            .format(instant)
+    fun formatTime(instant: Instant): String = TIME_FORMATTER.format(instant)
 
     /**
      * 記録日時を表示用（和暦・曜日付き）にフォーマットする
      * 例: 2023(令和5)年10月27日(金) 14:30
      */
     fun formatRecordTime(instant: Instant): String {
-        val zoneId = ZoneId.systemDefault()
-        val localDateTime = instant.atZone(zoneId).toLocalDateTime()
-        val localDate = localDateTime.toLocalDate()
-        val eraDate = JapaneseDate.from(localDate)
-        val eraYearFormatter = DateTimeFormatter.ofPattern("G").withLocale(Locale.JAPAN)
-        val eraYear = eraDate[java.time.temporal.ChronoField.YEAR_OF_ERA]
-        val eraName = eraDate.format(eraYearFormatter)
-        val dayOfWeek = localDate.format(DateTimeFormatter.ofPattern("(E)", Locale.JAPANESE))
-        return "%d(%s%d)年%d月%d日%s %02d:%02d".format(
-            localDate.year,
-            eraName,
-            eraYear,
-            localDate.monthValue,
-            localDate.dayOfMonth,
-            dayOfWeek,
-            localDateTime.hour,
-            localDateTime.minute,
-        )
+        val localDateTime = instant.atZone(DEFAULT_ZONE).toLocalDateTime()
+        val dateHeader = formatDateHeader(localDateTime.toLocalDate())
+        val time = "%02d:%02d".format(localDateTime.hour, localDateTime.minute)
+        return "$dateHeader $time"
     }
 
     /**
@@ -94,7 +89,7 @@ object DateTimeUtils {
      * 誕生日から年齢を計算する
      */
     fun calculateAge(birthday: Instant): Int {
-        val birthDate = birthday.atZone(ZoneId.systemDefault()).toLocalDate()
+        val birthDate = birthday.atZone(DEFAULT_ZONE).toLocalDate()
         val now = LocalDate.now()
         return java.time.Period.between(birthDate, now).years
     }
@@ -103,20 +98,15 @@ object DateTimeUtils {
      * インスタントを和暦形式でフォーマットする (例: 昭和25年1月1日)
      */
     fun formatDateJapaneseEra(instant: Instant): String {
-        val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+        val localDate = instant.atZone(DEFAULT_ZONE).toLocalDate()
         val japaneseDate = JapaneseDate.from(localDate)
-        val formatter = DateTimeFormatter.ofPattern("Gy年M月d日").withLocale(Locale.JAPAN)
-        return japaneseDate.format(formatter)
+        return japaneseDate.format(JAPANESE_ERA_FULL_FORMATTER)
     }
 
     /**
      * 写真のキャプション用のデフォルト日時フォーマット (yyyy/MM/dd HH:mm)
      */
-    fun formatPhotoCaption(instant: Instant): String {
-        return DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")
-            .withZone(ZoneId.systemDefault())
-            .format(instant)
-    }
+    fun formatPhotoCaption(instant: Instant): String = PHOTO_CAPTION_FORMATTER.format(instant)
 
     /**
      * 現在時刻を写真のキャプション用にフォーマットして返す
@@ -125,26 +115,17 @@ object DateTimeUtils {
 
     /**
      * 誕生日が現在から指定された日数以内（誕生日を含む）かどうかを判定する
-     * @param birthday 誕生日
-     * @param daysIn 判定する日数 (デフォルト30日)
-     * @return 期間内であれば true
      */
     fun isBirthdaySoon(birthday: Instant, daysIn: Int = 30): Boolean {
-        val zoneId = ZoneId.systemDefault()
-        val today = LocalDate.now(zoneId)
-        val birthDate = birthday.atZone(zoneId).toLocalDate()
+        val today = LocalDate.now(DEFAULT_ZONE)
+        val birthDate = birthday.atZone(DEFAULT_ZONE).toLocalDate()
 
-        // 今年の誕生日を求める
         var nextBirthday = birthDate.withYear(today.year)
-
-        // 今年の誕生日が既に過ぎている場合は来年の誕生日で判定する
         if (nextBirthday.isBefore(today)) {
             nextBirthday = nextBirthday.plusYears(1)
         }
 
-        // 今日から次の誕生日までの日数を計算
         val daysUntil = java.time.temporal.ChronoUnit.DAYS.between(today, nextBirthday)
-
         return daysUntil in 0..daysIn.toLong()
     }
 
@@ -152,10 +133,18 @@ object DateTimeUtils {
      * 今日が誕生日かどうかを判定する
      */
     fun isBirthdayToday(birthday: Instant): Boolean {
-        val zoneId = ZoneId.systemDefault()
-        val today = LocalDate.now(zoneId)
-        val birthDate = birthday.atZone(zoneId).toLocalDate()
-        
+        val today = LocalDate.now(DEFAULT_ZONE)
+        val birthDate = birthday.atZone(DEFAULT_ZONE).toLocalDate()
         return today.monthValue == birthDate.monthValue && today.dayOfMonth == birthDate.dayOfMonth
+    }
+
+    /**
+     * 西暦に和暦を添えた文字列を取得する (例: 2023(令和5)年)
+     */
+    private fun getYearWithEra(date: LocalDate): String {
+        val eraDate = JapaneseDate.from(date)
+        val eraName = eraDate.format(ERA_NAME_FORMATTER)
+        val eraYear = eraDate[ChronoField.YEAR_OF_ERA]
+        return "${date.year}(${eraName}${eraYear})年"
     }
 }

@@ -29,21 +29,24 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHeaderTitle
-import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import androidx.compose.ui.tooling.preview.Preview
+import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
+import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenTablet(
-    viewModel: PersonDetailViewModel,
-    conditionViewModel: PersonConditionViewModel,
     personId: Int,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
@@ -51,17 +54,25 @@ fun PersonConditionScreenTablet(
     records: List<Any>,
     isLoading: Boolean,
     searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     conditionPhotoMap: Map<Int, Boolean>,
+    photos: List<ConditionPhoto>,
+    isProcessing: Boolean,
+    defaultRecorderName: String,
     selectedId: Int,
     onSelectedIdChange: (Int) -> Unit,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
-    onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
+    onAddPhotoClick: () -> Unit,
     onNavigateToFullScreen: (String, String?) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
+    onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
+    onDeletePhoto: (ConditionPhoto) -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
+    val context = LocalContext.current
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -113,16 +124,68 @@ fun PersonConditionScreenTablet(
                 records = records,
                 isLoading = isLoading,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
+                onSearchQueryChange = onSearchQueryChange,
                 selectedId = selectedId,
-                onSelectedIdChange = onSelectedIdChange,
+                onSelectedIdChange = { id -> 
+                    onSelectedIdChange(id ?: -1)
+                },
                 conditionPhotoMap = conditionPhotoMap,
+                photos = photos,
+                isProcessing = isProcessing,
+                defaultRecorderName = defaultRecorderName,
                 onDeleteRecord = onDeleteRecord,
-                viewModel = viewModel,
-                conditionViewModel = conditionViewModel,
-                onNavigateToPhotoPreview = onNavigateToPhotoPreview,
+                onSaveRecord = onSaveRecord,
+                onDeletePhoto = onDeletePhoto,
+                onAddPhotoClick = onAddPhotoClick,
                 onNavigateToFullScreen = onNavigateToFullScreen
             )
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,orientation=landscape")
+@Composable
+fun PersonConditionScreenTabletPreview() {
+    CareMemoTheme {
+        PersonConditionScreenTablet(
+            personId = 1,
+            currentPerson = Person(
+                lastName = "山田",
+                firstName = "太郎",
+                lastNameFurigana = "ヤマダ",
+                firstNameFurigana = "タロウ",
+                birthday = Instant.now()
+            ),
+            isNameMaskingEnabled = false,
+            personCategorySummary = null,
+            records = listOf(
+                ConditionAtVisit(
+                    id = 1,
+                    personId = 1,
+                    title = "サンプルタイトル",
+                    condition = "サンプルの所見内容です。",
+                    author = "記録者A",
+                    recordTime = Instant.now()
+                )
+            ),
+            isLoading = false,
+            searchQuery = "",
+            onSearchQueryChange = {},
+            conditionPhotoMap = emptyMap(),
+            photos = emptyList(),
+            isProcessing = false,
+            defaultRecorderName = "記録者",
+            selectedId = -1,
+            onSelectedIdChange = {},
+            onBack = {},
+            onNavigateToCategory = {},
+            onAddPhotoClick = {},
+            onNavigateToFullScreen = { _, _ -> },
+            onShowPdfSettings = {},
+            onDeleteRecord = {},
+            onSaveRecord = { _, _ -> },
+            onDeletePhoto = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

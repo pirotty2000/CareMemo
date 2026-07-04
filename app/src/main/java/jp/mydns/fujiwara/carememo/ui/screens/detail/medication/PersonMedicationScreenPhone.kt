@@ -3,22 +3,32 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.medication
 /**
  * Screen : PersonMedicationScreenPhone
  *
- * 【画面名】
+ * 【画面名】：
  * 利用者服薬記録画面（スマートフォン版）
  *
- * 【役割】
+ * 【役割】：
  * スマートフォンなどの縦長画面（Compact/Mediumクラス）に最適化された服薬記録UIを提供する。
  *
- * 【主な機能】
- * ・モバイル向けレイアウト：単一カラムでの履歴表示と、ボトムシート等を用いた入力UI。
- * ・履歴表示：カレンダーとリストの切り替え、月間ナビゲーション。
- * ・PDF出力ボタンの配置：トップバーへのアクション配置。
+ * 【主な機能】：
+ * ・モバイル向けレイアウト：カレンダー表示と履歴表示をタブ切り替え。
+ * ・月間ナビゲーション：前月・次月への移動と、現在の年月の表示。
+ * ・アクション統合：トップバーからのPDF出力や、日付タップによる入力ダイアログ起動。
  *
- * 【遷移】
- * ← PersonMedicationScreen（呼び出し元）
+ * 【遷移】：
+ * ← PersonMedicationScreen (親コンテナ)
+ * → PersonMedicationScreenContent (共通コンテンツの呼び出し)
  *
- * 【備考】
- * 画面幅が制限されているため、情報の密度を調整し、スクロールやシートによる操作を主眼に置いている。
+ * 【使用するViewModel】：
+ * なし（Stateless化済み。親から状態とラムダを受け取る）
+ *
+ * 【使用するComponents】：
+ * ・screens/detail/medication/PersonMedicationScreenContent.kt
+ * ・detail/common/CategorySelectorBar.kt
+ * ・detail/common/PersonHeaderTitle.kt
+ * ・base/AppTopAppBarColors.kt
+ *
+ * 【備考】：
+ * このコンポーネント自体は状態を持たず、UIの構造定義と親画面へのイベント伝達に特化している。
  */
 
 import androidx.compose.foundation.layout.*
@@ -35,6 +45,9 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHeaderTitle
+import androidx.compose.ui.tooling.preview.Preview
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -97,7 +110,7 @@ fun PersonMedicationScreenPhone(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp)
         ) {
             PersonMedicationScreenContent(
                 isExpanded = false,
@@ -111,5 +124,35 @@ fun PersonMedicationScreenPhone(
                 onDayClick = onDayClick
             )
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun PersonMedicationScreenPhonePreview() {
+    CareMemoTheme {
+        PersonMedicationScreenPhone(
+            currentPerson = Person(
+                lastName = "山田",
+                firstName = "太郎",
+                lastNameFurigana = "ヤマダ",
+                firstNameFurigana = "タロウ",
+                birthday = Instant.now()
+            ),
+            isNameMaskingEnabled = false,
+            isLoading = false,
+            selectedMonth = YearMonth.now(),
+            recordsByDate = emptyMap(),
+            personCategorySummary = null,
+            isHistoryMode = false,
+            onHistoryModeChange = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onBack = {},
+            onNavigateToCategory = {},
+            onShowPdfSettings = {},
+            onDayClick = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

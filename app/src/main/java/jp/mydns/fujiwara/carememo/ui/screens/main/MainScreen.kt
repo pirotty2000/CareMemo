@@ -3,85 +3,92 @@ package jp.mydns.fujiwara.carememo.ui.screens.main
 /**
  * Screen : MainScreen
  *
- * 【画面名】
- * 利用者一覧（メイン画面）
+ * 【画面名】：
+ * 利用者一覧画面
  *
- * 【役割】
- * 登録された利用者（ケア対象者）の一覧を表示し、健康記録カテゴリへの橋渡しや、
- * 利用者情報の管理（登録・変更・サービス終了処理）を行うアプリのメインエントランス。。
+ * 【役割】：
+ * 登録された利用者（ケア対象者）の一覧を表示し、各記録カテゴリへの橋渡しや、
+ * 利用者情報の管理（登録・変更・サービス終了処理）を行うアプリのメインエントランス。
  *
- * 【主な機能】
- * ・利用者一覧：名前（マスキング対応）、フリガナ、年齢、備考および最新の記録状況をバッジで表示。
- * ・絞り込み検索：五十音順インデックスによる絞り込みと、検索バーによるフリーワード検索。
- * ・利用者管理：ダイアログ形式での情報登録・編集、および論理削除（サービス終了）と復元（Undo）機能。
- * ・カテゴリ連携：利用者選択時に表示されるボトムシートから、バイタルや食事等の各記録画面へ遷移。
- * ・システムメニュー：アプリ設定、操作ヘルプ、バージョン情報の確認。
+ * 【主な機能】：
+ * ・利用者一覧表示（名前のマスキング、年齢、最新記録状況のバッジ表示、誕生日通知）
+ * ・絞り込み検索（五十音順インデックスおよび検索バーによるフリーワード検索）
+ * ・利用者管理（ダイアログによる登録・編集、論理削除とUndo機能）
+ * ・カテゴリ遷移（利用者選択時のボトムシートから健康記録・所見メモ・服薬管理・一括入力へ遷移）
+ * ・システムメニュー（アプリ設定、ヘルプ、バージョン情報）
  *
- * 【遷移】
- * ← （アプリ起動）
- * → PersonHealthScreen / PersonMedicationScreen（カテゴリ選択シート経由）
- * → SettingsScreen（オプションメニューより遷移）
+ * 【遷移】：
+ * → PersonHealthScreen (詳細画面：健康記録)
+ * → PersonConditionScreen (詳細画面：所見メモ)
+ * → PersonMedicationScreen (詳細画面：服薬管理)
+ * → BatchInputScreen (健康記録の一括入力)
+ * → SettingsScreen (アプリ設定)
  *
- * 【使用するViewModel】
+ * 【使用するViewModel】：
  * PersonListViewModel
  *
- * 【備考】
- * UIの状態管理とイベント処理（Snackbar表示等）を担当。
- * データ操作および検索ロジックの本体は ViewModel に集約されている。
+ * 【使用するComponents】：
+ * ・main/CategoryBadges.kt
+ * ・main/CompactTextField.kt
+ * ・main/KanaIndexBar.kt
+ * ・base/BirthdayInputFields.kt
+ * ・base/EmptyState.kt
+ * ・base/InfoDialog.kt
+ * ・base/SearchBox.kt
+ * ・base/AppTopAppBarColors.kt
+ * ・base/LoadingScreen.kt
+ *
+ * 【備考】：
+ * UIの状態管理とイベント処理（Snackbar表示等）を担当。データ操作および検索ロジックはViewModelに集約。
+ *
+ * ---
+ * 最終更新日: 2026/07/04
  */
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PersonAddAlt1
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.ModeEdit
-import androidx.compose.material.icons.rounded.Menu
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.automirrored.rounded.Help
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
-import jp.mydns.fujiwara.carememo.ui.components.base.BirthdayInputFields
-import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
-import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
-import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
-import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
-import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
-import jp.mydns.fujiwara.carememo.ui.components.base.rememberBirthdayInputState
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.CategoryBadges
+import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
 import jp.mydns.fujiwara.carememo.ui.components.main.KanaIndexBar
+import jp.mydns.fujiwara.carememo.ui.components.main.UserEditDialog
+import jp.mydns.fujiwara.carememo.ui.components.main.UserListItem
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
-import jp.mydns.fujiwara.carememo.BuildConfig
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 
+/**
+ * 利用者一覧画面のメインエントランス。
+ * ViewModelとの接続、UI状態の監視、ダイアログやボトムシートの表示制御を行う。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -90,20 +97,20 @@ fun MainScreen(
     onNavigateToBatchInput: (Int) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    val userList by viewModel.userList.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val selectedSection by viewModel.selectedSection.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val userList by viewModel.userList.collectAsState() // 表示対象の利用者リスト
+    val isLoading by viewModel.isLoading.collectAsState() // データ読み込み中フラグ
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState() // 名前マスキングの有効状態
+    val selectedSection by viewModel.selectedSection.collectAsState() // 五十音インデックスの選択状態
+    val searchQuery by viewModel.searchQuery.collectAsState() // 検索クエリ
     
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val lazyListState = rememberLazyListState()
-    val userEndedFormat = stringResource(R.string.snackbar_user_ended)
-    val undoLabel = stringResource(R.string.undo)
+    val snackbarHostState = remember { SnackbarHostState() } // スナックバー制御用
+    val scope = rememberCoroutineScope() // 非同期処理用スコープ
+    val lazyListState = rememberLazyListState() // リストの表示位置管理用
+    val userEndedFormat = stringResource(R.string.snackbar_user_ended) // 終了メッセージ用フォーマット
+    val undoLabel = stringResource(R.string.undo) // Undoボタン用ラベル
 
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) // ボトムシートの状態管理
     var showSheet by remember { mutableStateOf(false) }
     
     var showEditDialog by remember { mutableStateOf(false) }
@@ -208,6 +215,10 @@ fun MainScreen(
     }
 }
 
+/**
+ * 利用者一覧画面のUIレイアウト本体。
+ * Scaffoldによる基本構造、検索ボックス、インデックスバー、利用者リストを表示する。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
@@ -229,6 +240,7 @@ fun MainScreenContent(
     var showVersionDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
 
+    // バージョン情報ダイアログ
     if (showVersionDialog) {
         AlertDialog(
             onDismissRequest = { showVersionDialog = false },
@@ -249,10 +261,15 @@ fun MainScreenContent(
         )
     }
 
+    // ヘルプ・ダイアログ
     if (showHelpDialog) {
-        AlertDialog(onDismissRequest = { showHelpDialog = false }, title = { Text(stringResource(R.string.dialog_help_title)) }, text = { Text(stringResource(R.string.dialog_help_content)) }, confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(stringResource(R.string.close)) } })
+        AlertDialog(onDismissRequest = { showHelpDialog = false }, 
+            title = { Text(stringResource(R.string.dialog_help_title)) }, 
+            text = { Text(stringResource(R.string.dialog_help_content)) }, 
+            confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(stringResource(R.string.close)) } })
     }
 
+    // ハンバーガーメニューの内容
     Scaffold(
         topBar = {
             TopAppBar(
@@ -282,14 +299,19 @@ fun MainScreenContent(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.user_registration)) } }
-    ) { paddingValues ->
+    ) 
+    
+    // メインのコンテンツ
+    { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // ---------- 所見メモ検索 ----------
             SearchBox(
                 query = searchQuery,
                 onQueryChange = onSearchQueryChange,
                 label = stringResource(R.string.search_memo_placeholder)
             )
 
+            // ---------- 名前(ふりがな)インデックス ----------
             KanaIndexBar(
                 selectedSection = selectedSection,
                 onSectionSelect = onSectionSelect
@@ -297,6 +319,7 @@ fun MainScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // ---------- 利用者一覧 ----------
             if (isLoading) {
                 LoadingScreen()
             } else if (userList.isEmpty()) {
@@ -311,237 +334,26 @@ fun MainScreenContent(
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                     items(userList, key = { it.person.id }) { userUiState ->
-                        var showItemMenu by remember { mutableStateOf(false) }
-                        val isBirthdayToday = remember(userUiState.person.birthday) {
-                            DateTimeUtils.isBirthdayToday(userUiState.person.birthday)
-                        }
-                        val isBirthdaySoon = remember(userUiState.person.birthday) {
-                            DateTimeUtils.isBirthdaySoon(userUiState.person.birthday)
-                        }
-                        Column(modifier = Modifier.animateItem()) {
-                            ListItem(
-                                leadingContent = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        CategoryBadges(summary = userUiState.summary)
-                                        
-                                        // ケーキアイコン領域をさらにコンパクト化
-                                        Box(
-                                            modifier = Modifier.width(20.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            if (isBirthdaySoon || isBirthdayToday) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.Cake,
-                                                    contentDescription = "もうすぐ誕生日",
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = Color(0xFFE91E63)
-                                                )
-                                            }
-                                        }
-                                    }
-                                },
-                                headlineContent = { 
-                                    Column { 
-                                        Text(
-                                            text = userUiState.maskedFurigana, 
-                                            style = MaterialTheme.typography.labelSmall, 
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                        Text(
-                                            text = buildString { 
-                                                append(userUiState.maskedName)
-                                                if (userUiState.person.note.isNotBlank()) append(" (${userUiState.person.note})") 
-                                            }, 
-                                            style = MaterialTheme.typography.titleMedium, 
-                                            fontWeight = FontWeight.Bold, 
-                                            maxLines = 1, 
-                                            overflow = TextOverflow.Ellipsis
-                                        ) 
-                                        Text(
-                                            text = stringResource(R.string.birthday_summary_format, userUiState.formattedBirthday, stringResource(R.string.age_suffix, userUiState.age)),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    } 
-                                },
-                                trailingContent = {
-                                    Box {
-                                        IconButton(onClick = { showItemMenu = true }) { Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") }
-                                        DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
-                                            DropdownMenuItem(text = { Text(stringResource(R.string.edit_user_info)) }, leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, onClick = { showItemMenu = false; onEditUser(userUiState.person) })
-                                            DropdownMenuItem(text = { Text(stringResource(R.string.end_user_service), color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, onClick = { showItemMenu = false; onEndUser(userUiState.person) })
-                                        }
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(
-                                    containerColor = when {
-                                        isBirthdayToday -> {
-                                            // 輝度でダークテーマ判定を行う（システム設定によらず、現在のテーマ配色に合わせる）
-                                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                                            if (isDark) {
-                                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                                            } else {
-                                                Color(0xFFFFC0CB) // Pink (今日: 濃いめ)
-                                            }
-                                        }
-                                        isBirthdaySoon -> {
-                                            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                                            if (isDark) {
-                                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
-                                            } else {
-                                                Color(0xFFFFF0F5)  // LavenderBlush (もうすぐ: 薄め)
-                                            }
-                                        }
-                                        else -> MaterialTheme.colorScheme.surface
-                                    }
-                                ),
-                                modifier = Modifier.clickable { onUserClick(userUiState.person) }
-                            )
-                            HorizontalDivider()
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CategorySelectionSheet(
-    personName: String,
-    onCategorySelect: (Category) -> Unit,
-    onBatchInputSelect: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = stringResource(R.string.category_selection_title, personName), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp).align(Alignment.Start))
-        
-        // 【一括入力】ボタン
-        Button(
-            onClick = onBatchInputSelect,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Icon(Icons.Rounded.EditNote, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("健康記録の一括入力", style = MaterialTheme.typography.titleMedium)
-        }
-        
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-        Category.entries.forEach { category ->
-            Button(onClick = { onCategorySelect(category) }, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)) {
-                Text(stringResource(category.displayNameRes), style = MaterialTheme.typography.bodyLarge)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun UserEditDialog(person: Person?, onDismiss: () -> Unit, onSave: (Person) -> Unit) {
-    var lastName by remember { mutableStateOf(person?.lastName ?: "") }
-    var firstName by remember { mutableStateOf(person?.firstName ?: "") }
-    var lastNameFurigana by remember { mutableStateOf(person?.lastNameFurigana ?: "") }
-    var firstNameFurigana by remember { mutableStateOf(person?.firstNameFurigana ?: "") }
-    var note by remember { mutableStateOf(person?.note ?: "") }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val birthdayState = rememberBirthdayInputState(initialInstant = person?.birthday)
-    val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && birthdayState.isValid
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (person == null) stringResource(R.string.user_registration) else stringResource(R.string.user_edit)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = lastName,
-                        onValueChange = { lastName = it },
-                        label = { Text(stringResource(R.string.last_name)) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    OutlinedTextField(
-                        value = firstName,
-                        onValueChange = { firstName = it },
-                        label = { Text(stringResource(R.string.first_name)) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = lastNameFurigana,
-                        onValueChange = { lastNameFurigana = it },
-                        label = { Text(stringResource(R.string.last_name_furigana)) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    OutlinedTextField(
-                        value = firstNameFurigana,
-                        onValueChange = { firstNameFurigana = it },
-                        label = { Text(stringResource(R.string.first_name_furigana)) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                }
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(stringResource(R.string.note_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-
-                BirthdayInputFields(state = birthdayState)
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    birthdayState.toInstant()?.let { birthday ->
-                        keyboardController?.hide()
-                        val newPerson = person?.copy(
-                            lastName = lastName,
-                            firstName = firstName,
-                            lastNameFurigana = lastNameFurigana,
-                            firstNameFurigana = firstNameFurigana,
-                            birthday = birthday,
-                            note = note
-                        ) ?: Person(
-                            lastName = lastName,
-                            firstName = firstName,
-                            lastNameFurigana = lastNameFurigana,
-                            firstNameFurigana = firstNameFurigana,
-                            birthday = birthday,
-                            note = note
+                        UserListItem(
+                            userUiState = userUiState,
+                            onUserClick = onUserClick,
+                            onEditUser = onEditUser,
+                            onEndUser = onEndUser,
+                            modifier = Modifier.animateItem()
                         )
-                        onSave(newPerson)
+                        HorizontalDivider()
                     }
-                },
-                enabled = isInputValid
-            ) { Text(stringResource(R.string.save)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
-    )
+                }
+            }
+        }
+    }
 }
 
+
+/**
+ * MainScreenのプレビュー用コンポーザブル。
+ * 開発時のUI確認用にモックデータを使用して画面を表示する。
+ */
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {

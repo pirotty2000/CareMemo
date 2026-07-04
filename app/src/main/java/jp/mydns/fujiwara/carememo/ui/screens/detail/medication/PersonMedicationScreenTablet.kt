@@ -3,21 +3,30 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.medication
 /**
  * Screen : PersonMedicationScreenTablet
  *
- * 【画面名】
+ * 【画面名】：
  * 利用者服薬記録画面（タブレット版）
  *
- * 【役割】
- * タブレットや折りたたみデバイスなどの横長画面（Expandedクラス）に最適化された服薬記録UIを提供する。
+ * 【役割】：
+ * タブレットや横長画面（Expandedクラス）に最適化された服薬記録UIを提供する。
  *
- * 【主な機能】
- * ・2ペインレイアウト：左側に履歴、右側に入力フォームや統計情報を配置し、大画面を有効活用。
- * ・固定ナビゲーション：画面遷移を抑えた効率的な操作感。
- * ・同時表示：リストと詳細を同時に閲覧できるため、過去の記録を参照しながらの入力が容易。
+ * 【主な機能】：
+ * ・2カラムレイアウト：左側にカレンダー、右側に月間履歴テーブルを常時表示。
+ * ・広い操作エリア：カレンダーからの素早い日付選択と、月間状況の俯瞰を両立。
+ * ・アクション統合：大画面を活かした固定トップバーとナビゲーション。
  *
- * 【遷移】
- * ← PersonMedicationScreen（呼び出し元）
+ * 【遷移】：
+ * ← PersonMedicationScreen (親コンテナ)
+ * → PersonMedicationScreenContent (共通コンテンツの呼び出し)
  *
- * 【備考】
+ * 【使用するViewModel】：
+ * なし（Stateless化済み。親から状態とラムダを受け取る）
+ *
+ * 【使用するComponents】：
+ * ・screens/detail/medication/PersonMedicationScreenContent.kt
+ * ・detail/common/CategorySelectorBar.kt
+ * ・detail/common/PersonHeaderTitle.kt
+ *
+ * 【備考】：
  * 広い画面スペースを活かし、情報の視認性と操作効率を最大化するレイアウトを採用している。
  */
 
@@ -34,6 +43,9 @@ import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHeaderTitle
+import androidx.compose.ui.tooling.preview.Preview
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -99,7 +111,7 @@ fun PersonMedicationScreenTablet(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp)
         ) {
             PersonMedicationScreenContent(
                 isExpanded = true,
@@ -113,5 +125,33 @@ fun PersonMedicationScreenTablet(
                 onDayClick = onDayClick,
             )
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,orientation=landscape")
+@Composable
+fun PersonMedicationScreenTabletPreview() {
+    CareMemoTheme {
+        PersonMedicationScreenTablet(
+            currentPerson = Person(
+                lastName = "山田",
+                firstName = "太郎",
+                lastNameFurigana = "ヤマダ",
+                firstNameFurigana = "タロウ",
+                birthday = Instant.now()
+            ),
+            isNameMaskingEnabled = false,
+            isLoading = false,
+            selectedMonth = YearMonth.now(),
+            recordsByDate = emptyMap(),
+            personCategorySummary = null,
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onBack = {},
+            onNavigateToCategory = {},
+            onShowPdfSettings = {},
+            onDayClick = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

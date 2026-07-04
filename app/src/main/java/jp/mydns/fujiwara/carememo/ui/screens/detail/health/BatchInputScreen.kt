@@ -49,7 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.HealthThresholds
+import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -251,7 +251,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = height,
                                 onValueChange = { onHeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HEIGHT)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) },
                                 suffix = { Text("cm") },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[0]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
@@ -260,7 +260,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = weight,
                                 onValueChange = { onWeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_WEIGHT)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) },
                                 suffix = { Text("kg") },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[1]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
@@ -275,7 +275,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = bpSystolic,
                                 onValueChange = { onBpSystolicChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[2]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { focusRequesters[3].requestFocus() })
@@ -283,7 +283,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = bpDiastolic,
                                 onValueChange = { onBpDiastolicChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[3]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                                 keyboardActions = KeyboardActions(onNext = { focusRequesters[4].requestFocus() })
@@ -293,7 +293,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = pulse,
                                 onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_PULSE)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) },
                                 suffix = { Text("bpm") },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[4]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
@@ -302,7 +302,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = bodyTemperature,
                                 onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_BODY_TEMP)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
                                 suffix = { Text("℃") },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[5]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
@@ -317,7 +317,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = glucose,
                                 onValueChange = { onGlucoseChange(it.filter { c -> c.isDigit() }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_GLUCOSE)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) },
                                 suffix = { Text("mg/dL") },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[6]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
@@ -326,7 +326,7 @@ fun BatchInputScreenContent(
                             OutlinedTextField(
                                 value = hba1c,
                                 onValueChange = { onHba1cChange(it.filter { c -> c.isDigit() || c == '.' }) },
-                                label = { Text(stringResource(HealthThresholds.HEALTH_LABEL_HBA1C)) },
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) },
                                 suffix = { Text("%") },
                                 modifier = Modifier.weight(1f).focusRequester(focusRequesters[7]),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),

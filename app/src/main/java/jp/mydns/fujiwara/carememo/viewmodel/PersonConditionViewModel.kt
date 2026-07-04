@@ -122,13 +122,25 @@ class PersonConditionViewModel(
     /**
      * 所見メモを保存または更新します。
      */
-    fun saveRecord(record: ConditionAtVisit) {
+    fun saveRecord(record: ConditionAtVisit, onSuccess: (Int) -> Unit = {}) {
         viewModelScope.launch {
             try {
                 _isProcessing.value = true
                 val isUpdate = record.id != 0
-                conditionRepository.insertConditionAtVisit(record)
+                val newId = conditionRepository.insertConditionAtVisit(record)
+                
+                // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける
+                if (!isUpdate) {
+                    conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt())
+                }
+
                 showSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました")
+                
+                // 選択中IDを更新して、詳細画面が新しいIDを参照するようにする
+                setSelectedConditionId(if (isUpdate) record.id else newId.toInt())
+
+                // コールバックを実行
+                onSuccess(if (isUpdate) record.id else newId.toInt())
             } catch (e: Exception) {
                 showError("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}")
             } finally {

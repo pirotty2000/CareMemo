@@ -3,19 +3,37 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.health
 /**
  * Screen : PersonHealthScreenContent
  *
- * 【画面名】
- * 利用者健康記録画面（共通コンテンツ）
+ * 【画面名】：
+ * 利用者健康記録画面（共通コンテンツレイアウト）
  *
- * 【役割】
- * 健康記録（カテゴリA/C/D）で共通して使用されるUI部品や、カテゴリごとの入力・表示ロジックを管理する。
+ * 【役割】：
+ * 健康記録（身長・体重、バイタル、血糖値・HbA1c）において、Phone版とTablet版で共通して使用される表示・入力ロジックの基盤を提供する。
+ * デバイスの形状（1カラム/2カラム）に応じた動的なレイアウト切り替えを担当する。
  *
- * 【主な機能】
- * ・カテゴリ別表示：バイタル、血糖値、身体計測の各記録項目に応じた入力フォームの動的生成。
- * ・グラフ統合：HealthGraphViewを用いた統計データの可視化。
- * ・履歴統合：PersonHistoryListによる時系列データの表示と編集・削除アクションの提供。
+ * 【主な機能】：
+ * ・マルチレイアウト制御（Phone版のタブ切り替え型とTablet版の2カラム固定型を1つのコンポーネントで管理）
+ * ・履歴リスト表示（PersonHistoryListを用いた時系列データの描画とスワイプ削除の統合）
+ * ・詳細入力・編集（HealthRecordDetailPaneによるカテゴリ別の入力フォーム表示）
+ * ・統計グラフ表示（HealthGraphViewによるデータの可視化と拡大表示連携）
  *
- * 【備考】
- * Phone版とTablet版のレイアウトの差異を吸収し、記録データのハンドリングと表示ロジックを共通化している。
+ * 【遷移】：
+ * なし（親画面である PersonHealthScreenPhone/Tablet が制御）
+ *
+ * 【使用するViewModel】：
+ * なし（Stateless化済み。親からラムダ経由で操作を実行）
+ *
+ * 【使用するComponents】：
+ * ・detail/health/HealthGraphView.kt
+ * ・detail/health/HealthRecordDetailPane (PersonHealthComponents.kt)
+ * ・detail/health/PersonHistoryList (PersonHealthComponents.kt)
+ * ・base/LoadingScreen.kt
+ * ・base/VerticalScrollIndicator.kt
+ *
+ * 【備考】：
+ * このコンポーネントをStatelessに保つことで、Phone/Tabletの両レイアウトでのプレビュー表示とロジックの共通化を両立している。
+ *
+ * ---
+ * 最終更新日: 2026/07/04
  */
 
 import androidx.activity.compose.BackHandler
@@ -37,10 +55,10 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.detail.health.HealthRecordDetailPane
-import jp.mydns.fujiwara.carememo.ui.components.detail.health.PersonHistoryList
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 @Composable
@@ -57,7 +75,7 @@ fun PersonHealthScreenContent(
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
-    healthViewModel: PersonHealthViewModel,
+    onSaveRecord: (Any) -> Unit,
     isAnyDialogOpen: Boolean
 ) {
     val historyListState = rememberLazyListState()
@@ -90,13 +108,12 @@ fun PersonHealthScreenContent(
             Box(modifier = Modifier.weight(1.5f)) {
                 if (selectedRecordId != -1) {
                     HealthRecordDetailPane(
-                        healthViewModel = healthViewModel,
                         personId = personId,
                         category = currentCategory,
                         recordId = selectedRecordId,
                         records = historyRecords,
                         onCancel = { onSelectedRecordIdChange(-1) },
-                        onSaveSuccess = { onSelectedRecordIdChange(-1) }
+                        onSaveRecord = onSaveRecord
                     )
                 } else {
                     val scrollState = rememberScrollState()
@@ -125,13 +142,12 @@ fun PersonHealthScreenContent(
         if (selectedRecordId != -1) {
             BackHandler { onSelectedRecordIdChange(-1) }
             HealthRecordDetailPane(
-                healthViewModel = healthViewModel,
                 personId = personId,
                 category = currentCategory,
                 recordId = selectedRecordId,
                 records = historyRecords,
                 onCancel = { onSelectedRecordIdChange(-1) },
-                onSaveSuccess = { onSelectedRecordIdChange(-1) }
+                onSaveRecord = onSaveRecord
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -161,7 +177,9 @@ fun PersonHealthScreenContent(
 
                 // コンテンツ表示
                 Box(modifier = Modifier.weight(1f)) {
+
                     if (preferredShowHistory) {
+                        // 履歴表示
                         PersonHistoryList(
                             records = historyRecords,
                             onItemClick = onItemClick,
@@ -173,6 +191,7 @@ fun PersonHealthScreenContent(
                         }
                         VerticalScrollIndicator(lazyListState = historyListState)
                     } else {
+                        // グラフ表示
                         val scrollState = rememberScrollState()
                         Box(modifier = Modifier.fillMaxSize()) {
                             Column(

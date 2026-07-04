@@ -3,19 +3,34 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.medication
 /**
  * Screen : PersonMedicationScreenContent
  *
- * 【画面名】
- * 利用者服薬記録画面（共通コンテンツ）
+ * 【画面名】：
+ * 利用者服薬記録画面（共通コンテンツレイアウト）
  *
- * 【役割】
- * Phone版とTablet版で共通して使用される、服薬記録のコアとなるUIコンポーネントを定義する。
+ * 【役割】：
+ * 服薬記録（カテゴリC）において、Phone版とTablet版で共通して使用される表示・入力ロジックの基盤を提供する。
  *
- * 【主な機能】
- * ・共通UI部品：日別の服薬状況表示、薬品名入力フィールド、時間帯選択などの再利用可能なコンポーネント。
- * ・ロジックの分離：レイアウトに依存しない表示ロジックの集約。
- * ・一貫した操作感：異なるデバイス間でも共通の入力・閲覧ルールを適用。
+ * 【主な機能】：
+ * ・マルチレイアウト制御（Phone版のカレンダー/履歴切り替えと、Tablet版の同時表示を管理）
+ * ・月間ナビゲーション：年月選択の共通UI提供。
+ * ・表示コンポーネントの統合：[CalendarGrid] と [MedicationHistoryTable] の出し分け。
  *
- * 【備考】
- * デバイスごとのレイアウト（Phone/Tablet）は上位レベルで切り分け、本ファイルは純粋なコンテンツの構成を担当する。
+ * 【遷移】：
+ * なし（親画面である PersonMedicationScreenPhone/Tablet が制御）
+ *
+ * 【使用するViewModel】：
+ * なし（Stateless化済み。親からラムダ経由で操作を実行）
+ *
+ * 【使用するComponents】：
+ * ・detail/medication/CalendarGrid (PersonMedicationComponents.kt)
+ * ・detail/medication/MedicationHistoryTable (PersonMedicationComponents.kt)
+ * ・base/LoadingScreen.kt
+ * ・base/VerticalScrollIndicator.kt
+ *
+ * 【備考】：
+ * このコンポーネントをStatelessに保つことで、Phone/Tabletの両レイアウトでのプレビュー表示とロジックの共通化を両立している。
+ *
+ * ---
+ * 最終更新日: 2026/07/04
  */
 
 import androidx.compose.foundation.layout.*
@@ -33,6 +48,8 @@ import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.detail.medication.CalendarGrid
 import jp.mydns.fujiwara.carememo.ui.components.detail.medication.MedicationHistoryTable
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
+import androidx.compose.ui.tooling.preview.Preview
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -179,5 +196,41 @@ fun PersonMedicationScreenContent(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun PersonMedicationScreenContentPhonePreview() {
+    CareMemoTheme {
+        PersonMedicationScreenContent(
+            isExpanded = false,
+            selectedMonth = YearMonth.now(),
+            isLoading = false,
+            recordsByDate = emptyMap(),
+            isHistoryMode = false,
+            onHistoryModeChange = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onDayClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 800)
+@Composable
+fun PersonMedicationScreenContentTabletPreview() {
+    CareMemoTheme {
+        PersonMedicationScreenContent(
+            isExpanded = true,
+            selectedMonth = YearMonth.now(),
+            isLoading = false,
+            recordsByDate = emptyMap(),
+            isHistoryMode = false,
+            onHistoryModeChange = {},
+            onPreviousMonth = {},
+            onNextMonth = {},
+            onDayClick = {}
+        )
     }
 }

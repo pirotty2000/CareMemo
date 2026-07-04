@@ -155,7 +155,7 @@ interface ConditionAtVisitDao {
     fun getByPersonId(personId: Int): Flow<List<ConditionAtVisit>>
 
     @Upsert
-    suspend fun insert(item: ConditionAtVisit)
+    suspend fun insert(item: ConditionAtVisit): Long
 
     @Query("UPDATE condition_at_visit_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -193,13 +193,10 @@ interface ConditionPhotoDao {
     fun getByConditionId(conditionId: Int): Flow<List<ConditionPhoto>>
 
     @Upsert
-    suspend fun insert(item: ConditionPhoto)
+    suspend fun insert(item: ConditionPhoto): Long
 
-//    @Update
-//    suspend fun update(item: ConditionPhoto)
-
-//    @Delete
-//    suspend fun delete(item: ConditionPhoto)
+    @Query("UPDATE condition_photo_db SET condition_id = :newConditionId WHERE condition_id = 0 AND person_id = :personId")
+    suspend fun linkTemporaryPhotosToRecord(personId: Int, newConditionId: Int)
 
     @Query("DELETE FROM condition_photo_db WHERE id = :id")
     suspend fun deleteById(id: Int)

@@ -5,11 +5,12 @@ import android.graphics.Color
 import jp.mydns.fujiwara.carememo.R
 
 /**
- * 健康指標の判定基準と判定ロジックを管理する基軸オブジェクト
+ * アプリ全体の判定基準、定数、および判定ロジックを管理する基軸オブジェクト
  */
-object HealthThresholds {
+object AppThresholds {
 
     // --- 定数定義 ---
+
 
     // ***** 血圧 *****************************************************
     const val BP_HIGH_SYSTOLIC = 140.0      // 高血圧：血圧(上)＞＝140
@@ -37,6 +38,25 @@ object HealthThresholds {
     const val BMI_OBESITY_1 = 30.0      // 30.0 ＜＝ 肥満(２度) ＜ 35.0 ：グラフ・ハイライトは薄い赤
     const val BMI_OBESITY_2 = 35.0      // 35.0 ＜＝ 肥満(３度) ＜ 40.0 ：グラフ・ハイライトは薄い紫
     const val BMI_OBESITY_3 = 40.0      // 40.0 ＜＝ 肥満(４度) 　      ：グラフ・ハイライトは紫
+
+    // --- 各カテゴリのUI/データ制限値 ---
+    /** 所見メモに添付できる写真の最大枚数 */
+    const val CONDITION_PHOTO_MAX_COUNT = 3
+    /** 写真の最大長辺サイズ（保存用） */
+    const val IMAGE_MAX_SIZE = 1024
+    /** サムネイルの最大長辺サイズ */
+    const val IMAGE_THUMBNAIL_SIZE = 256
+    /** 写真保存ディレクトリ名 */
+    const val PHOTOS_DIR_NAME = "photos"
+
+    // --- 服薬管理 (C) 関連の制限値・定義 ---
+    /** 服薬時間枠の総数 (朝・昼・夕・寝る前) */
+    const val MEDICATION_TIME_SLOT_COUNT = 4
+    /** 時間枠のインデックス定義 */
+    const val TIME_SLOT_MORNING = 0
+    const val TIME_SLOT_LUNCH = 1
+    const val TIME_SLOT_DINNER = 2
+    const val TIME_SLOT_BEDTIME = 3
 
     // --- ラベル定義（Resource ID） ---
     val VITAL_LABEL_NORMAL = R.string.vital_label_normal

@@ -137,4 +137,5 @@
     <string name="hide_password">非表示</string>
     <string name="more_items">さらに下に項目があります</string>
     <string name="decision">決定</string>
+    <string name="condition_photo_add_guide">写真は保存後に詳細画面から追加できます</string>
 </resources>

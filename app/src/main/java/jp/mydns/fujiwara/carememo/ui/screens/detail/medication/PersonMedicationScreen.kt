@@ -3,29 +3,36 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.medication
 /**
  * Screen : PersonMedicationScreen
  *
- * 【画面名】
+ * 【画面名】：
  * 利用者服薬記録画面
  *
- * 【役割】
- * 特定の利用者の服薬履歴を管理し、新規の服薬記録の登録、過去の記録の確認、
- * および服薬状況のPDFレポート出力を行う画面。
+ * 【役割】：
+ * 特定の利用者の服薬履歴を管理し、日ごとの服薬状況（朝・昼・夕・寝る前）の登録、
+ * 月間状況の確認、および服薬レポートのPDF出力を行う画面。
  *
- * 【主な機能】
- * ・履歴表示：日ごとの服薬状況をカレンダー形式またはリスト形式で表示。
- * ・服薬登録：薬品名、用量、時間帯（朝・昼・夕・寝る前など）の記録。
- * ・PDF出力：指定した期間の服薬記録をPDFとして生成し、共有・印刷可能にする。
- * ・画面最適化：デバイスの画面幅（Phone/Tablet）に応じて最適なレイアウトを自動選択。
- * ・カテゴリ連携：上部メニューから他の健康記録カテゴリへ直接遷移。
+ * 【主な機能】：
+ * ・利用者情報の表示（ヘッダー）
+ * ・月間状況の可視化（カレンダー表示 / 履歴リスト表示の切り替え）
+ * ・一括入力ダイアログによる服薬状況の登録・更新・削除
+ * ・PDFエクスポート機能（服薬状況の月間一覧出力）
+ * ・画面最適化（Phone/Tabletの動的レイアウト切り替え）
  *
- * 【遷移】
- * ← MainScreen（戻るボタン）
- * → PersonMedicationScreenPhone / PersonMedicationScreenTablet（画面幅に応じて内部で分岐）
+ * 【遷移】：
+ * ← MainScreen (戻るボタン)
+ * → PersonMedicationScreenPhone / PersonMedicationScreenTablet (デバイスサイズによる内部分岐)
  *
- * 【使用するViewModel】
- * PersonMedicationViewModel
+ * 【使用するViewModel】：
+ * ・PersonDetailViewModel (詳細画面共通フレームワーク)
+ * ・PersonMedicationViewModel (服薬記録固有ロジック)
  *
- * 【備考】
- * 履歴データは月単位でロードされ、カレンダーによる日別の絞り込みが可能。
+ * 【使用するComponents】：
+ * ・screens/detail/medication/PersonMedicationScreenPhone.kt
+ * ・screens/detail/medication/PersonMedicationScreenTablet.kt
+ * ・detail/medication/MedicationInputDialog (PersonMedicationComponents.kt)
+ * ・detail/common/PdfExportActionHandler.kt
+ *
+ * 【備考】：
+ * 履歴データは月単位でロードされ、カレンダーによる直感的な確認とリストによる詳細確認が可能。
  */
 
 import androidx.compose.material3.*
@@ -162,16 +169,14 @@ fun PersonMedicationScreen(
     )
 
     if (showDialog != null) {
+        val dateStr = showDialog.toString()
         MedicationInputDialog(
             date = showDialog!!,
             personId = personId,
-            records = recordsByDate[showDialog.toString()] ?: emptyList(),
+            records = recordsByDate[dateStr] ?: emptyList(),
             onDismiss = { showDialog = null },
-            onSave = { record ->
-                medicationViewModel.saveMedicationRecord(record)
-            },
-            onDelete = { record ->
-                medicationViewModel.deleteMedicationRecord(record)
+            onConfirm = { slotRecords ->
+                medicationViewModel.syncMedicationDay(dateStr, personId, slotRecords)
             }
         )
     }

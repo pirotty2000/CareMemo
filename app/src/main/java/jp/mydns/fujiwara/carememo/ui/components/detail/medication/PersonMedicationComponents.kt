@@ -1,5 +1,33 @@
 package jp.mydns.fujiwara.carememo.ui.components.detail.medication
 
+/**
+ * Component：PersonMedicationComponents
+ *
+ * 【役割】：
+ * 服薬管理（カテゴリC）に関連するカレンダー表示、月間履歴テーブル、および
+ * 日別の服薬状況を登録するための入力ダイアログ等の共通パーツ群を提供する。
+ *
+ * 【主な機能】：
+ * ・履歴テーブル（MedicationHistoryTable）：月間の全スロット状況を一覧形式で表示。
+ * ・カレンダー（CalendarGrid）：日付ごとの服薬有無を視覚的に把握できるグリッド表示。
+ * ・入力ダイアログ（MedicationInputDialog）：4つの時間枠（朝・昼・夕・寝る前）の状況を一括編集。
+ *
+ * 【想定する利用場所】：
+ * ・PersonMedicationScreenContent（服薬管理のメインコンテンツ領域）
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * ・データベースへの直接アクセス（すべて引数またはラムダ経由で外部から操作）
+ * ・「すべて未選択＝削除」等の判定ロジック（親の ViewModel 層が担当）
+ *
+ * 【公開composable】：
+ * ・MedicationHistoryTable
+ * ・CalendarGrid
+ * ・MedicationInputDialog
+ *
+ * ---
+ * 最終更新日: 2026/07/04
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +51,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatMedicationDialogTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
@@ -36,6 +67,9 @@ import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.rememberDateTimeInputState
 
+/**
+ * 月間の服薬状況を一覧表示するテーブル形式のコンポーネント。
+ */
 @Composable
 fun MedicationHistoryTable(
     yearMonth: YearMonth,
@@ -112,8 +146,9 @@ fun MedicationHistoryTable(
                         fontWeight = FontWeight.Medium
                     )
 
-                    listOf(0, 1, 2, 3).forEach { slot ->
-                        val weight = if (slot == 3) 1.2f else 1f
+                    val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
+                    timeSlots.forEach { slot ->
+                        val weight = if (slot == AppThresholds.TIME_SLOT_BEDTIME) 1.2f else 1f
                         val record = records.find { it.timeSlot == slot }
                         val symbol = getMedicationStatusSymbol(record?.status)
                         val symbolColor = when (record?.status) {
@@ -139,6 +174,9 @@ fun MedicationHistoryTable(
     }
 }
 
+/**
+ * 1ヶ月分の日付をグリッド表示するカレンダーコンポーネント。
+ */
 @Composable
 fun CalendarGrid(
     yearMonth: YearMonth,
@@ -193,8 +231,11 @@ fun CalendarGrid(
     }
 }
 
+/**
+ * カレンダー内の1日分を表示するセル。
+ */
 @Composable
-fun DayCell(
+private fun DayCell(
     date: LocalDate,
     records: List<MedicationRecord>,
     onClick: () -> Unit
@@ -231,20 +272,23 @@ fun DayCell(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    MedicationStatusIcon(label = getTimeSlotLabel(0, true), status = records.find { it.timeSlot == 0 }?.status)
-                    MedicationStatusIcon(label = getTimeSlotLabel(1, true), status = records.find { it.timeSlot == 1 }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_MORNING, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_MORNING }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_LUNCH, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_LUNCH }?.status)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    MedicationStatusIcon(label = getTimeSlotLabel(2, true), status = records.find { it.timeSlot == 2 }?.status)
-                    MedicationStatusIcon(label = getTimeSlotLabel(3, true), status = records.find { it.timeSlot == 3 }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_DINNER, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_DINNER }?.status)
+                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_BEDTIME, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_BEDTIME }?.status)
                 }
             }
         }
     }
 }
 
+/**
+ * 服薬状況（服用・未・介助）を示す小さな円形アイコン。
+ */
 @Composable
-fun MedicationStatusIcon(label: String, status: Int?) {
+private fun MedicationStatusIcon(label: String, status: Int?) {
     val bgColor = when (status) {
         2 -> getMedicationStatusColor(2)
         1 -> getMedicationStatusColor(1)
@@ -289,16 +333,27 @@ fun MedicationStatusIcon(label: String, status: Int?) {
     }
 }
 
+/**
+ * 日付ごとの服薬状況を登録・編集するためのダイアログ。
+ */
 @Composable
 fun MedicationInputDialog(
     date: LocalDate,
     personId: Int,
     records: List<MedicationRecord>,
     onDismiss: () -> Unit,
-    onSave: (MedicationRecord) -> Unit,
-    onDelete: (MedicationRecord) -> Unit
+    onConfirm: (List<MedicationRecord?>) -> Unit
 ) {
-    var tempRecords by remember(records) { mutableStateOf(records.associateBy { it.timeSlot }) }
+    // スロットごとの一時的な状態を保持（初期値はDBから取得した既存データ）
+    var tempRecords by remember(records) { 
+        mutableStateOf(
+            (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).map { slot ->
+                records.find { it.timeSlot == slot }
+            }
+        )
+    }
+    
+    // 現在時刻編集中のスロット
     var editingSlot by remember { mutableStateOf<Int?>(null) }
     
     // 編集中のスロットが変わるたびに dateTimeState をリセット
@@ -306,19 +361,25 @@ fun MedicationInputDialog(
         initialInstant = editingSlot?.let { tempRecords[it]?.recordTime }
     )
 
+    /**
+     * 入力中の日時を一時的なリストに反映する
+     */
     fun syncCurrentTimeFieldsToTemp() {
-        if (editingSlot != null) {
+        editingSlot?.let { slot ->
             val instant = dateTimeState.toInstant()
             if (instant != null) {
-                tempRecords[editingSlot!!]?.let { record ->
-                    tempRecords = tempRecords.toMutableMap().apply {
-                        put(editingSlot!!, record.copy(recordTime = instant))
+                tempRecords[slot]?.let { record ->
+                    tempRecords = tempRecords.toMutableList().apply {
+                        set(slot, record.copy(recordTime = instant))
                     }
                 }
             }
         }
     }
 
+    /**
+     * 特定のスロットの時刻編集を開始する
+     */
     fun startEditingSlot(slot: Int) {
         syncCurrentTimeFieldsToTemp()
         editingSlot = slot
@@ -334,7 +395,8 @@ fun MedicationInputDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                listOf(0, 1, 2, 3).forEach { slot ->
+                val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
+                timeSlots.forEach { slot ->
                     MedicationRow(
                         label = getTimeSlotLabel(slot),
                         currentRecord = tempRecords[slot],
@@ -342,14 +404,16 @@ fun MedicationInputDialog(
                         onStatusToggle = { status ->
                             val current = tempRecords[slot]
                             if (current?.status == status) {
+                                // 同じステータスなら解除（削除）
                                 syncCurrentTimeFieldsToTemp()
-                                tempRecords = tempRecords.toMutableMap().apply { remove(slot) }
+                                tempRecords = tempRecords.toMutableList().apply { set(slot, null) }
                                 if (editingSlot == slot) editingSlot = null
                             } else {
+                                // 新規またはステータス変更
                                 syncCurrentTimeFieldsToTemp()
                                 val instant = current?.recordTime ?: Instant.now()
-                                tempRecords = tempRecords.toMutableMap().apply {
-                                    put(slot, MedicationRecord(
+                                tempRecords = tempRecords.toMutableList().apply {
+                                    set(slot, MedicationRecord(
                                         id = current?.id ?: 0,
                                         personId = personId,
                                         dosageDate = date.toString(),
@@ -376,42 +440,27 @@ fun MedicationInputDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    // 1. 現在編集中の時間フィールドがあれば、一時レコードに反映させる
                     syncCurrentTimeFieldsToTemp()
-
-                    val initialMap = records.associateBy { it.timeSlot }
-
-                    // 2. 削除処理: 以前は存在したが、今回非選択になったスロットを物理削除
-                    initialMap.keys.forEach { slot ->
-                        if (!tempRecords.containsKey(slot)) {
-                            onDelete(initialMap[slot]!!)
-                        }
-                    }
-
-                    // 3. 保存・更新処理: 新規または内容が変更されたスロットのみを保存
-                    //    (何も選択していない新規セ方の場合は、ここが空になり何も起きない)
-                    tempRecords.forEach { (slot, record) ->
-                        if (record != initialMap[slot]) {
-                            onSave(record)
-                        }
-                    }
-
+                    onConfirm(tempRecords)
                     onDismiss()
                 }
             ) {
-                Text("保存")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("キャンセル")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
 }
 
+/**
+ * ダイアログ内の1つの時間枠（朝など）の行。
+ */
 @Composable
-fun MedicationRow(
+private fun MedicationRow(
     label: String,
     currentRecord: MedicationRecord?,
     isSelectedForTime: Boolean,
@@ -467,8 +516,11 @@ fun MedicationRow(
     }
 }
 
+/**
+ * ステータス（未・介助・服用）を選択するためのチップ。
+ */
 @Composable
-fun StatusChip(
+private fun StatusChip(
     text: String,
     isSelected: Boolean,
     color: Color,

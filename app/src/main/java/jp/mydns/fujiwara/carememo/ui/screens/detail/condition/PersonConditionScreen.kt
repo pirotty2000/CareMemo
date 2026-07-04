@@ -3,29 +3,38 @@ package jp.mydns.fujiwara.carememo.ui.screens.detail.condition
 /**
  * Screen : PersonConditionScreen
  *
- * 【画面名】
+ * 【画面名】：
  * 利用者所見記録画面
  *
- * 【役割】
+ * 【役割】：
  * 利用者の日々の様子や気になる変化を「所見メモ（カテゴリB）」として詳細に記録・閲覧する画面。
- * テキストによる記録に加え、写真撮影による視覚的な記録保存も行う。
+ * テキストによる記録に加え、写真撮影による視覚的な記録保存も担当する。
  *
- * 【主な機能】
- * ・所見一覧：時系列での所見履歴表示。
- * ・詳細登録：タイトル、内容、記録者、日時の登録。
- * ・写真管理：カメラ撮影またはギャラリーからの画像取り込み、および写真のフルスクリーン表示。
- * ・PDF出力：所見履歴と写真をまとめたPDFレポートの作成。
- * ・レスポンシブUI：画面サイズに応じたPhone用・Tablet用レイアウトの切り替え。
+ * 【主な機能】：
+ * ・利用者情報の表示（ヘッダー）
+ * ・履歴一覧と詳細表示の切り替え（Phone版）
+ * ・2ペインレイアウトによる一覧と詳細の同時表示（Tablet版）
+ * ・所見記録のCRUD操作（新規登録、編集、スワイプ削除）
+ * ・写真の管理（撮影連携、表示、削除）
+ * ・PDFレポート出力機能
  *
- * 【遷移】
- * ← MainScreen（戻るボタン）
+ * 【遷移】：
+ * ← MainScreen (戻るボタン)
  * → ConditionPhotoFullScreen / ConditionPhotoPreviewScreen
  *
- * 【使用するViewModel】
- * PersonDetailViewModel, PersonConditionViewModel
+ * 【使用するViewModel】：
+ * ・PersonDetailViewModel (詳細画面共通フレームワーク)
+ * ・PersonConditionViewModel (所見記録固有ロジック)
  *
- * 【備考】
+ * 【使用するComponents】：
+ * ・screens/detail/condition/PersonConditionScreenPhone.kt
+ * ・screens/detail/condition/PersonConditionScreenTablet.kt
+ * ・detail/common/PdfExportActionHandler.kt
+ * ・base/DeleteConfirmDialog.kt
+ *
+ * 【備考】：
  * 文字だけでは伝わりにくい患部の状態などを写真として残すことで、より正確な情報の共有を可能にする。
+ * 画面サイズ（WindowWidthSizeClass）に基づき、Phone版とTablet版を自動的に切り替える。
  */
 
 import android.net.Uri
@@ -36,7 +45,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.PdfExportActionHandler
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.launch
@@ -54,6 +65,7 @@ fun PersonConditionScreen(
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val records by conditionViewModel.filteredRecords.collectAsState()
 
@@ -67,25 +79,72 @@ fun PersonConditionScreen(
 
     var selectedId by rememberSaveable { mutableIntStateOf(-1) }
 
+    var dialogTitle by remember { mutableStateOf<String?>(null) }
+    var dialogMessage by remember { mutableStateOf<String?>(null) }
+
+    // アプリからの通知を受け付ける窓口
+    LaunchedEffect(Unit) {
+        viewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                else -> {}
+            }
+        }
+    }
+
+    // 選択されたIDが変更されたら、ViewModel側に通知して写真をロードさせる
+    LaunchedEffect(selectedId) {
+        conditionViewModel.setSelectedConditionId(if (selectedId != -1) selectedId else null)
+    }
+
+    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture(),
+    ) { success ->
+        if (success && tempPhotoUri != null) {
+            onNavigateToPhotoPreview(tempPhotoUri!!, personId, selectedId)
+        }
+    }
+
 
     val searchQuery by conditionViewModel.searchQuery.collectAsState()
     val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsState()
+    val photos by conditionViewModel.currentConditionPhotos.collectAsState()
+    val isProcessing by conditionViewModel.isProcessing.collectAsState()
+    val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
+    
     var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
+
+    // 最後にロードした利用者IDを保持して、不要なリセットを防ぐ
+    var lastLoadedPersonId by rememberSaveable { mutableIntStateOf(-1) }
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
         viewModel.setCategory(Category.CONDITION_AT_VISIT)
         conditionViewModel.loadPerson(personId)
-        // 画面遷移時に選択をリセット
-        selectedId = -1
+        
+        // 実際に別の利用者の画面へ遷移した時だけ、選択状態をリセットする。
+        // これにより、写真撮影画面から同じ利用者の画面に戻った際は、選択状態（selectedId）が維持される。
+        if (lastLoadedPersonId != personId) {
+            selectedId = -1
+            lastLoadedPersonId = personId
+        }
     }
 
-    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (isExpanded) {
+        // ---------- タブレット ----------
         PersonConditionScreenTablet(
-            viewModel = viewModel,
-            conditionViewModel = conditionViewModel,
             personId = personId,
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
@@ -93,12 +152,20 @@ fun PersonConditionScreen(
             records = records,
             isLoading = isLoading,
             searchQuery = searchQuery,
+            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
             conditionPhotoMap = conditionPhotoMap,
+            photos = photos,
+            isProcessing = isProcessing,
+            defaultRecorderName = defaultRecorderName,
             selectedId = selectedId,
             onSelectedIdChange = { selectedId = it },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
-            onNavigateToPhotoPreview = onNavigateToPhotoPreview,
+            onAddPhotoClick = {
+                val uri = ImageUtils.getTempPhotoUri(context)
+                tempPhotoUri = uri
+                cameraLauncher.launch(uri)
+            },
             onNavigateToFullScreen = onNavigateToFullScreen,
             onShowPdfSettings = {
                 if (records.isEmpty()) {
@@ -108,12 +175,15 @@ fun PersonConditionScreen(
                 }
             },
             onDeleteRecord = { recordToDelete = it },
+            onSaveRecord = { record, onSuccess -> 
+                conditionViewModel.saveRecord(record, onSuccess) 
+            },
+            onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             snackbarHostState = snackbarHostState
         )
     } else {
+        // ---------- スマホ ----------
         PersonConditionScreenPhone(
-            viewModel = viewModel,
-            conditionViewModel = conditionViewModel,
             personId = personId,
             currentPerson = currentPerson,
             isNameMaskingEnabled = isNameMaskingEnabled,
@@ -121,12 +191,20 @@ fun PersonConditionScreen(
             records = records,
             isLoading = isLoading,
             searchQuery = searchQuery,
+            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
             conditionPhotoMap = conditionPhotoMap,
+            photos = photos,
+            isProcessing = isProcessing,
+            defaultRecorderName = defaultRecorderName,
             selectedId = selectedId,
             onSelectedIdChange = { selectedId = it },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
-            onNavigateToPhotoPreview = onNavigateToPhotoPreview,
+            onAddPhotoClick = {
+                val uri = ImageUtils.getTempPhotoUri(context)
+                tempPhotoUri = uri
+                cameraLauncher.launch(uri)
+            },
             onNavigateToFullScreen = onNavigateToFullScreen,
             onShowPdfSettings = {
                 if (records.isEmpty()) {
@@ -136,6 +214,10 @@ fun PersonConditionScreen(
                 }
             },
             onDeleteRecord = { recordToDelete = it },
+            onSaveRecord = { record, onSuccess -> 
+                conditionViewModel.saveRecord(record, onSuccess) 
+            },
+            onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             snackbarHostState = snackbarHostState
         )
     }
@@ -171,6 +253,17 @@ fun PersonConditionScreen(
                         conditionViewModel.deleteRecord(record)
                     }
                 }
+            }
+        )
+    }
+
+    if (dialogMessage != null) {
+        InfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = {
+                dialogMessage = null
+                dialogTitle = null
             }
         )
     }

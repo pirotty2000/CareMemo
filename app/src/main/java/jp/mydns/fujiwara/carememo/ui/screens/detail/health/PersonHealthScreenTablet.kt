@@ -42,10 +42,14 @@ import jp.mydns.fujiwara.carememo.ui.components.detail.common.CategorySelectorBa
 import jp.mydns.fujiwara.carememo.ui.components.detail.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
+import androidx.compose.ui.tooling.preview.Preview
+import jp.mydns.fujiwara.carememo.data.BpAndPulse
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import java.time.Instant
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenTablet(
-    healthViewModel: PersonHealthViewModel,
     personId: Int,
     currentCategory: Category,
     records: List<Any>,
@@ -59,6 +63,8 @@ fun PersonHealthScreenTablet(
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
+    onDeleteRecord: (HistoryRecord) -> Unit,
+    onSaveRecord: (Any) -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
@@ -114,7 +120,7 @@ fun PersonHealthScreenTablet(
                 onDelete = {
                     recordToDelete?.let {
                         if (selectedRecordId == it.id) onSelectedRecordIdChange(-1)
-                        healthViewModel.deleteRecord(it)
+                        onDeleteRecord(it)
                     }
                 }
             )
@@ -150,10 +156,43 @@ fun PersonHealthScreenTablet(
                     onExpandGraph = { index ->
                         onNavigateToGraphExpansion(personId, currentCategory, index)
                     },
-                    healthViewModel = healthViewModel,
+                    onSaveRecord = onSaveRecord,
                     isAnyDialogOpen = recordToDelete != null
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,dpi=240")
+@Composable
+fun PersonHealthScreenTabletPreview() {
+    CareMemoTheme {
+        PersonHealthScreenTablet(
+            personId = 1,
+            currentCategory = Category.BP_AND_PULSE,
+            records = listOf(
+                BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+            ),
+            isLoading = false,
+            currentPerson = Person(
+                lastName = "山田", 
+                firstName = "太郎",
+                lastNameFurigana = "ヤマダ",
+                firstNameFurigana = "タロウ",
+                birthday = Instant.now()
+            ),
+            personCategorySummary = null,
+            isNameMaskingEnabled = false,
+            selectedRecordId = -1,
+            onSelectedRecordIdChange = {},
+            onBack = {},
+            onNavigateToGraphExpansion = { _, _, _ -> },
+            onNavigateToCategory = {},
+            onShowPdfSettings = {},
+            onDeleteRecord = {},
+            onSaveRecord = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

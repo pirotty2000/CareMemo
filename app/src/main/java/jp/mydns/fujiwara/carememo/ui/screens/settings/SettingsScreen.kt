@@ -55,12 +55,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,6 +80,8 @@ fun SettingsScreen(
     val backupPassword by viewModel.backupPassword.collectAsState()
     val themeSetting by viewModel.themeSetting.collectAsState()
     val endedUserList by viewModel.deletedUserList.collectAsState()
+    val isProcessing by viewModel.isProcessing.collectAsState()
+    val processingProgress by viewModel.processingProgress.collectAsState()
 
     val context = LocalContext.current
 
@@ -248,6 +252,86 @@ fun SettingsScreen(
         AlertDialog(onDismissRequest = { showPasswordInputDialog = false }, title = { Text("パスワードの入力") }, text = { Column { Text("このファイルはパスワード保護されています。入力してください。"); Spacer(modifier = Modifier.height(16.dp)); OutlinedTextField(value = inputPasswordForImport, onValueChange = { inputPasswordForImport = it }, label = { Text("パスワード") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = if (isInputPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { isInputPasswordVisible = !isInputPasswordVisible }) { Icon(imageVector = if (isInputPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) } }) } }, confirmButton = { Button(onClick = { viewModel.importData(context, android.net.Uri.EMPTY, inputPasswordForImport); showPasswordInputDialog = false; inputPasswordForImport = "" }, enabled = inputPasswordForImport.isNotEmpty()) { Text("実行") } }, dismissButton = { TextButton(onClick = { showPasswordInputDialog = false; inputPasswordForImport = "" }) { Text("キャンセル") } })
     }
 
+    SettingsScreenContent(
+        isMaskingEnabled = isMaskingEnabled,
+        localRecorderName = localRecorderName,
+        onMaskingChange = { viewModel.setNameMaskingEnabled(it) },
+        onRecorderNameChange = {
+            localRecorderName = it
+            viewModel.setDefaultRecorderName(it)
+        },
+        endedUserCount = endedUserList.size,
+        onNavigateToRestore = onNavigateToRestore,
+        onEraseClick = { if (endedUserList.isNotEmpty()) showEraseConfirm = true },
+        isBackupPasswordEnabled = isBackupPasswordEnabled,
+        localBackupPassword = localBackupPassword,
+        isPasswordValid = isPasswordValid,
+        isPasswordVisible = isPasswordVisible,
+        onBackupPasswordEnabledChange = { viewModel.setBackupPasswordEnabled(it) },
+        onBackupPasswordChange = {
+            localBackupPassword = it
+            if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it)
+        },
+        onPasswordVisibilityToggle = { isPasswordVisible = !isPasswordVisible },
+        onExportClick = {
+            viewModel.setLockBypassEnabled(true)
+            exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
+        },
+        onImportClick = {
+            viewModel.setLockBypassEnabled(true)
+            importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
+        },
+        isBiometricEnabled = isBiometricEnabled,
+        lockTimeoutMinutes = lockTimeoutMinutes,
+        onBiometricEnabledChange = { viewModel.setBiometricEnabled(context, it) },
+        onTimeoutClick = { showTimeoutDialog = true },
+        themeSetting = themeSetting,
+        onThemeClick = { showThemeDialog = true },
+        onHelpClick = { showHelpDialog = true },
+        onVersionClick = { showVersionDialog = true },
+        onClearAllClick = { showDevClearConfirm = true },
+        isProcessing = isProcessing,
+        processingProgress = processingProgress,
+        onBack = onBack
+    )
+}
+
+/**
+ * 設定画面のUIレイアウト本体。
+ * ViewModelに依存しないStatelessな設計により、プレビューを可能にしている。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreenContent(
+    isMaskingEnabled: Boolean,
+    localRecorderName: String,
+    onMaskingChange: (Boolean) -> Unit,
+    onRecorderNameChange: (String) -> Unit,
+    endedUserCount: Int,
+    onNavigateToRestore: () -> Unit,
+    onEraseClick: () -> Unit,
+    isBackupPasswordEnabled: Boolean,
+    localBackupPassword: String,
+    isPasswordValid: Boolean,
+    isPasswordVisible: Boolean,
+    onBackupPasswordEnabledChange: (Boolean) -> Unit,
+    onBackupPasswordChange: (String) -> Unit,
+    onPasswordVisibilityToggle: () -> Unit,
+    onExportClick: () -> Unit,
+    onImportClick: () -> Unit,
+    isBiometricEnabled: Boolean,
+    lockTimeoutMinutes: Int,
+    onBiometricEnabledChange: (Boolean) -> Unit,
+    onTimeoutClick: () -> Unit,
+    themeSetting: ThemeSetting,
+    onThemeClick: () -> Unit,
+    onHelpClick: () -> Unit,
+    onVersionClick: () -> Unit,
+    onClearAllClick: () -> Unit,
+    isProcessing: Boolean,
+    processingProgress: Int,
+    onBack: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -266,84 +350,394 @@ fun SettingsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // --- 1. 表示・記録設定 ---
-                SettingsSection(title = "表示・記録設定") {
-                    ListItem(headlineContent = { Text("氏名の伏せ字表示") }, supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") }, trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = { viewModel.setNameMaskingEnabled(it) }) })
-                    OutlinedTextField(value = localRecorderName, onValueChange = { localRecorderName = it; viewModel.setDefaultRecorderName(it) }, label = { Text("記録者の名前(デフォルト)") }, placeholder = { Text("例: 山田") }, supportingText = { Text("所見メモ作成時に自動入力されます") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                DisplayAndRecordingSection(
+                    isMaskingEnabled = isMaskingEnabled,
+                    localRecorderName = localRecorderName,
+                    onMaskingChange = onMaskingChange,
+                    onRecorderNameChange = onRecorderNameChange
+                )
 
-                // --- 2. 利用者管理 ---
-                SettingsSection(title = "利用者管理") {
-                    ListItem(headlineContent = { Text("利用終了者の復帰") }, supportingContent = { Text("現在 ${endedUserList.size} 名が利用終了となっています") }, trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } }, modifier = Modifier.clickable { onNavigateToRestore() })
-                    ListItem(headlineContent = { Text("利用終了者のデータを完全抹消", color = MaterialTheme.colorScheme.error) }, supportingContent = { Text("「利用終了」の方のデータを物理削除します") }, trailingContent = { IconButton(onClick = { if (endedUserList.isNotEmpty()) showEraseConfirm = true }, enabled = endedUserList.isNotEmpty()) { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = if (endedUserList.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline) } }, modifier = Modifier.clickable(enabled = endedUserList.isNotEmpty()) { showEraseConfirm = true })
-                }
+                UserManagementSection(
+                    endedUserCount = endedUserCount,
+                    onNavigateToRestore = onNavigateToRestore,
+                    onEraseClick = onEraseClick
+                )
 
-                // --- 3. データ管理 ---
-                SettingsSection(title = "データ管理") {
-                    ListItem(headlineContent = { Text("バックアップにパスワードを設定") }, supportingContent = { Text("Zipファイルを暗号化して保護します") }, trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = { viewModel.setBackupPasswordEnabled(it) }) })
-                    if (isBackupPasswordEnabled) {
-                        OutlinedTextField(value = localBackupPassword, onValueChange = { localBackupPassword = it; if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it) }, label = { Text("デフォルトのパスワード") }, placeholder = { Text("6桁以上の数字を推奨") }, supportingText = { if (!isPasswordValid && localBackupPassword.isNotEmpty()) Text("6文字以上で入力してください", color = MaterialTheme.colorScheme.error) else Text("バックアップ作成時に使用されます") }, isError = !isPasswordValid && localBackupPassword.isNotEmpty(), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) { Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) } })
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    val canExport = !isBackupPasswordEnabled || isPasswordValid
-                    ListItem(headlineContent = { Text("データのバックアップ (保存)") }, supportingContent = { Text("全データと写真をZip書き出しします") }, trailingContent = { IconButton(onClick = { viewModel.setLockBypassEnabled(true); exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") }, enabled = canExport) { Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) } }, modifier = Modifier.clickable(enabled = canExport) { viewModel.setLockBypassEnabled(true); exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip") })
-                    ListItem(headlineContent = { Text("データの復元 (読込)") }, supportingContent = { Text("バックアップからデータを読み込みます") }, trailingContent = { IconButton(onClick = { viewModel.setLockBypassEnabled(true); importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) }) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } }, modifier = Modifier.clickable { viewModel.setLockBypassEnabled(true); importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream")) })
-                }
+                DataManagementSection(
+                    isBackupPasswordEnabled = isBackupPasswordEnabled,
+                    localBackupPassword = localBackupPassword,
+                    isPasswordValid = isPasswordValid,
+                    isPasswordVisible = isPasswordVisible,
+                    onBackupPasswordEnabledChange = onBackupPasswordEnabledChange,
+                    onBackupPasswordChange = onBackupPasswordChange,
+                    onPasswordVisibilityToggle = onPasswordVisibilityToggle,
+                    onExportClick = onExportClick,
+                    onImportClick = onImportClick
+                )
 
-                // --- 4. セキュリティ ---
-                SettingsSection(title = "セキュリティ") {
-                    ListItem(headlineContent = { Text("アプリのロック") }, supportingContent = { Text("起動時・復帰時に認証を求めます") }, trailingContent = { Switch(checked = isBiometricEnabled, onCheckedChange = { viewModel.setBiometricEnabled(context, it) }) })
-                    val timeoutLabel = when (lockTimeoutMinutes) { 0 -> "即時"; -1 -> "ロックしない"; else -> "${lockTimeoutMinutes}分" }
-                    ListItem(headlineContent = { Text("再ロックまでの時間", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) }, supportingContent = { Text("指定時間が経過するとロックがかかります", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) }, trailingContent = { Text(text = timeoutLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) }, modifier = Modifier.clickable(enabled = isBiometricEnabled) { showTimeoutDialog = true })
-                    Text(text = "※画面消灯設定を短くするとより安全です", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                }
+                SecuritySection(
+                    isBiometricEnabled = isBiometricEnabled,
+                    lockTimeoutMinutes = lockTimeoutMinutes,
+                    onBiometricEnabledChange = onBiometricEnabledChange,
+                    onTimeoutClick = onTimeoutClick
+                )
 
-                // --- 5. テーマ ---
-                SettingsSection(title = "テーマ") {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { showThemeDialog = true }) {
-                        OutlinedTextField(
-                            value = themeSetting.label,
-                            onValueChange = {},
-                            readOnly = true,
-                            enabled = false,
-                            label = { Text("配色とモード") },
-                            trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
-                    Text(text = "※ ${themeSetting.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
-                }
+                ThemeSection(
+                    themeSetting = themeSetting,
+                    onThemeClick = onThemeClick
+                )
 
-                // --- 6. その他 ---
-                SettingsSection(title = "その他") {
-                    ListItem(headlineContent = { Text("ヘルプ") }, leadingContent = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) }, modifier = Modifier.clickable { showHelpDialog = true })
-                    ListItem(headlineContent = { Text("バージョン情報") }, leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) }, modifier = Modifier.clickable { showVersionDialog = true })
-                }
+                OtherSection(
+                    onHelpClick = onHelpClick,
+                    onVersionClick = onVersionClick
+                )
 
-                // --- 7. リセット ---
-                SettingsSection(title = "リセット") {
-                    Text(text = "※ 全データと写真が消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                    ListItem(headlineContent = { Text("■要注意■ 全データ消去", color = MaterialTheme.colorScheme.error) }, leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, modifier = Modifier.clickable { showDevClearConfirm = true })
-                }
+                ResetSection(
+                    onClearAllClick = onClearAllClick
+                )
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
             
             VerticalScrollIndicator(scrollState = scrollState)
         }
     }
+
+    if (isProcessing) {
+        AlertDialog(
+            onDismissRequest = { }, // 処理中は閉じられない
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            ),
+            title = { Text("処理中...") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    LinearProgressIndicator(
+                        progress = { processingProgress / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(text = "$processingProgress%")
+                }
+            },
+            confirmButton = {}
+        )
+    }
 }
 
+/**
+ * 表示・記録に関する設定セクション。
+ * 氏名のマスキング設定や、記録時に入力されるデフォルトの名前を管理する。
+ */
 @Composable
-fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun DisplayAndRecordingSection(
+    isMaskingEnabled: Boolean,
+    localRecorderName: String,
+    onMaskingChange: (Boolean) -> Unit,
+    onRecorderNameChange: (String) -> Unit
+) {
+    SettingsSection(title = "表示・記録設定") {
+        ListItem(
+            headlineContent = { Text("氏名の伏せ字表示") },
+            supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") },
+            trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = onMaskingChange) }
+        )
+        OutlinedTextField(
+            value = localRecorderName,
+            onValueChange = onRecorderNameChange,
+            label = { Text("記録者の名前(デフォルト)") },
+            placeholder = { Text("例: 山田") },
+            supportingText = { Text("所見メモ作成時に自動入力されます") },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+/**
+ * 利用者データに関する管理セクション。
+ * 論理削除された利用者の復帰や、データの完全抹消操作を管理する。
+ */
+@Composable
+private fun UserManagementSection(
+    endedUserCount: Int,
+    onNavigateToRestore: () -> Unit,
+    onEraseClick: () -> Unit
+) {
+    SettingsSection(title = "利用者管理") {
+        ListItem(
+            headlineContent = { Text("利用終了者の復帰") },
+            supportingContent = { Text("現在 ${endedUserCount} 名が利用終了となっています") },
+            trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
+            modifier = Modifier.clickable { onNavigateToRestore() }
+        )
+        ListItem(
+            headlineContent = { Text("利用終了者のデータを完全抹消", color = MaterialTheme.colorScheme.error) },
+            supportingContent = { Text("「利用終了」の方のデータを物理削除します") },
+            trailingContent = { 
+                IconButton(onClick = onEraseClick, enabled = endedUserCount > 0) { 
+                    Icon(
+                        Icons.Rounded.DeleteForever, 
+                        contentDescription = null, 
+                        tint = if (endedUserCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                    ) 
+                } 
+            },
+            modifier = Modifier.clickable(enabled = endedUserCount > 0) { onEraseClick() }
+        )
+    }
+}
+
+/**
+ * データのバックアップと復元に関するセクション。
+ * パスワード保護の設定、Zip形式でのエクスポート、およびインポート機能を管理する。
+ */
+@Composable
+private fun DataManagementSection(
+    isBackupPasswordEnabled: Boolean,
+    localBackupPassword: String,
+    isPasswordValid: Boolean,
+    isPasswordVisible: Boolean,
+    onBackupPasswordEnabledChange: (Boolean) -> Unit,
+    onBackupPasswordChange: (String) -> Unit,
+    onPasswordVisibilityToggle: () -> Unit,
+    onExportClick: () -> Unit,
+    onImportClick: () -> Unit
+) {
+    SettingsSection(title = "データ管理") {
+        ListItem(
+            headlineContent = { Text("バックアップにパスワードを設定") },
+            supportingContent = { Text("Zipファイルを暗号化して保護します") },
+            trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = onBackupPasswordEnabledChange) }
+        )
+        if (isBackupPasswordEnabled) {
+            OutlinedTextField(
+                value = localBackupPassword,
+                onValueChange = onBackupPasswordChange,
+                label = { Text("デフォルトのパスワード") },
+                placeholder = { Text("6桁以上の数字を推奨") },
+                supportingText = { 
+                    if (!isPasswordValid && localBackupPassword.isNotEmpty()) 
+                        Text("6文字以上で入力してください", color = MaterialTheme.colorScheme.error) 
+                    else Text("バックアップ作成時に使用されます") 
+                },
+                isError = !isPasswordValid && localBackupPassword.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = { 
+                    IconButton(onClick = onPasswordVisibilityToggle) { 
+                        Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) 
+                    } 
+                }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        val canExport = !isBackupPasswordEnabled || isPasswordValid
+        ListItem(
+            headlineContent = { Text("データのバックアップ (保存)") },
+            supportingContent = { Text("全データと写真をZip書き出しします") },
+            trailingContent = { 
+                IconButton(onClick = onExportClick, enabled = canExport) { 
+                    Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) 
+                } 
+            },
+            modifier = Modifier.clickable(enabled = canExport) { onExportClick() }
+        )
+        ListItem(
+            headlineContent = { Text("データの復元 (読込)") },
+            supportingContent = { Text("バックアップからデータを読み込みます") },
+            trailingContent = { IconButton(onClick = onImportClick) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } },
+            modifier = Modifier.clickable { onImportClick() }
+        )
+    }
+}
+
+/**
+ * アプリのセキュリティに関するセクション。
+ * 生体認証ロックの有効化や、自動再ロックまでの待機時間を管理する。
+ */
+@Composable
+private fun SecuritySection(
+    isBiometricEnabled: Boolean,
+    lockTimeoutMinutes: Int,
+    onBiometricEnabledChange: (Boolean) -> Unit,
+    onTimeoutClick: () -> Unit
+) {
+    SettingsSection(title = "セキュリティ") {
+        ListItem(
+            headlineContent = { Text("アプリのロック") },
+            supportingContent = { Text("起動時・復帰時に認証を求めます") },
+            trailingContent = { Switch(checked = isBiometricEnabled, onCheckedChange = onBiometricEnabledChange) }
+        )
+        val timeoutLabel = when (lockTimeoutMinutes) { 0 -> "即時"; -1 -> "ロックしない"; else -> "${lockTimeoutMinutes}分" }
+        ListItem(
+            headlineContent = { Text("再ロックまでの時間", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
+            supportingContent = { Text("指定時間が経過するとロックがかかります", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) },
+            trailingContent = { Text(text = timeoutLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) },
+            modifier = Modifier.clickable(enabled = isBiometricEnabled) { onTimeoutClick() }
+        )
+        Text(text = "※画面消灯設定を短くするとより安全です", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    }
+}
+
+/**
+ * アプリの表示テーマに関するセクション。
+ * ダークモードやライトモード、システム連携などの配色設定を管理する。
+ */
+@Composable
+private fun ThemeSection(
+    themeSetting: ThemeSetting,
+    onThemeClick: () -> Unit
+) {
+    SettingsSection(title = "テーマ") {
+        Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onThemeClick() }) {
+            OutlinedTextField(
+                value = themeSetting.label,
+                onValueChange = {},
+                readOnly = true,
+                enabled = false,
+                label = { Text("配色とモード") },
+                trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+        Text(text = "※ ${themeSetting.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+    }
+}
+
+/**
+ * 操作ヘルプやアプリ情報に関するセクション。
+ */
+@Composable
+private fun OtherSection(
+    onHelpClick: () -> Unit,
+    onVersionClick: () -> Unit
+) {
+    SettingsSection(title = "その他") {
+        ListItem(
+            headlineContent = { Text("ヘルプ") },
+            leadingContent = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
+            modifier = Modifier.clickable { onHelpClick() }
+        )
+        ListItem(
+            headlineContent = { Text("バージョン情報") },
+            leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
+            modifier = Modifier.clickable { onVersionClick() }
+        )
+    }
+}
+
+/**
+ * アプリデータのリセットに関するセクション。
+ */
+@Composable
+private fun ResetSection(
+    onClearAllClick: () -> Unit
+) {
+    SettingsSection(title = "リセット") {
+        Text(text = "※ 全データと写真が消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        ListItem(
+            headlineContent = { Text("■要注意■ 全データ消去", color = MaterialTheme.colorScheme.error) },
+            leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            modifier = Modifier.clickable { onClearAllClick() }
+        )
+    }
+}
+
+/**
+ * 設定画面の各セクションを共通のスタイル（背景、タイトル、余白）で描画するための枠組み。
+ */
+@Composable
+private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 4.dp))
         Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) { Column(content = content) }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    CareMemoTheme {
+        SettingsScreenContent(
+            isMaskingEnabled = false,
+            localRecorderName = "記録者名",
+            onMaskingChange = {},
+            onRecorderNameChange = {},
+            endedUserCount = 2,
+            onNavigateToRestore = {},
+            onEraseClick = {},
+            isBackupPasswordEnabled = true,
+            localBackupPassword = "password",
+            isPasswordValid = true,
+            isPasswordVisible = false,
+            onBackupPasswordEnabledChange = {},
+            onBackupPasswordChange = {},
+            onPasswordVisibilityToggle = {},
+            onExportClick = {},
+            onImportClick = {},
+            isBiometricEnabled = true,
+            lockTimeoutMinutes = 5,
+            onBiometricEnabledChange = {},
+            onTimeoutClick = {},
+            themeSetting = ThemeSetting.SYSTEM,
+            onThemeClick = {},
+            onHelpClick = {},
+            onVersionClick = {},
+            onClearAllClick = {},
+            isProcessing = false,
+            processingProgress = 0,
+            onBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenProcessingPreview() {
+    CareMemoTheme {
+        SettingsScreenContent(
+            isMaskingEnabled = false,
+            localRecorderName = "記録者名",
+            onMaskingChange = {},
+            onRecorderNameChange = {},
+            endedUserCount = 2,
+            onNavigateToRestore = {},
+            onEraseClick = {},
+            isBackupPasswordEnabled = true,
+            localBackupPassword = "password",
+            isPasswordValid = true,
+            isPasswordVisible = false,
+            onBackupPasswordEnabledChange = {},
+            onBackupPasswordChange = {},
+            onPasswordVisibilityToggle = {},
+            onExportClick = {},
+            onImportClick = {},
+            isBiometricEnabled = true,
+            lockTimeoutMinutes = 5,
+            onBiometricEnabledChange = {},
+            onTimeoutClick = {},
+            themeSetting = ThemeSetting.SYSTEM,
+            onThemeClick = {},
+            onHelpClick = {},
+            onVersionClick = {},
+            onClearAllClick = {},
+            isProcessing = true,
+            processingProgress = 45,
+            onBack = {}
+        )
     }
 }

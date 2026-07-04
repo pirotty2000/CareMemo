@@ -319,7 +319,7 @@ data class PersonSummaryQueryResult(
     val hasMedication: Boolean
 )
 
-// --- 計算・判定用拡張関数（基軸となる HealthThresholds を使用） ---
+// --- 計算・判定用拡張関数（基軸となる AppThresholds を使用） ---
 
 fun HeightAndWeight.calculateBMI(): Double {
     val h = height ?: 0.0
@@ -329,34 +329,34 @@ fun HeightAndWeight.calculateBMI(): Double {
     return w / (heightM * heightM)
 }
 
-fun HeightAndWeight.getBmiResult(context: Context): Pair<String, HealthThresholds.AlertLevel> {
-    val (resId, alert) = HealthThresholds.evaluateBMI(calculateBMI())
+fun HeightAndWeight.getBmiResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
+    val (resId, alert) = AppThresholds.evaluateBMI(calculateBMI())
     return (resId?.let { context.getString(it) } ?: "---") to alert
 }
 
-fun BpAndPulse.getVitalResults(context: Context): List<Pair<String, HealthThresholds.AlertLevel>> =
-    HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature).map {
+fun BpAndPulse.getVitalResults(context: Context): List<Pair<String, AppThresholds.AlertLevel>> =
+    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature).map {
         context.getString(it.first) to it.second
     }
 
-fun BpAndPulse.getWorstAlertLevel(): HealthThresholds.AlertLevel =
-    HealthThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
-        .maxByOrNull { it.second.severity }?.second ?: HealthThresholds.AlertLevel.NORMAL
+fun BpAndPulse.getWorstAlertLevel(): AppThresholds.AlertLevel =
+    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
+        .maxByOrNull { it.second.severity }?.second ?: AppThresholds.AlertLevel.NORMAL
 
-fun GlucoseAndHbA1c.getGlucoseResult(context: Context): Pair<String, HealthThresholds.AlertLevel> {
-    val (resId, alert) = HealthThresholds.evaluateGlucose(glucose)
+fun GlucoseAndHbA1c.getGlucoseResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
+    val (resId, alert) = AppThresholds.evaluateGlucose(glucose)
     return (resId?.let { context.getString(it) } ?: "---") to alert
 }
 
-fun GlucoseAndHbA1c.getHbA1cResult(context: Context): Pair<String, HealthThresholds.AlertLevel> {
-    val (resId, alert) = HealthThresholds.evaluateHbA1c(hba1c)
+fun GlucoseAndHbA1c.getHbA1cResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
+    val (resId, alert) = AppThresholds.evaluateHbA1c(hba1c)
     return (resId?.let { context.getString(it) } ?: "---") to alert
 }
 
-fun GlucoseAndHbA1c.getWorstAlertLevel(): HealthThresholds.AlertLevel =
+fun GlucoseAndHbA1c.getWorstAlertLevel(): AppThresholds.AlertLevel =
     maxOfBySeverity(
-        HealthThresholds.evaluateGlucose(glucose).second,
-        HealthThresholds.evaluateHbA1c(hba1c).second
+        AppThresholds.evaluateGlucose(glucose).second,
+        AppThresholds.evaluateHbA1c(hba1c).second
     )
 
 fun GlucoseAndHbA1c.getCombinedResultText(context: Context): String {
@@ -365,5 +365,5 @@ fun GlucoseAndHbA1c.getCombinedResultText(context: Context): String {
     return if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
 }
 
-private fun maxOfBySeverity(a: HealthThresholds.AlertLevel, b: HealthThresholds.AlertLevel): HealthThresholds.AlertLevel =
+private fun maxOfBySeverity(a: AppThresholds.AlertLevel, b: AppThresholds.AlertLevel): AppThresholds.AlertLevel =
     if (a.severity >= b.severity) a else b

@@ -13,7 +13,7 @@ class ConditionRepository(
     fun getConditionAtVisitByPersonId(personId: Int): Flow<List<ConditionAtVisit>> = 
         conditionAtVisitDao.getByPersonId(personId)
     
-    suspend fun insertConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.insert(item)
+    suspend fun insertConditionAtVisit(item: ConditionAtVisit): Long = conditionAtVisitDao.insert(item)
     
     suspend fun deleteConditionAtVisit(item: ConditionAtVisit) = conditionAtVisitDao.delete(item)
 
@@ -21,7 +21,10 @@ class ConditionRepository(
     fun getConditionPhotosByConditionId(conditionId: Int): Flow<List<ConditionPhoto>> = 
         conditionPhotoDao.getByConditionId(conditionId)
 
-    suspend fun insertConditionPhoto(item: ConditionPhoto) = conditionPhotoDao.insert(item)
+    suspend fun insertConditionPhoto(item: ConditionPhoto): Long = conditionPhotoDao.insert(item)
+
+    suspend fun linkTemporaryPhotosToRecord(personId: Int, newConditionId: Int) = 
+        conditionPhotoDao.linkTemporaryPhotosToRecord(personId, newConditionId)
 
     suspend fun deleteConditionPhotoById(id: Int) = conditionPhotoDao.deleteById(id)
     

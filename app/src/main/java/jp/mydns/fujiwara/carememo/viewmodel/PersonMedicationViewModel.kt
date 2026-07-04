@@ -90,27 +90,35 @@ class PersonMedicationViewModel(
     }
 
     /**
-     * 服薬記録を保存または更新する
+     * 特定の日の服薬状況を一括同期（保存・更新・削除）する。
+     * @param date 対象日 (yyyy-MM-dd)
+     * @param personId 利用者ID
+     * @param slotRecords 4スロット（朝・昼・夕・寝る前）の最新状態。nullのスロットは「記録なし（削除対象）」とみなす。
      */
-    fun saveMedicationRecord(record: MedicationRecord) {
+    fun syncMedicationDay(date: String, personId: Int, slotRecords: List<MedicationRecord?>) {
         viewModelScope.launch {
             try {
-                medicationRepository.insertMedicationRecord(record)
+                // 現在のその日のデータを取得（差分判定用）
+                // 本来はリポジトリ経由で最新を取得すべきだが、StateFlowのrecordsByDate[date]でも概ね安全
+                val currentDayRecords = recordsByDate.value[date] ?: emptyList()
+                
+                slotRecords.forEachIndexed { index, newRecord ->
+                    val existingRecord = currentDayRecords.find { it.timeSlot == index }
+                    
+                    if (newRecord != null) {
+                        // ケース1: 入力あり -> 追加または更新
+                        // IDが0でも @Upsert なので、既存があれば更新、なければ追加される
+                        medicationRepository.insertMedicationRecord(newRecord)
+                    } else {
+                        // ケース2: 入力なし（未選択） -> 既存があれば削除
+                        existingRecord?.let {
+                            medicationRepository.deleteMedicationRecord(it)
+                        }
+                    }
+                }
+                showSnackbar("服薬状況を更新しました")
             } catch (e: Exception) {
-                showError("保存エラー", "服薬記録の保存に失敗しました: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    /**
-     * 特定の記録を削除する
-     */
-    fun deleteMedicationRecord(record: MedicationRecord) {
-        viewModelScope.launch {
-            try {
-                medicationRepository.deleteMedicationRecord(record)
-            } catch (e: Exception) {
-                showError("削除エラー", "服薬記録の削除に失敗しました: ${e.localizedMessage}")
+                showError("更新エラー", "服薬状況の更新に失敗しました: ${e.localizedMessage}")
             }
         }
     }

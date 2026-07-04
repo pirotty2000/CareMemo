@@ -18,8 +18,10 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import android.util.Base64
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -83,6 +85,12 @@ class SettingsViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList(),
         )
+
+    private val _isProcessing = MutableStateFlow(false)
+    val isProcessing = _isProcessing.asStateFlow()
+
+    private val _processingProgress = MutableStateFlow(0)
+    val processingProgress = _processingProgress.asStateFlow()
 
     fun setNameMaskingEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -162,7 +170,7 @@ class SettingsViewModel(
                 val jsonFile = File(tempDir, "backup.json")
                 jsonFile.writeText(jsonString)
 
-                val photosDir = ImageUtils.getPhotosDir(context)
+                val photosDir = ImageUtils.getPhotosDirPublic(context)
                 val filesToZip = mutableListOf<File>()
                 filesToZip.add(jsonFile)
                 if (photosDir.exists() && (photosDir.list()?.isNotEmpty() == true)) {
@@ -179,7 +187,16 @@ class SettingsViewModel(
                     Base64.encodeToString(dbKey, Base64.NO_WRAP)
                 }
 
-                ZipUtils.zip(filesToZip, tempZipFile, password)
+                _isProcessing.value = true
+                _processingProgress.value = 0
+                
+                ZipUtils.zip(
+                    files = filesToZip,
+                    zipFile = tempZipFile,
+                    password = password,
+                    onProgress = { _processingProgress.value = it }
+                ).getOrThrow()
+
                 context.contentResolver.openOutputStream(uri)?.use { output: OutputStream ->
                     tempZipFile.inputStream().use { input: InputStream ->
                         input.copyTo(output)
@@ -189,6 +206,7 @@ class SettingsViewModel(
             } catch (e: Exception) {
                 showError("エラー", "エクスポートに失敗しました: ${e.localizedMessage}")
             } finally {
+                _isProcessing.value = false
                 // 一時ファイルの確実な削除
                 tempDir?.deleteRecursively()
                 tempZipFile?.delete()
@@ -275,7 +293,16 @@ class SettingsViewModel(
     private suspend fun proceedImportZip(context: Context, zipFile: File, password: String?) {
         val tempDir = zipFile.parentFile ?: File(context.cacheDir, "import_exec")
         try {
-            ZipUtils.unzip(zipFile, tempDir, password)
+            _isProcessing.value = true
+            _processingProgress.value = 0
+            
+            ZipUtils.unzip(
+                zipFile = zipFile,
+                targetDir = tempDir,
+                password = password,
+                onProgress = { _processingProgress.value = it }
+            ).getOrThrow()
+
             val jsonFile = File(tempDir, "backup.json")
             if (!jsonFile.exists()) throw Exception("バックアップファイル(backup.json)が見つかりません。")
             
@@ -287,13 +314,14 @@ class SettingsViewModel(
             ImageUtils.clearPhotosDir(context)
             val extractedPhotosDir = File(tempDir, "photos")
             if (extractedPhotosDir.exists() && extractedPhotosDir.isDirectory) {
-                val appPhotosDir = ImageUtils.getPhotosDir(context)
+                val appPhotosDir = ImageUtils.getPhotosDirPublic(context)
                 extractedPhotosDir.listFiles()?.forEach { file ->
                     file.copyTo(File(appPhotosDir, file.name), overwrite = true)
                 }
             }
             sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データと写真の復元が完了しました。"))
         } finally {
+            _isProcessing.value = false
             // 解凍に使用した一時ディレクトリのクリーンアップ
             tempDir.deleteRecursively()
         }
