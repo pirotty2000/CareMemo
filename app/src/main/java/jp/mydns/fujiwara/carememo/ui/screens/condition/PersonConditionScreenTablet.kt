@@ -30,7 +30,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -70,8 +69,6 @@ fun PersonConditionScreenTablet(
     onDeletePhoto: (ConditionPhoto) -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
-    val context = LocalContext.current
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {

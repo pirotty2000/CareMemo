@@ -30,7 +30,6 @@ class DeleteOrRestorePersonViewModel(
     }
 
     private val _mode = MutableStateFlow(OperationMode.RESTORE)
-    val mode: StateFlow<OperationMode> = _mode.asStateFlow()
 
     /**
      * モードを設定します。
@@ -111,20 +110,6 @@ class DeleteOrRestorePersonViewModel(
                 clearSelection()
             } catch (e: Exception) {
                 showError("削除エラー", "データの抹消に失敗しました: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    /**
-     * 単一の利用者を復元します。
-     */
-    fun restoreSinglePerson(person: Person) {
-        viewModelScope.launch {
-            try {
-                repository.restorePerson(person.id)
-                showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを一覧に戻しました")
-            } catch (e: Exception) {
-                showError("復帰エラー", "利用者の復帰に失敗しました: ${e.localizedMessage}")
             }
         }
     }

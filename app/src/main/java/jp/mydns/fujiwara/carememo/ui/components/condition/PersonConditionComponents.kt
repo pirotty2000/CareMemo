@@ -218,7 +218,6 @@ fun ConditionDetailPane(
      if (isEditing) {
          // ---------- 所見メモ・編集画面 ----------
          ConditionRecordEditForm(
-            personId = personId,
             conditionId = conditionId,
             dateTimeState = dateTimeState,
             title = title,
@@ -384,7 +383,6 @@ private fun ConditionRecordDisplayCard(
  */
 @Composable
 private fun ConditionRecordEditForm(
-    personId: Int,
     conditionId: Int,
     dateTimeState: DateTimeInputState,
     title: String,

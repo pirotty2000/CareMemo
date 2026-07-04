@@ -42,9 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
