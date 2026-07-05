@@ -42,7 +42,7 @@ object ZipUtils {
             }
 
             if (isEncrypted) {
-                zip.setPassword(password!!.toCharArray())
+                zip.setPassword(password.toCharArray())
             }
 
             // 非同期モードを有効にして進捗を監視可能にする
