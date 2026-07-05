@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
+/**
+ * Component：PersonHeaderTitle
+ *
+ * 【役割】：
+ * TopAppBar 等に表示される、利用者の基本情報（氏名、ふりがな、年齢、識別メモ）を含むタイトル部分を描画する。
+ *
+ * 【主な機能】：
+ * ・利用者の名前とふりがなに対するマスキング（伏せ字）の適用。
+ * ・生年月日から計算された現在の年齢の表示。
+ * ・同一人物を識別するための備考（note）の併記。
+ * ・利用者情報がない場合（初期表示等）のデフォルトタイトルの表示。
+ *
+ * 【想定する利用場所】：
+ * 詳細画面（健康、所見、服薬）の TopAppBar、一括入力画面など。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 情報の編集機能の提供。
+ *
+ * 【公開composable】：
+ * PersonHeaderTitle
+ */
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text

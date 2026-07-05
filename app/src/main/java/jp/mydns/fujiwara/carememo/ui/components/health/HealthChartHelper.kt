@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.health
 
+/**
+ * Component：HealthChartHelper
+ *
+ * 【役割】：
+ * 健康記録のグラフ描画に必要なデータ変換、設定生成、および配色管理を行うユーティリティ。
+ *
+ * 【主な機能】：
+ * ・各健康カテゴリ（血圧、血糖値、BMI等）に応じたグラフ設定（HealthChartConfig）の生成。
+ * ・原材料データ（HistoryRecord 等）からグラフ用座標データ（ChartPoint）への変換。
+ * ・各テーマ（ライト/ダーク）に最適化したグラフ背景のハイライト色の定義。
+ * ・判定基準（AppThresholds）に基づくアラート範囲（VisualRange）のグラフ用マッピング。
+ *
+ * 【想定する利用場所】：
+ * HealthGraphView, GraphExpansionScreen, PdfExporter。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * Canvas を用いた直接の描画処理（LineChart が担当）。
+ *
+ * 【公開composable】：
+ * なし（ロジッククラス）
+ */
+
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.data.*

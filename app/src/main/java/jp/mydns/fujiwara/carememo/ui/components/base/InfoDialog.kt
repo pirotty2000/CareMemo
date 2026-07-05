@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
+/**
+ * Component：InfoDialog
+ *
+ * 【役割】：
+ * ユーザーに重要な情報やエラーメッセージを通知するための共通ダイアログを提供する。
+ *
+ * 【主な機能】：
+ * ・タイトル（任意）と本文の表示。
+ * ・閉じボタン（確定ボタン）のみのシンプルな構成。
+ * ・多目的（情報、警告、成功報告、エラー）に利用可能。
+ *
+ * 【想定する利用場所】：
+ * 登録成功時の報告、入力エラーの通知、システムからのメッセージ表示等、アプリ全般。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 選択肢（Yes/No）による分岐（選択が必要な場合は AlertDialog や専用ダイアログを使用する）。
+ *
+ * 【公開composable】：
+ * InfoDialog
+ */
+
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton

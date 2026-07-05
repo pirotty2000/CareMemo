@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.components.main
 
+/**
+ * Component：CompactTextField
+ *
+ * 【役割】：
+ * 数値を入力する際など、省スペースかつ整った見た目が必要な場面で使用される共通の入力フィールドを提供する。
+ *
+ * 【主な機能】：
+ * ・Material3 の OutlinedTextField をベースに、余白（padding）や文字配置（中央揃え）を最適化した軽量なテキスト入力。
+ * ・読み取り専用モード（readOnly）への対応。
+ * ・エラー表示（isError）およびサフィックス（単位表示等）のサポート。
+ *
+ * 【想定する利用場所】：
+ * 生年月日入力、記録日時入力、および各種数値入力フィールド。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 入力値のバリデーションや数値変換ロジック。
+ *
+ * 【公開composable】：
+ * CompactTextField
+ */
+
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.BasicTextField

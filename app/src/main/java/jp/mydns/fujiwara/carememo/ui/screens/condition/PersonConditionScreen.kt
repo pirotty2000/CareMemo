@@ -3,20 +3,18 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
 /**
  * Screen : PersonConditionScreen
  *
- * 【画面名】：
- * 利用者所見記録画面
+ * 【画面名】：利用者所見記録画面
  *
  * 【役割】：
  * 利用者の日々の様子や気になる変化を「所見メモ（カテゴリB）」として詳細に記録・閲覧する画面。
  * テキストによる記録に加え、写真撮影による視覚的な記録保存も担当する。
  *
  * 【主な機能】：
- * ・利用者情報の表示（ヘッダー）
- * ・履歴一覧と詳細表示の切り替え（Phone版）
- * ・2ペインレイアウトによる一覧と詳細の同時表示（Tablet版）
- * ・所見記録のCRUD操作（新規登録、編集、スワイプ削除）
- * ・写真の管理（撮影連携、表示、削除）
- * ・PDFレポート出力機能
+ * ・利用者情報の表示（ヘッダー）。
+ * ・履歴一覧と詳細表示の切り替え（Phone版はシングルペイン、Tablet版は2ペイン）。
+ * ・所見記録のCRUD操作（新規登録、編集、スワイプ削除）。
+ * ・写真の管理（撮影連携、表示、削除）。
+ * ・PDFレポート出力機能。
  *
  * 【遷移】：
  * ← MainScreen (戻るボタン)
@@ -27,13 +25,12 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  * ・PersonConditionViewModel (所見記録固有ロジック)
  *
  * 【使用するComponents】：
- * ・screens/detail/condition/PersonConditionScreenPhone.kt
- * ・screens/detail/condition/PersonConditionScreenTablet.kt
- * ・detail/common/PdfExportActionHandler.kt
+ * ・PersonConditionScreenPhone / PersonConditionScreenTablet / PersonConditionScreenContent
+ * ・common/PdfExportActionHandler.kt
  * ・base/DeleteConfirmDialog.kt
+ * ・base/InfoDialog.kt
  *
  * 【備考】：
- * 文字だけでは伝わりにくい患部の状態などを写真として残すことで、より正確な情報の共有を可能にする。
  * 画面サイズ（WindowWidthSizeClass）に基づき、Phone版とTablet版を自動的に切り替える。
  */
 

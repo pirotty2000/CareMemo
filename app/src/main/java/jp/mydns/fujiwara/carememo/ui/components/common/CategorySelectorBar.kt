@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
+/**
+ * Component：CategorySelectorBar
+ *
+ * 【役割】：
+ * 利用者詳細画面において、記録カテゴリ（健康記録、所見メモ、服薬管理など）を切り替えるための共通ナビゲーションバーを提供する。
+ *
+ * 【主な機能】：
+ * ・カテゴリ一覧（Category.entries）の水平スクロール表示。
+ * ・現在選択されているカテゴリの強調表示と、自動スクロール（LaunchedEffect）。
+ * ・各カテゴリに記録データが存在するかどうかを示す視覚的フィードバック（ボーダー強調）。
+ *
+ * 【想定する利用場所】：
+ * 各利用者詳細画面（PersonHealthScreen, PersonConditionScreen, PersonMedicationScreen）。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 画面遷移自体の実行（クリックイベントを親に通知するのみ）。
+ *
+ * 【公開composable】：
+ * CategorySelectorBar
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow

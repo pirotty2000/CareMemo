@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
+/**
+ * Component：BirthdayInputFields
+ *
+ * 【役割】：
+ * 利用者の生年月日を入力するためのUIコンポーネントと、その状態管理を提供する。
+ *
+ * 【主な機能】：
+ * ・元号（西暦、昭和、平成、令和）の選択ドロップダウンの提供。
+ * ・年、月、日の数値入力フィールドの提供（CompactTextField を利用）。
+ * ・入力値のバリデーション（存在しない日付のチェック等）と、Instant への変換。
+ * ・入力フォーカス取得時の自動クリア動作（利便性向上）。
+ *
+ * 【想定する利用場所】：
+ * 利用者登録・編集ダイアログ（UserEditDialog）。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * データベースへの保存処理や、年齢の直接計算。
+ *
+ * 【公開composable】：
+ * BirthdayInputFields, rememberBirthdayInputState
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*

@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.health
 
+/**
+ * Component：HealthGraphView
+ *
+ * 【役割】：
+ * 健康記録の各指標（血圧、血糖値等）をカテゴリごとにグラフ化して表示するコンテナコンポーネント。
+ *
+ * 【主な機能】：
+ * ・カテゴリごとの複数グラフ（血圧なら3種、血糖値なら2種等）の自動レイアウト表示。
+ * ・HealthChartHelper と連携した、現在のテーマ（ライト/ダーク）に合わせた動的な配色生成。
+ * ・グラフごとの「数値の目安（ヘルプ）」ダイアログ表示機能。
+ * ・グラフ拡大画面（GraphExpansionScreen）への遷移トリガーの提供。
+ *
+ * 【想定する利用場所】：
+ * 健康記録のメインコンテンツ領域（PersonHealthScreenContent）、および拡大表示画面。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * グラフ描画エンジン自体の実装（LineChart が担当）や、詳細データの数値リスト表示。
+ *
+ * 【公開composable】：
+ * HealthGraphView
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.Icons

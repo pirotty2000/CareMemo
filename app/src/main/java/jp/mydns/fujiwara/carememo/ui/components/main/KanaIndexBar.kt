@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.components.main
 
+/**
+ * Component：KanaIndexBar
+ *
+ * 【役割】：
+ * 利用者一覧を「あいうえお順」の行（あ行、か行等）でフィルタリングするための、水平インデックス選択バーを提供する。
+ *
+ * 【主な機能】：
+ * ・「全」「あ」〜「わ」「他」のセクションリストの水平表示。
+ * ・現在選択されているセクションの強調表示（アンダーライン）。
+ * ・選択されたセクションへの自動スクロール（LaunchedEffect）。
+ *
+ * 【想定する利用場所】：
+ * 利用者一覧画面（MainScreen）の上部。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 実際のフィルタリングロジック（選択されたセクション名を呼び出し元に通知するのみ）。
+ *
+ * 【公開composable】：
+ * KanaIndexBar
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

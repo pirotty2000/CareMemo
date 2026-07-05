@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
+/**
+ * Component：PdfExportActionHandler
+ *
+ * 【役割】：
+ * PDF出力に関連する一連のユーザーアクション（設定ダイアログ表示、出力処理実行、結果通知）を共通で処理する。
+ *
+ * 【主な機能】：
+ * ・PdfSettingsDialog の表示制御。
+ * ・PdfExporter と連携した PDF 生成および共有インテントの呼び出し。
+ * ・出力成功/失敗時のスナックバーによるフィードバック。
+ * ・外部共有画面からの復帰時におけるアプリロックのバイパス制御。
+ *
+ * 【想定する利用場所】：
+ * 各カテゴリ（健康、所見、服薬）の詳細画面。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * PDFの描画ロジック自体（PdfExporter が担当）や、設定ダイアログの内部 UI 定義（PdfSettingsDialog が担当）。
+ *
+ * 【公開composable】：
+ * PdfExportActionHandler
+ */
+
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope

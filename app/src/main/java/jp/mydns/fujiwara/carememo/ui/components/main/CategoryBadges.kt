@@ -1,5 +1,25 @@
 package jp.mydns.fujiwara.carememo.ui.components.main
 
+/**
+ * Component：CategoryBadges
+ *
+ * 【役割】：
+ * 利用者の各カテゴリ（健康記録、所見メモ、服薬管理）における記録の有無を、色付きのバッジ（漢字一文字）で視覚的に表現する。
+ *
+ * 【主な機能】：
+ * ・「身」「バ」「糖」「メ」「薬」の各バッジを 2x2+1 のグリッド形式で表示。
+ * ・記録データが存在する場合（isActive）は鮮やかなアクセントカラー、存在しない場合はグレーアウトして表示。
+ *
+ * 【想定する利用場所】：
+ * 利用者一覧画面（MainScreen）の各リストアイテム内。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 個別の記録データの詳細表示や、バッジ自体のクリックイベント処理。
+ *
+ * 【公開composable】：
+ * CategoryBadges
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme

@@ -3,21 +3,29 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
 /**
  * Screen : ConditionPhotoPreviewScreen
  *
- * 【画面名】
- * 写真撮影・選択プレビュー画面
+ * 【画面名】：写真撮影・選択プレビュー画面
  *
- * 【役割】
- * カメラで撮影した直後、またはギャラリーから選択した直後の写真をプレビューし、
- * 所見メモへの保存を確定させる、あるいは再撮影・再選択を選択するための画面。
+ * 【役割】：
+ * カメラ撮影またはギャラリー選択直後の写真をプレビューし、保存の確定または再試行を選択するための画面。
  *
- * 【主な機能】
- * ・即時プレビュー：取り込まれた画像の構図やピントの最終確認。
- * ・決定/キャンセル操作：写真の採用・不採用の選択。
+ * 【主な機能】：
+ * ・取り込まれた画像のプレビュー表示。
+ * ・キャプション（説明文）の入力。
+ * ・画像の保存処理（ViewModel への委譲）および一時ファイルの削除。
  *
- * 【遷移】
- * ← PersonConditionScreen（写真取得後に自動遷移）
+ * 【遷移】：
+ * ← PersonConditionScreen（写真取得後に遷移）
+ * → PersonConditionScreen（保存完了またはキャンセル時に戻る）
  *
- * 【備考】
+ * 【使用するViewModel】：
+ * ・PersonDetailViewModel（利用者情報表示用）
+ * ・PersonConditionViewModel（画像処理・保存用）
+ *
+ * 【使用するComponents】：
+ * ・base/LoadingScreen.kt
+ * ・common/PersonHeaderTitle.kt
+ *
+ * 【備考】：
  * 誤った写真を保存することを防ぐための確認ステップとして機能する。
  */
 

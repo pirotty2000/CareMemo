@@ -1,5 +1,26 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
+/**
+ * Component：VerticalScrollIndicator
+ *
+ * 【役割】：
+ * 画面のスクロール位置を視覚的に補助するための垂直インジケーターを提供する。
+ *
+ * 【主な機能】：
+ * ・ScrollState（Column用）および LazyListState（LazyColumn用）の両方に対応。
+ * ・現在のスクロール位置に応じたスライドバーと、上部/下部のどちらに近いかを示すドット表示。
+ * ・スクロール不可な場合は自動的に非表示。
+ *
+ * 【想定する利用場所】：
+ * 詳細画面、履歴リスト、設定画面など、コンテンツが長い画面の右端。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * スクロール自体の制御（あくまで表示のみを担当）。
+ *
+ * 【公開composable】：
+ * VerticalScrollIndicator
+ */
+
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

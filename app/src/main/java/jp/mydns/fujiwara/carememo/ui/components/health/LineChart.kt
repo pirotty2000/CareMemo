@@ -1,5 +1,28 @@
 package jp.mydns.fujiwara.carememo.ui.components.health
 
+/**
+ * Component：LineChart
+ *
+ * 【役割】：
+ * Canvas を使用して、時系列データの折れ線グラフを低レイヤーで描画する汎用エンジンを提供する。
+ *
+ * 【主な機能】：
+ * ・複数のデータ系列（dataList）の同時描画。
+ * ・ピンチズームによるX軸の拡大・縮小、およびスワイプによるスクロール。
+ * ・グラフ上の点をタップした際の詳細情報（ツールチップ）の表示。
+ * ・目標値（limits）や背景ハイライト（ranges）の描画。
+ * ・動的なY軸目盛りの計算と表示。
+ *
+ * 【想定する利用場所】：
+ * HealthGraphView 内、およびグラフ拡大表示画面。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * データの加工ロジックや、カテゴリに応じた設定の生成（HealthChartHelper が担当）。
+ *
+ * 【公開composable】：
+ * LineChart
+ */
+
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures

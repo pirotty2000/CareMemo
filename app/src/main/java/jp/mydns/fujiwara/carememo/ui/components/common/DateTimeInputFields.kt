@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
+/**
+ * Component：DateTimeInputFields
+ *
+ * 【役割】：
+ * 記録日時（年月日時分）を入力するためのUIコンポーネントと、その状態管理を提供する。
+ *
+ * 【主な機能】：
+ * ・年、月、日、時、分の各数値入力フィールドの提供（CompactTextField を利用）。
+ * ・入力完了時や最大桁数到達時の自動フォーカス移動。
+ * ・入力値のバリデーションと、Instant への変換ロジック。
+ * ・新規記録時や編集時における初期日時の柔軟な設定。
+ *
+ * 【想定する利用場所】：
+ * 健康記録、所見メモ、一括入力画面などの記録日時設定箇所。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 和暦（令和等）での表示・入力（本コンポーネントは西暦数値入力に特化）。
+ *
+ * 【公開composable】：
+ * DateTimeInputFields, rememberDateTimeInputState
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions

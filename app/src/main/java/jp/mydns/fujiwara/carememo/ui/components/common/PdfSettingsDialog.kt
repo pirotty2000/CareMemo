@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
+/**
+ * Component：PdfSettingsDialog
+ *
+ * 【役割】：
+ * PDFを出力する際の詳細設定（期間、並び順、セキュリティ等）をユーザーが指定するためのダイアログを提供する。
+ *
+ * 【主な機能】：
+ * ・抽出範囲の選択（全期間、直近、カスタム期間指定など）。
+ * ・日付選択（DatePicker）によるカスタム期間の指定。
+ * ・並び順（昇順/降順）および写真を含めるかどうかの設定。
+ * ・出力されるPDFに対するパスワード保護（6桁以上）の設定。
+ *
+ * 【想定する利用場所】：
+ * 各カテゴリ（健康、所見、服薬）の詳細画面からのPDF出力時。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 実際のPDF生成処理（PdfExporter が担当）。
+ *
+ * 【公開composable】：
+ * PdfSettingsDialog
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

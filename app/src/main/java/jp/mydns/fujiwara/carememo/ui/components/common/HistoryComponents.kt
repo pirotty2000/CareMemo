@@ -1,5 +1,27 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
+/**
+ * Component：HistoryComponents
+ *
+ * 【役割】：
+ * 時系列の履歴リストを表示するための、アプリ共通の基盤コンポーネントを提供する。
+ *
+ * 【主な機能】：
+ * ・日付ごとの自動グルーピングと、粘着ヘッダー（stickyHeader）による視認性の向上。
+ * ・スワイプによる削除操作（SwipeToDismissBox）の標準実装。
+ * ・選択状態に応じた背景色の変更管理。
+ * ・リストアイテムの内容を外部から自由に定義できるスロット（itemContent）の提供。
+ *
+ * 【想定する利用場所】：
+ * 健康記録、所見メモなどの履歴リスト表示箇所。
+ *
+ * 【このコンポーネントでは行わないこと】：
+ * 個別の記録データの具体的な描画（具体的な表示内容は呼び出し側が Composable として提供する）。
+ *
+ * 【公開composable】：
+ * PersonHistoryList, HistoryItemWrapper
+ */
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
