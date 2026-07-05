@@ -160,7 +160,29 @@ fun SettingsScreen(
     }
 
     if (showImportUri != null) {
-        AlertDialog(onDismissRequest = { showImportUri = null }, title = { Text("データの復元") }, text = { Text("現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？") }, confirmButton = { Button(onClick = { viewModel.importData(context, showImportUri!!); showImportUri = null }) { Text("復元を実行") } }, dismissButton = { TextButton(onClick = { showImportUri = null }) { Text("キャンセル") } })
+        AlertDialog(
+            onDismissRequest = { showImportUri = null },
+            title = { Text("データの復元") },
+            text = {
+                val scrollState = rememberScrollState()
+                Box {
+                    Column(modifier = Modifier.verticalScroll(scrollState)) {
+                        Text("現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？")
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.importData(context, showImportUri!!); showImportUri = null }) {
+                    Text("復元を実行")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportUri = null }) {
+                    Text("キャンセル")
+                }
+            }
+        )
     }
 
     if (showEraseConfirm) {
@@ -189,12 +211,12 @@ fun SettingsScreen(
             onDismissRequest = { viewModel.clearInconsistencyResults() },
             title = { Text("データベース不整合レポート") },
             text = {
+                val scrollState = rememberScrollState()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("以下の ${inconsistencies.size} 件の孤立したデータが見つかりました：", style = MaterialTheme.typography.bodySmall)
                     
                     Box(modifier = Modifier.heightIn(max = 300.dp)) {
-                        val scroll = rememberScrollState()
-                        Column(modifier = Modifier.verticalScroll(scroll)) {
+                        Column(modifier = Modifier.verticalScroll(scrollState)) {
                             inconsistencies.forEach { inc ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -216,6 +238,7 @@ fun SettingsScreen(
                                 }
                             }
                         }
+                        VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
                     }
                     Text("これらは親データ（利用者）が存在しない無効な記録です。クリーンアップを実行して削除することをお勧めします。", 
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
@@ -248,8 +271,6 @@ fun SettingsScreen(
             title = { Text("再ロックまでの時間") },
             text = {
                 val scrollState = rememberScrollState()
-                val canScrollUp by remember { derivedStateOf { scrollState.value > 0 } }
-                val canScrollDown by remember { derivedStateOf { scrollState.value < scrollState.maxValue } }
                 Box {
                     Column(modifier = Modifier.verticalScroll(scrollState)) {
                         options.forEach { (minutes, label) ->
@@ -282,12 +303,7 @@ fun SettingsScreen(
                             }
                         }
                     }
-                    if (canScrollUp) {
-                        Icon(imageVector = Icons.Rounded.KeyboardArrowUp, contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape), tint = MaterialTheme.colorScheme.primary)
-                    }
-                    if (canScrollDown) {
-                        Icon(imageVector = Icons.Rounded.KeyboardArrowDown, contentDescription = null, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape), tint = MaterialTheme.colorScheme.primary)
-                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
                 }
             },
             confirmButton = { TextButton(onClick = { showTimeoutDialog = false }) { Text("キャンセル") } }
@@ -300,8 +316,6 @@ fun SettingsScreen(
             title = { Text("配色とモードの選択") },
             text = {
                 val scrollState = rememberScrollState()
-                val canScrollUp by remember { derivedStateOf { scrollState.value > 0 } }
-                val canScrollDown by remember { derivedStateOf { scrollState.value < scrollState.maxValue } }
                 Box(modifier = Modifier.heightIn(max = 400.dp)) {
                     Column(modifier = Modifier.verticalScroll(scrollState)) {
                         ThemeSetting.entries.forEach { selectionOption ->
@@ -312,12 +326,7 @@ fun SettingsScreen(
                             }
                         }
                     }
-                    if (canScrollUp) {
-                        Icon(imageVector = Icons.Rounded.KeyboardArrowUp, contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape), tint = MaterialTheme.colorScheme.primary)
-                    }
-                    if (canScrollDown) {
-                        Icon(imageVector = Icons.Rounded.KeyboardArrowDown, contentDescription = null, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape), tint = MaterialTheme.colorScheme.primary)
-                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
                 }
             },
             confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("キャンセル") } }
@@ -326,7 +335,51 @@ fun SettingsScreen(
 
     if (showPasswordInputDialog) {
         var isInputPasswordVisible by remember { mutableStateOf(false) }
-        AlertDialog(onDismissRequest = { showPasswordInputDialog = false }, title = { Text("パスワードの入力") }, text = { Column { Text("このファイルはパスワード保護されています。入力してください。"); Spacer(modifier = Modifier.height(16.dp)); OutlinedTextField(value = inputPasswordForImport, onValueChange = { inputPasswordForImport = it }, label = { Text("パスワード") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = if (isInputPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { IconButton(onClick = { isInputPasswordVisible = !isInputPasswordVisible }) { Icon(imageVector = if (isInputPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) } }) } }, confirmButton = { Button(onClick = { viewModel.importData(context, android.net.Uri.EMPTY, inputPasswordForImport); showPasswordInputDialog = false; inputPasswordForImport = "" }, enabled = inputPasswordForImport.isNotEmpty()) { Text("実行") } }, dismissButton = { TextButton(onClick = { showPasswordInputDialog = false; inputPasswordForImport = "" }) { Text("キャンセル") } })
+        AlertDialog(
+            onDismissRequest = { showPasswordInputDialog = false },
+            title = { Text("パスワードの入力") },
+            text = {
+                val scrollState = rememberScrollState()
+                Box {
+                    Column(modifier = Modifier.verticalScroll(scrollState)) {
+                        Text("このファイルはパスワード保護されています。入力してください。")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = inputPasswordForImport,
+                            onValueChange = { inputPasswordForImport = it },
+                            label = { Text("パスワード") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            visualTransformation = if (isInputPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { isInputPasswordVisible = !isInputPasswordVisible }) {
+                                    Icon(imageVector = if (isInputPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null)
+                                }
+                            }
+                        )
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.importData(context, android.net.Uri.EMPTY, inputPasswordForImport)
+                        showPasswordInputDialog = false
+                        inputPasswordForImport = ""
+                    },
+                    enabled = inputPasswordForImport.isNotEmpty()
+                ) {
+                    Text("実行")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordInputDialog = false; inputPasswordForImport = "" }) {
+                    Text("キャンセル")
+                }
+            }
+        )
     }
 
     SettingsScreenContent(
@@ -463,6 +516,7 @@ fun SettingsScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
+                    .navigationBarsPadding() // スクロール最下部がナビゲーションバーに隠れないようにする
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -531,16 +585,22 @@ fun SettingsScreenContent(
             ),
             title = { Text("処理中...") },
             text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    LinearProgressIndicator(
-                        progress = { processingProgress / 100f },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(text = "$processingProgress%")
+                val scrollState = rememberScrollState()
+                Box {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { processingProgress / 100f },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(text = "$processingProgress%")
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
                 }
             },
             confirmButton = {}

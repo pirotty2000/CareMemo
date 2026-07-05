@@ -31,6 +31,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.PersonOff
@@ -158,7 +160,8 @@ fun DeleteOrRestorePersonScreen(
                 Surface(
                     tonalElevation = 4.dp,
                     shadowElevation = 8.dp,
-                    color = if (isDeleteMode) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface
+                    color = if (isDeleteMode) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.navigationBarsPadding() // ナビゲーションバーとの重なりを回避
                 ) {
                     Button(
                         onClick = {
@@ -188,7 +191,7 @@ fun DeleteOrRestorePersonScreen(
         ) {
             if (archivedPersons.isEmpty()) {
                 EmptyState(
-                    message = "アーカイブされている利用者はいません",
+                    message = "終了した利用者はいません",
                     icon = Icons.Outlined.PersonOff
                 )
             } else {
@@ -274,7 +277,13 @@ fun DeleteOrRestorePersonScreen(
             icon = { Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("データの完全抹消") },
             text = { 
-                Text("選択された ${selectedIds.size} 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？")
+                val scrollState = rememberScrollState()
+                Box {
+                    Column(modifier = Modifier.verticalScroll(scrollState)) {
+                        Text("選択された ${selectedIds.size} 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？")
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
+                }
             },
             confirmButton = {
                 Button(

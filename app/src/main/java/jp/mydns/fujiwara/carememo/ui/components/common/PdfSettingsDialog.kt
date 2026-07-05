@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -125,9 +126,6 @@ fun PdfSettingsDialog(
         title = { Text(stringResource(R.string.pdf_settings_title, stringResource(category.displayNameRes))) },
         text = {
             val scrollState = rememberScrollState()
-            val showScrollIndicator by remember {
-                derivedStateOf { scrollState.value < scrollState.maxValue }
-            }
             Box {
                 Column(
                     modifier = Modifier.verticalScroll(scrollState),
@@ -180,23 +178,32 @@ fun PdfSettingsDialog(
 
                     // --- 抽出範囲 ---
                     Text(stringResource(R.string.extract_range), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    ExportRange.entries.forEach { range ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (range == selectedRange),
-                                    onClick = {
-                                        selectedRange = range
-                                    },
-                                )
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = (range == selectedRange), onClick = { selectedRange = range })
-                            Text(text = stringResource(range.displayNameRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
+                    ExportRange.entries
+                        .filter { range ->
+                            // 「最新の1件のみ」は所見メモ以外では除外する（意味がないため）
+                            if (range == ExportRange.LATEST) {
+                                category == Category.CONDITION_AT_VISIT
+                            } else {
+                                true
+                            }
                         }
-                    }
+                        .forEach { range ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = (range == selectedRange),
+                                        onClick = {
+                                            selectedRange = range
+                                        },
+                                    )
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = (range == selectedRange), onClick = { selectedRange = range })
+                                Text(text = stringResource(range.displayNameRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
                     if (selectedRange == ExportRange.CUSTOM) {
                         Row(
                             modifier = Modifier
@@ -253,18 +260,8 @@ fun PdfSettingsDialog(
                     }
                 }
 
-                // スクロールが必要なことを示すインジケーター（下端に到達していない場合のみ表示）
-                if (showScrollIndicator) {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.more_items),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 4.dp)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                // 共通のスクロールインジケーターに統一
+                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
             }
         },
         confirmButton = {

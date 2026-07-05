@@ -114,9 +114,9 @@
     <string name="slot_bedtime">寝る前</string>
     <string name="export_range_all">全ての記録</string>
     <string name="export_range_latest">最新の1件のみ</string>
-    <string name="export_range_one_month">直近 1ヶ月分</string>
-    <string name="export_range_three_months">直近 3ヶ月分</string>
-    <string name="export_range_six_months">直近 半年分</string>
+    <string name="export_range_one_month">当月</string>
+    <string name="export_range_three_months">過去3ヶ月</string>
+    <string name="export_range_six_months">過去6ヶ月</string>
     <string name="export_range_custom">期間を指定する</string>
     <string name="export_order_newest">新しい順</string>
     <string name="export_order_oldest">古い順</string>

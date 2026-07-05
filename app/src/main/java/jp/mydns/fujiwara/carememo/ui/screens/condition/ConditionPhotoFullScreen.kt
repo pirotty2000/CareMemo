@@ -8,57 +8,85 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  *
  * 【役割】
  * 所見メモに関連付けられた写真を画面全体に表示し、拡大・縮小（ピンチズーム）等の操作で詳細を確認するための画面。
- *
- * 【主な機能】
- * ・フルスクリーン閲覧：ナビゲーションバー等を隠し、画像のみを全面に表示。
- * ・ジェスチャー操作：ダブルタップやピンチアウトによるズーム、ドラッグによる移動。
- * ・情報オーバーレイ：必要に応じてタイトルや説明文を画像の上に重ねて表示。
- *
- * 【遷移】
- * ← PersonConditionScreen（写真タップ時に遷移）
- *
- * 【備考】
- * 患部の微細な変化などを正確に確認するため、Coilを用いた高効率な画像読み込みとスムーズなズーム体験を提供している。
+ * スワイプによる写真の切り替えに対応している。
  */
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
+import kotlin.math.abs
 
 @Composable
 fun ConditionPhotoFullScreen(
-    fileName: String,
-    caption: String? = null,
+    conditionId: Int,
+    initialPhotoId: Int,
+    viewModel: PersonConditionViewModel,
     onBack: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val photoFile = ImageUtils.getPhotoFile(context, fileName)
+    LaunchedEffect(conditionId) {
+        viewModel.setSelectedConditionId(conditionId)
+    }
+
+    val photos by viewModel.currentConditionPhotos.collectAsState()
+
+    if (photos.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color.White)
+        }
+        return
+    }
+
+    val initialIndex = remember(photos, initialPhotoId) {
+        val index = photos.indexOfFirst { it.id == initialPhotoId }
+        if (index != -1) index else 0
+    }
+
+    val pagerState = rememberPagerState(initialPage = initialIndex, pageCount = { photos.size })
+    var isAnyImageZoomed by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
-        contentAlignment = Alignment.Center
+            .background(Color.Black)
     ) {
-        AsyncImage(
-            model = photoFile,
-            contentDescription = caption,
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
+            pageSpacing = 16.dp,
+            userScrollEnabled = !isAnyImageZoomed
+        ) { page ->
+            val photo = photos[page]
+            ZoomableImage(
+                photo = photo,
+                isCurrentPage = pagerState.currentPage == page,
+                onZoomStateChanged = { zoomed ->
+                    if (pagerState.currentPage == page) {
+                        isAnyImageZoomed = zoomed
+                    }
+                }
+            )
+        }
         
-        // オーバーレイの戻るボタン
         IconButton(
             onClick = onBack,
             modifier = Modifier
@@ -72,8 +100,8 @@ fun ConditionPhotoFullScreen(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
         }
 
-        // キャプションの表示（あれば）
-        if (!caption.isNullOrBlank()) {
+        val currentPhoto = photos.getOrNull(pagerState.currentPage)
+        if (currentPhoto != null && currentPhoto.caption.isNotBlank()) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -83,11 +111,113 @@ fun ConditionPhotoFullScreen(
                 contentColor = Color.White
             ) {
                 Text(
-                    text = caption,
+                    text = currentPhoto.caption,
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ZoomableImage(
+    photo: ConditionPhoto,
+    isCurrentPage: Boolean,
+    onZoomStateChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val photoFile = remember(photo.photoFileName) {
+        ImageUtils.getPhotoFile(context, photo.photoFileName)
+    }
+
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+
+    LaunchedEffect(isCurrentPage) {
+        if (!isCurrentPage) {
+            scale = 1f
+            offset = Offset.Zero
+            onZoomStateChanged(false)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        if (scale > 1.05f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                        } else {
+                            scale = 2.5f
+                            offset = Offset.Zero 
+                        }
+                        onZoomStateChanged(scale > 1.05f)
+                    }
+                )
+            }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    var zoom = 1f
+                    var pan = Offset.Zero
+                    var pastTouchSlop = false
+                    val touchSlop = viewConfiguration.touchSlop
+
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val canceled = event.changes.any { it.isConsumed }
+                        if (!canceled) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
+
+                            if (!pastTouchSlop) {
+                                zoom *= zoomChange
+                                pan += panChange
+                                val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                                val zoomMotion = abs(1 - zoom) * centroidSize
+                                val panMotion = pan.getDistance()
+
+                                if (zoomMotion > touchSlop || panMotion > touchSlop) {
+                                    pastTouchSlop = true
+                                }
+                            }
+
+                            if (pastTouchSlop) {
+                                val isMultiTouch = event.changes.size > 1
+                                if (scale > 1.05f || isMultiTouch) {
+                                    val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+                                    val newOffset = if (newScale > 1.05f) offset + panChange else Offset.Zero
+                                    
+                                    scale = newScale
+                                    offset = newOffset
+                                    onZoomStateChanged(scale > 1.05f)
+                                    
+                                    event.changes.forEach { 
+                                        if (it.positionChange() != Offset.Zero) it.consume() 
+                                    }
+                                }
+                            }
+                        }
+                    } while (!canceled && event.changes.any { it.pressed })
+                }
+            }
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offset.x,
+                translationY = offset.y
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = photoFile,
+            contentDescription = photo.caption,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
     }
 }

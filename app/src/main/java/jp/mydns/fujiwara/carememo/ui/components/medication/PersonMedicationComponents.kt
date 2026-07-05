@@ -31,6 +31,7 @@ package jp.mydns.fujiwara.carememo.ui.components.medication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -47,6 +48,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +67,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 
@@ -245,7 +249,7 @@ private fun DayCell(
 
     Column(
         modifier = Modifier
-            .aspectRatio(0.9f)
+            .aspectRatio(0.8f)
             .padding(1.dp)
             .border(
                 width = if (isToday) 2.dp else 0.5.dp,
@@ -296,8 +300,9 @@ private fun MedicationStatusIcon(label: String, status: Int?) {
         else -> Color.Transparent
     }
     val contentColor = when (status) {
-        2, 0 -> Color.White
-        1 -> getMedicationStatusColor(2)
+        2 -> MaterialTheme.colorScheme.onPrimary
+        1 -> Color.White
+        0 -> MaterialTheme.colorScheme.onError
         else -> Color.LightGray.copy(alpha = 0.5f)
     }
     val displayText = if (status == 0) getMedicationStatusSymbol(0) else label
@@ -394,47 +399,54 @@ fun MedicationInputDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
-                timeSlots.forEach { slot ->
-                    MedicationRow(
-                        label = getTimeSlotLabel(slot),
-                        currentRecord = tempRecords[slot],
-                        isSelectedForTime = editingSlot == slot,
-                        onStatusToggle = { status ->
-                            val current = tempRecords[slot]
-                            if (current?.status == status) {
-                                // 同じステータスなら解除（削除）
-                                syncCurrentTimeFieldsToTemp()
-                                tempRecords = tempRecords.toMutableList().apply { set(slot, null) }
-                                if (editingSlot == slot) editingSlot = null
-                            } else {
-                                // 新規またはステータス変更
-                                syncCurrentTimeFieldsToTemp()
-                                val instant = current?.recordTime ?: Instant.now()
-                                tempRecords = tempRecords.toMutableList().apply {
-                                    set(slot, MedicationRecord(
-                                        id = current?.id ?: 0,
-                                        personId = personId,
-                                        dosageDate = date.toString(),
-                                        timeSlot = slot,
-                                        status = status,
-                                        recordTime = instant
-                                    ))
+            val scrollState = rememberScrollState()
+            Box {
+                Column(
+                    modifier = Modifier.verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
+                    timeSlots.forEach { slot ->
+                        MedicationRow(
+                            label = getTimeSlotLabel(slot),
+                            currentRecord = tempRecords[slot],
+                            isSelectedForTime = editingSlot == slot,
+                            onStatusToggle = { status ->
+                                val current = tempRecords[slot]
+                                if (current?.status == status) {
+                                    // 同じステータスなら解除（削除）
+                                    syncCurrentTimeFieldsToTemp()
+                                    tempRecords = tempRecords.toMutableList().apply { set(slot, null) }
+                                    if (editingSlot == slot) editingSlot = null
+                                } else {
+                                    // 新規またはステータス変更
+                                    syncCurrentTimeFieldsToTemp()
+                                    val instant = current?.recordTime ?: Instant.now()
+                                    tempRecords = tempRecords.toMutableList().apply {
+                                        set(slot, MedicationRecord(
+                                            id = current?.id ?: 0,
+                                            personId = personId,
+                                            dosageDate = date.toString(),
+                                            timeSlot = slot,
+                                            status = status,
+                                            recordTime = instant
+                                        ))
+                                    }
+                                    startEditingSlot(slot)
                                 }
+                            },
+                            onTimeClick = {
                                 startEditingSlot(slot)
                             }
-                        },
-                        onTimeClick = {
-                            startEditingSlot(slot)
-                        }
-                    )
-                }
+                        )
+                    }
 
-                if (editingSlot != null) {
-                    HorizontalDivider()
-                    DateTimeInputFields(state = dateTimeState)
+                    if (editingSlot != null) {
+                        HorizontalDivider()
+                        DateTimeInputFields(state = dateTimeState)
+                    }
                 }
+                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
             }
         },
         confirmButton = {
@@ -526,11 +538,19 @@ private fun StatusChip(
     color: Color,
     onClick: () -> Unit
 ) {
+    // 選択時の背景色に合わせて最適な文字色を選択
+    val selectedContentColor = when (color) {
+        MaterialTheme.colorScheme.primaryContainer -> MaterialTheme.colorScheme.onPrimaryContainer
+        MaterialTheme.colorScheme.primary -> MaterialTheme.colorScheme.onPrimary
+        MaterialTheme.colorScheme.error -> MaterialTheme.colorScheme.onError
+        else -> Color.White
+    }
+
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
         color = if (isSelected) color else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+        contentColor = if (isSelected) selectedContentColor else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.height(36.dp).width(56.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -569,9 +589,12 @@ fun getTimeSlotLabel(slot: Int, isShort: Boolean = false): String {
 
 @Composable
 fun getMedicationStatusColor(status: Int): Color {
+    // 注意（Warning）用のオレンジ色（健康記録画面と共通のロジック）
+    val warningColor = if (isSystemInDarkTheme()) Color(0xFFFFB74D) else Color(0xFFE65100)
+    
     return when (status) {
         0 -> MaterialTheme.colorScheme.error
-        1 -> MaterialTheme.colorScheme.primaryContainer
+        1 -> warningColor
         2 -> MaterialTheme.colorScheme.primary
         else -> Color.Transparent
     }

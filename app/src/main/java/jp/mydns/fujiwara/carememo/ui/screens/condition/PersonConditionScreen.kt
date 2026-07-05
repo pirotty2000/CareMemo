@@ -60,11 +60,12 @@ fun PersonConditionScreen(
     viewModel: PersonDetailViewModel,
     conditionViewModel: PersonConditionViewModel,
     personId: Int,
+    initialQuery: String = "",
     widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
-    onNavigateToFullScreen: (String, String?) -> Unit,
+    onNavigateToFullScreen: (Int, Int) -> Unit,
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
@@ -135,7 +136,7 @@ fun PersonConditionScreen(
     LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
         viewModel.setCategory(Category.CONDITION_AT_VISIT)
-        conditionViewModel.loadPerson(personId)
+        conditionViewModel.loadPerson(personId, initialQuery)
         
         // 実際に別の利用者の画面へ遷移した時だけ、選択状態をリセットする。
         // これにより、写真撮影画面から同じ利用者の画面に戻った際は、選択状態（selectedId）が維持される。
@@ -167,6 +168,8 @@ fun PersonConditionScreen(
             onAddPhotoClick = {
                 val uri = ImageUtils.getTempPhotoUri(context)
                 tempPhotoUri = uri
+                // カメラ起動前に、戻ってきた際のロックを一時的にスキップする設定を行う
+                viewModel.setLockBypassEnabled(true)
                 cameraLauncher.launch(uri)
             },
             onNavigateToFullScreen = onNavigateToFullScreen,
@@ -182,6 +185,7 @@ fun PersonConditionScreen(
                 conditionViewModel.saveRecord(record, onSuccess) 
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onMicClick = { viewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
         )
     } else {
@@ -206,6 +210,8 @@ fun PersonConditionScreen(
             onAddPhotoClick = {
                 val uri = ImageUtils.getTempPhotoUri(context)
                 tempPhotoUri = uri
+                // カメラ起動前に、戻ってきた際のロックを一時的にスキップする設定を行う
+                viewModel.setLockBypassEnabled(true)
                 cameraLauncher.launch(uri)
             },
             onNavigateToFullScreen = onNavigateToFullScreen,
@@ -221,6 +227,7 @@ fun PersonConditionScreen(
                 conditionViewModel.saveRecord(record, onSuccess) 
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onMicClick = { viewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
         )
     }

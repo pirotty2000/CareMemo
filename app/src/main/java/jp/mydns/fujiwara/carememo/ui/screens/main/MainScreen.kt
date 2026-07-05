@@ -47,8 +47,11 @@ package jp.mydns.fujiwara.carememo.ui.screens.main
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -138,6 +141,7 @@ fun MainScreen(
     MainScreenContent(
         userList = userList,
         isLoading = isLoading,
+        isNameMaskingEnabled = isNameMaskingEnabled, // 追加
         searchQuery = searchQuery,
         selectedSection = selectedSection,
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
@@ -214,6 +218,7 @@ fun MainScreen(
 fun MainScreenContent(
     userList: List<PersonUiState>,
     isLoading: Boolean,
+    isNameMaskingEnabled: Boolean, // 追加
     searchQuery: String,
     selectedSection: String,
     onSearchQueryChange: (String) -> Unit,
@@ -235,15 +240,23 @@ fun MainScreenContent(
             onDismissRequest = { showVersionDialog = false },
             title = { Text(stringResource(R.string.dialog_version_title)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text("バージョン: ${BuildConfig.VERSION_NAME}")
-                    HorizontalDivider()
-                    Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Text("Android 15 (API 35)")
-                    Text("KYOCERA TORQUE G06 最適化済")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("(C) 2025-2026 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
+                val scrollState = rememberScrollState()
+                Box {
+                    Column(
+                        modifier = Modifier.verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text("バージョン: ${BuildConfig.VERSION_NAME}")
+                        HorizontalDivider()
+                        Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("Android 15 (API 35)")
+                        Text("KYOCERA TORQUE G06 最適化済")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("(C) 2026 pirotty.galaxy"
+                            , style = MaterialTheme.typography.bodySmall)
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
                 }
             },
             confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text(stringResource(R.string.close)) } }
@@ -279,7 +292,12 @@ fun MainScreenContent(
     
     // メインのコンテンツ
     { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize().padding(paddingValues)
+            // 全体の左右の余白
+            .padding(horizontal = 4.dp),
+            // ########## 検索ボックス／五十音かなインデックス／利用者一覧の上下の余白 ##########
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // ---------- 所見メモ検索 ----------
             SearchBox(
                 query = searchQuery,
@@ -293,7 +311,7 @@ fun MainScreenContent(
                 onSectionSelect = onSectionSelect
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // ---------- 利用者一覧 ----------
             if (isLoading) {
@@ -311,10 +329,12 @@ fun MainScreenContent(
                 ) {
                     items(userList, key = { it.person.id }) { userUiState ->
                         UserListItem(
-                            userUiState = userUiState,
-                            onUserClick = onUserClick,
-                            onEditUser = onEditUser,
-                            onEndUser = onEndUser,
+                            person = userUiState.person,
+                            summary = userUiState.summary,
+                            isNameMaskingEnabled = isNameMaskingEnabled,
+                            onClick = { onUserClick(userUiState.person) },
+                            onEditClick = { onEditUser(userUiState.person) },
+                            onDeleteClick = { onEndUser(userUiState.person) },
                             modifier = Modifier.animateItem()
                         )
                         HorizontalDivider()
@@ -381,6 +401,7 @@ fun MainScreenPreview() {
             selectedSection = "全",
             onSearchQueryChange = {},
             onSectionSelect = {},
+            isNameMaskingEnabled = false,
             snackbarHostState = remember { SnackbarHostState() }, 
             lazyListState = rememberLazyListState(), 
             onUserClick = { }, 

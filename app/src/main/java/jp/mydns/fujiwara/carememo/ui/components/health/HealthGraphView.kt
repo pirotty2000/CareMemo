@@ -23,6 +23,8 @@ package jp.mydns.fujiwara.carememo.ui.components.health
  */
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -37,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 
 @Composable
 fun HealthGraphView(
@@ -58,8 +61,16 @@ fun HealthGraphView(
     if (showHelpDialog != null) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = null },
-            title = { Text(stringResource(R.string.menu_help)) }, // "数値の目安" is usually help
-            text = { Text(showHelpDialog!!) },
+            title = { Text(stringResource(R.string.menu_help)) },
+            text = {
+                val scrollState = rememberScrollState()
+                Box {
+                    Column(modifier = Modifier.verticalScroll(scrollState)) {
+                        Text(showHelpDialog!!)
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
+                }
+            },
             confirmButton = {
                 TextButton(onClick = { showHelpDialog = null }) {
                     Text(stringResource(R.string.close))

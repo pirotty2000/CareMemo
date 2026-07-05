@@ -103,7 +103,7 @@ object PdfExporter {
         PDFBoxResourceLoader.init(context)
         clearOldExports(context)
 
-        val filteredRecords = filterAnyRecords(records, range, customStartDate, customEndDate)
+        val filteredRecords = filterAnyRecords(category, records, range, customStartDate, customEndDate)
         if (filteredRecords.isEmpty()) return false
 
         val document = PdfDocument()
@@ -577,21 +577,36 @@ object PdfExporter {
         return result
     }
 
-    private fun filterAnyRecords(records: List<Any>, range: ExportRange, customStart: Instant?, customEnd: Instant?): List<Any> {
+    private fun filterAnyRecords(category: Category, records: List<Any>, range: ExportRange, customStart: Instant?, customEnd: Instant?): List<Any> {
         if (range == ExportRange.ALL) return records
         val items = records.filterIsInstance<HistoryRecord>()
         if (items.isEmpty()) return emptyList()
         val zone = ZoneId.systemDefault()
         val getEffectiveTime: (HistoryRecord) -> Instant = { rec -> if (rec is MedicationRecord) { try { LocalDate.parse(rec.dosageDate).atStartOfDay(zone).toInstant() } catch (_: Exception) { rec.recordTime } } else rec.recordTime }
         val sortedByEffective = items.sortedByDescending { getEffectiveTime(it) }
-        if (range == ExportRange.LATEST) return listOf(sortedByEffective.first())
+        if (range == ExportRange.LATEST) {
+            val latest = sortedByEffective.firstOrNull() ?: return emptyList()
+            return if (category == Category.CONDITION_AT_VISIT) {
+                // 所見メモの場合は、最新の「年月日」の全データを対象とする
+                val latestDate = latest.recordTime.atZone(zone).toLocalDate()
+                items.filter { it.recordTime.atZone(zone).toLocalDate() == latestDate }
+            } else {
+                listOf(latest)
+            }
+        }
         val startInclusive: Instant?; val endInclusive: Instant?
         if (range == ExportRange.CUSTOM) {
             startInclusive = customStart?.atZone(java.time.ZoneOffset.UTC)?.toLocalDate()?.atStartOfDay(zone)?.toInstant()
             endInclusive = customEnd?.atZone(java.time.ZoneOffset.UTC)?.toLocalDate()?.atTime(23, 59, 59, 999_999_999)?.atZone(zone)?.toInstant()
         } else {
-            val ref = getEffectiveTime(sortedByEffective.first()).atZone(zone)
-            startInclusive = when (range) { ExportRange.ONE_MONTH -> ref.minusMonths(1).toInstant(); ExportRange.THREE_MONTHS -> ref.minusMonths(3).toInstant(); ExportRange.SIX_MONTHS -> ref.minusMonths(6).toInstant(); else -> null }
+            // カレンダーベース（月初から）の範囲計算
+            val today = LocalDate.now(zone)
+            startInclusive = when (range) {
+                ExportRange.ONE_MONTH -> today.withDayOfMonth(1).atStartOfDay(zone).toInstant() // 当月
+                ExportRange.THREE_MONTHS -> today.minusMonths(2).withDayOfMonth(1).atStartOfDay(zone).toInstant() // 過去3ヶ月（今月含め）
+                ExportRange.SIX_MONTHS -> today.minusMonths(5).withDayOfMonth(1).atStartOfDay(zone).toInstant() // 過去6ヶ月（今月含め）
+                else -> null
+            }
             endInclusive = null
         }
         return items.filter { val t = getEffectiveTime(it); (startInclusive == null || !t.isBefore(startInclusive)) && (endInclusive == null || !t.isAfter(endInclusive)) }

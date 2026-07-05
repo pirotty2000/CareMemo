@@ -66,7 +66,9 @@ fun KanaIndexBar(
         items(kanaGroups) { title ->
             Box(
                 modifier = Modifier
-                    .width(44.dp)
+                    // 「全」「あ」・・・の間隔（文字幅を指定し、中央に配置しているだけで、
+                    // paddingを指定しているわけではない。
+                    .width(28.dp)
                     .height(48.dp)
                     .clickable { onSectionSelect(title) },
                 contentAlignment = Alignment.Center

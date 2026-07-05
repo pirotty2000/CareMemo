@@ -112,7 +112,10 @@ fun PersonHealthScreenContent(
                         recordId = selectedRecordId,
                         records = historyRecords,
                         onCancel = { onSelectedRecordIdChange(-1) },
-                        onSaveRecord = onSaveRecord
+                        onSaveRecord = { record ->
+                            onSaveRecord(record)
+                            onSelectedRecordIdChange(-1)
+                        }
                     )
                 } else {
                     val scrollState = rememberScrollState()
@@ -146,7 +149,10 @@ fun PersonHealthScreenContent(
                 recordId = selectedRecordId,
                 records = historyRecords,
                 onCancel = { onSelectedRecordIdChange(-1) },
-                onSaveRecord = onSaveRecord
+                onSaveRecord = { record ->
+                    onSaveRecord(record)
+                    onSelectedRecordIdChange(-1)
+                }
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

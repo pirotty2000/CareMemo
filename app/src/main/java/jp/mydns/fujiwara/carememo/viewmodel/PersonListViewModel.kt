@@ -114,7 +114,7 @@ class PersonListViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun getSectionForName(furigana: String): String {
-        val firstChar = furigana.firstOrNull() ?: return "その他"
+        val firstChar = furigana.firstOrNull() ?: return "他"
         return when (firstChar) {
             in 'あ'..'お' -> "あ"
             in 'か'..'こ', in 'が'..'ご' -> "か"
@@ -126,7 +126,7 @@ class PersonListViewModel(
             in 'や'..'よ' -> "や"
             in 'ら'..'ろ' -> "ら"
             in 'わ'..'ん' -> "わ"
-            else -> "その他"
+            else -> "他"
         }
     }
 

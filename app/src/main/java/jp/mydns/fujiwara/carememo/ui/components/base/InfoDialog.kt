@@ -21,10 +21,15 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  * InfoDialog
  */
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 
@@ -41,7 +46,15 @@ fun InfoDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = title?.let { { Text(it) } },
-        text = { Text(message) },
+        text = {
+            val scrollState = rememberScrollState()
+            Box {
+                Column(modifier = Modifier.verticalScroll(scrollState)) {
+                    Text(message)
+                }
+                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
+            }
+        },
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(confirmButtonText)

@@ -75,7 +75,8 @@ fun PersonConditionScreenContent(
     onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onNavigateToFullScreen: (String, String?) -> Unit,
+    onNavigateToFullScreen: (Int, Int) -> Unit,
+    onMicClick: () -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
 
@@ -138,7 +139,8 @@ fun PersonConditionScreenContent(
                     onDeletePhoto = onDeletePhoto,
                     onSelectedIdChange = { onSelectedIdChange(it) },
                     onAddPhotoClick = onAddPhotoClick,
-                    onNavigateToFullScreen = onNavigateToFullScreen
+                    onNavigateToFullScreen = onNavigateToFullScreen,
+                    onMicClick = onMicClick
                 )
             }
         }
@@ -158,7 +160,8 @@ fun PersonConditionScreenContent(
                     onDeletePhoto = onDeletePhoto,
                     onSelectedIdChange = { onSelectedIdChange(it) },
                     onAddPhotoClick = onAddPhotoClick,
-                    onNavigateToFullScreen = onNavigateToFullScreen
+                    onNavigateToFullScreen = onNavigateToFullScreen,
+                    onMicClick = onMicClick
                 )
             }
         } else {

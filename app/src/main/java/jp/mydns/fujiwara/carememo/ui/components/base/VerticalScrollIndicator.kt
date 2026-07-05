@@ -10,9 +10,10 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  * ・ScrollState（Column用）および LazyListState（LazyColumn用）の両方に対応。
  * ・現在のスクロール位置に応じたスライドバーと、上部/下部のどちらに近いかを示すドット表示。
  * ・スクロール不可な場合は自動的に非表示。
+ * ・isCompact 引数により、ダイアログ等に適した小型表示に切り替え可能。
  *
  * 【想定する利用場所】：
- * 詳細画面、履歴リスト、設定画面など、コンテンツが長い画面の右端。
+ * 詳細画面、履歴リスト、設定画面、および各種入力ダイアログ。
  *
  * 【このコンポーネントでは行わないこと】：
  * スクロール自体の制御（あくまで表示のみを担当）。
@@ -39,10 +40,16 @@ import androidx.compose.ui.unit.dp
 
 /**
  * 垂直スクロールインジケーター (通常の ScrollState 用)
+ *
+ * @param scrollState スクロール状態
+ * @param isCompact ダイアログ内などの狭い領域で使用する場合は true
  */
 @Composable
-fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
-    val barHeight = 60.dp
+fun BoxScope.VerticalScrollIndicator(
+    scrollState: ScrollState,
+    isCompact: Boolean = false
+) {
+    val barHeight = if (isCompact) 32.dp else 60.dp
     val density = LocalDensity.current
 
     val layoutData by remember {
@@ -66,21 +73,28 @@ fun BoxScope.VerticalScrollIndicator(scrollState: ScrollState) {
         scrollFraction = scrollFraction,
         isBottomSelected = isBottomSelected,
         maxOffset = maxOffset,
-        barHeight = barHeight
+        barHeight = barHeight,
+        isCompact = isCompact
     )
 }
 
 /**
  * 垂直スクロールインジケーター (LazyListState 用)
+ *
+ * @param lazyListState LazyListのスクロール状態
+ * @param isCompact ダイアログ内などの狭い領域で使用する場合は true
  */
 @Composable
-fun BoxScope.VerticalScrollIndicator(lazyListState: androidx.compose.foundation.lazy.LazyListState) {
+fun BoxScope.VerticalScrollIndicator(
+    lazyListState: androidx.compose.foundation.lazy.LazyListState,
+    isCompact: Boolean = false
+) {
     val canScroll by remember {
         derivedStateOf { lazyListState.canScrollForward || lazyListState.canScrollBackward }
     }
     if (!canScroll) return
 
-    val barHeight = 60.dp
+    val barHeight = if (isCompact) 32.dp else 60.dp
     val density = LocalDensity.current
 
     // スクロール位置とビューポートの高さをまとめて計算 (Recompositionを抑制)
@@ -113,7 +127,8 @@ fun BoxScope.VerticalScrollIndicator(lazyListState: androidx.compose.foundation.
         scrollFraction = scrollFraction,
         isBottomSelected = isBottomSelected,
         maxOffset = maxOffset,
-        barHeight = barHeight
+        barHeight = barHeight,
+        isCompact = isCompact
     )
 }
 
@@ -122,21 +137,27 @@ private fun BoxScope.IndicatorContent(
     scrollFraction: Float,
     isBottomSelected: Boolean,
     maxOffset: androidx.compose.ui.unit.Dp,
-    barHeight: androidx.compose.ui.unit.Dp
+    barHeight: androidx.compose.ui.unit.Dp,
+    isCompact: Boolean
 ) {
+    val dotSize = if (isCompact) 4.dp else 6.dp
+    val dotSpacing = if (isCompact) 4.dp else 8.dp
+    val paddingEnd = if (isCompact) 6.dp else 14.dp
+    val barWidth = if (isCompact) 2.dp else 4.dp
+
     // ドット表示 (上/下)
     Column(
         modifier = Modifier
             .align(Alignment.CenterEnd)
-            .padding(end = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(end = paddingEnd),
+        verticalArrangement = Arrangement.spacedBy(dotSpacing),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         repeat(2) { index ->
             val isSelected = if (index == 0) !isBottomSelected else isBottomSelected
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(dotSize)
                     .clip(CircleShape)
                     .background(
                         if (isSelected) MaterialTheme.colorScheme.primary 
@@ -149,7 +170,7 @@ private fun BoxScope.IndicatorContent(
     // スライドバー
     Box(
         modifier = Modifier
-            .width(4.dp)
+            .width(barWidth)
             .height(barHeight)
             .align(Alignment.TopEnd)
             .offset {

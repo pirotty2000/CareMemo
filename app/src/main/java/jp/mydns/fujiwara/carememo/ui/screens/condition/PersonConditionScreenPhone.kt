@@ -63,11 +63,12 @@ fun PersonConditionScreenPhone(
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onNavigateToFullScreen: (String, String?) -> Unit,
+    onNavigateToFullScreen: (Int, Int) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
     onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
+    onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
@@ -143,7 +144,8 @@ fun PersonConditionScreenPhone(
                 onSaveRecord = onSaveRecord,
                 onDeletePhoto = onDeletePhoto,
                 onAddPhotoClick = onAddPhotoClick,
-                onNavigateToFullScreen = onNavigateToFullScreen
+                onNavigateToFullScreen = onNavigateToFullScreen,
+                onMicClick = onMicClick
             )
         }
     }
@@ -195,6 +197,7 @@ fun PersonConditionScreenPhonePreview() {
                 onDeleteRecord = {},
                 onSaveRecord = { _, _ -> },
                 onDeletePhoto = {},
+                onMicClick = {},
                 snackbarHostState = remember { SnackbarHostState() }
             )
         }

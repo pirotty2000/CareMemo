@@ -53,6 +53,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
+import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.common.DetailItem
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
@@ -156,7 +157,8 @@ private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
             Text(
                 text = "($bmiLabel)",
                 style = bmiLabelStyle,
-                color = bmiColor
+                color = bmiColor,
+                fontWeight = if (alertLevel != AppThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal
             )
         }
     }
@@ -413,62 +415,67 @@ fun HealthRecordDetailPane(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(start = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    val scrollState = rememberScrollState()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 16.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 記録の詳細／新規作成・・・のタイトル
-            Text(
-                text = if (recordId == 0) "新規作成" else "記録の詳細",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            // 鉛筆アイコン
-            if (!isEditing && recordId != 0) {
-                IconButton(onClick = { isEditing = true }) {
-                    Icon(Icons.Rounded.EditNote, contentDescription = "編集")
-                }
-            }
-        }
-
-        if (isEditing) {
-            // ---------- 新規記録の入力 / 既存記録の編集 の画面 ----------
-            HealthRecordEditForm(
-                category = category,
-                dateTimeState = dateTimeState,
-                heightText = heightText, onHeightChange = { heightText = it },
-                weightText = weightText, onWeightChange = { weightText = it },
-                bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
-                bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
-                pulseText = pulseText, onPulseChange = { pulseText = it },
-                bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
-                glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
-                hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
-                onCancel = onCancel,
-                onSave = {
-                    dateTimeState.toInstant()?.let { recordTime ->
-                        val newRecord: Any = when (category) {
-                            Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
-                            Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
-                            Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
-                            else -> throw IllegalStateException("Not supported category")
-                        }
-                        onSaveRecord(newRecord)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 記録の詳細／新規作成・・・のタイトル
+                Text(
+                    text = if (recordId == 0) "新規作成" else "記録の詳細",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                // 鉛筆アイコン
+                if (!isEditing && recordId != 0) {
+                    IconButton(onClick = { isEditing = true }) {
+                        Icon(Icons.Rounded.EditNote, contentDescription = "編集")
                     }
                 }
-            )
-        } else {
-            // ---------- 記録の詳細 ----------
-            HealthRecordDisplayCard(record = record!!)
+            }
+
+            if (isEditing) {
+                // ---------- 新規記録の入力 / 既存記録の編集 の画面 ----------
+                HealthRecordEditForm(
+                    category = category,
+                    dateTimeState = dateTimeState,
+                    heightText = heightText, onHeightChange = { heightText = it },
+                    weightText = weightText, onWeightChange = { weightText = it },
+                    bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
+                    bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
+                    pulseText = pulseText, onPulseChange = { pulseText = it },
+                    bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
+                    glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
+                    hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
+                    onCancel = onCancel,
+                    onSave = {
+                        dateTimeState.toInstant()?.let { recordTime ->
+                            val newRecord: Any = when (category) {
+                                Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
+                                Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
+                                Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
+                                else -> throw IllegalStateException("Not supported category")
+                            }
+                            onSaveRecord(newRecord)
+                        }
+                    }
+                )
+            } else {
+                // ---------- 記録の詳細 ----------
+                HealthRecordDisplayCard(record = record!!)
+            }
+            Spacer(modifier = Modifier.height(80.dp))
         }
+        VerticalScrollIndicator(scrollState = scrollState)
     }
 }
 

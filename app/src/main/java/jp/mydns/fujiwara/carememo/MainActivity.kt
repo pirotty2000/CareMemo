@@ -247,12 +247,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val initialQuery = backStackEntry.arguments?.getString("query")?.let { if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
                     val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
-                    LaunchedEffect(initialQuery) { if (initialQuery.isNotBlank()) conditionViewModel.updateSearchQuery(initialQuery) }
-                    
+
                     PersonConditionScreen(
                         viewModel = detailViewModel,
                         conditionViewModel = conditionViewModel,
                         personId = personId,
+                        initialQuery = initialQuery,
                         widthSizeClass = widthSizeClass,
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToCategory = { category ->
@@ -265,9 +265,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             val encodedUri = Uri.encode(uri.toString())
                             navController.navigate("photoPreview/$encodedUri/$pId/$cId")
                         },
-                        onNavigateToFullScreen = { fileName, caption ->
-                            val encodedCaption = caption?.let { URLEncoder.encode(it, "UTF-8") } ?: ""
-                            navController.navigate("photoFull/$fileName?caption=$encodedCaption")
+                        onNavigateToFullScreen = { conditionId, photoId ->
+                            navController.navigate("photoFull/$conditionId/$photoId")
                         }
                     )
                 }
@@ -310,10 +309,23 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
                     ConditionPhotoPreviewScreen(viewModel = detailViewModel, conditionViewModel = conditionViewModel, uri = uri, personId = personId, conditionId = conditionId, onBack = { navController.popBackStack() }, onSaved = { navController.popBackStack() })
                 }
-                composable("photoFull/{fileName}?caption={caption}", arguments = listOf(navArgument("fileName") { type = NavType.StringType }, navArgument("caption") { type = NavType.StringType; nullable = true; defaultValue = null })) { backStackEntry ->
-                    val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
-                    val caption = backStackEntry.arguments?.getString("caption")
-                    ConditionPhotoFullScreen(fileName = fileName, caption = caption, onBack = { navController.popBackStack() })
+                composable(
+                    "photoFull/{conditionId}/{initialPhotoId}",
+                    arguments = listOf(
+                        navArgument("conditionId") { type = NavType.IntType },
+                        navArgument("initialPhotoId") { type = NavType.IntType }
+                    )
+                ) { backStackEntry ->
+                    val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
+                    val initialPhotoId = backStackEntry.arguments?.getInt("initialPhotoId") ?: 0
+                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
+
+                    ConditionPhotoFullScreen(
+                        conditionId = conditionId,
+                        initialPhotoId = initialPhotoId,
+                        viewModel = conditionViewModel,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
         }
