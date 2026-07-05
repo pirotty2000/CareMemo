@@ -13,6 +13,7 @@ package jp.mydns.fujiwara.carememo.ui.components.main
  * ・カテゴリ選択シート（CategorySelectionSheet）：機能遷移メニュー。
  */
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -39,7 +40,6 @@ import jp.mydns.fujiwara.carememo.ui.components.base.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.rememberBirthdayInputState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
-import java.time.ZoneId
 
 /**
  * 利用者カードを表示するコンポーネント（一覧用）。
@@ -53,7 +53,7 @@ fun UserListItem(
     onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     val isBirthdayToday = remember(person.birthday) {
         DateTimeUtils.isBirthdayToday(person.birthday)

@@ -32,15 +32,14 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -139,7 +138,6 @@ fun SettingsScreen(
                     // 全消去成功時など
                     onBack()
                 }
-                else -> {}
             }
         }
     }
@@ -838,7 +836,7 @@ private fun ResetSection(
         ListItem(
             headlineContent = { Text("データベース整合性チェック") },
             supportingContent = { Text("孤立したデータの検出とレポート作成") },
-            leadingContent = { Icon(Icons.Rounded.FactCheck, contentDescription = null) },
+            leadingContent = { Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null) },
             modifier = Modifier.clickable { onCheckIntegrity() }
         )
         ListItem(
