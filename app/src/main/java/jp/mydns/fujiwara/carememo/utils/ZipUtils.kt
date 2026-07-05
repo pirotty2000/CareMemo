@@ -8,6 +8,7 @@ import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.EncryptionMethod
 import net.lingala.zip4j.progress.ProgressMonitor
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Zip4jを使用して、パスワード付きZip圧縮・解凍を行うユーティリティ。
@@ -123,7 +124,7 @@ object ZipUtils {
         val monitor = zip.progressMonitor
         while (monitor.state == ProgressMonitor.State.BUSY) {
             onProgress(monitor.percentDone)
-            delay(100) // 100ms間隔でポーリング
+            delay(100.milliseconds) // 100ms間隔でポーリング
         }
 
         // エラーが発生した場合は例外をスローして runCatching に捕捉させる

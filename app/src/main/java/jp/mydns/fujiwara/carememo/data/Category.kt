@@ -61,7 +61,7 @@ enum class Category(
     fun getRoute(personId: Int, query: String = ""): String {
         return when (this) {
             MEDICATION -> "medication/$personId"
-            CONDITION_AT_VISIT -> "observation/$personId?query=$query"
+            CONDITION_AT_VISIT -> "condition/$personId?query=$query"
             else -> "detail/$personId/${this.name}?query=$query"
         }
     }

@@ -92,10 +92,9 @@ class PersonMedicationViewModel(
     /**
      * 特定の日の服薬状況を一括同期（保存・更新・削除）する。
      * @param date 対象日 (yyyy-MM-dd)
-     * @param personId 利用者ID
      * @param slotRecords 4スロット（朝・昼・夕・寝る前）の最新状態。nullのスロットは「記録なし（削除対象）」とみなす。
      */
-    fun syncMedicationDay(date: String, personId: Int, slotRecords: List<MedicationRecord?>) {
+    fun syncMedicationDay(date: String, slotRecords: List<MedicationRecord?>) {
         viewModelScope.launch {
             try {
                 // 現在のその日のデータを取得（差分判定用）

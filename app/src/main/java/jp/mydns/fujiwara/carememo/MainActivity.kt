@@ -120,6 +120,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         
         var isAuthenticated by rememberSaveable { mutableStateOf(false) }
 
+        // アプリ・ロック：
+        // 「最後にアプリを閉じてからどれくらい時間が経過したか」を判定し、必要であれば再認証（生体認証）を要求する
         DisposableEffect(activity) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -146,6 +148,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             onDispose { activity.lifecycle.removeObserver(observer) }
         }
 
+        // アプリ・ロック
+        // 実際にロック画面を表示
         LaunchedEffect(isBiometricEnabled, isAuthenticated) {
             if ((isBiometricEnabled == true) && !isAuthenticated) {
                 val executor = ContextCompat.getMainExecutor(activity)
@@ -161,7 +165,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         }
                     }
                 })
-                val promptInfo = BiometricPrompt.PromptInfo.Builder().setTitle("アプリ・ロック").setSubtitle("認証情報を入力してください").setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL).build()
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("アプリ・ロック").setSubtitle("認証情報を入力してください")
+                    .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL).build()
                 biometricPrompt.authenticate(promptInfo)
             } else if (isBiometricEnabled == false) {
                 isAuthenticated = true
@@ -172,7 +178,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             // 認証要求を処理する共通関数
             val requestAuthentication: (onSuccess: () -> Unit) -> Unit = { onSuccess ->
                 val executor = ContextCompat.getMainExecutor(activity)
-                val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+                val biometricPrompt = BiometricPrompt(
+                    activity, executor, object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         super.onAuthenticationSucceeded(result)
                         onSuccess()
@@ -187,8 +194,18 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             }
 
             NavHost(navController = navController, startDestination = "main") {
+
+                // ---------------------------------------------
+                // ---------- 「利用者一覧」(MainScreen) ----------
+                // ---------------------------------------------
                 composable("main") {
-                    val listViewModel: PersonListViewModel = viewModel(factory = PersonListViewModel.Factory(personRepository, deleteOrRestorePersonRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
+                    val listViewModel: PersonListViewModel = viewModel(
+                        factory = PersonListViewModel.Factory(
+                            personRepository,
+                            deleteOrRestorePersonRepository,
+                            personSummaryRepository,
+                            conditionRepository,
+                            userSettingsRepository))
                     MainScreen(
                         viewModel = listViewModel, 
                         onNavigateToDetail = { personId, category ->
@@ -202,80 +219,25 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToSettings = { navController.navigate("settings") }
                     )
                 }
-                composable("archive_management/{mode}") { backStackEntry ->
-                    val modeName = backStackEntry.arguments?.getString("mode") ?: DeleteOrRestorePersonViewModel.OperationMode.RESTORE.name
-                    val mode = DeleteOrRestorePersonViewModel.OperationMode.valueOf(modeName)
-                    val archiveViewModel: DeleteOrRestorePersonViewModel = viewModel(factory = DeleteOrRestorePersonViewModel.Factory(deleteOrRestorePersonRepository, userSettingsRepository))
-                    DeleteOrRestorePersonScreen(
-                        viewModel = archiveViewModel, 
-                        mode = mode,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-                composable("batch_input/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
-                    val batchViewModel: BatchInputViewModel = viewModel(factory = BatchInputViewModel.Factory(personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
-                    BatchInputScreen(viewModel = batchViewModel, personId = personId, onBack = { navController.popBackStack() })
-                }
-                composable("settings") {
-                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, userSettingsRepository))
-                    SettingsScreen(
-                        viewModel = settingsViewModel, 
-                        onNavigateToArchiveManagement = { mode ->
-                            navController.navigate("archive_management/${mode.name}")
-                        }, 
-                        onRequireAuthentication = requestAuthentication,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-                composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
-                    val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository))
-                    PersonMedicationScreen(viewModel = detailViewModel, medicationViewModel = medicationViewModel, personId = personId, widthSizeClass = widthSizeClass, onBack = { navController.popBackStack("main", inclusive = false) }, onNavigateToCategory = { category ->
-                        navController.navigate(category.getRoute(personId)) { 
-                            popUpTo("main")
-                            launchSingleTop = true
-                        }
-                    })
-                }
-                composable("observation/{personId}?query={query}", arguments = listOf(
-                    navArgument("personId") { type = NavType.IntType },
-                    navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }
-                )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
-                    val initialQuery = backStackEntry.arguments?.getString("query")?.let { if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
 
-                    PersonConditionScreen(
-                        viewModel = detailViewModel,
-                        conditionViewModel = conditionViewModel,
-                        personId = personId,
-                        initialQuery = initialQuery,
-                        widthSizeClass = widthSizeClass,
-                        onBack = { navController.popBackStack("main", inclusive = false) },
-                        onNavigateToCategory = { category ->
-                            navController.navigate(category.getRoute(personId)) { 
-                                popUpTo("main")
-                                launchSingleTop = true
-                            }
-                        },
-                        onNavigateToPhotoPreview = { uri, pId, cId -> 
-                            val encodedUri = Uri.encode(uri.toString())
-                            navController.navigate("photoPreview/$encodedUri/$pId/$cId")
-                        },
-                        onNavigateToFullScreen = { conditionId, photoId ->
-                            navController.navigate("photoFull/$conditionId/$photoId")
-                        }
-                    )
-                }
-                composable("detail/{personId}/{categoryName}?query={query}", arguments = listOf(navArgument("personId") { type = NavType.IntType }, navArgument("categoryName") { type = NavType.StringType }, navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" })) { backStackEntry ->
+                // --------------------------------------------------------
+                // ----- 利用者詳細データ（各カテゴリの閲覧・登録・修正・削除） -----
+                // --------------------------------------------------------
+
+                // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」 ----------
+                composable("detail/{personId}/{categoryName}?query={query}", arguments = listOf(
+                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("categoryName") { type = NavType.StringType },
+                    navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
                     val category = Category.valueOf(categoryName)
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
-                    val healthViewModel: PersonHealthViewModel = viewModel(factory = PersonHealthViewModel.Factory(personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
+                    val detailViewModel: PersonDetailViewModel = viewModel(
+                        factory = PersonDetailViewModel.Factory(
+                            personRepository, personSummaryRepository, userSettingsRepository))
+                    val healthViewModel: PersonHealthViewModel = viewModel(
+                        factory = PersonHealthViewModel.Factory(
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
                     PersonHealthScreen(
                         viewModel = detailViewModel,
                         healthViewModel = healthViewModel,
@@ -285,23 +247,89 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToGraphExpansion = { pId, cat, index -> navController.navigate("graphExpansion/$pId/${cat.name}/$index") },
                         onNavigateToCategory = { cat ->
-                            navController.navigate(cat.getRoute(personId)) { 
+                            navController.navigate(cat.getRoute(personId)) {
                                 popUpTo("main")
                                 launchSingleTop = true
                             }
                         }
                     )
                 }
-                composable("graphExpansion/{personId}/{categoryName}/{initialIndex}", arguments = listOf(navArgument("personId") { type = NavType.IntType }, navArgument("categoryName") { type = NavType.StringType }, navArgument("initialIndex") { type = NavType.IntType })) { backStackEntry ->
+                // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」のグラフ拡大 ----------
+                composable("graphExpansion/{personId}/{categoryName}/{initialIndex}", arguments = listOf(
+                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("categoryName") { type = NavType.StringType },
+                    navArgument("initialIndex") { type = NavType.IntType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
                     val category = Category.valueOf(categoryName)
                     val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
-                    val healthViewModel: PersonHealthViewModel = viewModel(factory = PersonHealthViewModel.Factory(personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
-                    GraphExpansionScreen(viewModel = detailViewModel, healthViewModel = healthViewModel, personId = personId, category = category, initialGraphIndex = initialIndex, onBack = { navController.popBackStack() })
+                    val healthViewModel: PersonHealthViewModel = viewModel(
+                        factory = PersonHealthViewModel.Factory(
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
+                    val detailViewModel: PersonDetailViewModel = viewModel(
+                        factory = PersonDetailViewModel.Factory(
+                            personRepository, personSummaryRepository, userSettingsRepository))
+                    GraphExpansionScreen(viewModel = detailViewModel,
+                        healthViewModel = healthViewModel,
+                        personId = personId,
+                        category = category,
+                        initialGraphIndex = initialIndex,
+                        onBack = { navController.popBackStack() })
                 }
-                composable("photoPreview/{uri}/{personId}/{conditionId}", arguments = listOf(navArgument("uri") { type = NavType.StringType }, navArgument("personId") { type = NavType.IntType }, navArgument("conditionId") { type = NavType.IntType })) { backStackEntry ->
+
+                // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」の一括入力 ----------
+                composable("batch_input/{personId}", arguments = listOf(
+                    navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val batchViewModel: BatchInputViewModel = viewModel(
+                        factory = BatchInputViewModel.Factory(
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
+                    BatchInputScreen(viewModel = batchViewModel, personId = personId, onBack = { navController.popBackStack() })
+                }
+
+                // ---------- 「所見メモ」 ----------
+                composable("condition/{personId}?query={query}", arguments = listOf(
+                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }
+                )) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val initialQuery = backStackEntry.arguments?.getString("query")?.let {
+                        if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
+                    val detailViewModel: PersonDetailViewModel = viewModel(
+                        factory = PersonDetailViewModel.Factory(
+                            personRepository, personSummaryRepository, userSettingsRepository))
+                    val conditionViewModel: PersonConditionViewModel = viewModel(
+                        factory = PersonConditionViewModel.Factory(
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
+
+                    PersonConditionScreen(
+                        viewModel = detailViewModel,
+                        conditionViewModel = conditionViewModel,
+                        personId = personId,
+                        initialQuery = initialQuery,
+                        widthSizeClass = widthSizeClass,
+                        onBack = { navController.popBackStack("main", inclusive = false) },
+                        onNavigateToCategory = { category ->
+                            navController.navigate(category.getRoute(personId)) {
+                                popUpTo("main")
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToPhotoPreview = { uri, pId, cId ->
+                            val encodedUri = Uri.encode(uri.toString())
+                            navController.navigate("photoPreview/$encodedUri/$pId/$cId")
+                        },
+                        onNavigateToFullScreen = { conditionId, photoId ->
+                            navController.navigate("photoFull/$conditionId/$photoId")
+                        }
+                    )
+                }
+
+                // ---------- 「所見メモ」の写真プレビュー ----------
+                composable("photoPreview/{uri}/{personId}/{conditionId}", arguments = listOf(
+                    navArgument("uri") { type = NavType.StringType },
+                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("conditionId") { type = NavType.IntType })) { backStackEntry ->
                     val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
@@ -309,6 +337,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
                     ConditionPhotoPreviewScreen(viewModel = detailViewModel, conditionViewModel = conditionViewModel, uri = uri, personId = personId, conditionId = conditionId, onBack = { navController.popBackStack() }, onSaved = { navController.popBackStack() })
                 }
+
+                // ---------- 「所見メモ」の写真表示 ----------
                 composable(
                     "photoFull/{conditionId}/{initialPhotoId}",
                     arguments = listOf(
@@ -327,6 +357,53 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onBack = { navController.popBackStack() }
                     )
                 }
+
+                // ---------- 「服薬管理」 ----------
+                composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
+                    val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository))
+                    PersonMedicationScreen(viewModel = detailViewModel, medicationViewModel = medicationViewModel, personId = personId, widthSizeClass = widthSizeClass, onBack = { navController.popBackStack("main", inclusive = false) }, onNavigateToCategory = { category ->
+                        navController.navigate(category.getRoute(personId)) {
+                            popUpTo("main")
+                            launchSingleTop = true
+                        }
+                    })
+                }
+
+                // -------------------------------------------------------------
+                // ----- 設定・管理画面（アプリケーションの設定、利用修了者管理など） -----
+                // -------------------------------------------------------------
+
+                // ---------- 「設定・管理」 ----------
+                composable("settings") {
+                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, userSettingsRepository))
+                    SettingsScreen(
+                        viewModel = settingsViewModel, 
+                        onNavigateToArchiveManagement = { mode ->
+                            navController.navigate("archive_management/${mode.name}")
+                        }, 
+                        onRequireAuthentication = requestAuthentication,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ---------- 設定：終了利用者の復帰・抹消 ----------
+                composable("archive_management/{mode}") { backStackEntry ->
+                    val modeName = backStackEntry.arguments?.getString("mode") ?: DeleteOrRestorePersonViewModel.OperationMode.RESTORE.name
+                    val mode = DeleteOrRestorePersonViewModel.OperationMode.valueOf(modeName)
+                    val archiveViewModel: DeleteOrRestorePersonViewModel = viewModel(
+                        factory = DeleteOrRestorePersonViewModel.Factory(
+                            deleteOrRestorePersonRepository, userSettingsRepository))
+                    DeleteOrRestorePersonScreen(
+                        viewModel = archiveViewModel,
+                        mode = mode,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+
+
             }
         }
     }

@@ -176,7 +176,7 @@ fun PersonMedicationScreen(
             records = recordsByDate[dateStr] ?: emptyList(),
             onDismiss = { showDialog = null },
             onConfirm = { slotRecords ->
-                medicationViewModel.syncMedicationDay(dateStr, personId, slotRecords)
+                medicationViewModel.syncMedicationDay(dateStr, slotRecords)
             }
         )
     }
