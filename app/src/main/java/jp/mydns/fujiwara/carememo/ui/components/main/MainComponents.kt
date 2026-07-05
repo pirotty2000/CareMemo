@@ -41,7 +41,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -167,14 +166,10 @@ fun UserListItem(
             colors = ListItemDefaults.colors(
                 containerColor = when {
                     isBirthdayToday -> {
-                        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                        if (isDark) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                        else Color(0xFFFFC0CB) // Pink
+                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
                     }
                     isBirthdaySoon -> {
-                        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                        if (isDark) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
-                        else Color(0xFFFFF0F5) // LavenderBlush
+                        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f)
                     }
                     else -> MaterialTheme.colorScheme.surface
                 }

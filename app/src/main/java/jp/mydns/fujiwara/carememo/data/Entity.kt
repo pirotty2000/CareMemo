@@ -61,22 +61,22 @@ data class Person(
     @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null // ヌルなら有効、値があれば削除日時（論理削除用）
 ) {
     /**
-     * 伏せ字を適用した氏名を返す
+     * 伏せ字を適用した氏名を返す（漢字氏名用：交互にマスク）
      */
     fun getMaskedName(isEnabled: Boolean): String {
         return if (isEnabled) {
-            "${lastName.mask()}\u3000${firstName.mask()}"
+            "${lastName.maskAlternate()}\u3000${firstName.maskAlternate()}"
         } else {
             "${lastName}\u3000${firstName}"
         }
     }
 
     /**
-     * 伏せ字を適用したふりがなを返す
+     * 伏せ字を適用したふりがなを返す（カナ氏名用：2文字目以降すべてマスク）
      */
     fun getMaskedFurigana(isEnabled: Boolean): String {
         return if (isEnabled) {
-            "${lastNameFurigana.mask()}\u3000${firstNameFurigana.mask()}"
+            "${lastNameFurigana.maskStartOnly()}\u3000${firstNameFurigana.maskStartOnly()}"
         } else {
             "${lastNameFurigana}\u3000${firstNameFurigana}"
         }
@@ -84,14 +84,23 @@ data class Person(
 }
 
 /**
- * 文字列に伏せ字ルールを適用する拡張関数
+ * 文字列に伏せ字ルールを適用する（漢字用）
  * 2文字以上の場合、偶数番目の文字を「○」で置き換える
  */
-fun String.mask(): String {
+fun String.maskAlternate(): String {
     if (this.length < 2) return this
     return this.mapIndexed { index, char ->
         if ((index + 1) % 2 == 0) '○' else char
     }.joinToString("")
+}
+
+/**
+ * 文字列に伏せ字ルールを適用する（カナ用）
+ * 2文字目以降をすべて「○」で置き換える
+ */
+fun String.maskStartOnly(): String {
+    if (this.isEmpty()) return this
+    return this.take(1) + "○".repeat(this.length - 1)
 }
 
 @Serializable
@@ -286,6 +295,7 @@ data class MedicationRecord(
 @Serializable
 data class CareMemoBackup(
     val version: Int = 3,
+    val appVersionCode: Int = 0, // エクスポート時のアプリバージョンコード
     val persons: List<Person>,
     val heightAndWeights: List<HeightAndWeight>,
     val bpAndPulses: List<BpAndPulse>,
@@ -317,6 +327,17 @@ data class PersonSummaryQueryResult(
     val hasGlucoseAndHbA1c: Boolean,
     val hasCondition: Boolean,
     val hasMedication: Boolean
+)
+
+/**
+ * データベースの不整合（孤立したレコード）を表現するクラス
+ */
+data class DatabaseInconsistency(
+    val tableName: String,
+    val recordId: Int,
+    val personId: Int?,
+    val recordTime: Instant?,
+    val description: String
 )
 
 // --- 計算・判定用拡張関数（基軸となる AppThresholds を使用） ---

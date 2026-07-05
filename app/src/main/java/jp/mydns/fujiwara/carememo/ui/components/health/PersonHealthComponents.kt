@@ -141,11 +141,22 @@ private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
         if (bmi > 0) {
             val (bmiLabel, alertLevel) = record.getBmiResult(context)
             Spacer(modifier = Modifier.width(2.dp))
+            
+            // 注意（Warning）用のオレンジ色
+            val warningColor = if (isSystemInDarkTheme()) Color(0xFFFFB74D) else Color(0xFFE65100)
+
+            // BMI固有の配色ロジック
+            val bmiColor = when {
+                alertLevel == AppThresholds.AlertLevel.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                bmi < AppThresholds.BMI_NORMAL_LOW -> MaterialTheme.colorScheme.error // 低体重は error
+                else -> warningColor // 肥満(1〜4度)は オレンジ
+            }
+
             // 判定結果ラベル (痩せすぎ/普通/肥満など)
             Text(
                 text = "($bmiLabel)",
                 style = bmiLabelStyle,
-                color = if (alertLevel == AppThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red
+                color = bmiColor
             )
         }
     }
@@ -157,15 +168,12 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
     val (gStatus, gLevel) = record.getGlucoseResult(context)
     val (hStatus, hLevel) = record.getHbA1cResult(context)
 
-    // 文字サイズの切り替え用
-    // val textStyle = MaterialTheme.typography.labelSmall
-    val textStyle = MaterialTheme.typography.labelMedium
-    // val textStyle = MaterialTheme.typography.labelLarge
+    // 注意（Warning）用のオレンジ色
+    val warningColor = if (isSystemInDarkTheme()) Color(0xFFFFB74D) else Color(0xFFE65100)
 
-    // 判定ラベルのスタイル切り替え用
-    // val statusLabelStyle = MaterialTheme.typography.labelSmall
+    // 文字サイズの切り替え用
+    val textStyle = MaterialTheme.typography.labelMedium
     val statusLabelStyle = MaterialTheme.typography.labelMedium
-    // val statusLabelStyle = MaterialTheme.typography.labelLarge
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -173,11 +181,16 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
             style = textStyle
         )
         if (record.glucose != null) {
+            val gColor = when (gLevel) {
+                AppThresholds.AlertLevel.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                AppThresholds.AlertLevel.WARNING -> warningColor
+                else -> MaterialTheme.colorScheme.error
+            }
             Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = "($gStatus)",
                 style = statusLabelStyle,
-                color = if (gLevel == AppThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red,
+                color = gColor,
                 fontWeight = if (gLevel != AppThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal
             )
         }
@@ -187,11 +200,16 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
             style = textStyle
         )
         if (record.hba1c != null) {
+            val hColor = when (hLevel) {
+                AppThresholds.AlertLevel.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                AppThresholds.AlertLevel.WARNING -> warningColor
+                else -> MaterialTheme.colorScheme.error
+            }
             Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = "($hStatus)",
                 style = statusLabelStyle,
-                color = if (hLevel == AppThresholds.AlertLevel.NORMAL) Color.Blue else Color.Red,
+                color = hColor,
                 fontWeight = if (hLevel != AppThresholds.AlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal
             )
         }
@@ -313,7 +331,7 @@ private fun VitalStatusIndicator(
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
             fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal
         ),
-        color = if (isActive) MaterialTheme.colorScheme.error else Color.LightGray.copy(alpha = 0.6f)
+        color = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
     )
 }
 

@@ -69,12 +69,12 @@ object HealthChartHelper {
         }
     }
 
-    // --- ハイライト色の定義 ---
-    private fun getWarningHighlight(isDark: Boolean) = if (isDark) Color(0xFF333112) else Color(0xFFFFFDE7)
-    private fun getAlertHighlight(isDark: Boolean) = if (isDark) Color(0xFF3D1F1F) else Color(0xFFFFEBEE)
-    private fun getInfoHighlight(isDark: Boolean) = if (isDark) Color(0xFF1A213D) else Color(0xFFE3F2FD)
-    private fun getObesityColor2(isDark: Boolean) = if (isDark) Color(0xFF2D1A3D) else Color(0xFFF3E5F5) // 薄い紫
-    private fun getObesityColor3(isDark: Boolean) = if (isDark) Color(0xFF4A148C) else Color(0xFFCE93D8) // 紫
+    // --- ハイライト色の定義 (テーマに合わせて調整) ---
+    private fun getWarningHighlight(isDark: Boolean) = if (isDark) Color(0xFF2E2A00) else Color(0xFFFFFDE7) // 警告（黄）
+    private fun getAlertHighlight(isDark: Boolean) = if (isDark) Color(0xFF3B1010) else Color(0xFFFFEBEE) // 注意（赤）
+    private fun getInfoHighlight(isDark: Boolean) = if (isDark) Color(0xFF0D1C33) else Color(0xFFE3F2FD) // 情報（青）
+    private fun getObesityColor2(isDark: Boolean) = if (isDark) Color(0xFF2D1A3D) else Color(0xFFF3E5F5) // 肥満1（薄紫）
+    private fun getObesityColor3(isDark: Boolean) = if (isDark) Color(0xFF4A148C) else Color(0xFFCE93D8) // 肥満2（紫）
 
     // --- ユーティリティ ---
 

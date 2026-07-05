@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.os.StatFs
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -9,11 +10,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
+import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
@@ -92,6 +95,10 @@ class SettingsViewModel(
     private val _processingProgress = MutableStateFlow(0)
     val processingProgress = _processingProgress.asStateFlow()
 
+    // データベース不整合チェックの結果
+    private val _inconsistencies = MutableStateFlow<List<DatabaseInconsistency>>(emptyList())
+    val inconsistencies = _inconsistencies.asStateFlow()
+
     fun setNameMaskingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userSettingsRepository.setNameMaskingEnabled(enabled)
@@ -163,6 +170,12 @@ class SettingsViewModel(
             var tempDir: File? = null
             var tempZipFile: File? = null
             try {
+                // 容量チェック
+                if (!hasAvailableSpace(context.cacheDir, 50 * 1024 * 1024)) { // 最低 50MB 
+                    showError("エラー", "空き容量が不足しているためエクスポートできません。")
+                    return@launch
+                }
+
                 val backup = maintenanceRepository.getBackupData()
                 val jsonString = json.encodeToString(CareMemoBackup.serializer(), backup)
                 tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
@@ -220,6 +233,17 @@ class SettingsViewModel(
                 if (passwordOverride == null) {
                     // 初回試行：一時ディレクトリの作成とファイルのコピー
                     clearPendingImport()
+                    
+                    // 容量チェック
+                    val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                    val fileSize = pfd?.statSize ?: 0L
+                    pfd?.close()
+                    
+                    if (!hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
+                        showError("エラー", "空き容量が不足しているため復元できません。")
+                        return@launch
+                    }
+
                     val tempDir = File(context.cacheDir, "import_check_${System.currentTimeMillis()}")
                     tempDir.mkdirs()
                     val tempZipFile = File(tempDir, "temp_import.zip")
@@ -267,6 +291,14 @@ class SettingsViewModel(
                         // 直接JSONファイルとして処理
                         val jsonString = tempZipFile.readText()
                         val backup = json.decodeFromString<CareMemoBackup>(jsonString)
+                        
+                        // バージョンチェック
+                        if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
+                            showError("復元エラー", "このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。")
+                            tempDir.deleteRecursively()
+                            return@launch
+                        }
+
                         maintenanceRepository.replaceAllData(backup)
                         tempDir.deleteRecursively()
                         sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました。"))
@@ -292,6 +324,9 @@ class SettingsViewModel(
 
     private suspend fun proceedImportZip(context: Context, zipFile: File, password: String?) {
         val tempDir = zipFile.parentFile ?: File(context.cacheDir, "import_exec")
+        val appPhotosDir = ImageUtils.getPhotosDirPublic(context)
+        val backupPhotosDir = File(context.filesDir, "photos_backup_${System.currentTimeMillis()}")
+        
         try {
             _isProcessing.value = true
             _processingProgress.value = 0
@@ -308,24 +343,57 @@ class SettingsViewModel(
             
             val jsonString = jsonFile.readText()
             val backup = json.decodeFromString<CareMemoBackup>(jsonString)
+
+            // バージョンチェック
+            if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
+                throw Exception("このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。")
+            }
+
+            // --- 写真の退避 (アトミック性の確保) ---
+            if (appPhotosDir.exists()) {
+                appPhotosDir.renameTo(backupPhotosDir)
+            }
+            appPhotosDir.mkdirs()
+
+            // データベースの置換
             maintenanceRepository.replaceAllData(backup)
             
-            // 写真データの復元
-            ImageUtils.clearPhotosDir(context)
+            // 新しい写真データのコピー
             val extractedPhotosDir = File(tempDir, "photos")
             if (extractedPhotosDir.exists() && extractedPhotosDir.isDirectory) {
-                val appPhotosDir = ImageUtils.getPhotosDirPublic(context)
                 extractedPhotosDir.listFiles()?.forEach { file ->
                     file.copyTo(File(appPhotosDir, file.name), overwrite = true)
                 }
             }
+            
+            // 全て成功したらバックアップを削除
+            backupPhotosDir.deleteRecursively()
+            
             sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データと写真の復元が完了しました。"))
+        } catch (e: Exception) {
+            // 失敗時は写真をロールバック
+            if (backupPhotosDir.exists()) {
+                appPhotosDir.deleteRecursively()
+                backupPhotosDir.renameTo(appPhotosDir)
+            }
+            showError("復元失敗", "処理中にエラーが発生したため、元の状態に差し戻しました。\n理由: ${e.localizedMessage}")
         } finally {
             _isProcessing.value = false
             // 解凍に使用した一時ディレクトリのクリーンアップ
             tempDir.deleteRecursively()
         }
     }
+
+    private fun hasAvailableSpace(dir: File, requiredBytes: Long): Boolean {
+        return try {
+            val stats = StatFs(dir.absolutePath)
+            val available = stats.availableBlocksLong * stats.blockSizeLong
+            available > requiredBytes
+        } catch (_: Exception) {
+            true // 取得に失敗した場合は念のため通すが、通常は失敗しない
+        }
+    }
+
 
     private fun clearPendingImport() {
         pendingImportFile?.parentFile?.deleteRecursively()
@@ -336,16 +404,99 @@ class SettingsViewModel(
     fun clearAllData(context: Context) {
         viewModelScope.launch {
             try {
-                // データベースの全消去
-                maintenanceRepository.clearAllData()
-                // 写真ファイルの全消去
-                ImageUtils.clearPhotosDir(context)
+                _isProcessing.value = true
+                _processingProgress.value = 0
 
-                sendUiEvent(UiEvent.ShowInfoDialog("完了", "全てのデータと写真を削除しました。"))
+                // 1. 写真ファイルの全消去を先に試める
+                val success = ImageUtils.clearPhotosDir(context)
+                if (!success) {
+                    throw Exception("写真データの物理削除に失敗しました。")
+                }
+                _processingProgress.value = 50
+
+                // 2. データベースの全消去（トランザクション）
+                maintenanceRepository.clearAllData()
+                _processingProgress.value = 100
+
+                sendUiEvent(UiEvent.ShowInfoDialog("完了", "全てのデータと写真を削除しました。アプリを初期状態に戻しました。"))
+                // メイン画面へ戻るための通知（必要に応じて）
+                sendUiEvent(UiEvent.SaveSuccess) 
             } catch (e: Exception) {
-                showError("エラー", "データの削除に失敗しました: ${e.localizedMessage}")
+                showError("エラー", "データの削除に失敗しました: ${e.localizedMessage}\nデータ保護のため処理を中断しました。")
+            } finally {
+                _isProcessing.value = false
             }
         }
+    }
+
+    /**
+     * データベースの不整合をスキャンします。
+     */
+    fun checkIntegrity() {
+        viewModelScope.launch {
+            try {
+                _isProcessing.value = true
+                val results = maintenanceRepository.scanInconsistencies()
+                _inconsistencies.value = results
+                
+                if (results.isEmpty()) {
+                    sendUiEvent(UiEvent.ShowInfoDialog("チェック完了", "不整合なデータは見つかりませんでした。"))
+                }
+            } catch (e: Exception) {
+                showError("エラー", "チェック中にエラーが発生しました: ${e.localizedMessage}")
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 検出された不整合を修正（削除）します。
+     */
+    fun fixInconsistencies() {
+        viewModelScope.launch {
+            try {
+                _isProcessing.value = true
+                maintenanceRepository.cleanInconsistencies(_inconsistencies.value)
+                val count = _inconsistencies.value.size
+                _inconsistencies.value = emptyList()
+                sendUiEvent(UiEvent.ShowInfoDialog("修復完了", "${count}件の孤立したデータを削除しました。"))
+            } catch (e: Exception) {
+                showError("エラー", "修復中にエラーが発生しました: ${e.localizedMessage}")
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 不整合なチェック結果をクリアします（ダイアログを閉じる際など）。
+     */
+    fun clearInconsistencyResults() {
+        _inconsistencies.value = emptyList()
+    }
+
+    /**
+     * 【テスト用】あえて不整合なデータを挿入します。
+     */
+    fun insertTestInconsistency() {
+        viewModelScope.launch {
+            try {
+                maintenanceRepository.insertTestInconsistency()
+                showSnackbar("テスト用不整合データを1件挿入しました。")
+            } catch (e: Exception) {
+                showError("エラー", "挿入に失敗しました: ${e.localizedMessage}")
+            }
+        }
+    }
+
+
+    /**
+     * デバイスが認証（生体認証または端末ロック）に対応し、かつ設定済みかを判定します。
+     */
+    fun canAuthenticate(context: Context): Boolean {
+        val biometricManager = BiometricManager.from(context)
+        return biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS
     }
 
     class Factory(

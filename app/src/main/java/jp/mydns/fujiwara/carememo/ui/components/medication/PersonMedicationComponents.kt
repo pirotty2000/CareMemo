@@ -570,9 +570,9 @@ fun getTimeSlotLabel(slot: Int, isShort: Boolean = false): String {
 @Composable
 fun getMedicationStatusColor(status: Int): Color {
     return when (status) {
-        0 -> Color(0xFFD32F2F) 
-        1 -> Color(0xFFD1C4E9) 
-        2 -> Color(0xFF673AB7) 
+        0 -> MaterialTheme.colorScheme.error
+        1 -> MaterialTheme.colorScheme.primaryContainer
+        2 -> MaterialTheme.colorScheme.primary
         else -> Color.Transparent
     }
 }

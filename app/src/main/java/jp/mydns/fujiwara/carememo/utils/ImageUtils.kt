@@ -175,10 +175,17 @@ object ImageUtils {
     /**
      * 全ての写真ファイルを物理削除する。
      */
-    suspend fun clearPhotosDir(context: Context) = withContext(Dispatchers.IO) {
-        val dir = getPhotosDir(context)
-        if (dir.exists()) {
-            dir.listFiles()?.forEach { it.delete() }
+    suspend fun clearPhotosDir(context: Context): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val dir = getPhotosDir(context)
+            if (dir.exists()) {
+                dir.listFiles()?.forEach { 
+                    if (!it.delete()) return@withContext false 
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 

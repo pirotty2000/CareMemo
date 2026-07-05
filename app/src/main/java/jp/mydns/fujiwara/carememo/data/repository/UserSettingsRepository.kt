@@ -50,7 +50,7 @@ class UserSettingsRepository(private val context: Context) {
 
     val isBackupPasswordEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[IS_BACKUP_PASSWORD_ENABLED] ?: false
+            preferences[IS_BACKUP_PASSWORD_ENABLED] ?: true
         }
 
     val backupPassword: Flow<String> = context.dataStore.data

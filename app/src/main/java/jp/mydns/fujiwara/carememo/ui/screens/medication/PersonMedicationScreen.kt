@@ -164,7 +164,6 @@ fun PersonMedicationScreen(
         category = Category.MEDICATION,
         person = currentPerson,
         records = allRecords,
-        isNameMaskingEnabled = isNameMaskingEnabled,
         snackbarHostState = snackbarHostState,
         viewModel = viewModel
     )

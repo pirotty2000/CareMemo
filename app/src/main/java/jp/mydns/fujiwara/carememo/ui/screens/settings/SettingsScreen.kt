@@ -41,7 +41,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -57,7 +56,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.BuildConfig
-import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -65,12 +65,14 @@ import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateToArchiveManagement: (DeleteOrRestorePersonViewModel.OperationMode) -> Unit,
+    onRequireAuthentication: (onSuccess: () -> Unit) -> Unit,
     onBack: () -> Unit,
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -83,8 +85,11 @@ fun SettingsScreen(
     val endedUserList by viewModel.deletedUserList.collectAsState()
     val isProcessing by viewModel.isProcessing.collectAsState()
     val processingProgress by viewModel.processingProgress.collectAsState()
+    val inconsistencies: List<DatabaseInconsistency> by viewModel.inconsistencies.collectAsState()
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var localRecorderName by remember { mutableStateOf(persistedRecorderName) }
     var localBackupPassword by remember { mutableStateOf(backupPassword) }
@@ -102,11 +107,14 @@ fun SettingsScreen(
     var showEraseConfirm by rememberSaveable { mutableStateOf(false) }
     var showDevClearConfirm by rememberSaveable { mutableStateOf(false) }
     var showVersionDialog by rememberSaveable { mutableStateOf(false) }
-    var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showTimeoutDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
+
+    // 開発者モード（リセット表示用）の状態管理
+    var versionTapCount by remember { mutableIntStateOf(0) }
+    var isDeveloperModeEnabled by rememberSaveable { mutableStateOf(false) }
 
     var dialogTitle by rememberSaveable { mutableStateOf<String?>(null) }
     var dialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -127,6 +135,10 @@ fun SettingsScreen(
                     dialogTitle = "通知"
                     dialogMessage = event.message
                 }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
+                    // 全消去成功時など
+                    onBack()
+                }
                 else -> {}
             }
         }
@@ -143,7 +155,7 @@ fun SettingsScreen(
                 dialogMessage = null
                 dialogTitle = null
             },
-            confirmButtonText = "OK"
+            confirmButtonText = "OK",
         )
     }
 
@@ -165,9 +177,59 @@ fun SettingsScreen(
         DeleteConfirmDialog(
             onDismiss = { showDevClearConfirm = false },
             onDelete = { viewModel.clearAllData(context) },
-            title = "(開発用) 全データ消去",
-            message = "すべてのデータおよび写真を物理削除します。取り消せません。",
+            title = "(管理者) 全データ消去",
+            message = "全てのデータおよび写真を物理削除します。取り消せません。",
             confirmButtonText = "実行する"
+        )
+    }
+
+    // データベース不整合レポート・ダイアログ
+    if (inconsistencies.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearInconsistencyResults() },
+            title = { Text("データベース不整合レポート") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("以下の ${inconsistencies.size} 件の孤立したデータが見つかりました：", style = MaterialTheme.typography.bodySmall)
+                    
+                    Box(modifier = Modifier.heightIn(max = 300.dp)) {
+                        val scroll = rememberScrollState()
+                        Column(modifier = Modifier.verticalScroll(scroll)) {
+                            inconsistencies.forEach { inc ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(text = inc.description, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                                        Text(
+                                            text = buildString {
+                                                append("元利用者ID: ${inc.personId ?: "不明"}")
+                                                append(" | テーブル: ${inc.tableName}")
+                                            }, 
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                        inc.recordTime?.let { time ->
+                                            Text(text = "記録日時: ${DateTimeUtils.formatRecordTime(time)}", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text("これらは親データ（利用者）が存在しない無効な記録です。クリーンアップを実行して削除することをお勧めします。", 
+                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.fixInconsistencies() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) { Text("クリーンアップ実行") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.clearInconsistencyResults() }) { Text("閉じる") }
+            }
         )
     }
 
@@ -176,14 +238,6 @@ fun SettingsScreen(
             title = "バージョン情報",
             message = "CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy",
             onDismiss = { showVersionDialog = false }
-        )
-    }
-
-    if (showHelpDialog) {
-        InfoDialog(
-            title = "ヘルプ",
-            message = "・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「利用者管理」から復帰できます。\n・データは定期的にバックアップすることをお勧めします。",
-            onDismiss = { showHelpDialog = false }
         )
     }
 
@@ -199,7 +253,29 @@ fun SettingsScreen(
                 Box {
                     Column(modifier = Modifier.verticalScroll(scrollState)) {
                         options.forEach { (minutes, label) ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { viewModel.setLockTimeoutMinutes(minutes); showTimeoutDialog = false }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if ((minutes == -1) && (lockTimeoutMinutes != -1)) {
+                                            // 「ロックしない」を新しく選ぶ場合は認証を求める
+                                            if (viewModel.canAuthenticate(context)) {
+                                                onRequireAuthentication {
+                                                    viewModel.setLockTimeoutMinutes(minutes)
+                                                    showTimeoutDialog = false
+                                                }
+                                            } else {
+                                                viewModel.setLockTimeoutMinutes(minutes)
+                                                showTimeoutDialog = false
+                                            }
+                                        } else {
+                                            viewModel.setLockTimeoutMinutes(minutes)
+                                            showTimeoutDialog = false
+                                        }
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(selected = lockTimeoutMinutes == minutes, onClick = null)
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(label)
@@ -254,6 +330,7 @@ fun SettingsScreen(
     }
 
     SettingsScreenContent(
+        snackbarHostState = snackbarHostState,
         isMaskingEnabled = isMaskingEnabled,
         localRecorderName = localRecorderName,
         onMaskingChange = { viewModel.setNameMaskingEnabled(it) },
@@ -273,7 +350,21 @@ fun SettingsScreen(
             localBackupPassword = it
             if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it)
         },
-        onPasswordVisibilityToggle = { isPasswordVisible = !isPasswordVisible },
+        onPasswordVisibilityToggle = {
+            if (isPasswordVisible) {
+                // 非表示にする場合は認証不要
+                isPasswordVisible = false
+            } else {
+                // 表示する場合は、デバイスが認証に対応していれば認証を求める
+                if (viewModel.canAuthenticate(context)) {
+                    onRequireAuthentication {
+                        isPasswordVisible = true
+                    }
+                } else {
+                    isPasswordVisible = true
+                }
+            }
+        },
         onExportClick = {
             viewModel.setLockBypassEnabled(true)
             exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
@@ -288,9 +379,29 @@ fun SettingsScreen(
         onTimeoutClick = { showTimeoutDialog = true },
         themeSetting = themeSetting,
         onThemeClick = { showThemeDialog = true },
-        onHelpClick = { showHelpDialog = true },
-        onVersionClick = { showVersionDialog = true },
-        onClearAllClick = { showDevClearConfirm = true },
+        onVersionClick = {
+            if (!isDeveloperModeEnabled) {
+                versionTapCount++
+                if (versionTapCount >= 7) {
+                    isDeveloperModeEnabled = true
+                    scope.launch { snackbarHostState.showSnackbar("管理者向け設定が有効になりました") }
+                }
+            }
+            showVersionDialog = true
+        },
+        onClearAllClick = {
+            // 実行前にまず認証を求める
+            if (viewModel.canAuthenticate(context)) {
+                onRequireAuthentication {
+                    showDevClearConfirm = true
+                }
+            } else {
+                showDevClearConfirm = true
+            }
+        },
+        onCheckIntegrity = { viewModel.checkIntegrity() },
+        onInsertTestInconsistency = { viewModel.insertTestInconsistency() },
+        isDeveloperModeEnabled = isDeveloperModeEnabled,
         isProcessing = isProcessing,
         processingProgress = processingProgress,
         onBack = onBack
@@ -304,6 +415,7 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreenContent(
+    snackbarHostState: SnackbarHostState,
     isMaskingEnabled: Boolean,
     localRecorderName: String,
     onMaskingChange: (Boolean) -> Unit,
@@ -326,14 +438,17 @@ fun SettingsScreenContent(
     onTimeoutClick: () -> Unit,
     themeSetting: ThemeSetting,
     onThemeClick: () -> Unit,
-    onHelpClick: () -> Unit,
     onVersionClick: () -> Unit,
     onClearAllClick: () -> Unit,
+    onCheckIntegrity: () -> Unit,
+    onInsertTestInconsistency: () -> Unit,
+    isDeveloperModeEnabled: Boolean,
     isProcessing: Boolean,
     processingProgress: Int,
     onBack: () -> Unit
 ) {
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("設定・管理", fontWeight = FontWeight.Bold) },
@@ -389,13 +504,16 @@ fun SettingsScreenContent(
                 )
 
                 OtherSection(
-                    onHelpClick = onHelpClick,
                     onVersionClick = onVersionClick
                 )
 
-                ResetSection(
-                    onClearAllClick = onClearAllClick
-                )
+                if (isDeveloperModeEnabled) {
+                    ResetSection(
+                        onClearAllClick = onClearAllClick,
+                        onCheckIntegrity = onCheckIntegrity,
+                        onInsertTestInconsistency = onInsertTestInconsistency
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -473,7 +591,7 @@ private fun UserManagementSection(
     SettingsSection(title = "利用者管理") {
         ListItem(
             headlineContent = { Text("利用終了者の復帰") },
-            supportingContent = { Text("現在 ${endedUserCount} 名が利用終了となっています") },
+            supportingContent = { Text("現在 $endedUserCount 名が利用終了となっています") },
             trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
             modifier = Modifier.clickable { onNavigateToRestore() }
         )
@@ -513,7 +631,18 @@ private fun DataManagementSection(
     SettingsSection(title = "データ管理") {
         ListItem(
             headlineContent = { Text("バックアップにパスワードを設定") },
-            supportingContent = { Text("Zipファイルを暗号化して保護します") },
+            supportingContent = { 
+                Column {
+                    Text("Zipファイルを暗号化して保護します")
+                    if (!isBackupPasswordEnabled) {
+                        Text(
+                            text = "※OFFの場合、別の端末では復元できない可能性があります",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            },
             trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = onBackupPasswordEnabledChange) }
         )
         if (isBackupPasswordEnabled) {
@@ -624,15 +753,9 @@ private fun ThemeSection(
  */
 @Composable
 private fun OtherSection(
-    onHelpClick: () -> Unit,
     onVersionClick: () -> Unit
 ) {
     SettingsSection(title = "その他") {
-        ListItem(
-            headlineContent = { Text("ヘルプ") },
-            leadingContent = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
-            modifier = Modifier.clickable { onHelpClick() }
-        )
         ListItem(
             headlineContent = { Text("バージョン情報") },
             leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
@@ -646,10 +769,28 @@ private fun OtherSection(
  */
 @Composable
 private fun ResetSection(
-    onClearAllClick: () -> Unit
+    onClearAllClick: () -> Unit,
+    onCheckIntegrity: () -> Unit,
+    onInsertTestInconsistency: () -> Unit
 ) {
-    SettingsSection(title = "リセット") {
-        Text(text = "※ 全データと写真が消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    SettingsSection(title = "管理者向けツール") {
+        Text(text = "※ データベースの状態チェックと修復を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        ListItem(
+            headlineContent = { Text("データベース整合性チェック") },
+            supportingContent = { Text("孤立したデータの検出とレポート作成") },
+            leadingContent = { Icon(Icons.Rounded.FactCheck, contentDescription = null) },
+            modifier = Modifier.clickable { onCheckIntegrity() }
+        )
+        ListItem(
+            headlineContent = { Text("[テスト] 不整合データを挿入") },
+            supportingContent = { Text("検証用の孤立レコード(バイタル)を1件作成します") },
+            leadingContent = { Icon(Icons.Rounded.BugReport, contentDescription = null) },
+            modifier = Modifier.clickable { onInsertTestInconsistency() }
+        )
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+        
+        Text(text = "※ 全データと写真が完全に消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         ListItem(
             headlineContent = { Text("■要注意■ 全データ消去", color = MaterialTheme.colorScheme.error) },
             leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
@@ -674,6 +815,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 fun SettingsScreenPreview() {
     CareMemoTheme {
         SettingsScreenContent(
+            snackbarHostState = remember { SnackbarHostState() },
             isMaskingEnabled = false,
             localRecorderName = "記録者名",
             onMaskingChange = {},
@@ -696,9 +838,11 @@ fun SettingsScreenPreview() {
             onTimeoutClick = {},
             themeSetting = ThemeSetting.SYSTEM,
             onThemeClick = {},
-            onHelpClick = {},
             onVersionClick = {},
             onClearAllClick = {},
+            onCheckIntegrity = {},
+            onInsertTestInconsistency = {},
+            isDeveloperModeEnabled = true,
             isProcessing = false,
             processingProgress = 0,
             onBack = {}
@@ -711,6 +855,7 @@ fun SettingsScreenPreview() {
 fun SettingsScreenProcessingPreview() {
     CareMemoTheme {
         SettingsScreenContent(
+            snackbarHostState = remember { SnackbarHostState() },
             isMaskingEnabled = false,
             localRecorderName = "記録者名",
             onMaskingChange = {},
@@ -733,9 +878,11 @@ fun SettingsScreenProcessingPreview() {
             onTimeoutClick = {},
             themeSetting = ThemeSetting.SYSTEM,
             onThemeClick = {},
-            onHelpClick = {},
             onVersionClick = {},
             onClearAllClick = {},
+            onCheckIntegrity = {},
+            onInsertTestInconsistency = {},
+            isDeveloperModeEnabled = true,
             isProcessing = true,
             processingProgress = 45,
             onBack = {}

@@ -241,7 +241,6 @@ fun PersonConditionScreen(
             category = Category.CONDITION_AT_VISIT,
             person = currentPerson,
             records = records,
-            isNameMaskingEnabled = isNameMaskingEnabled,
             snackbarHostState = snackbarHostState,
             viewModel = viewModel,
             photos = allPhotos.value

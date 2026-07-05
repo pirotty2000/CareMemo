@@ -206,7 +206,6 @@ fun PersonHealthScreen(
         category = currentCategory,
         person = currentPerson,
         records = records,
-        isNameMaskingEnabled = isNameMaskingEnabled,
         snackbarHostState = snackbarHostState,
         viewModel = viewModel
     )

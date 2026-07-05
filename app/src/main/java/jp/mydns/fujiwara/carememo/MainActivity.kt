@@ -169,6 +169,23 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         }
 
         if (isAuthenticated || isBiometricEnabled == false) {
+            // 認証要求を処理する共通関数
+            val requestAuthentication: (onSuccess: () -> Unit) -> Unit = { onSuccess ->
+                val executor = ContextCompat.getMainExecutor(activity)
+                val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        onSuccess()
+                    }
+                })
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("本人確認")
+                    .setSubtitle("パスワードを表示するために認証してください")
+                    .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                    .build()
+                biometricPrompt.authenticate(promptInfo)
+            }
+
             NavHost(navController = navController, startDestination = "main") {
                 composable("main") {
                     val listViewModel: PersonListViewModel = viewModel(factory = PersonListViewModel.Factory(personRepository, deleteOrRestorePersonRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
@@ -207,6 +224,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToArchiveManagement = { mode ->
                             navController.navigate("archive_management/${mode.name}")
                         }, 
+                        onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack() }
                     )
                 }

@@ -23,7 +23,6 @@ fun PdfExportActionHandler(
     category: Category,
     person: Person?,
     records: List<HistoryRecord>,
-    isNameMaskingEnabled: Boolean,
     snackbarHostState: SnackbarHostState,
     viewModel: BaseViewModel,
     photos: List<ConditionPhoto> = emptyList()
@@ -45,7 +44,6 @@ fun PdfExportActionHandler(
                 val success = PdfExporter.exportAndShare(
                     context = context,
                     person = person,
-                    isNameMaskingEnabled = isNameMaskingEnabled,
                     category = category,
                     records = records,
                     allPhotos = if (includePhotos) photos else emptyList(),

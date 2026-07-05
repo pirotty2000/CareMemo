@@ -89,8 +89,19 @@ interface HeightAndWeightDao {
     @Upsert
     suspend fun insertAll(items: List<HeightAndWeight>)
 
+    // --- 整合性チェック用 ---
+    @Query("""
+        SELECT h.* FROM height_and_weight_db h
+        LEFT JOIN person_db p ON h.person_id = p.id
+        WHERE p.id IS NULL
+    """)
+    suspend fun getOrphanedRecords(): List<HeightAndWeight>
+
     @Query("SELECT EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
+
+    @Query("DELETE FROM height_and_weight_db WHERE id = :id")
+    suspend fun deleteById(id: Int)
 }
 
 @Dao
@@ -120,8 +131,19 @@ interface BpAndPulseDao {
     @Upsert
     suspend fun insertAll(items: List<BpAndPulse>)
 
+    // --- 整合性チェック用 ---
+    @Query("""
+        SELECT b.* FROM bp_and_pulse_db b
+        LEFT JOIN person_db p ON b.person_id = p.id
+        WHERE p.id IS NULL
+    """)
+    suspend fun getOrphanedRecords(): List<BpAndPulse>
+
     @Query("SELECT EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
+
+    @Query("DELETE FROM bp_and_pulse_db WHERE id = :id")
+    suspend fun deleteById(id: Int)
 }
 
 @Dao
@@ -151,8 +173,19 @@ interface GlucoseAndHbA1cDao {
     @Upsert
     suspend fun insertAll(items: List<GlucoseAndHbA1c>)
 
+    // --- 整合性チェック用 ---
+    @Query("""
+        SELECT g.* FROM glucose_and_hba1c_db g
+        LEFT JOIN person_db p ON g.person_id = p.id
+        WHERE p.id IS NULL
+    """)
+    suspend fun getOrphanedRecords(): List<GlucoseAndHbA1c>
+
     @Query("SELECT EXISTS(SELECT 1 FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
+
+    @Query("DELETE FROM glucose_and_hba1c_db WHERE id = :id")
+    suspend fun deleteById(id: Int)
 }
 
 @Dao
@@ -182,6 +215,14 @@ interface ConditionAtVisitDao {
     @Upsert
     suspend fun insertAll(items: List<ConditionAtVisit>)
 
+    // --- 整合性チェック用 ---
+    @Query("""
+        SELECT c.* FROM condition_at_visit_db c
+        LEFT JOIN person_db p ON c.person_id = p.id
+        WHERE p.id IS NULL
+    """)
+    suspend fun getOrphanedRecords(): List<ConditionAtVisit>
+
     @Query("""
         SELECT DISTINCT person_id FROM condition_at_visit_db 
         WHERE deleted_at IS NULL 
@@ -191,6 +232,9 @@ interface ConditionAtVisitDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM condition_at_visit_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
+
+    @Query("DELETE FROM condition_at_visit_db WHERE id = :id")
+    suspend fun deleteById(id: Int)
 }
 
 @Dao
@@ -234,6 +278,14 @@ interface ConditionPhotoDao {
 
     @Upsert
     suspend fun insertAll(items: List<ConditionPhoto>)
+
+    // --- 整合性チェック用 ---
+    @Query("""
+        SELECT cp.* FROM condition_photo_db cp
+        LEFT JOIN condition_at_visit_db c ON cp.condition_id = c.id
+        WHERE c.id IS NULL
+    """)
+    suspend fun getOrphanedPhotos(): List<ConditionPhoto>
 }
 
 @Dao
@@ -269,6 +321,17 @@ interface MedicationRecordDao {
     @Upsert
     suspend fun insertAll(items: List<MedicationRecord>)
 
+    // --- 整合性チェック用 ---
+    @Query("""
+        SELECT m.* FROM medication_record_db m
+        LEFT JOIN person_db p ON m.person_id = p.id
+        WHERE p.id IS NULL
+    """)
+    suspend fun getOrphanedRecords(): List<MedicationRecord>
+
     @Query("SELECT EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: Int): Flow<Boolean>
+
+    @Query("DELETE FROM medication_record_db WHERE id = :id")
+    suspend fun deleteById(id: Int)
 }

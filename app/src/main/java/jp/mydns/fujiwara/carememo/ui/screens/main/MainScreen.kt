@@ -50,7 +50,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -229,7 +228,6 @@ fun MainScreenContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
-    var showHelpDialog by remember { mutableStateOf(false) }
 
     // バージョン情報ダイアログ
     if (showVersionDialog) {
@@ -252,14 +250,6 @@ fun MainScreenContent(
         )
     }
 
-    // ヘルプ・ダイアログ
-    if (showHelpDialog) {
-        AlertDialog(onDismissRequest = { showHelpDialog = false }, 
-            title = { Text(stringResource(R.string.dialog_help_title)) }, 
-            text = { Text(stringResource(R.string.dialog_help_content)) }, 
-            confirmButton = { TextButton(onClick = { showHelpDialog = false }) { Text(stringResource(R.string.close)) } })
-    }
-
     // ハンバーガーメニューの内容
     Scaffold(
         topBar = {
@@ -273,11 +263,6 @@ fun MainScreenContent(
                             text = { Text(stringResource(R.string.menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                             onClick = { showMenu = false; onNavigateToSettings() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_help)) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Help, contentDescription = null) },
-                            onClick = { showMenu = false; showHelpDialog = true }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.menu_version)) },

@@ -47,7 +47,6 @@ object PdfExporter {
         val context: Context,
         val document: PdfDocument,
         val person: Person,
-        val isNameMaskingEnabled: Boolean,
         val category: Category
     ) {
         var pageNumber = 0
@@ -92,7 +91,6 @@ object PdfExporter {
     fun exportAndShare(
         context: Context,
         person: Person,
-        isNameMaskingEnabled: Boolean,
         category: Category,
         records: List<Any>,
         allPhotos: List<ConditionPhoto> = emptyList(),
@@ -109,7 +107,7 @@ object PdfExporter {
         if (filteredRecords.isEmpty()) return false
 
         val document = PdfDocument()
-        val pageContext = PdfPageContext(context, document, person, isNameMaskingEnabled, category)
+        val pageContext = PdfPageContext(context, document, person, category)
         
         // 最初のページ作成
         pageContext.nextPage()
@@ -422,7 +420,10 @@ object PdfExporter {
 
     private fun drawHeader(ctx: PdfPageContext): Float {
         val paint = Paint().apply { color = Color.BLACK; textSize = 18f; isFakeBoldText = true }
-        val name = ctx.person.getMaskedName(ctx.isNameMaskingEnabled)
+        
+        // PDFは外部共有前提のため、アプリの設定に関わらず常にマスキングを適用する
+        val name = ctx.person.getMaskedName(isEnabled = true)
+
         val date = DateTimeUtils.getCurrentPhotoCaption()
         ctx.canvas.drawText(ctx.context.getString(R.string.pdf_title, ctx.context.getString(ctx.category.displayNameRes)), MARGIN, 50f, paint)
         paint.textSize = 12f; paint.isFakeBoldText = false
