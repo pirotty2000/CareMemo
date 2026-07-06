@@ -66,6 +66,8 @@ import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
@@ -408,23 +410,27 @@ private fun ConditionRecordEditForm(
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     DateTimeInputFields(state = dateTimeState)
                     HorizontalDivider(thickness = 0.5.dp)
-                    OutlinedTextField(
+                    AppTextField(
                         value = title,
                         onValueChange = onTitleChange,
+                        type = AppTextFieldType.TEXT,
                         label = { Text("タイトル (任意)") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
+                    AppTextField(
                         value = author,
                         onValueChange = onAuthorChange,
+                        type = AppTextFieldType.TEXT,
                         label = { Text("記録者") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
+                    AppTextField(
                         value = condition,
                         onValueChange = onConditionChange,
+                        type = AppTextFieldType.TEXT,
                         label = { Text("所見メモ") },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
+                        singleLine = false,
                         trailingIcon = {
                             IconButton(onClick = {
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -443,12 +449,12 @@ private fun ConditionRecordEditForm(
                             onClick = onCancel,
                             modifier = Modifier.weight(1f),
                             enabled = conditionId != 0
-                        ) { Text(stringResource(R.string.cancel)) }
+                        ) { Text(stringResource(R.string.common_cancel)) }
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f),
                             enabled = author.isNotBlank() && condition.isNotBlank() && isDateTimeValid
-                        ) { Text(stringResource(R.string.save)) }
+                        ) { Text(stringResource(R.string.common_save)) }
                     }
                 }
             }

@@ -167,7 +167,7 @@ fun PersonHealthScreenContent(
                             activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                    ) { Text(stringResource(R.string.tab_history)) }
+                    ) { Text(stringResource(R.string.common_tab_history)) }
                     SegmentedButton(
                         selected = !preferredShowHistory,
                         onClick = { onPreferredShowHistoryChange(false) },
@@ -177,7 +177,7 @@ fun PersonHealthScreenContent(
                             activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                    ) { Text(stringResource(R.string.tab_graph)) }
+                    ) { Text(stringResource(R.string.common_tab_graph)) }
                 }
 
                 // コンテンツ表示

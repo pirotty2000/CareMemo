@@ -98,8 +98,9 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() } // スナックバー制御用
     val scope = rememberCoroutineScope() // 非同期処理用スコープ
     val lazyListState = rememberLazyListState() // リストの表示位置管理用
-    val userEndedFormat = stringResource(R.string.snackbar_user_ended) // 終了メッセージ用フォーマット
-    val undoLabel = stringResource(R.string.undo) // Undoボタン用ラベル
+    val userEndedFormat = stringResource(R.string.main_snackbar_user_ended) // 終了メッセージ用フォーマット
+    val undoLabel = stringResource(R.string.common_undo) // Undoボタン用ラベル
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) // ボトムシートの状態管理
@@ -119,13 +120,24 @@ fun MainScreen(
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
                 }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
                     showEditDialog = false
@@ -237,7 +249,7 @@ fun MainScreenContent(
     if (showVersionDialog) {
         AlertDialog(
             onDismissRequest = { showVersionDialog = false },
-            title = { Text(stringResource(R.string.dialog_version_title)) },
+            title = { Text(stringResource(R.string.main_dialog_version_title)) },
             text = {
                 val scrollState = rememberScrollState()
                 Box {
@@ -258,7 +270,7 @@ fun MainScreenContent(
                     VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
                 }
             },
-            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text(stringResource(R.string.close)) } }
+            confirmButton = { TextButton(onClick = { showVersionDialog = false }) { Text(stringResource(R.string.common_close)) } }
         )
     }
 
@@ -272,12 +284,12 @@ fun MainScreenContent(
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_settings)) },
+                            text = { Text(stringResource(R.string.main_menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                             onClick = { showMenu = false; onNavigateToSettings() }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_version)) },
+                            text = { Text(stringResource(R.string.main_menu_version)) },
                             leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
                             onClick = { showMenu = false; showVersionDialog = true }
                         )
@@ -286,7 +298,7 @@ fun MainScreenContent(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.user_registration)) } }
+        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.main_user_registration)) } }
     ) 
     
     // メインのコンテンツ
@@ -301,7 +313,7 @@ fun MainScreenContent(
             SearchBox(
                 query = searchQuery,
                 onQueryChange = onSearchQueryChange,
-                label = stringResource(R.string.search_memo_placeholder)
+                label = stringResource(R.string.main_search_placeholder)
             )
 
             // ---------- 名前(ふりがな)インデックス ----------
@@ -310,14 +322,15 @@ fun MainScreenContent(
                 onSectionSelect = onSectionSelect
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            //Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider()
 
             // ---------- 利用者一覧 ----------
             if (isLoading) {
                 LoadingScreen()
             } else if (userList.isEmpty()) {
                 EmptyState(
-                    message = if (searchQuery.isNotEmpty()) stringResource(R.string.no_user_found) else stringResource(R.string.no_user_registered),
+                    message = if (searchQuery.isNotEmpty()) stringResource(R.string.main_no_user_found) else stringResource(R.string.main_no_user_registered),
                     icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1
                 )
             } else {

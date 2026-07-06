@@ -106,8 +106,8 @@ fun PersonConditionScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     if (records.isEmpty()) {
                         EmptyState(
-                            message = stringResource(R.string.empty_records),
-                            description = stringResource(R.string.empty_records_description),
+                            message = stringResource(R.string.p_detail_empty_records),
+                            description = stringResource(R.string.p_detail_empty_records_desc),
                             icon = Icons.Outlined.Description
                         )
                     } else {
@@ -178,8 +178,8 @@ fun PersonConditionScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     if (records.isEmpty()) {
                         EmptyState(
-                            message = stringResource(R.string.empty_records),
-                            description = stringResource(R.string.empty_records_description),
+                            message = stringResource(R.string.p_detail_empty_records),
+                            description = stringResource(R.string.p_detail_empty_records_desc),
                             icon = Icons.Outlined.Description
                         )
                     } else {

@@ -14,17 +14,9 @@ package jp.mydns.fujiwara.carememo.ui.components.common
  *
  * 【想定する利用場所】：
  * 健康記録、所見メモ、一括入力画面などの記録日時設定箇所。
- *
- * 【このコンポーネントでは行わないこと】：
- * 和暦（令和等）での表示・入力（本コンポーネントは西暦数値入力に特化）。
- *
- * 【公開composable】：
- * DateTimeInputFields, rememberDateTimeInputState
  */
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -33,12 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
 import java.time.Instant
 import java.time.ZoneId
@@ -53,10 +42,6 @@ class DateTimeInputState(
     val day: MutableState<String>,
     val hour: MutableState<String>,
     val minute: MutableState<String>,
-    val monthFocusRequester: FocusRequester = FocusRequester(),
-    val dayFocusRequester: FocusRequester = FocusRequester(),
-    val hourFocusRequester: FocusRequester = FocusRequester(),
-    val minuteFocusRequester: FocusRequester = FocusRequester(),
 ) {
     /**
      * 入力値から Instant を生成する。不正な入力の場合は null を返す。
@@ -90,9 +75,6 @@ class DateTimeInputState(
 fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
     val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
     
-    // initialInstant が変わった際に状態をリセットしたいが、rememberSaveable の性質上、
-    // 明示的なキー指定がないと以前の値を保持し続ける。
-    // ここでは、initialInstant を inputs として渡すことでリセットを促す。
     val year = rememberSaveable(initialInstant) { mutableStateOf(zdt.year.toString()) }
     val month = rememberSaveable(initialInstant) { mutableStateOf(zdt.monthValue.toString()) }
     val day = rememberSaveable(initialInstant) { mutableStateOf(zdt.dayOfMonth.toString()) }
@@ -120,10 +102,6 @@ fun DateTimeInputFields(
         onHourChange = { state.hour.value = it },
         minute = state.minute.value,
         onMinuteChange = { state.minute.value = it },
-        monthFocusRequester = state.monthFocusRequester,
-        dayFocusRequester = state.dayFocusRequester,
-        hourFocusRequester = state.hourFocusRequester,
-        minuteFocusRequester = state.minuteFocusRequester,
         autoFocusHour = autoFocusHour
     )
 }
@@ -140,14 +118,8 @@ fun DateTimeInputFields(
     onHourChange: (String) -> Unit,
     minute: String,
     onMinuteChange: (String) -> Unit,
-    monthFocusRequester: FocusRequester,
-    dayFocusRequester: FocusRequester,
-    hourFocusRequester: FocusRequester,
-    minuteFocusRequester: FocusRequester,
     autoFocusHour: Boolean = true
 ) {
-    val focusManager = LocalFocusManager.current
-
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = "記録日時",
@@ -164,43 +136,37 @@ fun DateTimeInputFields(
                 onValueChange = onYearChange,
                 maxLength = 4,
                 label = "年",
-                modifier = Modifier.weight(1.3f),
-                nextFocusRequester = monthFocusRequester
+                modifier = Modifier.weight(1.3f)
             )
             DateTimeUnitField(
                 value = month,
                 onValueChange = onMonthChange,
                 maxLength = 2,
                 label = "月",
-                modifier = Modifier.weight(1f).focusRequester(monthFocusRequester),
-                nextFocusRequester = dayFocusRequester
+                modifier = Modifier.weight(1f)
             )
             DateTimeUnitField(
                 value = day,
                 onValueChange = onDayChange,
                 maxLength = 2,
                 label = "日",
-                modifier = Modifier.weight(1f).focusRequester(dayFocusRequester),
-                nextFocusRequester = if (autoFocusHour) hourFocusRequester else null
+                modifier = Modifier.weight(1f),
+                imeAction = if (autoFocusHour) ImeAction.Next else ImeAction.Done
             )
             DateTimeUnitField(
                 value = hour,
                 onValueChange = onHourChange,
                 maxLength = 2,
                 label = "時",
-                modifier = Modifier.weight(1f).focusRequester(hourFocusRequester),
-                nextFocusRequester = minuteFocusRequester
+                modifier = Modifier.weight(1f)
             )
             DateTimeUnitField(
                 value = minute,
                 onValueChange = onMinuteChange,
                 maxLength = 2,
                 label = "分",
-                modifier = Modifier.weight(1f).focusRequester(minuteFocusRequester),
-                imeAction = ImeAction.Done,
-                onDone = {
-                    focusManager.clearFocus()
-                }
+                modifier = Modifier.weight(1f),
+                imeAction = ImeAction.Done
             )
         }
     }
@@ -213,25 +179,15 @@ private fun DateTimeUnitField(
     maxLength: Int,
     label: String,
     modifier: Modifier = Modifier,
-    nextFocusRequester: FocusRequester? = null,
     imeAction: ImeAction = ImeAction.Next,
-    onDone: (() -> Unit)? = null
 ) {
     CompactTextField(
         value = value,
-        onValueChange = {
-            val filtered = it.filter { c -> c.isDigit() }
-            if (filtered.length <= maxLength) {
-                onValueChange(filtered)
-                if (filtered.length == maxLength) nextFocusRequester?.requestFocus()
-            }
-        },
+        onValueChange = onValueChange,
         modifier = modifier,
+        type = AppTextFieldType.INTEGER,
         suffix = { Text(label, style = MaterialTheme.typography.bodySmall) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = imeAction),
-        keyboardActions = KeyboardActions(
-            onNext = { nextFocusRequester?.requestFocus() },
-            onDone = { onDone?.invoke() }
-        )
+        maxLength = maxLength,
+        imeAction = imeAction
     )
 }

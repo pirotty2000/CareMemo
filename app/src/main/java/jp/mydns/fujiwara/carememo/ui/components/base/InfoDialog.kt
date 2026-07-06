@@ -41,7 +41,7 @@ fun InfoDialog(
     title: String?,
     message: String,
     onDismiss: () -> Unit,
-    confirmButtonText: String = stringResource(R.string.close)
+    confirmButtonText: String = stringResource(R.string.common_close)
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,

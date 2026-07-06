@@ -27,12 +27,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
@@ -68,8 +70,18 @@ fun KanaIndexBar(
                 modifier = Modifier
                     // 「全」「あ」・・・の間隔（文字幅を指定し、中央に配置しているだけで、
                     // paddingを指定しているわけではない。
-                    .width(28.dp)
-                    .height(48.dp)
+                    .width(28.dp)   // 幅を48→28にして横を詰めた
+                    .height(32.dp)  // 高さを48→32にして上下を詰めた
+                    // ----- 2026/07/06 start
+                    // ------ 選択されたら背景色を変える
+                    .background(
+                        color =
+                            if (selectedSection == title)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            else Color.Transparent,
+                                shape = RoundedCornerShape(4.dp) // 少し角を丸くすると馴染みます
+                    )
+                    // ----- 2026/07/06 end
                     .clickable { onSectionSelect(title) },
                 contentAlignment = Alignment.Center
             ) {
@@ -81,7 +93,9 @@ fun KanaIndexBar(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (selectedSection == title) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (selectedSection == title)
+                            MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (selectedSection == title) {
                         Box(

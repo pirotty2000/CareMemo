@@ -117,7 +117,7 @@ fun GraphExpansionScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back), modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), modifier = Modifier.size(20.dp))
                     }
                     Text(
                         text = "${currentPerson?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${stringResource(category.displayNameRes)}",
@@ -133,7 +133,7 @@ fun GraphExpansionScreen(
                 LoadingScreen()
             } else if (records.isEmpty()) {
                 EmptyState(
-                    message = stringResource(R.string.empty_records),
+                    message = stringResource(R.string.p_detail_empty_records),
                     icon = Icons.AutoMirrored.Rounded.ShowChart
                 )
             } else {
@@ -204,7 +204,7 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.empty_records))
+                    Text(stringResource(R.string.p_detail_empty_records))
                 }
             }
         }

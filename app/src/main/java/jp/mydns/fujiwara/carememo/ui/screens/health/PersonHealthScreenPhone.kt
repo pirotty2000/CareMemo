@@ -105,7 +105,7 @@ fun PersonHealthScreenPhone(
                         IconButton(onClick = { if (selectedRecordId != -1) onSelectedRecordIdChange(-1) else onBack() }) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
+                                contentDescription = stringResource(R.string.common_back)
                             )
                         }
                     },
@@ -116,7 +116,7 @@ fun PersonHealthScreenPhone(
                             IconButton(onClick = onShowPdfSettings) {
                                 Icon(
                                     Icons.Rounded.PictureAsPdf,
-                                    contentDescription = stringResource(R.string.pdf_export)
+                                    contentDescription = stringResource(R.string.common_pdf_export)
                                 )
                             }
                         }
@@ -137,7 +137,7 @@ fun PersonHealthScreenPhone(
                 FloatingActionButton(onClick = {
                     onSelectedRecordIdChange(0)
                 }) {
-                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_new))
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.main_btn_add_new))
                 }
             }
         }
@@ -159,8 +159,8 @@ fun PersonHealthScreenPhone(
         ) {
             if (records.isEmpty() && selectedRecordId == -1 && !isLoading) {
                 EmptyState(
-                    message = stringResource(R.string.empty_records),
-                    description = stringResource(R.string.empty_records_description),
+                    message = stringResource(R.string.p_detail_empty_records),
+                    description = stringResource(R.string.p_detail_empty_records_desc),
                     icon = Icons.Outlined.Description
                 )
             } else {

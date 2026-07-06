@@ -9,6 +9,7 @@ import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
@@ -114,8 +115,8 @@ class SettingsViewModel(
                     userSettingsRepository.setBiometricEnabled(enabled = true)
                 } else {
                     showError(
-                        "設定できません",
-                        "このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。",
+                        R.string.settings_err_title_biometric,
+                        R.string.settings_err_biometric_unsupported,
                     )
                 }
             } else {
@@ -158,9 +159,9 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 archivedPersonRepository.deleteAllEndedPersons()
-                sendUiEvent(UiEvent.ShowInfoDialog("完了", "利用終了者のデータを一括で完全に抹消しました。"))
+                showInfo(R.string.common_error_title_info, R.string.settings_msg_delete_ended_success)
             } catch (e: Exception) {
-                showError("エラー", "データの抹消に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
             }
         }
     }
@@ -172,7 +173,7 @@ class SettingsViewModel(
             try {
                 // 容量チェック
                 if (!hasAvailableSpace(context.cacheDir, 50 * 1024 * 1024)) { // 最低 50MB 
-                    showError("エラー", "空き容量が不足しているためエクスポートできません。")
+                    showError(R.string.common_error_title_error, R.string.common_error_no_space, "50MB")
                     return@launch
                 }
 
@@ -215,9 +216,9 @@ class SettingsViewModel(
                         input.copyTo(output)
                     }
                 }
-                sendUiEvent(UiEvent.ShowInfoDialog("エクスポート完了", "データと写真のエクスポートが完了しました。"))
+                showInfo(R.string.common_error_title_info, R.string.settings_msg_export_success)
             } catch (e: Exception) {
-                showError("エラー", "エクスポートに失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
                 // 一時ファイルの確実な削除
@@ -240,7 +241,7 @@ class SettingsViewModel(
                     pfd?.close()
                     
                     if (!hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
-                        showError("エラー", "空き容量が不足しているため復元できません。")
+                        showError(R.string.common_error_title_error, R.string.common_error_no_space, (fileSize * 2.5).toLong())
                         return@launch
                     }
 
@@ -294,14 +295,14 @@ class SettingsViewModel(
                         
                         // バージョンチェック
                         if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
-                            showError("復元エラー", "このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。")
+                            showError(R.string.common_error_title_update, R.string.settings_err_import_version_mismatch)
                             tempDir.deleteRecursively()
                             return@launch
                         }
 
                         maintenanceRepository.replaceAllData(backup)
                         tempDir.deleteRecursively()
-                        sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データの復元が完了しました。"))
+                        showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success_data_only)
                     }
                 } else {
                     // パスワード入力後の再試行
@@ -310,13 +311,13 @@ class SettingsViewModel(
                         proceedImportZip(context, file, passwordOverride)
                         clearPendingImport()
                     } else {
-                        showError("エラー", "パスワードが違います。")
+                        showError(R.string.common_error_title_error, R.string.settings_err_import_wrong_password)
                         // パスワードが違う場合はダイアログを閉じるか再入力を促す（ここでは再度RequestPasswordを送るのも手だが、UI側で制御）
                         sendUiEvent(UiEvent.RequestPassword)
                     }
                 }
             } catch (e: Exception) {
-                showError("エラー", "復元に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
                 clearPendingImport()
             }
         }
@@ -369,14 +370,14 @@ class SettingsViewModel(
             // 全て成功したらバックアップを削除
             backupPhotosDir.deleteRecursively()
             
-            sendUiEvent(UiEvent.ShowInfoDialog("復元完了", "データと写真の復元が完了しました。"))
+            showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success)
         } catch (e: Exception) {
             // 失敗時は写真をロールバック
             if (backupPhotosDir.exists()) {
                 appPhotosDir.deleteRecursively()
                 backupPhotosDir.renameTo(appPhotosDir)
             }
-            showError("復元失敗", "処理中にエラーが発生したため、元の状態に差し戻しました。\n理由: ${e.localizedMessage}")
+            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         } finally {
             _isProcessing.value = false
             // 解凍に使用した一時ディレクトリのクリーンアップ
@@ -418,11 +419,11 @@ class SettingsViewModel(
                 maintenanceRepository.clearAllData()
                 _processingProgress.value = 100
 
-                sendUiEvent(UiEvent.ShowInfoDialog("完了", "全てのデータと写真を削除しました。アプリを初期状態に戻しました。"))
+                showInfo(R.string.common_error_title_info, R.string.settings_msg_clear_all_success)
                 // メイン画面へ戻るための通知（必要に応じて）
                 sendUiEvent(UiEvent.SaveSuccess) 
             } catch (e: Exception) {
-                showError("エラー", "データの削除に失敗しました: ${e.localizedMessage}\nデータ保護のため処理を中断しました。")
+                showError(R.string.common_error_title_error, R.string.common_error_delete, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
             }
@@ -440,10 +441,10 @@ class SettingsViewModel(
                 _inconsistencies.value = results
                 
                 if (results.isEmpty()) {
-                    sendUiEvent(UiEvent.ShowInfoDialog("チェック完了", "不整合なデータは見つかりませんでした。"))
+                    showInfo(R.string.common_error_title_info, R.string.settings_msg_integrity_ok)
                 }
             } catch (e: Exception) {
-                showError("エラー", "チェック中にエラーが発生しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
             }
@@ -460,9 +461,9 @@ class SettingsViewModel(
                 maintenanceRepository.cleanInconsistencies(_inconsistencies.value)
                 val count = _inconsistencies.value.size
                 _inconsistencies.value = emptyList()
-                sendUiEvent(UiEvent.ShowInfoDialog("修復完了", "${count}件の孤立したデータを削除しました。"))
+                showInfo(R.string.common_error_title_info, R.string.settings_msg_fix_success, count)
             } catch (e: Exception) {
-                showError("エラー", "修復中にエラーが発生しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
             }
@@ -483,9 +484,9 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 maintenanceRepository.insertTestInconsistency()
-                showSnackbar("テスト用不整合データを1件挿入しました。")
+                showSnackbar(R.string.settings_msg_test_inconsistency_added)
             } catch (e: Exception) {
-                showError("エラー", "挿入に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             }
         }
     }

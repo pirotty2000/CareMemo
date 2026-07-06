@@ -83,7 +83,7 @@ fun PersonHealthScreenTablet(
                         IconButton(onClick = onBack) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
+                                contentDescription = stringResource(R.string.common_back)
                             )
                         }
                     },
@@ -100,7 +100,7 @@ fun PersonHealthScreenTablet(
                         IconButton(onClick = onShowPdfSettings) {
                             Icon(
                                 Icons.Rounded.PictureAsPdf,
-                                contentDescription = stringResource(R.string.pdf_export)
+                                contentDescription = stringResource(R.string.common_pdf_export)
                             )
                         }
                     }
@@ -135,8 +135,8 @@ fun PersonHealthScreenTablet(
             if (records.isEmpty() && selectedRecordId == -1 && !isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
-                        message = stringResource(R.string.empty_records),
-                        description = stringResource(R.string.empty_records_description),
+                        message = stringResource(R.string.p_detail_empty_records),
+                        description = stringResource(R.string.p_detail_empty_records_desc),
                         icon = Icons.Outlined.Description
                     )
                 }

@@ -70,6 +70,7 @@ fun PersonHealthScreen(
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded // 画面が拡張レイアウト（タブレット等）かどうか
     val scope = rememberCoroutineScope() // コルーチンスコープ
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val records by healthViewModel.records.collectAsState() // 記録データのリスト
 
@@ -85,7 +86,7 @@ fun PersonHealthScreen(
 
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
-    val noRecordsMsgFormat = stringResource(R.string.error_no_records_for_pdf) // PDF出力時のデータ無しメッセージ用フォーマット
+    val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf) // PDF出力時のデータ無しメッセージ用フォーマット
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
@@ -93,12 +94,27 @@ fun PersonHealthScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is BaseViewModel.UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
-                    event.message
-                )
+                is BaseViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                }
+                is BaseViewModel.UiEvent.ShowInfoDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowInfoDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
                 is BaseViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 else -> {}
             }

@@ -1,58 +1,84 @@
 <resources>
     <string name="app_name">CareMemo</string>
-    <string name="loading">読み込み中…</string>
-    <string name="no_user_found">検索条件に一致する利用者は見つかりませんでした</string>
-    <string name="no_user_registered">利用者が登録されていません。\n右下のボタンから登録してください。</string>
-    <string name="menu_settings">設定</string>
-    <string name="menu_help">ヘルプ</string>
-    <string name="menu_version">バージョン情報</string>
-    <string name="dialog_version_title">バージョン情報</string>
-    <string name="dialog_help_title">ヘルプ</string>
-    <string name="dialog_help_content">・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「設定」内の「利用者管理」から復帰できます。</string>
-    <string name="close">閉じる</string>
-    <string name="edit_user_info">利用者情報を編集</string>
-    <string name="end_user_service">利用を終了する</string>
-    <string name="snackbar_user_ended">%1$s さんの利用を終了しました</string>
-    <string name="undo">元に戻す</string>
-    <string name="category_selection_title">%1$s さんの記録を選択</string>
-    <string name="user_registration">利用者登録</string>
-    <string name="user_edit">登録情報の編集</string>
-    <string name="last_name">姓</string>
-    <string name="first_name">名</string>
-    <string name="last_name_furigana">せい</string>
-    <string name="first_name_furigana">めい</string>
-    <string name="birthday">生年月日</string>
-    <string name="note_label">同姓同名識別用メモ</string>
-    <string name="save">保存</string>
-    <string name="cancel">キャンセル</string>
-    <string name="search_memo_placeholder">所見メモ検索</string>
-    <string name="search_memo_hint">特定の症状や出来事を入力…</string>
-    <string name="clear">クリア</string>
-    <string name="era_ad">西暦</string>
-    <string name="era_showa">昭和</string>
-    <string name="era_heisei">平成</string>
-    <string name="era_reiwa">令和</string>
-    <string name="year_suffix">年</string>
-    <string name="month_suffix">月</string>
-    <string name="day_suffix">日</string>
-    <string name="age_suffix">%1$d 歳</string>
-    <string name="birthday_summary_format">%1$s生　%2$s</string>
-    <string name="category_height_weight">身長・体重</string>
-    <string name="category_vital">バイタル</string>
-    <string name="category_glucose">血糖値・HbA1c</string>
-    <string name="category_condition">所見メモ</string>
-    <string name="category_medication">服薬管理</string>
-    <string name="back">戻る</string>
-    <string name="pdf_export">PDF出力</string>
-    <string name="add_new">新規追加</string>
-    <string name="delete_data_title">データの削除</string>
-    <string name="delete_confirm_message">この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。</string>
-    <string name="delete">削除</string>
-    <string name="tab_history">履歴</string>
-    <string name="tab_graph">グラフ</string>
-    <string name="empty_records">記録がありません</string>
-    <string name="empty_records_description">右下の ＋ ボタンをタップして、\n記録を追加しましょう</string>
-    <string name="error_no_records_for_pdf">%1$sの記録がないため出力できません</string>
+    <string name="common_loading">読み込み中…</string>
+    <string name="common_close">閉じる</string>
+    <string name="common_save">保存</string>
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_clear">クリア</string>
+    <string name="common_back">戻る</string>
+    <string name="common_delete">削除</string>
+    <string name="common_undo">元に戻す</string>
+    <string name="common_pdf_export">PDF出力</string>
+
+    <!-- 日付・単位関連 -->
+    <string name="common_era_ad">西暦</string>
+    <string name="common_era_showa">昭和</string>
+    <string name="common_era_heisei">平成</string>
+    <string name="common_era_reiwa">令和</string>
+    <string name="common_year_suffix">年</string>
+    <string name="common_month_suffix">月</string>
+    <string name="common_day_suffix">日</string>
+    <string name="common_age_suffix">%1$d 歳</string>
+    <string name="common_birthday_format">%1$s生　%2$s</string>
+
+    <!-- カテゴリ名 -->
+    <string name="common_category_height_weight">身長・体重</string>
+    <string name="common_category_vital">バイタル</string>
+    <string name="common_category_glucose">血糖値・HbA1c</string>
+    <string name="common_category_condition">所見メモ</string>
+    <string name="common_category_medication">服薬管理</string>
+
+    <!-- タブ名 -->
+    <string name="common_tab_history">履歴</string>
+    <string name="common_tab_graph">グラフ</string>
+
+    <!-- MainScreen / PersonList -->
+    <string name="main_title">利用者一覧</string>
+    <string name="main_no_user_found">検索条件に一致する利用者は見つかりませんでした</string>
+    <string name="main_no_user_registered">利用者が登録されていません。\n右下のボタンから登録してください。</string>
+    <string name="main_menu_settings">設定</string>
+    <string name="main_menu_help">ヘルプ</string>
+    <string name="main_menu_version">バージョン情報</string>
+    <string name="main_dialog_version_title">バージョン情報</string>
+    <string name="main_dialog_help_title">ヘルプ</string>
+    <string name="main_dialog_help_content">・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「設定」内の「利用者管理」から復帰できます。</string>
+    <string name="main_edit_user_info">利用者情報を編集</string>
+    <string name="main_end_user_service">利用を終了する</string>
+    <string name="main_snackbar_user_ended">%1$s さんの利用を終了しました</string>
+    <string name="main_category_selection_title">%1$s さんの記録を選択</string>
+    <string name="main_user_registration">利用者登録</string>
+    <string name="main_user_edit">登録情報の編集</string>
+    <string name="main_label_last_name">姓</string>
+    <string name="main_label_first_name">名</string>
+    <string name="main_label_last_name_furigana">せい</string>
+    <string name="main_label_first_name_furigana">めい</string>
+    <string name="main_label_birthday">生年月日</string>
+    <string name="main_label_note">同姓同名識別用メモ</string>
+    <string name="main_search_placeholder">所見メモ検索</string>
+    <string name="main_search_hint">特定の症状や出来事を入力…</string>
+    <string name="main_btn_add_new">新規追加</string>
+
+    <string name="main_msg_user_added">%1$s さんを登録しました</string>
+    <string name="main_msg_user_updated">利用者情報を更新しました</string>
+    <string name="main_msg_user_archived">%1$s さんをアーカイブに移動しました</string>
+    <string name="main_msg_user_restored">%1$s さんを利用者一覧に戻しました</string>
+    <string name="main_err_duplicate_active">既に同じ内容の利用者が登録されています。別人として登録したい場合は「同姓同名識別用メモ」の内容を変更して区別してください。</string>
+    <string name="main_err_duplicate_archived">入力された内容（%1$s 様）は、現在「利用修了者（アーカイブ）」の中に存在します。\n\n●その方を復帰させたい場合：\nこの画面を閉じ、設定メニューの「利用終了者の復帰」から操作してください。\n\n●別人として新規登録／更新したい場合：\n「同姓同名識別用メモ」を別の内容に変更してから再度保存してください。</string>
+    <string name="main_err_title_duplicate_archived_add">登録エラー（利用修了者に存在）</string>
+    <string name="main_err_title_duplicate_archived_update">更新エラー（利用修了者と重複）</string>
+
+    <!-- PersonHealthScreen / PersonConditionScreen 共通 -->
+    <string name="p_detail_dialog_title_delete">データの削除</string>
+    <string name="p_detail_dialog_msg_delete_confirm">この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。</string>
+    <string name="p_detail_empty_records">記録がありません</string>
+    <string name="p_detail_empty_records_desc">右下の ＋ ボタンをタップして、\n記録を追加しましょう</string>
+    <string name="p_detail_error_no_records_for_pdf">%1$sの記録がないため出力できません</string>
+
+    <!-- PersonHealthScreen -->
+    <string name="p_health_title">健康記録</string>
+    <string name="p_health_msg_save_success">記録を保存しました</string>
+    <string name="p_health_msg_update_success">記録を更新しました</string>
+    <string name="p_health_msg_delete_success">記録を削除しました</string>
 
     <!-- Health Labels -->
     <string name="health_label_height">身長</string>
@@ -138,4 +164,54 @@
     <string name="more_items">さらに下に項目があります</string>
     <string name="decision">決定</string>
     <string name="condition_photo_add_guide">写真は保存後に詳細画面から追加できます</string>
+
+    <!-- Common Messages -->
+    <string name="common_error_title_save">保存エラー</string>
+    <string name="common_error_title_update">更新エラー</string>
+    <string name="common_error_title_delete">削除エラー</string>
+    <string name="common_error_title_info">完了</string>
+    <string name="common_error_title_error">エラー</string>
+    <string name="common_error_save">データの保存に失敗しました: %1$s</string>
+    <string name="common_error_update">情報の更新に失敗しました: %1$s</string>
+    <string name="common_error_delete">データの削除に失敗しました: %1$s</string>
+    <string name="common_error_unknown">予期せぬエラーが発生しました: %1$s</string>
+    <string name="common_error_no_space">空き容量が不足しています (%1$s)</string>
+
+    <!-- PersonConditionScreen -->
+    <string name="p_cond_title">所見メモ</string>
+    <string name="p_cond_msg_save_success">記録を保存しました</string>
+    <string name="p_cond_msg_update_success">記録を更新しました</string>
+    <string name="p_cond_msg_delete_success">記録を削除しました</string>
+    <string name="p_cond_msg_photo_save_success">写真を保存しました</string>
+    <string name="p_cond_msg_photo_delete_success">写真を削除しました</string>
+    <string name="p_cond_err_photo_process_failure">画像の処理に失敗しました。空き容量を確認してください。</string>
+
+    <!-- PersonMedicationScreen -->
+    <string name="p_med_msg_update_success">服薬状況を更新しました</string>
+    <string name="p_med_err_update_failure">服薬状況の更新に失敗しました: %1$s</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_err_title_biometric">設定できません</string>
+    <string name="settings_err_biometric_unsupported">このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。</string>
+    <string name="settings_msg_delete_ended_success">利用終了者のデータを一括で完全に抹消しました。</string>
+    <string name="settings_msg_export_success">データと写真のエクスポートが完了しました。</string>
+    <string name="settings_msg_import_success">データと写真の復元が完了しました。</string>
+    <string name="settings_msg_import_success_data_only">データの復元が完了しました。</string>
+    <string name="settings_err_import_no_json">バックアップファイル(backup.json)が見つかりません。</string>
+    <string name="settings_err_import_version_mismatch">このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。</string>
+    <string name="settings_err_import_wrong_password">パスワードが違います。</string>
+    <string name="settings_msg_clear_all_success">全てのデータと写真を削除しました。アプリを初期状態に戻しました。</string>
+    <string name="settings_msg_integrity_ok">不整合なデータは見つかりませんでした。</string>
+    <string name="settings_msg_fix_success">%1$d件の孤立したデータを削除しました。</string>
+    <string name="settings_msg_test_inconsistency_added">テスト用不整合データを1件挿入しました。</string>
+
+    <!-- Archive (DeleteOrRestorePerson) -->
+    <string name="archive_msg_restored">%1$d 名の利用者を一覧に戻しました</string>
+    <string name="archive_msg_deleted">%1$d 名の利用者を完全に抹消しました</string>
+    <string name="archive_err_restore_failure">利用者の復帰に失敗しました: %1$s</string>
+    <string name="archive_err_delete_failure">データの抹消に失敗しました: %1$s</string>
+
+    <!-- BatchInputScreen -->
+    <string name="batch_msg_save_success">健康記録を一括保存しました</string>
+    <string name="batch_err_save_failure">一括保存に失敗しました: %1$s</string>
 </resources>

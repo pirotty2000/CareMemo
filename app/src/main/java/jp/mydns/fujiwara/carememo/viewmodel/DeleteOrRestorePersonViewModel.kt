@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,10 +90,10 @@ class DeleteOrRestorePersonViewModel(
                 val targets = persons.filter { _selectedIds.value.contains(it.id) }
                 targets.forEach { repository.restorePerson(it.id) }
                 
-                showSnackbar("${targets.size} 名の利用者を一覧に戻しました")
+                showSnackbar(R.string.archive_msg_restored, targets.size)
                 clearSelection()
             } catch (e: Exception) {
-                showError("復元エラー", "利用者の復帰に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_error, R.string.archive_err_restore_failure, e.localizedMessage ?: "")
             }
         }
     }
@@ -106,10 +107,10 @@ class DeleteOrRestorePersonViewModel(
                 val targets = persons.filter { _selectedIds.value.contains(it.id) }
                 targets.forEach { repository.permanentlyDeletePerson(it.id) }
                 
-                showSnackbar("${targets.size} 名の利用者を完全に抹消しました")
+                showSnackbar(R.string.archive_msg_deleted, targets.size)
                 clearSelection()
             } catch (e: Exception) {
-                showError("削除エラー", "データの抹消に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_delete, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
             }
         }
     }

@@ -23,8 +23,11 @@ abstract class BaseViewModel(
      */
     sealed interface UiEvent {
         data class ShowSnackbar(val message: String) : UiEvent
+        data class ShowSnackbarRes(val resId: Int, val args: List<Any> = emptyList()) : UiEvent
         data class ShowInfoDialog(val title: String, val message: String) : UiEvent
+        data class ShowInfoDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
         data class ShowErrorDialog(val title: String, val message: String) : UiEvent
+        data class ShowErrorDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
         object RequestPassword : UiEvent
         object SaveSuccess : UiEvent
     }
@@ -62,7 +65,14 @@ abstract class BaseViewModel(
     }
 
     protected fun showSnackbar(message: String) = sendUiEvent(UiEvent.ShowSnackbar(message))
+    protected fun showSnackbar(resId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowSnackbarRes(resId, args.toList()))
+    
     protected fun showError(title: String, message: String) = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
+    protected fun showError(titleResId: Int, messageResId: Int, vararg args: Any) = 
+        sendUiEvent(UiEvent.ShowErrorDialogRes(titleResId, messageResId, args.toList()))
+
+    protected fun showInfo(titleResId: Int, messageResId: Int, vararg args: Any) =
+        sendUiEvent(UiEvent.ShowInfoDialogRes(titleResId, messageResId, args.toList()))
 
     /**
      * 外部アプリ（ファイルピッカー等）呼び出しのために、次回のフォアグラウンド復帰時のロックを一時的にスキップさせる

@@ -61,7 +61,7 @@ fun HealthGraphView(
     if (showHelpDialog != null) {
         AlertDialog(
             onDismissRequest = { showHelpDialog = null },
-            title = { Text(stringResource(R.string.menu_help)) },
+            title = { Text(stringResource(R.string.main_menu_help)) },
             text = {
                 val scrollState = rememberScrollState()
                 Box {
@@ -73,7 +73,7 @@ fun HealthGraphView(
             },
             confirmButton = {
                 TextButton(onClick = { showHelpDialog = null }) {
-                    Text(stringResource(R.string.close))
+                    Text(stringResource(R.string.common_close))
                 }
             }
         )
@@ -115,7 +115,7 @@ fun HealthGraphView(
                             fixedMaxX = globalMaxX
                         )
                     } else {
-                        Text(stringResource(R.string.empty_records), modifier = Modifier.align(Alignment.Center))
+                        Text(stringResource(R.string.p_detail_empty_records), modifier = Modifier.align(Alignment.Center))
                     }
                 }
                 if (index < graphCount - 1) {

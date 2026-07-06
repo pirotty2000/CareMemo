@@ -30,6 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 
 /**
  * アプリ共通の検索ボックス
@@ -40,11 +42,12 @@ fun SearchBox(
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
-    placeholder: String = stringResource(R.string.search_memo_hint)
+    placeholder: String = stringResource(R.string.main_search_hint)
 ) {
-    OutlinedTextField(
+    AppTextField(
         value = query,
         onValueChange = onQueryChange,
+        type = AppTextFieldType.TEXT,
         modifier = modifier.fillMaxWidth(),
         label = label?.let { { Text(it) } },
         placeholder = { Text(placeholder) },
@@ -52,14 +55,10 @@ fun SearchBox(
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Rounded.Clear, contentDescription = stringResource(R.string.clear))
+                    Icon(Icons.Rounded.Clear, contentDescription = stringResource(R.string.common_clear))
                 }
             }
         },
-        singleLine = true,
-        shape = MaterialTheme.shapes.medium,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-        )
+        singleLine = true
     )
 }

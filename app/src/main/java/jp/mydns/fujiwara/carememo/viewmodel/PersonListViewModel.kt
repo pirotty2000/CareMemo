@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteConstraintException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
@@ -143,14 +144,14 @@ class PersonListViewModel(
                 // 2. データベースへ保存
                 repository.insertPerson(person)
                 sendUiEvent(UiEvent.SaveSuccess)
-                showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを登録しました")
+                showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
             } catch (_: SQLiteConstraintException) {
                 // 万が一、事前のチェックをすり抜けた場合
                 val existing = repository.findExistingPerson(person)
                 if (existing != null) {
                     handleDuplicateError(existing, person, isUpdate = false)
                 } else {
-                    showError("登録エラー", "データベースの制約により登録できませんでした。")
+                    showError(R.string.main_err_title_duplicate_archived_add, R.string.common_error_save, "")
                 }
             }
         }
@@ -169,13 +170,13 @@ class PersonListViewModel(
                 // 2. データベースを更新
                 repository.updatePerson(person)
                 sendUiEvent(UiEvent.SaveSuccess)
-                showSnackbar("利用者情報を更新しました")
+                showSnackbar(R.string.main_msg_user_updated)
             } catch (_: SQLiteConstraintException) {
                 val existing = repository.findExistingPerson(person)
                 if (existing != null && existing.id != person.id) {
                     handleDuplicateError(existing, person, isUpdate = true)
                 } else {
-                    showError("更新エラー", "情報の更新に失敗しました。")
+                    showError(R.string.main_err_title_duplicate_archived_update, R.string.main_msg_user_updated)
                 }
             }
         }
@@ -186,23 +187,17 @@ class PersonListViewModel(
      */
     private fun handleDuplicateError(existing: Person, input: Person, isUpdate: Boolean) {
         val personName = input.getMaskedName(isNameMaskingEnabled.value)
-        val title = if (isUpdate) "更新エラー" else "登録エラー"
+        val titleRes = if (isUpdate) R.string.main_err_title_duplicate_archived_update else R.string.main_err_title_duplicate_archived_add
         
         if (existing.deletedAt == null) {
             // アクティブな利用者に重複
             showError(
-                title,
-                "既に同じ内容の利用者が登録されています。別人として登録したい場合は「同姓同名識別用メモ」の内容を変更して区別してください。"
+                titleRes,
+                R.string.main_err_duplicate_active
             )
         } else {
             // アーカイブ済みの利用者に重複
-            val errorTitle = if (isUpdate) "更新エラー（利用修了者と重複）" else "登録エラー（利用修了者に存在）"
-            val message = buildString {
-                append("入力された内容（$personName 様）は、現在「利用修了者（アーカイブ）」の中に存在します。\n\n")
-                append("●その方を復帰させたい場合：\nこの画面を閉じ、設定メニューの「利用終了者の復帰」から操作してください。\n\n")
-                append("●別人として新規登録／更新したい場合：\n「同姓同名識別用メモ」を別の内容に変更してから再度保存してください。")
-            }
-            showError(errorTitle, message)
+            showError(titleRes, R.string.main_err_duplicate_archived, personName)
         }
     }
 
@@ -210,14 +205,14 @@ class PersonListViewModel(
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
             archivedRepository.logicalDeletePerson(person.id)
-            showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんをアーカイブに移動しました")
+            showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }
 
     fun restorePerson(person: Person) {
         viewModelScope.launch {
             archivedRepository.restorePerson(person.id)
-            showSnackbar("${person.getMaskedName(isNameMaskingEnabled.value)} さんを一覧に戻しました")
+            showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }
 

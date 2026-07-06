@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
@@ -138,7 +139,7 @@ class PersonConditionViewModel(
                     conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt())
                 }
 
-                showSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました")
+                showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
                 
                 // 選択中IDを更新して、詳細画面が新しいIDを参照するようにする
                 setSelectedConditionId(if (isUpdate) record.id else newId.toInt())
@@ -146,7 +147,7 @@ class PersonConditionViewModel(
                 // コールバックを実行
                 onSuccess(if (isUpdate) record.id else newId.toInt())
             } catch (e: Exception) {
-                showError("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
             }
@@ -160,9 +161,9 @@ class PersonConditionViewModel(
         viewModelScope.launch {
             try {
                 conditionRepository.deleteConditionAtVisit(record)
-                showSnackbar("記録を削除しました")
+                showSnackbar(R.string.p_cond_msg_delete_success)
             } catch (e: Exception) {
-                showError("削除エラー", "データの削除に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
             }
         }
     }
@@ -215,12 +216,12 @@ class PersonConditionViewModel(
                         }
                     }
 
-                    showSnackbar("写真を保存しました")
+                    showSnackbar(R.string.p_cond_msg_photo_save_success)
                 } else {
-                    showError("保存エラー", "画像の処理に失敗しました。空き容量を確認してください。")
+                    showError(R.string.common_error_title_save, R.string.p_cond_err_photo_process_failure)
                 }
             } catch (e: Exception) {
-                showError("保存エラー", "写真の保存中にエラーが発生しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
             }
@@ -235,9 +236,9 @@ class PersonConditionViewModel(
             try {
                 conditionRepository.deleteConditionPhotoById(photo.id)
                 ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
-                showSnackbar("写真を削除しました")
+                showSnackbar(R.string.p_cond_msg_photo_delete_success)
             } catch (e: Exception) {
-                showError("削除エラー", "写真の削除に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
             }
         }
     }

@@ -8,6 +8,7 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -115,9 +116,9 @@ class PersonMedicationViewModel(
                         }
                     }
                 }
-                showSnackbar("服薬状況を更新しました")
+                showSnackbar(R.string.p_med_msg_update_success)
             } catch (e: Exception) {
-                showError("更新エラー", "服薬状況の更新に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_update, R.string.p_med_err_update_failure, e.localizedMessage ?: "")
             }
         }
     }

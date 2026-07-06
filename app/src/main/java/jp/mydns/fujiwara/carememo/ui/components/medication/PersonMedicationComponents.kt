@@ -457,12 +457,12 @@ fun MedicationInputDialog(
                     onDismiss()
                 }
             ) {
-                Text(stringResource(R.string.save))
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

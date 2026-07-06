@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import java.time.Instant
 import java.time.ZoneId
@@ -143,9 +145,10 @@ fun PdfSettingsDialog(
                     }
 
                     if (protectWithPassword) {
-                        OutlinedTextField(
+                        AppTextField(
                             value = password,
                             onValueChange = { password = it },
+                            type = AppTextFieldType.PASSWORD,
                             label = { Text(stringResource(R.string.pdf_password_label)) },
                             placeholder = { Text(stringResource(R.string.pdf_password_placeholder)) },
                             supportingText = {
@@ -157,9 +160,6 @@ fun PdfSettingsDialog(
                             },
                             isError = !isPasswordValid && password.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                                     Icon(
@@ -286,7 +286,7 @@ fun PdfSettingsDialog(
             TextButton(
                 onClick = onDismiss
             ) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

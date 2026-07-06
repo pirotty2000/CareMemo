@@ -100,7 +100,7 @@ jp.mydns.fujiwara.carememo
 
 | 分類                   | 画面 (Screen)                                                              | 使用コンポーネント (ファイル名)                                                                                                                                                                                                                                                                                                                             |
 |:---------------------|:-------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1. 利用者一覧および(A)(B)(C) | (全主要画面)                                                                  | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`main/CompactTextField.kt`**：入力欄の微調整用コンポーネント                                                                                                   |
+| 1. 利用者一覧および(A)(B)(C) | (全主要画面)                                                                  | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準）<br>🔴**`main/CompactTextField.kt`**：入力欄の微調整用コンポーネント                                                                                                   |
 | 2. 利用者一覧             | `MainScreen`                                                             | `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ<br>`main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等）<br>`main/KanaIndexBar.kt`：五十音インデックスバー<br>🔴**`base/SearchBox.kt`**：共通検索バー<br>`base/BirthdayInputFields.kt`：生年月日入力部品                                                                                                                             |
 | 3. (A)(B)(C)共通       | (詳細3画面全体)                                                                | 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助<br>🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー<br>🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー<br>🔴**`common/DateTimeInputFields.kt`**：共通の日時入力<br>🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理<br>🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ                   |
 | 4. (A) 健康記録          | `PersonHealthScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt`     | 🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤<br>`common/CommonDetailComponents.kt`：詳細共通部品（DetailItem）<br>`health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル<br>`health/HealthGraphView.kt`：(A)専用グラフ表示<br>`health/LineChart.kt`：グラフ描画エンジン<br>`health/HealthChartHelper.kt`：グラフ用データ変換 |
@@ -124,6 +124,7 @@ jp.mydns.fujiwara.carememo
 | 🔴**`base/LoadingScreen.kt`** | ✓ | ✓ | ✓ | ✓ | ✓ | | |
 | 🔴**`base/EmptyState.kt`** | ✓ | ✓ | ✓ | ✓ | | ✓ | |
 | 🔴**`base/InfoDialog.kt`** | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ |
+| 🔴**`base/AppTextField.kt`** | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | 🔴**`base/SearchBox.kt`** | ✓ | | ✓ | | | | |
 | 🔴**`base/VerticalScrollIndicator.kt`** | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | 🔴**`base/DeleteConfirmDialog.kt`** | | ✓ | ✓ | | | | ✓ |
@@ -153,6 +154,26 @@ jp.mydns.fujiwara.carememo
 # 実装上の重要指針（保守ガイド）
 
 不具合修正や機能追加の際は、以下の指針を遵守してください。
+
+### 0. 入力コンポーネントの実装ガイド（AppTextField）
+
+アプリ内での数値・テキスト入力には、標準の `OutlinedTextField` を直接使用せず、必ずプロジェクト共通基盤である `AppTextField`（またはそれをラップしたコンポーネント）を使用して、入力体験（UX）を統一してください。
+
+#### 基本ポリシー：編集体験の統一
+CareMemo では、以下の挙動を「アプリ標準ルール」として定義しています。
+*   **タップ時のカーソル制御（最重要）**: 入力項目をタップ（フォーカス取得）した際、既存の値を保持したまま**カーソルを自動的に末尾に移動**させます。
+*   **入力属性（AppTextFieldType）による自動設定**: `type` 引数（`TEXT`, `INTEGER`, `DECIMAL`, `PASSWORD` 等）を指定するだけで、以下の設定が自動適用されます。
+    *   **キーボード**: タイプに適したモード（数値、日本語、英数等）が自動選択されます。
+    *   **入力制限**: 数値タイプの場合、数字以外の入力が自動的に弾かれます。
+    *   **IMEアクション**: 文脈に応じた最適なボタン（次へ、完了等）が設定されます。
+
+#### コンポーネントの使い分け
+見た目（サイズ感）に応じて選択してください。どちらも内部で `AppTextField` のロジックを継承しています。
+
+| コンポーネント名 | 用途 | 配置場所 |
+| :--- | :--- | :--- |
+| **`AppTextField`** | 標準的な入力項目（名前、メモ、記録者など） | `base/AppTextField.kt` |
+| **`CompactTextField`** | 省スペースが必要な数値入力（日時、バイタル等） | `main/CompactTextField.kt` |
 
 ### 1. 基本方針
 - **影響範囲の最小化**: 依頼された修正内容以外について、設計変更やファイル整理を行わない。

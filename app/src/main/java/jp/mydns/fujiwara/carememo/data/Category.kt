@@ -29,29 +29,29 @@ enum class Category(
 ) {
     /** 身長・体重 (A) */
     HEIGHT_AND_WEIGHT(
-        displayNameRes = R.string.category_height_weight
+        displayNameRes = R.string.common_category_height_weight
     ),
 
     /** バイタル (A) */
     BP_AND_PULSE(
-        displayNameRes = R.string.category_vital
+        displayNameRes = R.string.common_category_vital
     ),
 
     /** 血糖値・HbA1c (A) */
     GLUCOSE_AND_HBA1C(
-        displayNameRes = R.string.category_glucose
+        displayNameRes = R.string.common_category_glucose
     ),
 
     /** 所見メモ (B) */
     CONDITION_AT_VISIT(
-        displayNameRes = R.string.category_condition,
+        displayNameRes = R.string.common_category_condition,
         hasGraph = false,
         hasOption = true
     ),
 
     /** 服薬管理 (C) */
     MEDICATION(
-        displayNameRes = R.string.category_medication,
+        displayNameRes = R.string.common_category_medication,
         hasGraph = false
     );
 

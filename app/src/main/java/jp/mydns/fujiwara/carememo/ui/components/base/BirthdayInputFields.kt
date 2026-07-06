@@ -9,33 +9,21 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  * 【主な機能】：
  * ・元号（西暦、昭和、平成、令和）の選択ドロップダウンの提供。
  * ・年、月、日の数値入力フィールドの提供（CompactTextField を利用）。
+ * ・入力完了時や最大桁数到達時の自動フォーカス移動。
  * ・入力値のバリデーション（存在しない日付のチェック等）と、Instant への変換。
- * ・入力フォーカス取得時の自動クリア動作（利便性向上）。
- *
- * 【想定する利用場所】：
- * 利用者登録・編集ダイアログ（UserEditDialog）。
- *
- * 【このコンポーネントでは行わないこと】：
- * データベースへの保存処理や、年齢の直接計算。
- *
- * 【公開composable】：
- * BirthdayInputFields, rememberBirthdayInputState
  */
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
 import java.time.Instant
 import java.time.LocalDate
@@ -46,10 +34,10 @@ import java.time.ZoneId
  * 生年月日の元号定義
  */
 enum class BirthEra(val displayNameRes: Int) {
-    AD(R.string.era_ad),
-    SHOWA(R.string.era_showa),
-    HEISEI(R.string.era_heisei),
-    REIWA(R.string.era_reiwa)
+    AD(R.string.common_era_ad),
+    SHOWA(R.string.common_era_showa),
+    HEISEI(R.string.common_era_heisei),
+    REIWA(R.string.common_era_reiwa)
 }
 
 /**
@@ -60,9 +48,6 @@ class BirthdayInputState(
     val year: MutableState<String>,
     val month: MutableState<String>,
     val day: MutableState<String>,
-    val yearFocusRequester: FocusRequester = FocusRequester(),
-    val monthFocusRequester: FocusRequester = FocusRequester(),
-    val dayFocusRequester: FocusRequester = FocusRequester(),
 ) {
     /**
      * 入力内容を Instant に変換。不正な場合は null。
@@ -186,14 +171,14 @@ fun BirthdayInputFields(
     var eraExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.birthday), style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.main_label_birthday), style = MaterialTheme.typography.labelMedium)
         
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 元号選択 (CompactTextFieldのデザインに合わせる)
+            // 元号選択
             ExposedDropdownMenuBox(
                 expanded = eraExpanded,
                 onExpandedChange = { eraExpanded = !eraExpanded },
@@ -227,19 +212,12 @@ fun BirthdayInputFields(
             // 年入力
             CompactTextField(
                 value = state.year.value,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    val maxLength = if (state.era.value == BirthEra.AD) 4 else 2
-                    if (filtered.length <= maxLength) {
-                        state.year.value = filtered
-                        if (filtered.length == maxLength) state.monthFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1f).focusRequester(state.yearFocusRequester),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                onValueChange = { state.year.value = it },
+                modifier = Modifier.weight(1f),
+                type = AppTextFieldType.INTEGER,
+                maxLength = if (state.era.value == BirthEra.AD) 4 else 2,
                 isError = state.isYearError,
-                suffix = { Text(stringResource(R.string.year_suffix), style = MaterialTheme.typography.labelSmall) },
-                onFocusChanged = { if (it.isFocused) state.year.value = "" }
+                suffix = { Text(stringResource(R.string.common_year_suffix), style = MaterialTheme.typography.labelSmall) }
             )
         }
 
@@ -251,32 +229,23 @@ fun BirthdayInputFields(
             // 月入力
             CompactTextField(
                 value = state.month.value,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 2) {
-                        state.month.value = filtered
-                        if (filtered.length == 2) state.dayFocusRequester.requestFocus()
-                    }
-                },
-                modifier = Modifier.weight(1f).focusRequester(state.monthFocusRequester),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                onValueChange = { state.month.value = it },
+                modifier = Modifier.weight(1f),
+                type = AppTextFieldType.INTEGER,
+                maxLength = 2,
                 isError = state.isMonthError,
-                suffix = { Text(stringResource(R.string.month_suffix), style = MaterialTheme.typography.labelSmall) },
-                onFocusChanged = { if (it.isFocused) state.month.value = "" }
+                suffix = { Text(stringResource(R.string.common_month_suffix), style = MaterialTheme.typography.labelSmall) }
             )
 
             // 日入力
             CompactTextField(
                 value = state.day.value,
-                onValueChange = {
-                    val filtered = it.filter { c -> c.isDigit() }
-                    if (filtered.length <= 2) state.day.value = filtered
-                },
-                modifier = Modifier.weight(1f).focusRequester(state.dayFocusRequester),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                onValueChange = { state.day.value = it },
+                modifier = Modifier.weight(1f),
+                type = AppTextFieldType.INTEGER,
+                maxLength = 2,
                 isError = state.isDayError,
-                suffix = { Text(stringResource(R.string.day_suffix), style = MaterialTheme.typography.labelSmall) },
-                onFocusChanged = { if (it.isFocused) state.day.value = "" }
+                suffix = { Text(stringResource(R.string.common_day_suffix), style = MaterialTheme.typography.labelSmall) }
             )
         }
     }

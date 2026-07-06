@@ -15,17 +15,8 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  * ・バイタル入力：最高血圧、最低血圧、脈拍、体温の入力。
  * ・血糖値入力：血糖値、HbA1cの入力。
  * ・身体計測入力：身長、体重の入力。
- * ・入力補助：数値キーボードの自動表示、IMEアクションによるフォーカス移動、入力値のバリデーション。
+ * ・入力補助：数値キーボードの自動表示、最大桁数到達やIMEアクションによる自動フォーカス移動。
  * ・即時反映：保存成功時のフィードバックと自動画面遷移。
- *
- * 【遷移】
- * ← MainScreen（戻るボタンまたは保存完了時に遷移）
- *
- * 【使用するViewModel】
- * BatchInputViewModel
- *
- * 【備考】
- * 多くの項目を一度に扱うため、スクロール位置の管理や各項目のエラー状態の可視化に配慮している。
  */
 
 import androidx.compose.animation.animateColorAsState
@@ -40,8 +31,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -54,10 +43,12 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
+import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
@@ -66,10 +57,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,6 +88,11 @@ fun BatchInputScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // ダイアログ表示用の状態
+    var dialogTitle by remember { mutableStateOf<String?>(null) }
+    var dialogMessage by remember { mutableStateOf<String?>(null) }
 
     // 成功時のフラッシュ演出用
     var showSuccessEffect by remember { mutableStateOf(false) }
@@ -131,6 +124,19 @@ fun BatchInputScreen(
                     scope.launch {
                         snackbarHostState.showSnackbar(event.message)
                     }
+                }
+                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                    }
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = context.getString(R.string.common_error_title_error)
+                    dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 else -> {}
             }
@@ -170,6 +176,18 @@ fun BatchInputScreen(
         },
         onBack = onBack
     )
+
+    // 通知ダイアログの表示
+    if (dialogMessage != null) {
+        jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = {
+                dialogMessage = null
+                dialogTitle = null
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -202,8 +220,6 @@ fun BatchInputScreenContent(
     onSave: () -> Unit,
     onBack: () -> Unit
 ) {
-    val focusManager = LocalFocusManager.current
-    val focusRequesters = remember { List(8) { FocusRequester() } }
     val isDateTimeValid by remember(dateTimeState) {
         derivedStateOf { dateTimeState.toInstant() != null }
     }
@@ -240,31 +256,29 @@ fun BatchInputScreenContent(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    // 1. 記録日時 (オートフォーカスを日で止める)
+                    // 1. 記録日時
                     InputSectionCard(title = "") {
-                        DateTimeInputFields(state = dateTimeState, autoFocusHour = false)
+                        DateTimeInputFields(state = dateTimeState, autoFocusHour = true)
                     }
 
                     // 2. 身長・体重
                     InputSectionCard(title = "身長・体重") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = height,
-                                onValueChange = { onHeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                onValueChange = onHeightChange,
+                                type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) },
                                 suffix = { Text("cm") },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[0]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[1].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = weight,
-                                onValueChange = { onWeightChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                onValueChange = onWeightChange,
+                                type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) },
                                 suffix = { Text("kg") },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[1]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[2].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -272,41 +286,37 @@ fun BatchInputScreenContent(
                     // 3. バイタル
                     InputSectionCard(title = "バイタル") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = bpSystolic,
-                                onValueChange = { onBpSystolicChange(it.filter { c -> c.isDigit() }) },
+                                onValueChange = onBpSystolicChange,
+                                type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[2]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[3].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = bpDiastolic,
-                                onValueChange = { onBpDiastolicChange(it.filter { c -> c.isDigit() }) },
+                                onValueChange = onBpDiastolicChange,
+                                type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[3]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[4].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = pulse,
-                                onValueChange = { onPulseChange(it.filter { c -> c.isDigit() }) },
+                                onValueChange = onPulseChange,
+                                type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) },
                                 suffix = { Text("bpm") },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[4]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[5].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = bodyTemperature,
-                                onValueChange = { onBodyTemperatureChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                onValueChange = onBodyTemperatureChange,
+                                type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
                                 suffix = { Text("℃") },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[5]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[6].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -314,30 +324,29 @@ fun BatchInputScreenContent(
                     // 4. 血糖値・HbA1c
                     InputSectionCard(title = "血糖値・HbA1c") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = glucose,
-                                onValueChange = { onGlucoseChange(it.filter { c -> c.isDigit() }) },
+                                onValueChange = onGlucoseChange,
+                                type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) },
                                 suffix = { Text("mg/dL") },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[6]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                keyboardActions = KeyboardActions(onNext = { focusRequesters[7].requestFocus() })
+                                modifier = Modifier.weight(1f)
                             )
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = hba1c,
-                                onValueChange = { onHba1cChange(it.filter { c -> c.isDigit() || c == '.' }) },
+                                onValueChange = onHba1cChange,
+                                type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) },
                                 suffix = { Text("%") },
-                                modifier = Modifier.weight(1f).focusRequester(focusRequesters[7]),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                                modifier = Modifier.weight(1f),
+                                imeAction = ImeAction.Done
                             )
                         }
                     }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f), enabled = !isProcessing) {
-                            Text(stringResource(R.string.cancel))
+                            Text(stringResource(R.string.common_cancel))
                         }
                         Button(
                             onClick = onSave,
@@ -348,7 +357,7 @@ fun BatchInputScreenContent(
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(8.dp))
                             }
-                            Text(stringResource(R.string.save))
+                            Text(stringResource(R.string.common_save))
                         }
                     }
 
@@ -357,7 +366,7 @@ fun BatchInputScreenContent(
             }
 
             // スクロールインジケーター (上向きV, 下向きV)
-            VerticalScrollIndicator(scrollState)
+            VerticalScrollIndicator(scrollState = scrollState)
         }
     }
 }

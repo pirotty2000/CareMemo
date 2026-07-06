@@ -38,10 +38,10 @@ import jp.mydns.fujiwara.carememo.R
 fun DeleteConfirmDialog(
     onDismiss: () -> Unit,
     onDelete: () -> Unit,
-    title: String = stringResource(R.string.delete_data_title),
-    message: String = stringResource(R.string.delete_confirm_message),
-    confirmButtonText: String = stringResource(R.string.delete),
-    dismissButtonText: String = stringResource(R.string.cancel),
+    title: String = stringResource(R.string.p_detail_dialog_title_delete),
+    message: String = stringResource(R.string.p_detail_dialog_msg_delete_confirm),
+    confirmButtonText: String = stringResource(R.string.common_delete),
+    dismissButtonText: String = stringResource(R.string.common_cancel),
     isDestructive: Boolean = true
 ) {
     AlertDialog(

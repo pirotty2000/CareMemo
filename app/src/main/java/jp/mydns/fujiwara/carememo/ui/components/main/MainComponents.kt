@@ -36,6 +36,8 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.rememberBirthdayInputState
@@ -111,9 +113,9 @@ fun UserListItem(
                 // 生年月日 + 年齢 (下段)
                 Text(
                     text = stringResource(
-                        R.string.birthday_summary_format, 
+                        R.string.common_birthday_format, 
                         DateTimeUtils.formatDateJapaneseEra(person.birthday), 
-                        stringResource(R.string.age_suffix, DateTimeUtils.calculateAge(person.birthday))
+                        stringResource(R.string.common_age_suffix, DateTimeUtils.calculateAge(person.birthday))
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -129,12 +131,12 @@ fun UserListItem(
                 }
                 DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.edit_user_info)) }, 
+                        text = { Text(stringResource(R.string.main_edit_user_info)) }, 
                         leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, 
                         onClick = { showItemMenu = false; onEditClick() }
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.end_user_service), color = MaterialTheme.colorScheme.error) }, 
+                        text = { Text(stringResource(R.string.main_end_user_service), color = MaterialTheme.colorScheme.error) }, 
                         leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, 
                         onClick = { showItemMenu = false; onDeleteClick() }
                     )
@@ -175,8 +177,8 @@ fun UserEditDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (person == null) stringResource(R.string.user_registration)
-                else stringResource(R.string.user_edit)
+                if (person == null) stringResource(R.string.main_user_registration)
+                else stringResource(R.string.main_user_edit)
             )
         },
         text = {
@@ -187,48 +189,43 @@ fun UserEditDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
+                        AppTextField(
                             value = lastName,
                             onValueChange = { lastName = it },
-                            label = { Text(stringResource(R.string.last_name)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                            type = AppTextFieldType.TEXT,
+                            label = { Text(stringResource(R.string.main_label_last_name)) },
+                            modifier = Modifier.weight(1f)
                         )
-                        OutlinedTextField(
+                        AppTextField(
                             value = firstName,
                             onValueChange = { firstName = it },
-                            label = { Text(stringResource(R.string.first_name)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                            type = AppTextFieldType.TEXT,
+                            label = { Text(stringResource(R.string.main_label_first_name)) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
+                        AppTextField(
                             value = lastNameFurigana,
                             onValueChange = { lastNameFurigana = it },
-                            label = { Text(stringResource(R.string.last_name_furigana)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                            type = AppTextFieldType.TEXT,
+                            label = { Text(stringResource(R.string.main_label_last_name_furigana)) },
+                            modifier = Modifier.weight(1f)
                         )
-                        OutlinedTextField(
+                        AppTextField(
                             value = firstNameFurigana,
                             onValueChange = { firstNameFurigana = it },
-                            label = { Text(stringResource(R.string.first_name_furigana)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                            type = AppTextFieldType.TEXT,
+                            label = { Text(stringResource(R.string.main_label_first_name_furigana)) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    OutlinedTextField(
+                    AppTextField(
                         value = note,
                         onValueChange = { note = it },
-                        label = { Text(stringResource(R.string.note_label)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                        type = AppTextFieldType.TEXT,
+                        label = { Text(stringResource(R.string.main_label_note)) },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -262,11 +259,11 @@ fun UserEditDialog(
                     }
                 },
                 enabled = isInputValid
-            ) { Text(stringResource(R.string.save)) }
+            ) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )
@@ -290,7 +287,7 @@ fun CategorySelectionSheet(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = stringResource(R.string.category_selection_title, personName),
+            text = stringResource(R.string.main_category_selection_title, personName),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier
                 .padding(bottom = 12.dp)

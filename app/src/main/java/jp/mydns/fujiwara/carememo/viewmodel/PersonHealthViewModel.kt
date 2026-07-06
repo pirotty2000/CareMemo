@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
@@ -94,9 +95,9 @@ class PersonHealthViewModel(
             try {
                 val isUpdate = if (record is HistoryRecord) record.id != 0 else false
                 performSave(record)
-                showSnackbar(if (isUpdate) "記録を更新しました" else "記録を保存しました")
+                showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
             } catch (e: Exception) {
-                showError("保存エラー", "データの保存に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
             }
         }
     }
@@ -115,9 +116,9 @@ class PersonHealthViewModel(
         viewModelScope.launch {
             try {
                 performDelete(record)
-                showSnackbar("記録を削除しました")
+                showSnackbar(R.string.p_health_msg_delete_success)
             } catch (e: Exception) {
-                showError("削除エラー", "データの削除に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
             }
         }
     }

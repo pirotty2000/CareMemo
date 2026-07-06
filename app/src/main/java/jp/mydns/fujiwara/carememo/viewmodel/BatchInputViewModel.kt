@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
@@ -107,12 +108,12 @@ class BatchInputViewModel(
                 }
 
                 sendUiEvent(UiEvent.SaveSuccess)
-                showSnackbar("健康記録を一括保存しました")
+                showSnackbar(R.string.batch_msg_save_success)
                 
                 // 保存成功後に一部をクリア（連続入力のため、身長などは残す運用もあるが、基本はリセット）
                 resetInputs()
             } catch (e: Exception) {
-                showError("保存エラー", "一括保存に失敗しました: ${e.localizedMessage}")
+                showError(R.string.common_error_title_save, R.string.batch_err_save_failure, e.localizedMessage ?: "")
             } finally {
                 _isSaving.value = false
             }

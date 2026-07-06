@@ -54,6 +54,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
@@ -61,6 +62,8 @@ import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
@@ -121,19 +124,31 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
+                    dialogTitle = context.getString(R.string.common_error_title_info)
+                    dialogMessage = event.message
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    dialogTitle = context.getString(R.string.common_error_title_info)
+                    dialogMessage = context.getString(event.resId, *event.args.toTypedArray())
+                }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
+                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> showPasswordInputDialog = true
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
-                    dialogTitle = "通知"
-                    dialogMessage = event.message
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
+                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> showPasswordInputDialog = true
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
                     // 全消去成功時など
                     onBack()
@@ -342,14 +357,12 @@ fun SettingsScreen(
                     Column(modifier = Modifier.verticalScroll(scrollState)) {
                         Text("このファイルはパスワード保護されています。入力してください。")
                         Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedTextField(
+                        AppTextField(
                             value = inputPasswordForImport,
                             onValueChange = { inputPasswordForImport = it },
+                            type = AppTextFieldType.PASSWORD,
                             label = { Text("パスワード") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            visualTransformation = if (isInputPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 IconButton(onClick = { isInputPasswordVisible = !isInputPasswordVisible }) {
                                     Icon(imageVector = if (isInputPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null)
@@ -623,14 +636,14 @@ private fun DisplayAndRecordingSection(
             supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") },
             trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = onMaskingChange) }
         )
-        OutlinedTextField(
+        AppTextField(
             value = localRecorderName,
             onValueChange = onRecorderNameChange,
+            type = AppTextFieldType.TEXT,
             label = { Text("記録者の名前(デフォルト)") },
             placeholder = { Text("例: 山田") },
             supportingText = { Text("所見メモ作成時に自動入力されます") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            singleLine = true
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
     }
@@ -704,9 +717,10 @@ private fun DataManagementSection(
             trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = onBackupPasswordEnabledChange) }
         )
         if (isBackupPasswordEnabled) {
-            OutlinedTextField(
+            AppTextField(
                 value = localBackupPassword,
                 onValueChange = onBackupPasswordChange,
+                type = AppTextFieldType.PASSWORD,
                 label = { Text("デフォルトのパスワード") },
                 placeholder = { Text("6桁以上の数字を推奨") },
                 supportingText = { 
@@ -716,9 +730,6 @@ private fun DataManagementSection(
                 },
                 isError = !isPasswordValid && localBackupPassword.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = { 
                     IconButton(onClick = onPasswordVisibilityToggle) { 
                         Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) 

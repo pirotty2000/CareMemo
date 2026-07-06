@@ -38,7 +38,7 @@ import jp.mydns.fujiwara.carememo.R
 @Composable
 fun LoadingScreen(
     modifier: Modifier = Modifier,
-    message: String = stringResource(R.string.loading)
+    message: String = stringResource(R.string.common_loading)
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
