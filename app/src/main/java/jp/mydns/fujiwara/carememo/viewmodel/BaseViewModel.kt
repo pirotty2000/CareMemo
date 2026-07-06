@@ -67,7 +67,7 @@ abstract class BaseViewModel(
     protected fun showSnackbar(message: String) = sendUiEvent(UiEvent.ShowSnackbar(message))
     protected fun showSnackbar(resId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowSnackbarRes(resId, args.toList()))
     
-    protected fun showError(title: String, message: String) = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
+    // protected fun showError(title: String, message: String) = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
     protected fun showError(titleResId: Int, messageResId: Int, vararg args: Any) = 
         sendUiEvent(UiEvent.ShowErrorDialogRes(titleResId, messageResId, args.toList()))
 

@@ -30,8 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
+
 
 /**
  * アプリ共通の検索ボックス

@@ -1,5 +1,33 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
+
+/**
+ * AppTextField で扱う入力タイプ
+ */
+enum class AppTextFieldType {
+    TEXT,       // 通常のテキスト（日本語）
+    INTEGER,    // 整数のみ（数字キーボード、数字以外フィルタ）
+    DECIMAL,    // 小数（小数点対応キーボード、数字とドット以外フィルタ）
+    PASSWORD,   // パスワード（英数モード、秘匿表示）
+    EMAIL,      // メールアドレス（英数モード）
+    PHONE       // 電話番号（数値モード）
+}
+
 /**
  * Component：AppTextField
  *
@@ -36,35 +64,6 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  * @param keyboardActions カスタムのキーボードアクション。指定しない場合は自動移動が適用される。
  * @param onFocusChanged フォーカス状態変更時のコールバック。
  */
-
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusState
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
-
-/**
- * AppTextField で扱う入力タイプ
- */
-enum class AppTextFieldType {
-    TEXT,       // 通常のテキスト（日本語）
-    INTEGER,    // 整数のみ（数字キーボード、数字以外フィルタ）
-    DECIMAL,    // 小数（小数点対応キーボード、数字とドット以外フィルタ）
-    PASSWORD,   // パスワード（英数モード、秘匿表示）
-    EMAIL,      // メールアドレス（英数モード）
-    PHONE       // 電話番号（数値モード）
-}
-
 @Composable
 fun AppTextField(
     value: String,
