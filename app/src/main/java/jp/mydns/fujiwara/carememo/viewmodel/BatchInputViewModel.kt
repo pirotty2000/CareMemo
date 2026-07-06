@@ -13,6 +13,8 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -26,6 +28,15 @@ class BatchInputViewModel(
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository
 ) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
+
+    init {
+        // 利用者情報がロードされたらローディング状態を解除する
+        currentPerson.onEach { person ->
+            if (person != null) {
+                _isLoading.value = false
+            }
+        }.launchIn(viewModelScope)
+    }
 
     private val _recordTime = MutableStateFlow(Instant.now())
     val recordTime = _recordTime.asStateFlow()
