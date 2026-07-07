@@ -16,7 +16,6 @@ package jp.mydns.fujiwara.carememo.ui.components.main
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -108,56 +107,6 @@ class BirthdayInputState(
                 true
             }
         }
-
-    val isValid: Boolean
-        get() = year.value.isNotBlank() && month.value.isNotBlank() && day.value.isNotBlank() &&
-                !isYearError && !isMonthError && !isDayError
-}
-
-@Composable
-fun rememberBirthdayInputState(initialInstant: Instant? = null): BirthdayInputState {
-    val initialDate = initialInstant?.atZone(ZoneId.systemDefault())?.toLocalDate()
-
-    val initialEra = remember(initialInstant) {
-        if (initialDate == null) {
-            BirthEra.SHOWA // 新規登録時はデフォルト「昭和」
-        } else {
-            when {
-                initialDate.year in 1926..1989 -> BirthEra.SHOWA
-                initialDate.year in 1990..2019 -> BirthEra.HEISEI
-                initialDate.year >= 2020 -> BirthEra.REIWA
-                else -> BirthEra.AD
-            }
-        }
-    }
-
-    val era = rememberSaveable(initialInstant) { mutableStateOf(initialEra) }
-
-    val initialYearText = remember(initialInstant) {
-        if (initialDate == null) {
-            "" // 新規時は空文字
-        } else {
-            val y = initialDate.year
-            when (initialEra) {
-                BirthEra.SHOWA -> (y - 1925).toString()
-                BirthEra.HEISEI -> (y - 1988).toString()
-                BirthEra.REIWA -> (y - 2018).toString()
-                BirthEra.AD -> y.toString()
-            }
-        }
-    }
-
-    val year = rememberSaveable(initialInstant) { mutableStateOf(initialYearText) }
-    val month = rememberSaveable(initialInstant) {
-        mutableStateOf(initialDate?.monthValue?.toString() ?: "")
-    }
-    val day = rememberSaveable(initialInstant) {
-        mutableStateOf(initialDate?.dayOfMonth?.toString() ?: "")
-    }
-
-    return remember(initialInstant) {
-        BirthdayInputState(era, year, month, day)
-    }
 }
 
 /**
