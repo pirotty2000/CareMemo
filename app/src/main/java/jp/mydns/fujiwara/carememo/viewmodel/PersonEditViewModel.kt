@@ -103,7 +103,7 @@ class PersonEditViewModel(
     /**
      * 現在の入力内容が初期状態から変更されているかどうか
      */
-    val isChanged: StateFlow<Boolean> = combine(
+    val isChanged: StateFlow<Boolean> = combine<Any, Boolean>(
         lastName, firstName, lastNameFurigana, firstNameFurigana, note, era, year, month, day
     ) { params ->
         val currentLastName = params[0] as String
@@ -142,7 +142,7 @@ class PersonEditViewModel(
     /**
      * 保存可能かどうか（バリデーション）
      */
-    val isValid: StateFlow<Boolean> = combine(
+    val isValid: StateFlow<Boolean> = combine<Any, Boolean>(
         lastName, firstName, era, year, month, day
     ) { params ->
         val lName = params[0] as String
@@ -213,7 +213,7 @@ class PersonEditViewModel(
                     showSnackbar(R.string.main_msg_user_updated)
                 }
                 sendUiEvent(UiEvent.SaveSuccess)
-            } catch (e: SQLiteConstraintException) {
+            } catch (_: SQLiteConstraintException) {
                 showError(R.string.common_error_save, R.string.common_error_save)
             }
         }
