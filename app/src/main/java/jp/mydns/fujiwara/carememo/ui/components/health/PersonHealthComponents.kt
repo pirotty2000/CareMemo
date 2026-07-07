@@ -34,15 +34,30 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
-import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
-import jp.mydns.fujiwara.carememo.ui.components.common.DetailItem
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
-import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import java.time.Instant
+
+
+/**
+ * 詳細表示カード内の各項目（ラベルと値のペア）を描画する補助コンポーネント。
+ * ラベルを左側に控えめに、値を right 側に強調して配置する。
+ */
+@Composable
+fun DetailItem(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.secondary)
+        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    }
+}
 
 
 /**
@@ -214,6 +229,60 @@ fun HealthRecordDetailPane(
     var glucoseText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
     var hba1cText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
 
+    // 変更検知用の初期状態
+    val initialDateTime = remember(recordId) { record?.recordTime }
+    val initialHeight = remember(recordId) { if (record is HeightAndWeight) record.height?.toString() ?: "" else "" }
+    val initialWeight = remember(recordId) { if (record is HeightAndWeight) record.weight?.toString() ?: "" else "" }
+    val initialBpSystolic = remember(recordId) { if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "" }
+    val initialBpDiastolic = remember(recordId) { if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "" }
+    val initialPulse = remember(recordId) { if (record is BpAndPulse) record.pulse?.toString() ?: "" else "" }
+    val initialBodyTemp = remember(recordId) { if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "" }
+    val initialGlucose = remember(recordId) { if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "" }
+    val initialHbA1c = remember(recordId) { if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "" }
+
+    val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
+        derivedStateOf {
+            heightText != initialHeight || weightText != initialWeight ||
+            bpSystolicText != initialBpSystolic || bpDiastolicText != initialBpDiastolic ||
+            pulseText != initialPulse || bodyTemperatureText != initialBodyTemp ||
+            glucoseText != initialGlucose || hba1cText != initialHbA1c ||
+            dateTimeState.toInstant() != initialDateTime
+        }
+    }
+
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    // システム戻るボタンの制御
+    androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        AppDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
+            text = {
+                AppDialogContent(text = stringResource(R.string.common_confirm_discard_message))
+            },
+            confirmButton = {
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_discard),
+                    type = AppDialogActionType.DELETE,
+                    onClick = {
+                        showDiscardDialog = false
+                        onCancel()
+                    }
+                )
+            },
+            dismissButton = {
+                AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { showDiscardDialog = false }
+                )
+            }
+        )
+    }
+
     LaunchedEffect(recordId, category) {
         if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
             val latestHeight = records.filterIsInstance<HeightAndWeight>().filter { it.height != null }.maxByOrNull { it.recordTime }?.height
@@ -243,7 +312,9 @@ fun HealthRecordDetailPane(
                     bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
                     glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
                     hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
-                    onCancel = onCancel,
+                    onCancel = {
+                        if (isChanged) showDiscardDialog = true else onCancel()
+                    },
                     onSave = {
                         dateTimeState.toInstant()?.let { recordTime ->
                             val newRecord: Any = when (category) {
@@ -294,21 +365,21 @@ private fun HealthRecordEditForm(
                 when (category) {
                     Category.HEIGHT_AND_WEIGHT -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(value = heightText, onValueChange = onHeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) }, suffix = { Text("cm") }, modifier = Modifier.weight(1f))
-                            CompactTextField(value = weightText, onValueChange = onWeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) }, suffix = { Text("kg") }, modifier = Modifier.weight(1f), imeAction = ImeAction.Done)
+                            AppCompactTextField(value = heightText, onValueChange = onHeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) }, suffix = { Text("cm") }, modifier = Modifier.weight(1f))
+                            AppCompactTextField(value = weightText, onValueChange = onWeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) }, suffix = { Text("kg") }, modifier = Modifier.weight(1f), imeAction = ImeAction.Done)
                         }
                     }
                     Category.BP_AND_PULSE -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) }, modifier = Modifier.weight(1f))
-                            CompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) }, modifier = Modifier.weight(1f))
+                            AppCompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) }, modifier = Modifier.weight(1f))
+                            AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) }, modifier = Modifier.weight(1f))
                         }
-                        CompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) }, suffix = { Text("bpm") }, modifier = Modifier.fillMaxWidth())
-                        CompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) }, suffix = { Text("℃") }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
+                        AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) }, suffix = { Text("bpm") }, modifier = Modifier.fillMaxWidth())
+                        AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) }, suffix = { Text("℃") }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
                     }
                     Category.GLUCOSE_AND_HBA1C -> {
-                        CompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) }, suffix = { Text("mg/dL") }, modifier = Modifier.fillMaxWidth())
-                        CompactTextField(value = hba1cText, onValueChange = onHba1cChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) }, suffix = { Text("%") }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
+                        AppCompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) }, suffix = { Text("mg/dL") }, modifier = Modifier.fillMaxWidth())
+                        AppCompactTextField(value = hba1cText, onValueChange = onHba1cChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) }, suffix = { Text("%") }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
                     }
                     else -> {}
                 }

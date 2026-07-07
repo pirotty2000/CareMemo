@@ -1,4 +1,4 @@
-package jp.mydns.fujiwara.carememo.ui.components.base
+package jp.mydns.fujiwara.carememo.ui.components.main
 
 /**
  * Component：BirthdayInputFields
@@ -8,7 +8,7 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  *
  * 【主な機能】：
  * ・元号（西暦、昭和、平成、令和）の選択ドロップダウンの提供。
- * ・年、月、日の数値入力フィールドの提供（CompactTextField を利用）。
+ * ・年、月、日の数値入力フィールドの提供（AppCompactTextField を利用）。
  * ・入力完了時や最大桁数到達時の自動フォーカス移動。
  * ・入力値のバリデーション（存在しない日付のチェック等）と、Instant への変換。
  */
@@ -22,7 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -63,9 +65,10 @@ class BirthdayInputState(
         }
 
         return try {
-            LocalDate.of(westernYear, m, d)
+            val instant = LocalDate.of(westernYear, m, d)
                 .atStartOfDay(ZoneId.systemDefault())
                 .toInstant()
+            DateTimeUtils.normalizeBirthday(instant)
         } catch (_: Exception) {
             null
         }
@@ -182,7 +185,7 @@ fun BirthdayInputFields(
                 onExpandedChange = { eraExpanded = !eraExpanded },
                 modifier = Modifier.weight(1f)
             ) {
-                CompactTextField(
+                AppCompactTextField(
                     value = stringResource(state.era.value.displayNameRes),
                     onValueChange = {},
                     readOnly = true,
@@ -208,7 +211,7 @@ fun BirthdayInputFields(
             }
 
             // 年入力
-            CompactTextField(
+            AppCompactTextField(
                 value = state.year.value,
                 onValueChange = { state.year.value = it },
                 modifier = Modifier.weight(1f),
@@ -225,7 +228,7 @@ fun BirthdayInputFields(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 月入力
-            CompactTextField(
+            AppCompactTextField(
                 value = state.month.value,
                 onValueChange = { state.month.value = it },
                 modifier = Modifier.weight(1f),
@@ -236,7 +239,7 @@ fun BirthdayInputFields(
             )
 
             // 日入力
-            CompactTextField(
+            AppCompactTextField(
                 value = state.day.value,
                 onValueChange = { state.day.value = it },
                 modifier = Modifier.weight(1f),

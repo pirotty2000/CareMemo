@@ -36,7 +36,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  * 最終更新日: 2026/07/04
  */
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -142,7 +141,6 @@ fun PersonHealthScreenContent(
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
         if (selectedRecordId != -1) {
-            BackHandler { onSelectedRecordIdChange(-1) }
             HealthRecordDetailPane(
                 personId = personId,
                 category = currentCategory,

@@ -48,8 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,8 +64,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 
@@ -197,20 +194,35 @@ fun CalendarGrid(
     }
 
     Column {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val daysOfWeek = getShortDayOfWeekNames()
             daysOfWeek.forEachIndexed { index, day ->
-                Text(
-                    text = day,
+                val (bgColor, textColor) = when (index) {
+                    0 -> MaterialTheme.colorScheme.error to Color.White
+                    6 -> MaterialTheme.colorScheme.primary to Color.White
+                    else -> Color.Transparent to MaterialTheme.colorScheme.onSurface
+                }
+
+                Box(
                     modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = when (index) {
-                        0 -> MaterialTheme.colorScheme.error
-                        6 -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = day,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(bgColor)
+                            .wrapContentHeight(Alignment.CenterVertically),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = textColor,
+                        fontWeight = if (index == 0 || index == 6) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
             }
         }
 
@@ -390,7 +402,7 @@ fun MedicationInputDialog(
         editingSlot = slot
     }
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -399,10 +411,8 @@ fun MedicationInputDialog(
             )
         },
         text = {
-            val scrollState = rememberScrollState()
-            Box {
+            AppDialogContent {
                 Column(
-                    modifier = Modifier.verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
@@ -446,24 +456,23 @@ fun MedicationInputDialog(
                         DateTimeInputFields(state = dateTimeState)
                     }
                 }
-                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
             }
         },
         confirmButton = {
-            TextButton(
+            AppDialogConfirmButton(
+                text = stringResource(R.string.common_save),
                 onClick = {
                     syncCurrentTimeFieldsToTemp()
                     onConfirm(tempRecords)
                     onDismiss()
                 }
-            ) {
-                Text(stringResource(R.string.common_save))
-            }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
+            AppDialogDismissButton(
+                text = stringResource(R.string.common_cancel),
+                onClick = onDismiss
+            )
         }
     )
 }

@@ -24,9 +24,7 @@ package jp.mydns.fujiwara.carememo.ui.components.common
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -38,9 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -116,14 +112,12 @@ fun PdfSettingsDialog(
             DatePicker(state = datePickerState)
         }
     }
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pdf_settings_title, stringResource(category.displayNameRes))) },
         text = {
-            val scrollState = rememberScrollState()
-            Box {
+            AppDialogContent {
                 Column(
-                    modifier = Modifier.verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // --- セキュリティ（最上位に移動） ---
@@ -252,13 +246,12 @@ fun PdfSettingsDialog(
                         }
                     }
                 }
-
-                // 共通のスクロールインジケーターに統一
-                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
             }
         },
         confirmButton = {
-            Button(
+            AppDialogConfirmButton(
+                text = stringResource(R.string.create_pdf),
+                type = AppDialogActionType.ACTION,
                 onClick = {
                     onExport(
                         selectedRange,
@@ -274,16 +267,13 @@ fun PdfSettingsDialog(
                     val isPasswordSetupValid = if (protectWithPassword) isPasswordValid else true
                     isCustomRangeValid && isPasswordSetupValid
                 }
-            ) {
-                Text(stringResource(R.string.create_pdf))
-            }
+            )
         },
         dismissButton = {
-            TextButton(
+            AppDialogDismissButton(
+                text = stringResource(R.string.common_cancel),
                 onClick = onDismiss
-            ) {
-                Text(stringResource(R.string.common_cancel))
-            }
+            )
         }
     )
 }

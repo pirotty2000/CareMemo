@@ -31,8 +31,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.PersonOff
@@ -44,9 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
-import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
@@ -284,34 +280,28 @@ fun DeleteOrRestorePersonScreen(
 
     // 抹消実行前の最終確認
     if (showFinalConfirmDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showFinalConfirmDialog = false },
             icon = { Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("データの完全抹消") },
-            text = { 
-                val scrollState = rememberScrollState()
-                Box {
-                    Column(modifier = Modifier.verticalScroll(scrollState)) {
-                        Text("選択された ${selectedIds.size} 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？")
-                    }
-                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
-                }
+            text = {
+                AppDialogContent(text = "選択された ${selectedIds.size} 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？")
             },
             confirmButton = {
-                Button(
+                AppDialogConfirmButton(
+                    text = "抹消を実行する",
+                    type = AppDialogActionType.DELETE,
                     onClick = {
                         showFinalConfirmDialog = false
                         viewModel.deleteSelectedPersons(archivedPersons)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("抹消を実行する")
-                }
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showFinalConfirmDialog = false }) {
-                    Text("キャンセル")
-                }
+                AppDialogDismissButton(
+                    text = "キャンセル",
+                    onClick = { showFinalConfirmDialog = false }
+                )
             }
         )
     }

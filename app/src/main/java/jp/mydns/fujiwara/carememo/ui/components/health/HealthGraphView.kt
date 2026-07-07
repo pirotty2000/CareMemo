@@ -23,8 +23,6 @@ package jp.mydns.fujiwara.carememo.ui.components.health
  */
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -39,7 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 
 @Composable
 fun HealthGraphView(
@@ -59,22 +57,17 @@ fun HealthGraphView(
     val context = LocalContext.current
 
     if (showHelpDialog != null) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showHelpDialog = null },
             title = { Text(stringResource(R.string.main_menu_help)) },
             text = {
-                val scrollState = rememberScrollState()
-                Box {
-                    Column(modifier = Modifier.verticalScroll(scrollState)) {
-                        Text(showHelpDialog!!)
-                    }
-                    VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
-                }
+                AppDialogContent(text = showHelpDialog!!)
             },
             confirmButton = {
-                TextButton(onClick = { showHelpDialog = null }) {
-                    Text(stringResource(R.string.common_close))
-                }
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_close),
+                    onClick = { showHelpDialog = null }
+                )
             }
         )
     }

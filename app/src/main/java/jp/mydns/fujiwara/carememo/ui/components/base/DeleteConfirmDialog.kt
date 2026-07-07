@@ -21,13 +21,9 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  * DeleteConfirmDialog
  */
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 
@@ -42,39 +38,28 @@ fun DeleteConfirmDialog(
     message: String = stringResource(R.string.p_detail_dialog_msg_delete_confirm),
     confirmButtonText: String = stringResource(R.string.common_delete),
     dismissButtonText: String = stringResource(R.string.common_cancel),
-    isDestructive: Boolean = true
 ) {
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            val scrollState = rememberScrollState()
-            Box {
-                Column(modifier = Modifier.verticalScroll(scrollState)) {
-                    Text(message)
-                }
-                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
-            }
+            AppDialogContent(text = message)
         },
         confirmButton = {
-            TextButton(
+            AppDialogConfirmButton(
+                text = confirmButtonText,
                 onClick = {
                     onDelete()
                     onDismiss()
                 },
-                colors = if (isDestructive) {
-                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                } else {
-                    ButtonDefaults.textButtonColors()
-                }
-            ) {
-                Text(confirmButtonText)
-            }
+                type = AppDialogActionType.DELETE
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(dismissButtonText)
-            }
+            AppDialogDismissButton(
+                text = dismissButtonText,
+                onClick = onDismiss
+            )
         }
     )
 }

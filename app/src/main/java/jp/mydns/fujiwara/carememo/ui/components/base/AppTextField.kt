@@ -161,8 +161,11 @@ fun AppTextField(
                 newValue
             }
 
+            // テキストが実際に変更されたか（再帰呼び出しや onBlur 時の重複処理を防止）
+            val isTextChanged = finalValue.text != textFieldValueState.text
+
             textFieldValueState = finalValue
-            if (value != finalValue.text) {
+            if (isTextChanged) {
                 onValueChange(finalValue.text)
                 
                 // maxLength 到達時の自動移動

@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
@@ -98,9 +100,10 @@ fun ConditionPhotoPreviewScreen(
                 contentScale = ContentScale.Fit
             )
             
-            OutlinedTextField(
+            AppTextField(
                 value = caption,
                 onValueChange = { caption = it },
+                type = AppTextFieldType.TEXT,
                 label = { Text("キャプション") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,

@@ -37,6 +37,7 @@ import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.screens.main.MainScreen
+import jp.mydns.fujiwara.carememo.ui.screens.main.PersonEditScreen
 import jp.mydns.fujiwara.carememo.ui.screens.health.BatchInputScreen
 import jp.mydns.fujiwara.carememo.ui.screens.health.GraphExpansionScreen
 import jp.mydns.fujiwara.carememo.ui.screens.health.PersonHealthScreen
@@ -53,6 +54,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
@@ -216,7 +218,27 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToBatchInput = { personId ->
                             navController.navigate("batch_input/$personId")
                         },
+                        onNavigateToAddPerson = {
+                            navController.navigate("person_edit/-1")
+                        },
+                        onNavigateToEditPerson = { personId ->
+                            navController.navigate("person_edit/$personId")
+                        },
                         onNavigateToSettings = { navController.navigate("settings") }
+                    )
+                }
+
+                // ---------- 「利用者情報の登録・編集」 ----------
+                composable("person_edit/{personId}", arguments = listOf(
+                    navArgument("personId") { type = NavType.IntType }
+                )) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getInt("personId") ?: -1
+                    val editViewModel: PersonEditViewModel = viewModel(
+                        factory = PersonEditViewModel.Factory(
+                            personId, personRepository, userSettingsRepository))
+                    PersonEditScreen(
+                        viewModel = editViewModel,
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

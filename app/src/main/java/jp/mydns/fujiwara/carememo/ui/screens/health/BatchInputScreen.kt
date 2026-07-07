@@ -48,7 +48,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
-import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
@@ -264,7 +264,7 @@ fun BatchInputScreenContent(
                     // 2. 身長・体重
                     InputSectionCard(title = "身長・体重") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = height,
                                 onValueChange = onHeightChange,
                                 type = AppTextFieldType.DECIMAL,
@@ -272,7 +272,7 @@ fun BatchInputScreenContent(
                                 suffix = { Text("cm") },
                                 modifier = Modifier.weight(1f)
                             )
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = weight,
                                 onValueChange = onWeightChange,
                                 type = AppTextFieldType.DECIMAL,
@@ -286,14 +286,14 @@ fun BatchInputScreenContent(
                     // 3. バイタル
                     InputSectionCard(title = "バイタル") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = bpSystolic,
                                 onValueChange = onBpSystolicChange,
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
                                 modifier = Modifier.weight(1f)
                             )
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = bpDiastolic,
                                 onValueChange = onBpDiastolicChange,
                                 type = AppTextFieldType.INTEGER,
@@ -302,7 +302,7 @@ fun BatchInputScreenContent(
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = pulse,
                                 onValueChange = onPulseChange,
                                 type = AppTextFieldType.INTEGER,
@@ -310,7 +310,7 @@ fun BatchInputScreenContent(
                                 suffix = { Text("bpm") },
                                 modifier = Modifier.weight(1f)
                             )
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = bodyTemperature,
                                 onValueChange = onBodyTemperatureChange,
                                 type = AppTextFieldType.DECIMAL,
@@ -324,7 +324,7 @@ fun BatchInputScreenContent(
                     // 4. 血糖値・HbA1c
                     InputSectionCard(title = "血糖値・HbA1c") {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = glucose,
                                 onValueChange = onGlucoseChange,
                                 type = AppTextFieldType.INTEGER,
@@ -332,7 +332,7 @@ fun BatchInputScreenContent(
                                 suffix = { Text("mg/dL") },
                                 modifier = Modifier.weight(1f)
                             )
-                            CompactTextField(
+                            AppCompactTextField(
                                 value = hba1c,
                                 onValueChange = onHba1cChange,
                                 type = AppTextFieldType.DECIMAL,

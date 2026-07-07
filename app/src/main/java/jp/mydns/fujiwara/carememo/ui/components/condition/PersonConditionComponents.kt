@@ -63,9 +63,7 @@ import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
-import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
-import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
@@ -127,6 +125,7 @@ fun ConditionList(
     records: List<Any>,
     selectedId: Int,
     conditionPhotoMap: Map<Int, Boolean>,
+    isAnyDialogOpen: Boolean,
     onSelect: (Int) -> Unit,
     onDelete: (HistoryRecord) -> Unit,
     lazyListState: LazyListState = rememberLazyListState()
@@ -136,7 +135,7 @@ fun ConditionList(
         selectedRecordId = selectedId,
         onItemClick = { onSelect(it.id) },
         onDeleteSwipe = onDelete,
-        isAnyDialogOpen = false,
+        isAnyDialogOpen = isAnyDialogOpen,
         lazyListState = lazyListState
     ) { record ->
         (record as? ConditionAtVisit)?.let {
@@ -179,6 +178,54 @@ fun ConditionDetailPane(
     var condition by remember(conditionId) { mutableStateOf(memo?.condition ?: "") }
     var author by remember(conditionId) { 
         mutableStateOf(memo?.author ?: defaultRecorderName) 
+    }
+
+    // 変更検知用の初期状態
+    val initialDateTime = remember(conditionId) { memo?.recordTime }
+    val initialTitle = remember(conditionId) { memo?.title ?: "" }
+    val initialCondition = remember(conditionId) { memo?.condition ?: "" }
+    val initialAuthor = remember(conditionId, defaultRecorderName) { memo?.author ?: defaultRecorderName }
+
+    val isChanged by remember(title, condition, author, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
+        derivedStateOf {
+            title != initialTitle ||
+            condition != initialCondition ||
+            author != initialAuthor ||
+            dateTimeState.toInstant() != initialDateTime
+        }
+    }
+
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    // システム戻るボタンの制御
+    androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        AppDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
+            text = {
+                AppDialogContent(text = stringResource(R.string.common_confirm_discard_message))
+            },
+            confirmButton = {
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_discard),
+                    type = AppDialogActionType.DELETE,
+                    onClick = {
+                        showDiscardDialog = false
+                        if (conditionId == 0) onSelectedIdChange(-1) else isEditing = false
+                    }
+                )
+            },
+            dismissButton = {
+                AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { showDiscardDialog = false }
+                )
+            }
+        )
     }
 
     LaunchedEffect(defaultRecorderName) {
@@ -239,7 +286,13 @@ fun ConditionDetailPane(
                     }
                 }
             },
-            onCancel = { if (conditionId != 0) isEditing = false },
+            onCancel = {
+                if (isChanged) {
+                    showDiscardDialog = true
+                } else {
+                    if (conditionId != 0) isEditing = false else onSelectedIdChange(-1)
+                }
+            },
             onAddPhotoClick = onAddPhotoClick,
             onDeletePhoto = { photoToDelete = it },
             onMicClick = onMicClick

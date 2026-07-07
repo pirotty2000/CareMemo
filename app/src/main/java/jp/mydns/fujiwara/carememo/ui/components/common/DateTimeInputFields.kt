@@ -7,7 +7,7 @@ package jp.mydns.fujiwara.carememo.ui.components.common
  * 記録日時（年月日時分）を入力するためのUIコンポーネントと、その状態管理を提供する。
  *
  * 【主な機能】：
- * ・年、月、日、時、分の各数値入力フィールドの提供（CompactTextField を利用）。
+ * ・年、月、日、時、分の各数値入力フィールドの提供（AppCompactTextField を利用）。
  * ・入力完了時や最大桁数到達時の自動フォーカス移動。
  * ・入力値のバリデーションと、Instant への変換ロジック。
  * ・新規記録時や編集時における初期日時の柔軟な設定。
@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
-import jp.mydns.fujiwara.carememo.ui.components.main.CompactTextField
+import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -181,7 +181,7 @@ private fun DateTimeUnitField(
     modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Next,
 ) {
-    CompactTextField(
+    AppCompactTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,

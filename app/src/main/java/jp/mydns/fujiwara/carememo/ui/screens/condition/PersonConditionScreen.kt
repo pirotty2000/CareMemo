@@ -140,6 +140,8 @@ fun PersonConditionScreen(
     
     var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
 
+    val isAnyDialogOpen = recordToDelete != null || showPdfSettingsDialog || dialogMessage != null
+
     // 最後にロードした利用者IDを保持して、不要なリセットを防ぐ
     var lastLoadedPersonId by rememberSaveable { mutableIntStateOf(-1) }
 
@@ -171,6 +173,7 @@ fun PersonConditionScreen(
             conditionPhotoMap = conditionPhotoMap,
             photos = photos,
             isProcessing = isProcessing,
+            isAnyDialogOpen = isAnyDialogOpen,
             defaultRecorderName = defaultRecorderName,
             selectedId = selectedId,
             onSelectedIdChange = { selectedId = it },
@@ -213,6 +216,7 @@ fun PersonConditionScreen(
             conditionPhotoMap = conditionPhotoMap,
             photos = photos,
             isProcessing = isProcessing,
+            isAnyDialogOpen = isAnyDialogOpen,
             defaultRecorderName = defaultRecorderName,
             selectedId = selectedId,
             onSelectedIdChange = { selectedId = it },

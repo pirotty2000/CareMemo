@@ -150,6 +150,15 @@ object DateTimeUtils {
     }
 
     /**
+     * 生年月日を正規化する（時刻情報を切り捨てて UTC 00:00:00 に固定する）
+     * 同姓同名・同生年月日の重複判定を確実にするために使用。
+     */
+    fun normalizeBirthday(instant: Instant): Instant {
+        val localDate = instant.atZone(DEFAULT_ZONE).toLocalDate()
+        return localDate.atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+    }
+
+    /**
      * 西暦に和暦を添えた文字列を取得する (例: 2023(令和5)年)
      */
     private fun getYearWithEra(date: LocalDate): String {

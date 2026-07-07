@@ -1,7 +1,7 @@
-package jp.mydns.fujiwara.carememo.ui.components.main
+package jp.mydns.fujiwara.carememo.ui.components.base
 
 /**
- * Component：CompactTextField
+ * Component：AppCompactTextField
  *
  * 【役割】：
  * 数値を入力する際など、省スペースかつ整った見た目が必要な場面で使用される共通の入力フィールドを提供する。
@@ -38,11 +38,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompactTextField(
+fun AppCompactTextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -114,8 +113,12 @@ fun CompactTextField(
 
             val finalValue = if (filteredText != newValue.text) newValue.copy(text = filteredText) else newValue
             
+            // テキストが実際に変更されたか（再帰呼び出しや onBlur 時の重複処理を防止）
+            val isTextChanged = finalValue.text != textFieldValueState.text
+
             textFieldValueState = finalValue
-            if (value != finalValue.text) {
+            
+            if (isTextChanged) {
                 onValueChange(finalValue.text)
 
                 // maxLength 到達時の自動移動

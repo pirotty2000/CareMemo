@@ -10,6 +10,11 @@
     <string name="common_undo">元に戻す</string>
     <string name="common_pdf_export">PDF出力</string>
 
+    <!-- 変更の破棄確認 -->
+    <string name="common_confirm_discard_title">変更の破棄</string>
+    <string name="common_confirm_discard_message">入力途中の内容がありますが、破棄して戻りますか？</string>
+    <string name="common_discard">破棄して戻る</string>
+
     <!-- 日付・単位関連 -->
     <string name="common_era_ad">西暦</string>
     <string name="common_era_showa">昭和</string>

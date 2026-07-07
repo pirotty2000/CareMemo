@@ -36,7 +36,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  * 最終更新日: 2026/07/04
  */
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -70,6 +69,7 @@ fun PersonConditionScreenContent(
     conditionPhotoMap: Map<Int, Boolean>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
+    isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
     onDeleteRecord: (HistoryRecord) -> Unit,
     onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
@@ -115,6 +115,7 @@ fun PersonConditionScreenContent(
                             records = records,
                             selectedId = selectedId,
                             conditionPhotoMap = conditionPhotoMap,
+                            isAnyDialogOpen = isAnyDialogOpen,
                             onSelect = { onSelectedIdChange(it) },
                             onDelete = onDeleteRecord,
                             lazyListState = lazyListState
@@ -147,7 +148,6 @@ fun PersonConditionScreenContent(
     } else {
         // スマホ用レイアウト (切り替え)
         if (selectedId != -1) {
-            BackHandler { onSelectedIdChange(-1) }
             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ConditionDetailPane(
                     personId = personId,
@@ -187,6 +187,7 @@ fun PersonConditionScreenContent(
                             records = records,
                             selectedId = selectedId,
                             conditionPhotoMap = conditionPhotoMap,
+                            isAnyDialogOpen = isAnyDialogOpen,
                             onSelect = { onSelectedIdChange(it) },
                             onDelete = onDeleteRecord,
                             lazyListState = lazyListState

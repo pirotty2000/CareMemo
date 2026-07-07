@@ -14,8 +14,22 @@ interface PersonDao {
     @Query("SELECT * FROM person_db WHERE id = :id")
     fun getPersonById(id: Int): Flow<Person?>
 
-    @Query("SELECT * FROM person_db WHERE last_name = :lastName AND first_name = :firstName AND birthday = :birthday AND note = :note LIMIT 1")
-    suspend fun findExistingPerson(lastName: String, firstName: String, birthday: java.time.Instant, note: String): Person?
+    @Query("""
+        SELECT * FROM person_db 
+        WHERE last_name = :lastName 
+        AND first_name = :firstName 
+        AND birthday >= :start 
+        AND birthday < :end
+        AND COALESCE(note, '') = COALESCE(:note, '')
+        LIMIT 1
+    """)
+    suspend fun findExistingPerson(
+        lastName: String, 
+        firstName: String, 
+        start: java.time.Instant, 
+        end: java.time.Instant, 
+        note: String
+    ): Person?
 
     @Insert
     suspend fun insert(person: Person)

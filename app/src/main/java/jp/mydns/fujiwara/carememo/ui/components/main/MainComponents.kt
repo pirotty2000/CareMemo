@@ -16,8 +16,6 @@ package jp.mydns.fujiwara.carememo.ui.components.main
 import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -34,11 +32,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
-import jp.mydns.fujiwara.carememo.ui.components.base.BirthdayInputFields
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
-import jp.mydns.fujiwara.carememo.ui.components.base.rememberBirthdayInputState
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
@@ -171,7 +165,7 @@ fun UserEditDialog(
     val birthdayState = rememberBirthdayInputState(initialInstant = person?.birthday)
     val isInputValid = lastName.isNotBlank() && firstName.isNotBlank() && birthdayState.isValid
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -180,10 +174,8 @@ fun UserEditDialog(
             )
         },
         text = {
-            val scrollState = rememberScrollState()
-            Box {
+            AppDialogContent {
                 Column(
-                    modifier = Modifier.verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -230,11 +222,12 @@ fun UserEditDialog(
 
                     BirthdayInputFields(state = birthdayState)
                 }
-                VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
             }
         },
         confirmButton = {
-            Button(
+            AppDialogConfirmButton(
+                text = stringResource(R.string.common_save),
+                enabled = isInputValid,
                 onClick = {
                     birthdayState.toInstant()?.let { birthday ->
                         keyboardController?.hide()
@@ -255,14 +248,14 @@ fun UserEditDialog(
                         )
                         onSave(newPerson)
                     }
-                },
-                enabled = isInputValid
-            ) { Text(stringResource(R.string.common_save)) }
+                }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
+            AppDialogDismissButton(
+                text = stringResource(R.string.common_cancel),
+                onClick = onDismiss
+            )
         }
     )
 }
