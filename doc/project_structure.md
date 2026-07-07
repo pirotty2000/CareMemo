@@ -84,33 +84,33 @@ jp.mydns.fujiwara.carememo
 
 各機能層におけるロジックの垂直方向の依存関係です。
 
-| 分類       | 画面 (Screen)              | ViewModel                                              | 主要Repository                                                                                |
-|:---------|:-------------------------|:-------------------------------------------------------|:--------------------------------------------------------------------------------------------|
-| 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel` | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository` |
-| (A) 健康記録 | `PersonHealthScreen`     | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                       |
-| (B) 所見メモ | `PersonConditionScreen`  | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                    |
-| (C) 服薬管理 | `PersonMedicationScreen` | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                   |
-| 健康一括入力   | `BatchInputScreen`       | `BatchInputViewModel`                                  | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                       |
-| 利用者管理    | `DeleteOrRestorePerson`  | `DeleteOrRestorePersonViewModel`                       | `DeleteOrRestorePersonRepository`                                                           |
-| アプリ設定    | `SettingsScreen`         | `SettingsViewModel`                                    | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository` |
-| 共通基盤     | (詳細画面全体)                 | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                             |
+| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Repository                                                                                                     |
+|:---------|:-----------------------------------|:-------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------|
+| 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel`         | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository` |
+| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                         |
+| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
+| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | `DeleteOrRestorePersonRepository`                                                                                |
+| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
+| 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                                                  |
 
 # Screen - Components 依存関係
 
 各画面で使用されるUIコンポーネントの構成です。修正時の影響範囲の確認に利用してください。
 ※ 🔴**太字**は2つ以上の画面で共有されている部品です。変更時の影響範囲に注意してください。
 
-| 分類                   | 画面 (Screen)                                                              | 使用コンポーネント (ファイル名)                                                                                                                                                                                                                                                                                                                             |
-|:---------------------|:-------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1. 利用者一覧および(A)(B)(C) | (全主要画面)                                                                  | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/AppDialog.kt`**：共通ダイアログ基盤（ボタン・コンテンツ・スクロール制御）<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準）<br>🔴**`base/AppCompactTextField.kt`**：入力欄の微調整用コンポーネント                                                                                                   |
-| 2. 利用者一覧             | `MainScreen`<br>`*Content.kt`<br>`PersonEditScreen.kt` | `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ<br>`main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等）<br>`main/KanaIndexBar.kt`：五十音インデックスバー<br>🔴**`base/SearchBox.kt`**：共通検索バー<br>`main/BirthdayInputFields.kt`：生年月日入力部品                                                                                                                             |
-| 3. (A)(B)(C)共通       | (詳細3画面全体)                                                                | 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助<br>🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー<br>🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー<br>🔴**`common/DateTimeInputFields.kt`**：共通の日時入力<br>🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤<br>🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理<br>🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ                   |
-| 4. (A) 健康記録          | `PersonHealthScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt`     | `health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル・詳細項目(DetailItem)<br>`health/HealthGraphView.kt`：(A)専用グラフ表示<br>`health/LineChart.kt`：グラフ描画エンジン<br>`health/HealthChartHelper.kt`：グラフ用データ変換 |
-| 5. (B) 所見メモ          | `PersonConditionScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt`  | 🔴**`base/SearchBox.kt`**：共通検索バー<br>`condition/PersonConditionComponents.kt`：(B)専用の表示・編集・写真グリッド                                                                                                                                        |
-| 6. (C) 服薬管理          | `PersonMedicationScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt` | `medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ                                                                                                                                                                                                                                                                          |
-| 7. (A)の一括入力          | `BatchInputScreen`                                                       | 🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`common/DateTimeInputFields.kt`**：共通の日時入力<br>🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                              |
-| 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                     |
-| 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/DeleteConfirmDialog.kt`**：破壊的操作の警告ダイアログ<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                           |
+| 分類                   | 画面 (Screen)                                                              | 使用コンポーネント (ファイル名)                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|:---------------------|:-------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1. 利用者一覧および(A)(B)(C) | (全主要画面)                                                                  | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/AppDialog.kt`**：共通ダイアログ基盤（ボタン・コンテンツ・スクロール制御）<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準）<br>🔴**`base/AppCompactTextField.kt`**：入力欄の微調整用コンポーネント                                                                             |
+| 2. 利用者一覧             | `MainScreen`<br>`*Content.kt`<br>`PersonEditScreen.kt`                   | `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ<br>`main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等）<br>`main/KanaIndexBar.kt`：五十音インデックスバー<br>🔴**`base/SearchBox.kt`**：共通検索バー<br>`main/BirthdayInputFields.kt`：生年月日入力部品                                                                                                                                                                                                                   |
+| 3. (A)(B)(C)共通       | (詳細3画面全体)                                                                | 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助<br>🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー<br>🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー<br>🔴**`common/DateTimeInputFields.kt`**：共通の日時入力<br>🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤<br>🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理<br>🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ |
+| 4. (A) 健康記録          | `PersonHealthScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt`     | `health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル・詳細項目(DetailItem)<br>`health/HealthGraphView.kt`：(A)専用グラフ表示<br>`health/LineChart.kt`：グラフ描画エンジン<br>`health/HealthChartHelper.kt`：グラフ用データ変換                                                                                                                                                                                                                                       |
+| 5. (B) 所見メモ          | `PersonConditionScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt`  | 🔴**`base/SearchBox.kt`**：共通検索バー<br>`condition/PersonConditionComponents.kt`：(B)専用の表示・編集・写真グリッド                                                                                                                                                                                                                                                                                                                                     |
+| 6. (C) 服薬管理          | `PersonMedicationScreen`<br>`*Phone.kt`<br>`*Tablet.kt`<br>`*Content.kt` | `medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ                                                                                                                                                                                                                                                                                                                                                                |
+| 7. (A)の一括入力          | `BatchInputScreen`                                                       | 🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`common/DateTimeInputFields.kt`**：共通の日時入力<br>🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                    |
+| 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                           |
+| 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/DeleteConfirmDialog.kt`**：破壊的操作の警告ダイアログ<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                 |
 
 # Components - Screen 逆引きリファレンス
 
@@ -119,36 +119,36 @@ jp.mydns.fujiwara.carememo
 ※ **注意**: 一方の表を修正した際は、必ずもう一方も更新して矛盾が起きないようにしてください。
 <br>
 
-| コンポーネント (ファイル名) | 一覧 | (A)健康 | (B)所見 | (C)服薬 | (A)一括 | 管理 | 設定 |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **【共通部品 (複数画面で使用)】** | | | | | | | |
-| 🔴**`base/AppCompactTextField.kt`**：入力欄の微調整用コンポーネント | ✓ | ✓ | ✓ | ✓ | ✓ | | |
-| 🔴**`base/AppDialog.kt`**：共通ダイアログ基盤（ボタン・コンテンツ・スクロール制御） | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ |
-| 🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準） | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
-| 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ | | ✓ | ✓ | ✓ | | | ✓ |
-| 🔴**`base/EmptyState.kt`**：共通の「データなし」表示 | ✓ | ✓ | ✓ | ✓ | | ✓ | |
-| 🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 🔴**`base/LoadingScreen.kt`**：共通のローディング表示 | ✓ | ✓ | ✓ | ✓ | ✓ | | |
-| 🔴**`base/SearchBox.kt`**：共通検索バー | ✓ | | ✓ | | | | |
-| 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助 | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー | | ✓ | ✓ | ✓ | | | |
-| 🔴**`common/DateTimeInputFields.kt`**：共通の日時入力 | | ✓ | ✓ | ✓ | ✓ | | |
-| 🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤 | | ✓ | ✓ | ✓ | | | |
-| 🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理 | | ✓ | ✓ | ✓ | | | |
-| 🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ | | ✓ | ✓ | ✓ | | | |
-| 🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー | | ✓ | ✓ | ✓ | ✓ | | |
-| **【個別部品 (特定ドメイン/画面)】** | | | | | | | |
-| `condition/PersonConditionComponents.kt`：(B)専用の表示・編集・写真グリッド | | | ✓ | | | | |
-| `health/HealthChartHelper.kt`：グラフ用データ変換 | | ✓ | | | | | |
-| `health/HealthGraphView.kt`：(A)専用グラフ表示 | | ✓ | | | | | |
-| `health/LineChart.kt`：グラフ描画エンジン | | ✓ | | | | | |
-| `health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル・詳細項目(DetailItem) | | ✓ | | | | | |
-| `main/BirthdayInputFields.kt`：生年月日入力部品 | ✓ | | | | | | |
-| `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ | ✓ | | | | | | |
-| `main/KanaIndexBar.kt`：五十音インデックスバー | ✓ | | | | | | |
-| `main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等） | ✓ | | | | | | |
-| `medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ | | | | ✓ | | | |
+| コンポーネント (ファイル名)                                                       | 一覧 | (A)健康 | (B)所見 | (C)服薬 | (A)一括 | 管理 | 設定 |
+|:----------------------------------------------------------------------|:--:|:-----:|:-----:|:-----:|:-----:|:--:|:--:|
+| **【共通部品 (複数画面で使用)】**                                                  |    |       |       |       |       |    |    |
+| 🔴**`base/AppCompactTextField.kt`**：入力欄の微調整用コンポーネント                   | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
+| 🔴**`base/AppDialog.kt`**：共通ダイアログ基盤（ボタン・コンテンツ・スクロール制御）                | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  | ✓  |
+| 🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準）                           | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    | ✓  |
+| 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理                    | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |
+| 🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ                    |    |   ✓   |   ✓   |   ✓   |       |    | ✓  |
+| 🔴**`base/EmptyState.kt`**：共通の「データなし」表示                               | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  |    |
+| 🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |
+| 🔴**`base/LoadingScreen.kt`**：共通のローディング表示                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
+| 🔴**`base/SearchBox.kt`**：共通検索バー                                      | ✓  |       |   ✓   |       |       |    |    |
+| 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                     |    |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |
+| 🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー                |    |   ✓   |   ✓   |   ✓   |       |    |    |
+| 🔴**`common/DateTimeInputFields.kt`**：共通の日時入力                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
+| 🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤                        |    |   ✓   |   ✓   |   ✓   |       |    |    |
+| 🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理                |    |   ✓   |   ✓   |   ✓   |       |    |    |
+| 🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ                      |    |   ✓   |   ✓   |   ✓   |       |    |    |
+| 🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
+| **【個別部品 (特定ドメイン/画面)】**                                                |    |       |       |       |       |    |    |
+| `condition/PersonConditionComponents.kt`：(B)専用の表示・編集・写真グリッド           |    |       |   ✓   |       |       |    |    |
+| `health/HealthChartHelper.kt`：グラフ用データ変換                               |    |   ✓   |       |       |       |    |    |
+| `health/HealthGraphView.kt`：(A)専用グラフ表示                                |    |   ✓   |       |       |       |    |    |
+| `health/LineChart.kt`：グラフ描画エンジン                                       |    |   ✓   |       |       |       |    |    |
+| `health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル・詳細項目(DetailItem) |    |   ✓   |       |       |       |    |    |
+| `main/BirthdayInputFields.kt`：生年月日入力部品                                | ✓  |       |       |       |       |    |    |
+| `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ                               | ✓  |       |       |       |       |    |    |
+| `main/KanaIndexBar.kt`：五十音インデックスバー                                    | ✓  |       |       |       |       |    |    |
+| `main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等）                    | ✓  |       |       |       |       |    |    |
+| `medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ  |    |       |       |   ✓   |       |    |    |
 
 
 # 実装上の重要指針（保守ガイド）
@@ -174,9 +174,9 @@ CareMemo では、以下の挙動を「アプリ標準ルール」として定�
 ### コンポーネントの使い分け
 見た目（サイズ感）に応じて選択してください。どちらも内部で `AppTextField` のロジックを継承しています。
 
-| コンポーネント名 | 用途 | 配置場所 |
-| :--- | :--- | :--- |
-| **`AppTextField`** | 標準的な入力項目（名前、メモ、記録者など） | `base/AppTextField.kt` |
+| コンポーネント名                  | 用途                      | 配置場所                          |
+|:--------------------------|:------------------------|:------------------------------|
+| **`AppTextField`**        | 標準的な入力項目（名前、メモ、記録者など）   | `base/AppTextField.kt`        |
 | **`AppCompactTextField`** | 省スペースが必要な数値入力（日時、バイタル等） | `base/AppCompactTextField.kt` |
 
 ### 実装上のルール
@@ -185,7 +185,7 @@ CareMemo では、以下の挙動を「アプリ標準ルール」として定�
 *   **例外的な挙動**: 
     検索窓など、タップ時に値をクリアした方が利便性が高い特殊なケースに限り、個別に挙動を上書きすることを許可します。その場合は、ソースコード内にその理由を明記してください。
 
-## 2，ダイアログの標準化ガイド（AppDialog）
+## 2．ダイアログの標準化ガイド（AppDialog）
 
 アプリ内での意思決定を求めるダイアログには、標準の `AlertDialog` を直接使用せず、必ずプロジェクト共通基盤である `AppDialog`（およびその関連コンポーネント）を使用して、ユーザーの視線誘導と操作の意図を明確にしてください。
 
