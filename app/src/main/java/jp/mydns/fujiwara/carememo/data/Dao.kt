@@ -373,10 +373,4 @@ interface AuditLogDao {
 
     @Query("DELETE FROM audit_log_db")
     suspend fun deleteAll()
-
-    @Query("SELECT * FROM audit_log_db")
-    suspend fun getAllRaw(): List<AuditLog>
-
-    @Upsert
-    suspend fun insertAll(items: List<AuditLog>)
 }

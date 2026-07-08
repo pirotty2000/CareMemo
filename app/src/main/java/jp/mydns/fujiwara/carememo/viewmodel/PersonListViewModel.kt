@@ -157,38 +157,13 @@ class PersonListViewModel(
         }
     }
 
-    fun updatePerson(person: Person) {
-        viewModelScope.launch {
-            try {
-                // 1. 自分自身以外で重複している人がいないかチェック
-                val existing = repository.findExistingPerson(person)
-                if (existing != null && existing.id != person.id) {
-                    handleDuplicateError(existing, person, isUpdate = true)
-                    return@launch
-                }
-
-                // 2. データベースを更新
-                repository.updatePerson(person, "PersonList", "updatePerson")
-                sendUiEvent(UiEvent.SaveSuccess)
-                showSnackbar(R.string.main_msg_user_updated)
-            } catch (_: SQLiteConstraintException) {
-                val existing = repository.findExistingPerson(person)
-                if (existing != null && existing.id != person.id) {
-                    handleDuplicateError(existing, person, isUpdate = true)
-                } else {
-                    showError(R.string.main_err_title_duplicate_archived_update, R.string.main_msg_user_updated)
-                }
-            }
-        }
-    }
-
     /**
      * 重複エラーが発生した際のメッセージ表示を共通化
      */
     private fun handleDuplicateError(existing: Person, input: Person, isUpdate: Boolean) {
         val personName = input.getMaskedName(isNameMaskingEnabled.value)
         val titleRes = if (isUpdate) R.string.main_err_title_duplicate_archived_update else R.string.main_err_title_duplicate_archived_add
-        
+
         if (existing.deletedAt == null) {
             // アクティブな利用者に重複
             showError(
@@ -200,7 +175,6 @@ class PersonListViewModel(
             showError(titleRes, R.string.main_err_duplicate_archived, personName)
         }
     }
-
 
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {

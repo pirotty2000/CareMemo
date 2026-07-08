@@ -59,7 +59,6 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -124,7 +123,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 0)
         val lastActiveTime by userSettingsRepository.lastActiveTime.collectAsState(initial = 0L)
         
-        var isAuthenticated by rememberSaveable { mutableStateOf(false) }
+        var isAuthenticated by rememberSaveable { mutableStateOf(value = false) }
 
         // 初回起動時の生体認証設定の自動最適化
         LaunchedEffect(isBiometricSettingInitialized) {
@@ -150,7 +149,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         scope.launch { userSettingsRepository.setLastActiveTime(System.currentTimeMillis()) }
                     }
                     Lifecycle.Event.ON_START -> {
-                        if ((isBiometricEnabled == true) && isAuthenticated) {
+                        if (isBiometricEnabled && isAuthenticated) {
                             if (userSettingsRepository.isLockBypassed) {
                                 userSettingsRepository.isLockBypassed = false
                                 return@LifecycleEventObserver
@@ -178,10 +177,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 
                 // デバイスが認証不可能な状態（ハードウェア故障、セキュリティ設定の削除など）に陥っている場合
                 if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                    if (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE || 
-                        canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ||
-                        canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ||
-                        canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED) {
+                    if (
+                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE) ||
+                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE) ||
+                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) ||
+                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED)
+                    ) {
                         
                         // ロックアウトを避けるため、認証成功とみなして設定をOFFにする
                         isAuthenticated = true
@@ -191,13 +192,17 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
 
                 val executor = ContextCompat.getMainExecutor(activity)
-                val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        super.onAuthenticationSucceeded(result)
-                        isAuthenticated = true
-                    }
-                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        super.onAuthenticationError(errorCode, errString)
+                val biometricPrompt = BiometricPrompt(
+                    activity,
+                    executor,
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            isAuthenticated = true
+                        }
+
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                            super.onAuthenticationError(errorCode, errString)
                         if (errorCode == BiometricPrompt.ERROR_USER_CANCELED || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON || errorCode == BiometricPrompt.ERROR_LOCKOUT || errorCode == BiometricPrompt.ERROR_LOCKOUT_PERMANENT || errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS || errorCode == BIOMETRIC_STRONG) {
                             activity.finish()
                         }
@@ -263,7 +268,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToEditPerson = { personId ->
                             navController.navigate("person_edit/$personId")
                         },
-                        onNavigateToSettings = { navController.navigate("settings") }
+                        onNavigateToSettings = { navController.navigate("settings") },
                     )
                 }
 
