@@ -24,7 +24,6 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import android.util.Base64
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +36,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 設定画面・バックアップ管理用の ViewModel
@@ -95,7 +95,7 @@ class SettingsViewModel(
     val auditLogCount: StateFlow<Int> = kotlinx.coroutines.flow.flow {
         while (true) {
             emit(auditLogRepository.getLogCount())
-            kotlinx.coroutines.delay(5000)
+            kotlinx.coroutines.delay(5000.milliseconds)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -110,21 +110,25 @@ class SettingsViewModel(
     val auditLogs: StateFlow<List<AuditLog>> = combine(
         auditLogRepository.allLogs,
         _selectedTable,
-        _selectedScreen
+        _selectedScreen,
     ) { logs, table, screen ->
         logs.filter { log ->
-            (table == null || log.tableName == table) &&
-                    (screen == null || log.screenName == screen)
+            ((table == null) || (log.tableName == table)) &&
+                    ((screen == null) || (log.screenName == screen))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 存在する項目の一覧（フィルター選択用）
     val availableTables: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs -> logs.map { it.tableName }.distinct().sorted() }
+        .map { logs ->
+            logs.asSequence().map { it.tableName }.distinct().sorted().toList()
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableScreens: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs -> logs.map { it.screenName }.distinct().sorted() }
+        .map { logs ->
+            logs.asSequence().map { it.screenName }.distinct().sorted().toList()
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setTableFilter(table: String?) {
@@ -151,7 +155,7 @@ class SettingsViewModel(
             initialValue = emptyList(),
         )
 
-    private val _isProcessing = MutableStateFlow(false)
+    private val _isProcessing = MutableStateFlow(value = false)
     val isProcessing = _isProcessing.asStateFlow()
 
     private val _processingProgress = MutableStateFlow(0)
@@ -301,8 +305,9 @@ class SettingsViewModel(
                     files = filesToZip,
                     zipFile = tempZipFile,
                     password = password,
-                    onProgress = { _processingProgress.value = it }
-                ).getOrThrow()
+                ) { progress ->
+                    _processingProgress.value = progress
+                }.getOrThrow()
 
                 context.contentResolver.openOutputStream(uri)?.use { output: OutputStream ->
                     tempZipFile.inputStream().use { input: InputStream ->
@@ -429,8 +434,9 @@ class SettingsViewModel(
                 zipFile = zipFile,
                 targetDir = tempDir,
                 password = password,
-                onProgress = { _processingProgress.value = it }
-            ).getOrThrow()
+            ) { progress ->
+                _processingProgress.value = progress
+            }.getOrThrow()
 
             val jsonFile = File(tempDir, "backup.json")
             if (!jsonFile.exists()) throw Exception("バックアップファイル(backup.json)が見つかりません。")

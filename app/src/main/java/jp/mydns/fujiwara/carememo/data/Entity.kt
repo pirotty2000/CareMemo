@@ -47,7 +47,7 @@ interface HistoryRecord {
 @Serializable
 @Entity(
     tableName = "person_db",
-    indices = [Index(value = ["last_name", "first_name", "birthday", "note"], unique = true)]
+    indices = [Index(value = ["last_name", "first_name", "birthday", "note"], unique = true)],
 )
 data class Person(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -67,7 +67,7 @@ data class Person(
         return if (isEnabled) {
             "${lastName.maskAlternate()}\u3000${firstName.maskAlternate()}"
         } else {
-            "${lastName}\u3000${firstName}"
+            "$lastName\u3000$firstName"
         }
     }
 
@@ -90,7 +90,7 @@ data class Person(
 fun String.maskAlternate(): String {
     if (this.length < 2) return this
     return this.mapIndexed { index, char ->
-        if ((index + 1) % 2 == 0) '○' else char
+        if (((index + 1) % 2) == 0) '○' else char
     }.joinToString("")
 }
 

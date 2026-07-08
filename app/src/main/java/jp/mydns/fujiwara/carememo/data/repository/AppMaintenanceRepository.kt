@@ -18,7 +18,7 @@ class AppMaintenanceRepository(
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
     private val medicationRecordDao: MedicationRecordDao,
-    private val auditLogDao: AuditLogDao
+    private val auditLogDao: AuditLogDao,
 ) {
     suspend fun getBackupData(): CareMemoBackup {
         return CareMemoBackup(
@@ -29,7 +29,7 @@ class AppMaintenanceRepository(
             glucoseAndHbA1cs = glucoseAndHbA1cDao.getAllRaw(),
             conditionAtVisits = conditionAtVisitDao.getAllRaw(),
             conditionPhotos = conditionPhotoDao.getAllRaw(),
-            medicationRecords = medicationRecordDao.getAllRaw()
+            medicationRecords = medicationRecordDao.getAllRaw(),
         )
     }
 
@@ -46,7 +46,7 @@ class AppMaintenanceRepository(
             conditionPhotoDao.insertAll(backup.conditionPhotos)
             
             // 服薬記録のインポート（有効なステータスを持つものだけを保存するガード）
-            val validMedicationRecords = backup.medicationRecords.filter { it.status in 0..2 }
+            val validMedicationRecords = backup.medicationRecords.filter { (it.status in (0..2)) }
             medicationRecordDao.insertAll(validMedicationRecords)
         }
     }
@@ -137,7 +137,7 @@ class AppMaintenanceRepository(
             // 存在しない personId = -999 を使ってレコードを挿入
             db.execSQL(
                 "INSERT INTO bp_and_pulse_db (person_id, bp_systolic, bp_diastolic, pulse, record_time, deleted_at) VALUES (-999, 120, 80, 70, ?, NULL)",
-                arrayOf(now)
+                arrayOf(now),
             )
         } finally {
             // 制約を必ず元に戻す

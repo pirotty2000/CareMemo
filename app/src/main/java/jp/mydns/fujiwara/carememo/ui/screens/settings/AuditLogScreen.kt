@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -35,7 +34,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 @Composable
 fun AuditLogScreen(
     viewModel: SettingsViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     // 実際には専用のViewModelを作るか、SettingsViewModelにリストを持たせる
     // ここではSettingsViewModelにallLogsを追加したと仮定
@@ -48,7 +47,7 @@ fun AuditLogScreen(
     val availableScreens by viewModel.availableScreens.collectAsState()
 
     val lazyListState = rememberLazyListState()
-    val isFiltered = selectedTable != null || selectedScreen != null
+    val isFiltered = (selectedTable != null) || (selectedScreen != null)
 
     Scaffold(
         topBar = {
@@ -59,9 +58,9 @@ fun AuditLogScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
-                colors = appTopAppBarColors()
+                colors = appTopAppBarColors(),
             )
-        }
+        },
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // フィルターバー
@@ -73,8 +72,9 @@ fun AuditLogScreen(
                     availableScreens = availableScreens,
                     onTableSelect = { viewModel.setTableFilter(it) },
                     onScreenSelect = { viewModel.setScreenFilter(it) },
-                    onClear = { viewModel.clearFilters() }
-                )
+                ) {
+                    viewModel.clearFilters()
+                }
             }
 
             if (auditLogs.isEmpty()) {
@@ -82,7 +82,7 @@ fun AuditLogScreen(
                     message = if (isFiltered) "条件に合うログはありません" else "ログはありません",
                     icon = Icons.Rounded.History,
                     description = if (isFiltered) "フィルター設定を変更してください" else "操作を行うとここに履歴が記録されます",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             } else {
                 Box(modifier = Modifier.weight(1f)) {
@@ -90,7 +90,7 @@ fun AuditLogScreen(
                         state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(auditLogs) { log ->
                             AuditLogItem(log)
@@ -113,17 +113,17 @@ private fun AuditLogFilterBar(
     availableScreens: List<String>,
     onTableSelect: (String?) -> Unit,
     onScreenSelect: (String?) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
 ) {
-    var showTableMenu by remember { mutableStateOf(false) }
-    var showScreenMenu by remember { mutableStateOf(false) }
+    var showTableMenu by remember { mutableStateOf(value = false) }
+    var showScreenMenu by remember { mutableStateOf(value = false) }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // テーブル絞り込み
         item {
@@ -135,7 +135,7 @@ private fun AuditLogFilterBar(
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedTable != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    } else null
+                    } else null,
                 )
                 DropdownMenu(expanded = showTableMenu, onDismissRequest = { showTableMenu = false }) {
                     DropdownMenuItem(
@@ -143,7 +143,7 @@ private fun AuditLogFilterBar(
                         onClick = {
                             onTableSelect(null)
                             showTableMenu = false
-                        }
+                        },
                     )
                     availableTables.forEach { table ->
                         DropdownMenuItem(
@@ -151,7 +151,7 @@ private fun AuditLogFilterBar(
                             onClick = {
                                 onTableSelect(table)
                                 showTableMenu = false
-                            }
+                            },
                         )
                     }
                 }
@@ -168,7 +168,7 @@ private fun AuditLogFilterBar(
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedScreen != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    } else null
+                    } else null,
                 )
                 DropdownMenu(expanded = showScreenMenu, onDismissRequest = { showScreenMenu = false }) {
                     DropdownMenuItem(
@@ -176,7 +176,7 @@ private fun AuditLogFilterBar(
                         onClick = {
                             onScreenSelect(null)
                             showScreenMenu = false
-                        }
+                        },
                     )
                     availableScreens.forEach { screen ->
                         DropdownMenuItem(
@@ -184,7 +184,7 @@ private fun AuditLogFilterBar(
                             onClick = {
                                 onScreenSelect(screen)
                                 showScreenMenu = false
-                            }
+                            },
                         )
                     }
                 }
@@ -192,13 +192,13 @@ private fun AuditLogFilterBar(
         }
 
         // クリアボタン
-        if (selectedTable != null || selectedScreen != null) {
+        if ((selectedTable != null) || (selectedScreen != null)) {
             item {
                 IconButton(onClick = onClear) {
                     Icon(
                         Icons.Rounded.ClearAll,
                         contentDescription = "フィルター解除",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -211,18 +211,18 @@ fun AuditLogItem(log: AuditLog) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     text = DateTimeUtils.formatRecordTime(log.timestamp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = log.actionType,
@@ -235,7 +235,7 @@ fun AuditLogItem(log: AuditLog) {
                         "LOGICAL_DELETE" -> Color(0xFFFF9800)
                         "RESTORE" -> Color(0xFF9C27B0)
                         else -> MaterialTheme.colorScheme.primary
-                    }
+                    },
                 )
             }
             
@@ -244,13 +244,13 @@ fun AuditLogItem(log: AuditLog) {
             Text(
                 text = "${log.screenName} > ${log.operation}",
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             
             Text(
                 text = "Table: ${log.tableName} | ID: ${log.affectedId}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             
             log.details?.let {
@@ -258,7 +258,7 @@ fun AuditLogItem(log: AuditLog) {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
