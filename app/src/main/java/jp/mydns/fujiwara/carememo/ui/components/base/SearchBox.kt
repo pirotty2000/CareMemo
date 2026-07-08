@@ -29,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import jp.mydns.fujiwara.carememo.R
 
 
@@ -48,8 +49,8 @@ fun SearchBox(
         onValueChange = onQueryChange,
         type = AppTextFieldType.TEXT,
         modifier = modifier.fillMaxWidth(),
-        label = label?.let { { Text(it) } },
-        placeholder = { Text(placeholder) },
+        label = label?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+        placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {

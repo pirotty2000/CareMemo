@@ -47,6 +47,7 @@ fun PdfExportActionHandler(
     records: List<HistoryRecord>,
     snackbarHostState: SnackbarHostState,
     viewModel: BaseViewModel,
+    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
     photos: List<ConditionPhoto> = emptyList()
 ) {
     val context = LocalContext.current
@@ -55,7 +56,8 @@ fun PdfExportActionHandler(
     if (showDialog && person != null) {
         PdfSettingsDialog(
             category = category,
-            onDismiss = onDismiss
+            onDismiss = onDismiss,
+            onRequireAuthentication = onRequireAuthentication
         ) { range, order, start, end, includePhotos, password ->
             onDismiss()
             // PDF出力後の共有UI（システムの共有シート）から戻ってきたときに

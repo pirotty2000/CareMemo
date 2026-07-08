@@ -66,6 +66,7 @@ fun PersonConditionScreen(
     onNavigateToCategory: (Category) -> Unit,
     onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
     onNavigateToFullScreen: (Int, Int) -> Unit,
+    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
@@ -262,6 +263,7 @@ fun PersonConditionScreen(
             records = records,
             snackbarHostState = snackbarHostState,
             viewModel = viewModel,
+            onRequireAuthentication = onRequireAuthentication,
             photos = allPhotos.value
         )
     }

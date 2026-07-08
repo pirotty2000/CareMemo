@@ -17,7 +17,8 @@ class AppMaintenanceRepository(
     private val glucoseAndHbA1cDao: GlucoseAndHbA1cDao,
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
-    private val medicationRecordDao: MedicationRecordDao
+    private val medicationRecordDao: MedicationRecordDao,
+    private val auditLogDao: AuditLogDao
 ) {
     suspend fun getBackupData(): CareMemoBackup {
         return CareMemoBackup(
@@ -34,7 +35,9 @@ class AppMaintenanceRepository(
 
     suspend fun replaceAllData(backup: CareMemoBackup) {
         database.withTransaction {
-            clearAllData()
+            // バックアップからの復元時、操作ログは保持したまま臨床データのみを差し替える
+            clearClinicalData()
+            
             personDao.insertAll(backup.persons)
             heightAndWeightDao.insertAll(backup.heightAndWeights)
             bpAndPulseDao.insertAll(backup.bpAndPulses)
@@ -48,16 +51,27 @@ class AppMaintenanceRepository(
         }
     }
 
+    /**
+     * アプリ内のすべてのデータを消去します（監査ログを含む）
+     */
     suspend fun clearAllData() {
         database.withTransaction {
-            medicationRecordDao.deleteAll()
-            conditionPhotoDao.deleteAll()
-            conditionAtVisitDao.deleteAll()
-            glucoseAndHbA1cDao.deleteAll()
-            bpAndPulseDao.deleteAll()
-            heightAndWeightDao.deleteAll()
-            personDao.deleteAll()
+            auditLogDao.deleteAll()
+            clearClinicalData()
         }
+    }
+
+    /**
+     * 利用者情報およびすべての臨床記録を消去します（監査ログは保持）
+     */
+    private suspend fun clearClinicalData() {
+        medicationRecordDao.deleteAll()
+        conditionPhotoDao.deleteAll()
+        conditionAtVisitDao.deleteAll()
+        glucoseAndHbA1cDao.deleteAll()
+        bpAndPulseDao.deleteAll()
+        heightAndWeightDao.deleteAll()
+        personDao.deleteAll()
     }
 
     /**

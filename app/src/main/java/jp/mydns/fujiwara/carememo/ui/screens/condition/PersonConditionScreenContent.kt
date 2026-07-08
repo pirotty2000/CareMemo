@@ -101,7 +101,8 @@ fun PersonConditionScreenContent(
             ) {
                 SearchBox(
                     query = searchQuery,
-                    onQueryChange = onSearchQueryChange
+                    onQueryChange = onSearchQueryChange,
+                    placeholder = stringResource(R.string.main_search_hint_short)
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     if (records.isEmpty()) {

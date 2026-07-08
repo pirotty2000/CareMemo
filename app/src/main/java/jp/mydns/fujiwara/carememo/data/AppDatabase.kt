@@ -18,8 +18,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         ConditionAtVisit::class,
         ConditionPhoto::class,
         MedicationRecord::class,
+        AuditLog::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -31,6 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun conditionAtVisitDao(): ConditionAtVisitDao
     abstract fun conditionPhotoDao(): ConditionPhotoDao
     abstract fun medicationRecordDao(): MedicationRecordDao
+    abstract fun auditLogDao(): AuditLogDao
 
     companion object {
         @Volatile

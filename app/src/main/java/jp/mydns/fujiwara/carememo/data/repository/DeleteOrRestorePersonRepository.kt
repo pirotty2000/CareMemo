@@ -15,7 +15,8 @@ class DeleteOrRestorePersonRepository(
     private val glucoseAndHbA1cDao: GlucoseAndHbA1cDao,
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
-    private val medicationRecordDao: MedicationRecordDao
+    private val medicationRecordDao: MedicationRecordDao,
+    private val auditLogRepository: AuditLogRepository? = null
 ) {
     /**
      * アーカイブ（論理削除）されている利用者一覧を取得します。
@@ -26,7 +27,7 @@ class DeleteOrRestorePersonRepository(
      * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
      * ※現在は主にSettingsScreenなどから利用されます。
      */
-    suspend fun logicalDeletePerson(personId: Int) {
+    suspend fun logicalDeletePerson(personId: Int, screenName: String = "", operation: String = "") {
         database.withTransaction {
             val timestamp = System.currentTimeMillis()
             personDao.logicalDelete(personId, timestamp)
@@ -36,13 +37,22 @@ class DeleteOrRestorePersonRepository(
             conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
             conditionPhotoDao.logicalDeleteByPersonId(personId, timestamp)
             medicationRecordDao.logicalDeleteByPersonId(personId, timestamp)
+
+            auditLogRepository?.log(
+                screenName = screenName,
+                operation = operation,
+                tableName = "person_db",
+                actionType = "LOGICAL_DELETE",
+                affectedId = personId.toString(),
+                details = "Cascade logical delete for person and all related records"
+            )
         }
     }
 
     /**
      * 論理削除された利用者と、紐づくすべての記録を復帰させます。
      */
-    suspend fun restorePerson(personId: Int) {
+    suspend fun restorePerson(personId: Int, screenName: String = "", operation: String = "") {
         database.withTransaction {
             personDao.restore(personId)
             heightAndWeightDao.restoreByPersonId(personId)
@@ -51,22 +61,44 @@ class DeleteOrRestorePersonRepository(
             conditionAtVisitDao.restoreByPersonId(personId)
             conditionPhotoDao.restoreByPersonId(personId)
             medicationRecordDao.restoreByPersonId(personId)
+
+            auditLogRepository?.log(
+                screenName = screenName,
+                operation = operation,
+                tableName = "person_db",
+                actionType = "RESTORE",
+                affectedId = personId.toString(),
+                details = "Restore person and all related records"
+            )
         }
     }
 
     /**
      * 指定された利用者を完全に抹消（物理削除）します。
      */
-    suspend fun permanentlyDeletePerson(personId: Int) {
-        // PersonDao の物理削除メソッドを個別に呼ぶか、Dao側の整理が必要
-        // 現状は一括削除しかない場合、指定IDのみの削除をDaoに追加する必要があるかもしれません
+    suspend fun permanentlyDeletePerson(personId: Int, screenName: String = "", operation: String = "") {
         personDao.deletePersonPhysically(personId)
+        auditLogRepository?.log(
+            screenName = screenName,
+            operation = operation,
+            tableName = "person_db",
+            actionType = "PERMANENT_DELETE",
+            affectedId = personId.toString()
+        )
     }
 
     /**
      * 全ての利用終了者（論理削除された利用者）と、そのすべての記録を物理削除します。
      */
-    suspend fun deleteAllEndedPersons() {
+    suspend fun deleteAllEndedPersons(screenName: String = "", operation: String = "") {
         personDao.deleteEndedPersons()
+        auditLogRepository?.log(
+            screenName = screenName,
+            operation = operation,
+            tableName = "person_db",
+            actionType = "CLEAR_ALL_ARCHIVED",
+            affectedId = "all",
+            details = "Permanently deleted all logical-deleted persons"
+        )
     }
 }

@@ -32,11 +32,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.fragment.app.FragmentActivity
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.*
+import jp.mydns.fujiwara.carememo.utils.SecurityHelper
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -60,8 +65,10 @@ enum class ExportOrder(val displayNameRes: Int) {
 fun PdfSettingsDialog(
     category: Category,
     onDismiss: () -> Unit,
+    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
     onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean, String?) -> Unit,
 ) {
+    val context = LocalContext.current
     var selectedRange by remember { mutableStateOf(ExportRange.ALL) }
     var selectedOrder by remember { mutableStateOf(ExportOrder.NEWEST_FIRST) }
     var includePhotos by remember { mutableStateOf(true) }
@@ -70,8 +77,8 @@ fun PdfSettingsDialog(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
-    // パスワード設定用
-    var protectWithPassword by remember { mutableStateOf(false) }
+    // パスワード設定用 (デフォルトONに変更)
+    var protectWithPassword by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     val isPasswordValid = password.length >= 6
@@ -125,13 +132,53 @@ fun PdfSettingsDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { protectWithPassword = !protectWithPassword }
+                            .clickable {
+                                val newChecked = !protectWithPassword
+                                if (newChecked) {
+                                    protectWithPassword = true
+                                    isPasswordVisible = false
+                                } else {
+                                    // OFFにする場合は認証を求める
+                                    val activity = context as? FragmentActivity
+                                    if (activity != null && SecurityHelper.canAuthenticate(activity)) {
+                                        onRequireAuthentication(
+                                            R.string.security_auth_title,
+                                            R.string.security_auth_reason_change_settings
+                                        ) {
+                                            protectWithPassword = false
+                                        }
+                                    } else {
+                                        protectWithPassword = false
+                                    }
+                                }
+                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(stringResource(R.string.protect_pdf_with_password))
-                        Switch(checked = protectWithPassword, onCheckedChange = { protectWithPassword = it })
+                        Switch(
+                            checked = protectWithPassword,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    protectWithPassword = true
+                                    isPasswordVisible = false
+                                } else {
+                                    // OFFにする場合は認証を求める
+                                    val activity = context as? FragmentActivity
+                                    if (activity != null && SecurityHelper.canAuthenticate(activity)) {
+                                        onRequireAuthentication(
+                                            R.string.security_auth_title,
+                                            R.string.security_auth_reason_change_settings
+                                        ) {
+                                            protectWithPassword = false
+                                        }
+                                    } else {
+                                        protectWithPassword = false
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     if (protectWithPassword) {
@@ -150,8 +197,25 @@ fun PdfSettingsDialog(
                             },
                             isError = !isPasswordValid && password.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth(),
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
-                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                IconButton(onClick = {
+                                    if (isPasswordVisible) {
+                                        isPasswordVisible = false
+                                    } else {
+                                        val activity = context as? FragmentActivity
+                                        if (activity != null && SecurityHelper.canAuthenticate(activity)) {
+                                            onRequireAuthentication(
+                                                R.string.security_auth_title,
+                                                R.string.security_auth_reason_show_password
+                                            ) {
+                                                isPasswordVisible = true
+                                            }
+                                        } else {
+                                            isPasswordVisible = true
+                                        }
+                                    }
+                                }) {
                                     Icon(
                                         imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
                                         contentDescription = if (isPasswordVisible) stringResource(R.string.hide_password) else stringResource(R.string.show_password)

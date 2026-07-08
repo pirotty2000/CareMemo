@@ -103,9 +103,9 @@ class PersonHealthViewModel(
     }
 
     private suspend fun performSave(record: Any) = when (record) {
-        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record)
-        is BpAndPulse -> healthRepository.insertBpAndPulse(record)
-        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record)
+        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record, "PersonHealth", "saveRecord")
+        is BpAndPulse -> healthRepository.insertBpAndPulse(record, "PersonHealth", "saveRecord")
+        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record, "PersonHealth", "saveRecord")
         else -> {}
     }
 
@@ -124,9 +124,9 @@ class PersonHealthViewModel(
     }
 
     private suspend fun performDelete(record: Any) = when (record) {
-        is HeightAndWeight -> healthRepository.deleteHeightAndWeight(record)
-        is BpAndPulse -> healthRepository.deleteBpAndPulse(record)
-        is GlucoseAndHbA1c -> healthRepository.deleteGlucoseAndHbA1c(record)
+        is HeightAndWeight -> healthRepository.deleteHeightAndWeight(record, "PersonHealth", "deleteRecord")
+        is BpAndPulse -> healthRepository.deleteBpAndPulse(record, "PersonHealth", "deleteRecord")
+        is GlucoseAndHbA1c -> healthRepository.deleteGlucoseAndHbA1c(record, "PersonHealth", "deleteRecord")
         else -> {}
     }
 

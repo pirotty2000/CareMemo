@@ -32,7 +32,7 @@ interface PersonDao {
     ): Person?
 
     @Insert
-    suspend fun insert(person: Person)
+    suspend fun insert(person: Person): Long
 
     @Update
     suspend fun update(person: Person)
@@ -82,7 +82,7 @@ interface HeightAndWeightDao {
     fun getByPersonId(personId: Int): Flow<List<HeightAndWeight>>
 
     @Upsert
-    suspend fun insert(item: HeightAndWeight)
+    suspend fun insert(item: HeightAndWeight): Long
 
     @Query("UPDATE height_and_weight_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -124,7 +124,7 @@ interface BpAndPulseDao {
     fun getByPersonId(personId: Int): Flow<List<BpAndPulse>>
 
     @Upsert
-    suspend fun insert(item: BpAndPulse)
+    suspend fun insert(item: BpAndPulse): Long
 
     @Query("UPDATE bp_and_pulse_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -166,7 +166,7 @@ interface GlucoseAndHbA1cDao {
     fun getByPersonId(personId: Int): Flow<List<GlucoseAndHbA1c>>
 
     @Upsert
-    suspend fun insert(item: GlucoseAndHbA1c)
+    suspend fun insert(item: GlucoseAndHbA1c): Long
 
     @Query("UPDATE glucose_and_hba1c_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -314,7 +314,7 @@ interface MedicationRecordDao {
     fun getByMonth(personId: Int, month: String): Flow<List<MedicationRecord>>
 
     @Upsert
-    suspend fun insert(item: MedicationRecord)
+    suspend fun insert(item: MedicationRecord): Long
 
     @Query("UPDATE medication_record_db SET deleted_at = :timestamp WHERE person_id = :personId")
     suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
@@ -348,4 +348,35 @@ interface MedicationRecordDao {
 
     @Query("DELETE FROM medication_record_db WHERE id = :id")
     suspend fun deleteById(id: Int)
+}
+
+@Dao
+interface AuditLogDao {
+    @Insert
+    suspend fun insert(log: AuditLog)
+
+    @Query("SELECT * FROM audit_log_db ORDER BY timestamp DESC")
+    fun getAllLogs(): Flow<List<AuditLog>>
+
+    /**
+     * 指定された日時より古いログを削除する（ローテーション用）
+     * @param threshold 削除のしきい値となる Instant
+     */
+    @Query("DELETE FROM audit_log_db WHERE timestamp < :threshold")
+    suspend fun deleteOldLogs(threshold: java.time.Instant)
+
+    /**
+     * ログの総件数を取得（管理画面での統計用）
+     */
+    @Query("SELECT COUNT(*) FROM audit_log_db")
+    suspend fun getLogCount(): Int
+
+    @Query("DELETE FROM audit_log_db")
+    suspend fun deleteAll()
+
+    @Query("SELECT * FROM audit_log_db")
+    suspend fun getAllRaw(): List<AuditLog>
+
+    @Upsert
+    suspend fun insertAll(items: List<AuditLog>)
 }

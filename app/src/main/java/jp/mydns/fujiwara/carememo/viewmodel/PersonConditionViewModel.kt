@@ -132,11 +132,11 @@ class PersonConditionViewModel(
             try {
                 _isProcessing.value = true
                 val isUpdate = record.id != 0
-                val newId = conditionRepository.insertConditionAtVisit(record)
+                val newId = conditionRepository.insertConditionAtVisit(record, "PersonCondition", "saveRecord")
                 
                 // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける
                 if (!isUpdate) {
-                    conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt())
+                    conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt(), "PersonCondition", "saveRecord(link)")
                 }
 
                 showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
@@ -160,7 +160,7 @@ class PersonConditionViewModel(
     fun deleteRecord(record: ConditionAtVisit) {
         viewModelScope.launch {
             try {
-                conditionRepository.deleteConditionAtVisit(record)
+                conditionRepository.deleteConditionAtVisit(record, "PersonCondition", "deleteRecord")
                 showSnackbar(R.string.p_cond_msg_delete_success)
             } catch (e: Exception) {
                 showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
@@ -205,7 +205,7 @@ class PersonConditionViewModel(
                         capturedAt = Instant.now(),
                         caption = caption
                     )
-                    conditionRepository.insertConditionPhoto(photo)
+                    conditionRepository.insertConditionPhoto(photo, "PersonCondition", "processAndSavePhoto")
                     
                     // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
                     if (uri.scheme == "file" || uri.scheme == "content") {
@@ -234,7 +234,7 @@ class PersonConditionViewModel(
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
         viewModelScope.launch {
             try {
-                conditionRepository.deleteConditionPhotoById(photo.id)
+                conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, "PersonCondition", "deletePhoto")
                 ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
                 showSnackbar(R.string.p_cond_msg_photo_delete_success)
             } catch (e: Exception) {

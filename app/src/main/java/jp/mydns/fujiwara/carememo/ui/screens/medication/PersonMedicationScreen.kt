@@ -55,6 +55,7 @@ fun PersonMedicationScreen(
     medicationViewModel: PersonMedicationViewModel,
     personId: Int,
     widthSizeClass: WindowWidthSizeClass,
+    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit
 ) {
@@ -177,7 +178,8 @@ fun PersonMedicationScreen(
         person = currentPerson,
         records = allRecords,
         snackbarHostState = snackbarHostState,
-        viewModel = viewModel
+        viewModel = viewModel,
+        onRequireAuthentication = onRequireAuthentication
     )
 
     if (showDialog != null) {

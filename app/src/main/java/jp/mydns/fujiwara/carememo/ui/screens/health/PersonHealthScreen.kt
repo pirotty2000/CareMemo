@@ -64,6 +64,7 @@ fun PersonHealthScreen(
     initialCategoryType: Category,
     personId: Int,
     widthSizeClass: WindowWidthSizeClass,
+    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
@@ -223,6 +224,7 @@ fun PersonHealthScreen(
         person = currentPerson,
         records = records,
         snackbarHostState = snackbarHostState,
-        viewModel = viewModel
+        viewModel = viewModel,
+        onRequireAuthentication = onRequireAuthentication
     )
 }

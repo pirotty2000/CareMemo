@@ -69,12 +69,12 @@ object DateTimeUtils {
 
     /**
      * 記録日時を表示用（和暦・曜日付き）にフォーマットする
-     * 例: 2023(令和5)年10月27日(金) 14:30
+     * 例: 2023(令和5)年10月27日(金) 14:30:05
      */
     fun formatRecordTime(instant: Instant): String {
         val localDateTime = instant.atZone(DEFAULT_ZONE).toLocalDateTime()
         val dateHeader = formatDateHeader(localDateTime.toLocalDate())
-        val time = "%02d:%02d".format(localDateTime.hour, localDateTime.minute)
+        val time = "%02d:%02d:%02d".format(localDateTime.hour, localDateTime.minute, localDateTime.second)
         return "$dateHeader $time"
     }
 

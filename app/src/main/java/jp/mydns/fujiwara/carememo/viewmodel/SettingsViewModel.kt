@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.BuildConfig
+import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
@@ -19,13 +20,17 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import android.util.Base64
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -39,6 +44,7 @@ import java.io.OutputStream
 class SettingsViewModel(
     private val maintenanceRepository: AppMaintenanceRepository,
     private val archivedPersonRepository: DeleteOrRestorePersonRepository,
+    private val auditLogRepository: AuditLogRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
@@ -62,7 +68,7 @@ class SettingsViewModel(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false,
+            initialValue = true,
         )
 
     val backupPassword: StateFlow<String> = userSettingsRepository.backupPassword
@@ -78,6 +84,61 @@ class SettingsViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = ThemeSetting.SYSTEM,
         )
+
+    val auditLogRetentionDays: StateFlow<Int> = userSettingsRepository.auditLogRetentionDays
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 30,
+        )
+
+    val auditLogCount: StateFlow<Int> = kotlinx.coroutines.flow.flow {
+        while (true) {
+            emit(auditLogRepository.getLogCount())
+            kotlinx.coroutines.delay(5000)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    // 絞り込み状態
+    private val _selectedTable = MutableStateFlow<String?>(null)
+    val selectedTable = _selectedTable.asStateFlow()
+
+    private val _selectedScreen = MutableStateFlow<String?>(null)
+    val selectedScreen = _selectedScreen.asStateFlow()
+
+    // 絞り込み済みのログリスト
+    val auditLogs: StateFlow<List<AuditLog>> = combine(
+        auditLogRepository.allLogs,
+        _selectedTable,
+        _selectedScreen
+    ) { logs, table, screen ->
+        logs.filter { log ->
+            (table == null || log.tableName == table) &&
+                    (screen == null || log.screenName == screen)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 存在する項目の一覧（フィルター選択用）
+    val availableTables: StateFlow<List<String>> = auditLogRepository.allLogs
+        .map { logs -> logs.map { it.tableName }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val availableScreens: StateFlow<List<String>> = auditLogRepository.allLogs
+        .map { logs -> logs.map { it.screenName }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setTableFilter(table: String?) {
+        _selectedTable.value = table
+    }
+
+    fun setScreenFilter(screen: String?) {
+        _selectedScreen.value = screen
+    }
+
+    fun clearFilters() {
+        _selectedTable.value = null
+        _selectedScreen.value = null
+    }
 
     // 復元処理用の一時保持
     private var pendingImportFile: File? = null
@@ -152,6 +213,38 @@ class SettingsViewModel(
     fun setThemeSetting(theme: ThemeSetting) {
         viewModelScope.launch {
             userSettingsRepository.setThemeSetting(theme)
+        }
+    }
+
+    fun setAuditLogRetentionDays(days: Int) {
+        viewModelScope.launch {
+            userSettingsRepository.setAuditLogRetentionDays(days)
+        }
+    }
+
+    fun clearAuditLogs() {
+        viewModelScope.launch {
+            try {
+                auditLogRepository.deleteAllLogs()
+                showSnackbar(R.string.settings_msg_audit_log_cleared)
+            } catch (e: Exception) {
+                showError(R.string.common_error_title_error, R.string.common_error_delete, e.localizedMessage ?: "")
+            }
+        }
+    }
+
+    fun rotateLogsManually() {
+        viewModelScope.launch {
+            try {
+                _isProcessing.value = true
+                val days = auditLogRetentionDays.value
+                auditLogRepository.deleteOldLogs(days)
+                showInfo(R.string.common_error_title_info, R.string.settings_msg_rotate_success)
+            } catch (e: Exception) {
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
+            } finally {
+                _isProcessing.value = false
+            }
         }
     }
 
@@ -503,12 +596,13 @@ class SettingsViewModel(
     class Factory(
         private val maintenanceRepository: AppMaintenanceRepository,
         private val archivedPersonRepository: DeleteOrRestorePersonRepository,
+        private val auditLogRepository: AuditLogRepository,
         private val userSettingsRepository: UserSettingsRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-                return SettingsViewModel(maintenanceRepository, archivedPersonRepository, userSettingsRepository) as T
+                return SettingsViewModel(maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

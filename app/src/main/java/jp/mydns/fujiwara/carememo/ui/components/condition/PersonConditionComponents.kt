@@ -500,8 +500,7 @@ private fun ConditionRecordEditForm(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = onCancel,
-                            modifier = Modifier.weight(1f),
-                            enabled = conditionId != 0
+                            modifier = Modifier.weight(1f)
                         ) { Text(stringResource(R.string.common_cancel)) }
                         Button(
                             onClick = onSave,

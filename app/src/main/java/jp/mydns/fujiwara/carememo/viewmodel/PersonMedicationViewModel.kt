@@ -108,11 +108,11 @@ class PersonMedicationViewModel(
                     if (newRecord != null) {
                         // ケース1: 入力あり -> 追加または更新
                         // IDが0でも @Upsert なので、既存があれば更新、なければ追加される
-                        medicationRepository.insertMedicationRecord(newRecord)
+                        medicationRepository.insertMedicationRecord(newRecord, "PersonMedication", "syncMedicationDay")
                     } else {
                         // ケース2: 入力なし（未選択） -> 既存があれば削除
                         existingRecord?.let {
-                            medicationRepository.deleteMedicationRecord(it)
+                            medicationRepository.deleteMedicationRecord(it, "PersonMedication", "syncMedicationDay(delete)")
                         }
                     }
                 }

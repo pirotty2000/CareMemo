@@ -93,6 +93,7 @@ jp.mydns.fujiwara.carememo
 | 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
 | 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | `DeleteOrRestorePersonRepository`                                                                                |
 | アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
+| 操作ログ     | `AuditLogScreen`                   | `SettingsViewModel`                                    | `AuditLogRepository`                                                                                             |
 | 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                                                  |
 
 # Screen - Components 依存関係
@@ -111,6 +112,7 @@ jp.mydns.fujiwara.carememo
 | 7. (A)の一括入力          | `BatchInputScreen`                                                       | 🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`common/DateTimeInputFields.kt`**：共通の日時入力<br>🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                    |
 | 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                           |
 | 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/DeleteConfirmDialog.kt`**：破壊的操作の警告ダイアログ<br>🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                 |
+ 10. 操作ログ            | `AuditLogScreen`                                                         | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                           |
 
 # Components - Screen 逆引きリファレンス
 
@@ -119,43 +121,51 @@ jp.mydns.fujiwara.carememo
 ※ **注意**: 一方の表を修正した際は、必ずもう一方も更新して矛盾が起きないようにしてください。
 <br>
 
-| コンポーネント (ファイル名)                                                       | 一覧 | (A)健康 | (B)所見 | (C)服薬 | (A)一括 | 管理 | 設定 |
-|:----------------------------------------------------------------------|:--:|:-----:|:-----:|:-----:|:-----:|:--:|:--:|
-| **【共通部品 (複数画面で使用)】**                                                  |    |       |       |       |       |    |    |
-| 🔴**`base/AppCompactTextField.kt`**：入力欄の微調整用コンポーネント                   | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
-| 🔴**`base/AppDialog.kt`**：共通ダイアログ基盤（ボタン・コンテンツ・スクロール制御）                | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  | ✓  |
-| 🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準）                           | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    | ✓  |
-| 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理                    | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |
-| 🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ                    |    |   ✓   |   ✓   |   ✓   |       |    | ✓  |
-| 🔴**`base/EmptyState.kt`**：共通の「データなし」表示                               | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  |    |
-| 🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |
-| 🔴**`base/LoadingScreen.kt`**：共通のローディング表示                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
-| 🔴**`base/SearchBox.kt`**：共通検索バー                                      | ✓  |       |   ✓   |       |       |    |    |
-| 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                     |    |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |
-| 🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー                |    |   ✓   |   ✓   |   ✓   |       |    |    |
-| 🔴**`common/DateTimeInputFields.kt`**：共通の日時入力                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
-| 🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤                        |    |   ✓   |   ✓   |   ✓   |       |    |    |
-| 🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理                |    |   ✓   |   ✓   |   ✓   |       |    |    |
-| 🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ                      |    |   ✓   |   ✓   |   ✓   |       |    |    |
-| 🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |
-| **【個別部品 (特定ドメイン/画面)】**                                                |    |       |       |       |       |    |    |
-| `condition/PersonConditionComponents.kt`：(B)専用の表示・編集・写真グリッド           |    |       |   ✓   |       |       |    |    |
-| `health/HealthChartHelper.kt`：グラフ用データ変換                               |    |   ✓   |       |       |       |    |    |
-| `health/HealthGraphView.kt`：(A)専用グラフ表示                                |    |   ✓   |       |       |       |    |    |
-| `health/LineChart.kt`：グラフ描画エンジン                                       |    |   ✓   |       |       |       |    |    |
-| `health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル・詳細項目(DetailItem) |    |   ✓   |       |       |       |    |    |
-| `main/BirthdayInputFields.kt`：生年月日入力部品                                | ✓  |       |       |       |       |    |    |
-| `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ                               | ✓  |       |       |       |       |    |    |
-| `main/KanaIndexBar.kt`：五十音インデックスバー                                    | ✓  |       |       |       |       |    |    |
-| `main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等）                    | ✓  |       |       |       |       |    |    |
-| `medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ  |    |       |       |   ✓   |       |    |    |
+| コンポーネント (ファイル名)                                                       | 一覧 | (A)健康 | (B)所見 | (C)服薬 | (A)一括 | 管理 | 設定 | ログ |
+|:----------------------------------------------------------------------|:--:|:-----:|:-----:|:-----:|:-----:|:--:|:--:|:--:|
+| **【共通部品 (複数画面で使用)】**                                                  |    |       |       |       |       |    |    |    |
+| 🔴**`base/AppCompactTextField.kt`**：入力欄の微調整用コンポーネント                   | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    |    |    |
+| 🔴**`base/AppDialog.kt`**：共通ダイアログ基盤（ボタン・コンテンツ・スクロール制御）                | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  | ✓  |    |
+| 🔴**`base/AppTextField.kt`**：共通の入力フィールド（標準）                           | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    | ✓  |    |
+| 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理                    | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  | ✓  |
+| 🔴**`base/DeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ                    |    |   ✓   |   ✓   |   ✓   |       |    | ✓  |    |
+| 🔴**`base/EmptyState.kt`**：共通の「データなし」表示                               | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  |    | ✓  |
+| 🔴**`base/InfoDialog.kt`**：共通の通知・エラーダイアログ                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |    |
+| 🔴**`base/LoadingScreen.kt`**：共通のローディング表示                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   |    |    |    |
+| 🔴**`base/SearchBox.kt`**：共通検索バー                                      | ✓  |       |   ✓   |       |       |    |    |    |
+| 🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                     |    |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  | ✓  |
+| 🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー                |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
+| 🔴**`common/DateTimeInputFields.kt`**：共通の日時入力                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |    |
+| 🔴**`common/HistoryComponents.kt`**：共通の履歴リスト基盤                        |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
+| 🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理                |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
+| 🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ                      |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
+| 🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |    |
+| **【個別部品 (特定ドメイン/画面)】**                                                |    |       |       |       |       |    |    |    |
+| `condition/PersonConditionComponents.kt`：(B)専用の表示・編集・写真グリッド           |    |       |   ✓   |       |       |    |    |    |
+| `health/HealthChartHelper.kt`：グラフ用データ変換                               |    |   ✓   |       |       |       |    |    |    |
+| `health/HealthGraphView.kt`：(A)専用グラフ表示                                |    |   ✓   |       |       |       |    |    |    |
+| `health/LineChart.kt`：グラフ描画エンジン                                       |    |   ✓   |       |       |       |    |    |    |
+| `health/PersonHealthComponents.kt`：(A)専用の表示・編集・詳細パネル・詳細項目(DetailItem) |    |   ✓   |       |       |       |    |    |    |
+| `main/BirthdayInputFields.kt`：生年月日入力部品                                | ✓  |       |       |       |       |    |    |    |
+| `main/CategoryBadges.kt`：記録状況を示すカテゴリバッジ                               | ✓  |       |       |       |       |    |    |    |
+| `main/KanaIndexBar.kt`：五十音インデックスバー                                    | ✓  |       |       |       |       |    |    |    |
+| `main/MainComponents.kt`：利用者一覧共通部品（UserListItem 等）                    | ✓  |       |       |       |       |    |    |    |
+| `medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ  |    |       |       |   ✓   |       |    |    |    |
 
 
 # 実装上の重要指針（保守ガイド）
 
 不具合修正や機能追加の際は、以下の指針を遵守してください。
 
-## 1．入力コンポーネントの実装ガイド（AppTextField）
+## 1．定数・バリデーションの集約（AppThresholds）
+
+アプリ全体のビジネスルール、入力制限、およびバリデーションロジックは、個別の Composable や ViewModel に分散させず、**`data/AppThresholds.kt` を「プロジェクトの辞書」として一元管理**してください。
+
+*   **入力制限（桁数）**: 数値入力の整数部・小数部の最大桁数（`DIGITS_...`）はここに定義し、UI（maxLength等）とバリデーションの両方で参照します。
+*   **バリデーションルール**: `isWithinFormat` などの汎用的な判定ロジックや、身長・体重等の項目ごとの妥当性判定（`isValid...`）をここに集約します。
+*   **閾値と判定**: 血圧や血糖値等の正常/異常判定の基準値、およびそれに基づくアラートレベル（`AlertLevel`）の決定ロジックを保持します。
+
+## 2．入力コンポーネントの実装ガイド（AppTextField）
 
 アプリ内での数値・テキスト入力には、標準の `OutlinedTextField` を直接使用せず、必ずプロジェクト共通基盤である `AppTextField`（またはそれをラップしたコンポーネント）を使用して、入力体験（UX）を統一してください。
 
@@ -185,7 +195,7 @@ CareMemo では、以下の挙動を「アプリ標準ルール」として定�
 *   **例外的な挙動**: 
     検索窓など、タップ時に値をクリアした方が利便性が高い特殊なケースに限り、個別に挙動を上書きすることを許可します。その場合は、ソースコード内にその理由を明記してください。
 
-## 2．ダイアログの標準化ガイド（AppDialog）
+## 3．ダイアログの標準化ガイド（AppDialog）
 
 アプリ内での意思決定を求めるダイアログには、標準の `AlertDialog` を直接使用せず、必ずプロジェクト共通基盤である `AppDialog`（およびその関連コンポーネント）を使用して、ユーザーの視線誘導と操作の意図を明確にしてください。
 
@@ -207,19 +217,19 @@ CareMemo では、誤操作を防止しつつ操作を加速させるため、�
 *   **AppDialogContent の使用**:
     ダイアログ内のメッセージや入力項目は、必ず `AppDialogContent` でラップしてください。これにより、コンテンツが画面高さに収まらない場合に、自動的にスクロールバー（`VerticalScrollIndicator`）が表示され、かつタイトルとボタンエリアが固定された正しいレイアウトが維持されます。
 
-## 3．基本方針
+## 4．基本方針
 - **影響範囲の最小化**: 依頼された修正内容以外について、設計変更やファイル整理を行わない。
 - **既存設計とUI/UXの尊重**: 既存の設計思想、フォルダ構成、責務分割、および既存のUI/UXを維持する。既存実装と異なる設計を採用する場合は、修正前に理由・メリット・影響範囲を説明し、承認を得ること。
 - **不要なリファクタリングの禁止**: 「利用箇所が少ない」「将来のため」「フォルダ構成のみ」「命名変更のみ」といった理由での修正は行わない。改善案がある場合は、コードを直接修正せず「改善提案」として提示すること。
 
-## 4．コーディング・UI規約
+## 5．コーディング・UI規約
 - **Material3 準拠**: 標準的な扱いに極力準拠する。必要な場面で準拠されている実装から逸脱する場合は、その旨を明記して修正の是非の判断を求めること。
 - **Modifier の扱い**: `Modifier` は常に Composable 関数の最初のオプション引数とする。
 - **Preview の必須化**: 各 Composable ファイルには、主要な状態を確認できる Preview を必ず 1 つ以上含める。
 - **UIイベント通知**: トーストやダイアログの表示は、ViewModel の `UiEventFlow` 経由で行う。
 - **Composable の追加**: 新しい Composable は責務毎に追加し、新規実装より既存実装の再利用を優先する。
 
-## 5．状態管理・パフォーマンス・データ保護
+## 6．状態管理・パフォーマンス・データ保護
 - **UI状態の初期化とブランキング抑制**: IDに基づいてデータを表示・編集する場合、状態変数の初期化に `LaunchedEffect` を使用しない。
   - **推奨**: `val text = remember(id) { mutableStateOf(record?.field ?: "") }`
   - **理由**: `LaunchedEffect` による初期化は非同期で行われるため、1フレーム目に空の値が表示され、2フレーム目に実際の値が表示される「ブランキング（チラつき）」の原因となるため。
@@ -236,7 +246,7 @@ CareMemo では、誤操作を防止しつつ操作を加速させるため、�
   - **個別状態のリセット**: 専門 ViewModel では `loadPerson` をオーバーライドし、検索クエリや選択中の日付などの「利用者固有の状態変数」を初期値に戻すこと。
   - **ナビゲーションの注意**: 利用者が切り替わる遷移では、`NavHost` の `restoreState = true` を使用しない。
 
-## 6．共通化・共通部品の判断基準
+## 7．共通化・共通部品の判断基準
 - **共通化の原則**: 
   - 同一仕様が今後も維持されるもののみ共通化する。
   - 将来仕様が分かれそうなものは、重複を許容してもカテゴリ毎に保持する。
@@ -255,7 +265,7 @@ CareMemo では、誤操作を防止しつつ操作を加速させるため、�
   - **推奨**: LoadingScreen, EmptyState, Dialog, 共通入力部品, 共通ボタン列、履歴リスト基盤など。
   - **非推奨**: 画面固有の入力フォーム, カテゴリ固有の表示ロジック, 将来仕様が分岐する可能性が高いUIなど。
 
-## 7．配色とプライバシー（マスキング）
+## 8．配色とプライバシー（マスキング）
 - **配色セマンティクスの遵守**: 固定色（`Color.Red`等）の直接指定を避け、`MaterialTheme.colorScheme` のセマンティックカラー（`primary`, `error`等）を優先する。
 - **状態の視覚的区別（3段階ルール）**:
   - **正常**: `onSurfaceVariant`（グレー系）を使用し、情報をミュート（控えめに表示）することで重要なシグナルの埋没を防ぐ。
@@ -267,7 +277,65 @@ CareMemo では、誤操作を防止しつつ操作を加速させるため、�
   - **カナ氏名**: 2文字目以降をすべてマスク（例：ヤ○○　タ○○）。
 - **PDFの機密性保持**: PDF出力は外部共有を前提とするため、アプリの設定（伏せ字ON/OFF）に関わらず、**常にマスキングを適用した状態で出力**すること。
 
-## 8．修正報告
+## 9．セキュリティ・バイ・デフォルト（安全性の優先）
+
+CareMemo では、ユーザーの操作なしに「デフォルトで最も安全な状態」が提供されるよう、以下の設計指針を遵守してください。
+
+*   **完全オフライン設計**: 原則としてインターネット接続権限（INTERNET permission）を付与せず、データ漏洩リスクを構造的に排除します。
+*   **プライバシー保護（デフォルト・マスキング）**: 氏名等の個人情報を伏せ字にする機能は、**初期状態で「有効（ON）」**とします。ユーザーが明示的に解除しない限り、情報の露出を最小限に抑えます。
+*   **機密データの暗号化**: データベースのパスワードや認証情報などの機密性の高い情報は、`EncryptedSharedPreferences` や暗号化されたデータベース層を使用して保護します。
+*   **重要操作の保護（生体認証）**: 以下の操作を行う際は、デバイスの生体認証（指紋・顔認証）または端末ロック解除を必須とします。
+    *   セキュリティ設定の変更
+    *   パスワード等の機密情報の表示
+    *   データのバックアップ/復元などの破壊的または広範囲な操作
+*   **エクスポートデータの保護**: PDF出力等の外部共有用データには、アプリの設定に関わらず強制的に個人情報のマスキングを適用します。
+
+## 10．操作ログ（監査ログ）の実装ガイド
+
+アプリの透明性と保守性を高めるため、データの変更を伴う操作（CRUD）については必ず操作ログを記録します。
+
+### ログ記録の基本構造
+ログ記録は「Repository で実行し、ViewModel でコンテキスト（画面名・操作内容）を指定する」という責務分割で行います。
+
+1.  **Repository の準備**:
+    `AuditLogRepository` をコンストラクタで受け取り、各操作メソッドの引数に `screenName` と `operation` を追加します。
+    ```kotlin
+    // Repositoryの実装例
+    suspend fun insertData(item: Data, screenName: String = "", operation: String = "") {
+        dao.insert(item)
+        // 最後にログを記録
+        auditLogRepository.log(
+            tableName = "data_table",
+            actionType = "INSERT",
+            affectedId = item.id.toString(),
+            screenName = screenName,
+            operation = operation
+        )
+    }
+    ```
+
+2.  **ViewModel からの呼び出し**:
+    UIイベント発生時に、どの画面で何が行われたかを明示的に渡します。
+    ```kotlin
+    // ViewModelの実装例
+    fun saveData() {
+        viewModelScope.launch {
+            repository.insertData(
+                item = currentData,
+                screenName = "データ登録画面",  // 日本語で論理的な画面名を指定
+                operation = "保存ボタン押下"    // 「何をしたか」を指定
+            )
+        }
+    }
+    ```
+
+### 実装上の注意点
+*   **例外処理**: ログ記録自体が失敗しても、本来の業務処理（データの保存等）を妨げないようにしてください（Repository側で例外をキャッチすることを推奨）。
+*   **actionType の定型化**: 原則として `INSERT`, `UPDATE`, `DELETE`, `LOGICAL_DELETE`（論理削除）, `RESTORE`（復帰）のいずれかを使用してください。これらは「操作ログ」画面で色分け表示されます。
+*   **個人情報の保護**: `details` カラムに値を記録する際は、氏名などの個人情報を直接含めないよう注意してください。IDのみを記録するか、マスキングを適用してください。
+*   **バックアップ対象外**: `audit_log_db` はバックアップおよび復元の対象外です。データのエクスポート・インポート時にこのテーブルの内容が移動・上書きされることはありません。
+
+## 11．修正報告
 修正完了時は以下を報告すること。
 - 修正ファイル
 - 共通部品への影響有無
@@ -317,4 +385,4 @@ Component：
 
 
 ---
-最終更新日: 2026/07/06
+最終更新日: 2026/07/08

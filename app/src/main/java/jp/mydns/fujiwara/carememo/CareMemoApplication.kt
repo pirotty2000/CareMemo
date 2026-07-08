@@ -5,6 +5,7 @@ import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class CareMemoApplication : Application() {
@@ -18,6 +19,10 @@ class CareMemoApplication : Application() {
             try {
                 // queryを発行することで物理的にDBファイルを開き、SQLCipherの復号化処理を走らせる
                 database.openHelper.writableDatabase
+
+                // 操作ログの自動ローテーション
+                val days = userSettingsRepository.auditLogRetentionDays.first()
+                auditLogRepository.deleteOldLogs(days)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -31,7 +36,12 @@ class CareMemoApplication : Application() {
 
     // (共通) 利用者情報リポジトリ
     val personRepository: PersonRepository by lazy {
-        PersonRepository(database.personDao())
+        PersonRepository(database.personDao(), auditLogRepository)
+    }
+
+    // (共通) 監査ログリポジトリ
+    val auditLogRepository: AuditLogRepository by lazy {
+        AuditLogRepository(database.auditLogDao())
     }
 
     // (管理) 利用者復帰・抹消管理リポジトリ
@@ -44,7 +54,8 @@ class CareMemoApplication : Application() {
             database.glucoseAndHbA1cDao(),
             database.conditionAtVisitDao(),
             database.conditionPhotoDao(),
-            database.medicationRecordDao()
+            database.medicationRecordDao(),
+            auditLogRepository
         )
     }
 
@@ -70,7 +81,8 @@ class CareMemoApplication : Application() {
             database.glucoseAndHbA1cDao(),
             database.conditionAtVisitDao(),
             database.conditionPhotoDao(),
-            database.medicationRecordDao()
+            database.medicationRecordDao(),
+            database.auditLogDao()
         )
     }
 
@@ -79,7 +91,8 @@ class CareMemoApplication : Application() {
         HealthRepository(
             database.heightAndWeightDao(),
             database.bpAndPulseDao(),
-            database.glucoseAndHbA1cDao()
+            database.glucoseAndHbA1cDao(),
+            auditLogRepository
         )
     }
 
@@ -87,14 +100,16 @@ class CareMemoApplication : Application() {
     val conditionRepository: ConditionRepository by lazy {
         ConditionRepository(
             database.conditionAtVisitDao(),
-            database.conditionPhotoDao()
+            database.conditionPhotoDao(),
+            auditLogRepository
         )
     }
 
     // (C系統) 服薬管理リポジトリ
     val medicationRepository: MedicationRepository by lazy {
         MedicationRepository(
-            database.medicationRecordDao()
+            database.medicationRecordDao(),
+            auditLogRepository
         )
     }
 }

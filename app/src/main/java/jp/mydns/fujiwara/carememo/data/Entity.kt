@@ -306,6 +306,59 @@ data class CareMemoBackup(
 )
 
 /**
+ * 監査ログ (操作履歴)
+ */
+@Serializable
+@Entity(tableName = "audit_log_db")
+data class AuditLog(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+
+    /**
+     * 操作日時
+     */
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "timestamp")
+    val timestamp: Instant = Instant.now(),
+
+    /**
+     * 実行された画面名 (例: "PersonConditionScreen")
+     */
+    @ColumnInfo(name = "screen_name")
+    val screenName: String,
+
+    /**
+     * 実行された操作・トリガー (例: "onSaveButtonClick", "swipeToDelete")
+     */
+    @ColumnInfo(name = "operation")
+    val operation: String,
+
+    /**
+     * 操作対象のテーブル名 (例: "person_db")
+     */
+    @ColumnInfo(name = "table_name")
+    val tableName: String,
+
+    /**
+     * 操作種別 ("INSERT", "UPDATE", "DELETE")
+     */
+    @ColumnInfo(name = "action_type")
+    val actionType: String,
+
+    /**
+     * 操作されたレコードの主キー (追跡用)
+     */
+    @ColumnInfo(name = "affected_id")
+    val affectedId: String,
+
+    /**
+     * 補足情報 (エラーメッセージや非個人情報のメタデータ)
+     */
+    @ColumnInfo(name = "details")
+    val details: String? = null
+)
+
+/**
  * 利用者ごとの記録有無サマリー
  * メイン画面のインジケーター（バッジ）点灯判定に使用
  */

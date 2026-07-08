@@ -45,6 +45,7 @@ import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionScreen
 import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoFullScreen
 import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoPreviewScreen
 import jp.mydns.fujiwara.carememo.ui.screens.medication.PersonMedicationScreen
+import jp.mydns.fujiwara.carememo.ui.screens.settings.AuditLogScreen
 import jp.mydns.fujiwara.carememo.ui.screens.settings.DeleteOrRestorePersonScreen
 import jp.mydns.fujiwara.carememo.ui.screens.settings.SettingsScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -58,6 +59,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -109,6 +111,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
     val healthRepository = application.healthRepository
     val conditionRepository = application.conditionRepository
     val medicationRepository = application.medicationRepository
+    val auditLogRepository = application.auditLogRepository
     val userSettingsRepository = application.userSettingsRepository
     val themeSetting by userSettingsRepository.themeSetting.collectAsState(initial = ThemeSetting.SYSTEM)
 
@@ -116,11 +119,27 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         val navController = rememberNavController()
         val scope = rememberCoroutineScope()
 
-        val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = null)
+        val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = false)
+        val isBiometricSettingInitialized by userSettingsRepository.isBiometricSettingInitialized.collectAsState(initial = true)
         val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 0)
         val lastActiveTime by userSettingsRepository.lastActiveTime.collectAsState(initial = 0L)
         
         var isAuthenticated by rememberSaveable { mutableStateOf(false) }
+
+        // 初回起動時の生体認証設定の自動最適化
+        LaunchedEffect(isBiometricSettingInitialized) {
+            if (!isBiometricSettingInitialized) {
+                val biometricManager = androidx.biometric.BiometricManager.from(activity)
+                val status = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                if (status == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
+                    // 認証可能なデバイスならデフォルトON（Security by Default）
+                    userSettingsRepository.setBiometricEnabled(true)
+                } else {
+                    // 非対応または未設定ならOFF
+                    userSettingsRepository.setBiometricEnabled(false)
+                }
+            }
+        }
 
         // アプリ・ロック：
         // 「最後にアプリを閉じてからどれくらい時間が経過したか」を判定し、必要であれば再認証（生体認証）を要求する
@@ -154,6 +173,23 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         // 実際にロック画面を表示
         LaunchedEffect(isBiometricEnabled, isAuthenticated) {
             if ((isBiometricEnabled == true) && !isAuthenticated) {
+                val biometricManager = androidx.biometric.BiometricManager.from(activity)
+                val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                
+                // デバイスが認証不可能な状態（ハードウェア故障、セキュリティ設定の削除など）に陥っている場合
+                if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
+                    if (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE || 
+                        canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ||
+                        canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ||
+                        canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED) {
+                        
+                        // ロックアウトを避けるため、認証成功とみなして設定をOFFにする
+                        isAuthenticated = true
+                        userSettingsRepository.setBiometricEnabled(false)
+                        return@LaunchedEffect
+                    }
+                }
+
                 val executor = ContextCompat.getMainExecutor(activity)
                 val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -178,7 +214,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
         if (isAuthenticated || isBiometricEnabled == false) {
             // 認証要求を処理する共通関数
-            val requestAuthentication: (onSuccess: () -> Unit) -> Unit = { onSuccess ->
+            val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
                 val executor = ContextCompat.getMainExecutor(activity)
                 val biometricPrompt = BiometricPrompt(
                     activity, executor, object : BiometricPrompt.AuthenticationCallback() {
@@ -187,9 +223,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onSuccess()
                     }
                 })
+                val title = titleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_title)
+                val subtitle = subtitleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_reason_change_settings)
+                
                 val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                    .setTitle("本人確認")
-                    .setSubtitle("パスワードを表示するために認証してください")
+                    .setTitle(title)
+                    .setSubtitle(subtitle)
                     .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                     .build()
                 biometricPrompt.authenticate(promptInfo)
@@ -266,6 +305,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         initialCategoryType = category,
                         personId = personId,
                         widthSizeClass = widthSizeClass,
+                        onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToGraphExpansion = { pId, cat, index -> navController.navigate("graphExpansion/$pId/${cat.name}/$index") },
                         onNavigateToCategory = { cat ->
@@ -330,6 +370,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         personId = personId,
                         initialQuery = initialQuery,
                         widthSizeClass = widthSizeClass,
+                        onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToCategory = { category ->
                             navController.navigate(category.getRoute(personId)) {
@@ -385,7 +426,14 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
                     val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository))
-                    PersonMedicationScreen(viewModel = detailViewModel, medicationViewModel = medicationViewModel, personId = personId, widthSizeClass = widthSizeClass, onBack = { navController.popBackStack("main", inclusive = false) }, onNavigateToCategory = { category ->
+                    PersonMedicationScreen(
+                        viewModel = detailViewModel,
+                        medicationViewModel = medicationViewModel,
+                        personId = personId,
+                        widthSizeClass = widthSizeClass,
+                        onRequireAuthentication = requestAuthentication,
+                        onBack = { navController.popBackStack("main", inclusive = false) },
+                        onNavigateToCategory = { category ->
                         navController.navigate(category.getRoute(personId)) {
                             popUpTo("main")
                             launchSingleTop = true
@@ -399,13 +447,25 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
                 // ---------- 「設定・管理」 ----------
                 composable("settings") {
-                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, userSettingsRepository))
+                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
                     SettingsScreen(
                         viewModel = settingsViewModel, 
                         onNavigateToArchiveManagement = { mode ->
                             navController.navigate("archive_management/${mode.name}")
-                        }, 
+                        },
+                        onNavigateToAuditLog = {
+                            navController.navigate("audit_log")
+                        },
                         onRequireAuthentication = requestAuthentication,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ---------- 設定：操作ログ参照 ----------
+                composable("audit_log") {
+                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
+                    AuditLogScreen(
+                        viewModel = settingsViewModel,
                         onBack = { navController.popBackStack() }
                     )
                 }

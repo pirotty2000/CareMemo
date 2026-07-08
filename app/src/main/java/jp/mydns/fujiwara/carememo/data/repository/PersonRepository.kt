@@ -8,15 +8,36 @@ import java.time.ZoneId
  * 利用者情報の管理を担当するリポジトリ
  */
 class PersonRepository(
-    private val personDao: PersonDao
+    private val personDao: PersonDao,
+    private val auditLogRepository: AuditLogRepository? = null
 ) {
     fun getAllPersons(): Flow<List<Person>> = personDao.getAllPersons()
     
     fun getPersonById(id: Int): Flow<Person?> = personDao.getPersonById(id)
     
-    suspend fun insertPerson(person: Person) = personDao.insert(person)
+    suspend fun insertPerson(person: Person, screenName: String = "", operation: String = "") {
+        val id = personDao.insert(person)
+        auditLogRepository?.log(
+            screenName = screenName,
+            operation = operation,
+            tableName = "person_db",
+            actionType = "INSERT",
+            affectedId = id.toString(),
+            details = "Name: ${person.lastName} ${person.firstName}"
+        )
+    }
     
-    suspend fun updatePerson(person: Person) = personDao.update(person)
+    suspend fun updatePerson(person: Person, screenName: String = "", operation: String = "") {
+        personDao.update(person)
+        auditLogRepository?.log(
+            screenName = screenName,
+            operation = operation,
+            tableName = "person_db",
+            actionType = "UPDATE",
+            affectedId = person.id.toString(),
+            details = "Name: ${person.lastName} ${person.firstName}"
+        )
+    }
 
     /**
      * 同姓同名・同生年月日・同備考の利用者が既に存在するか（論理削除済みを含む）を確認します。

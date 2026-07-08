@@ -142,7 +142,7 @@ class PersonListViewModel(
                 }
 
                 // 2. データベースへ保存
-                repository.insertPerson(person)
+                repository.insertPerson(person, "PersonList", "addPerson")
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
             } catch (_: SQLiteConstraintException) {
@@ -168,7 +168,7 @@ class PersonListViewModel(
                 }
 
                 // 2. データベースを更新
-                repository.updatePerson(person)
+                repository.updatePerson(person, "PersonList", "updatePerson")
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar(R.string.main_msg_user_updated)
             } catch (_: SQLiteConstraintException) {
@@ -204,14 +204,14 @@ class PersonListViewModel(
 
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
-            archivedRepository.logicalDeletePerson(person.id)
+            archivedRepository.logicalDeletePerson(person.id, "PersonList", "logicalDeletePerson")
             showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }
 
     fun restorePerson(person: Person) {
         viewModelScope.launch {
-            archivedRepository.restorePerson(person.id)
+            archivedRepository.restorePerson(person.id, "PersonList", "restorePerson")
             showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }

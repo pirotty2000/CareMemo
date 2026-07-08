@@ -87,6 +87,7 @@ fun AppTextField(
     imeAction: ImeAction = if (singleLine) ImeAction.Next else ImeAction.Default,
     autoMoveFocus: Boolean = true,
     keyboardActions: KeyboardActions? = null,
+    visualTransformation: VisualTransformation? = null,
     onFocusChanged: (FocusState) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
@@ -135,7 +136,7 @@ fun AppTextField(
     }
 
     // タイプに応じた視覚変換の決定
-    val visualTransformation = remember(type) {
+    val finalVisualTransformation = visualTransformation ?: remember(type) {
         if (type == AppTextFieldType.PASSWORD) PasswordVisualTransformation() else VisualTransformation.None
     }
 
@@ -198,7 +199,7 @@ fun AppTextField(
         maxLines = maxLines,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions ?: defaultKeyboardActions,
-        visualTransformation = visualTransformation,
+        visualTransformation = finalVisualTransformation,
         colors = OutlinedTextFieldDefaults.colors()
     )
 }

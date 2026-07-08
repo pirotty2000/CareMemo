@@ -22,7 +22,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,7 +74,7 @@ fun UserListItem(
                             imageVector = Icons.Rounded.Cake,
                             contentDescription = "誕生日通知",
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFFE91E63)
+                            tint = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
@@ -87,7 +86,7 @@ fun UserListItem(
                 Text(
                     text = person.getMaskedFurigana(isNameMaskingEnabled), 
                     style = MaterialTheme.typography.labelSmall, 
-                    color = MaterialTheme.colorScheme.secondary
+                    color = if (isBirthdayToday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.secondary
                 )
                 // 氏名 + 備考 (中段)
                 Text(
@@ -108,7 +107,7 @@ fun UserListItem(
                         stringResource(R.string.common_age_suffix, DateTimeUtils.calculateAge(person.birthday))
                     ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isBirthdayToday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -135,9 +134,13 @@ fun UserListItem(
         },
         colors = ListItemDefaults.colors(
             containerColor = when {
-                isBirthdayToday -> Color(0xFFFFC0CB) // Pink
-                isBirthdaySoon -> Color(0xFFFFF0F5)  // LavenderBlush
+                isBirthdayToday -> MaterialTheme.colorScheme.tertiaryContainer
+                isBirthdaySoon -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                 else -> MaterialTheme.colorScheme.surface
+            },
+            headlineColor = when {
+                isBirthdayToday -> MaterialTheme.colorScheme.onTertiaryContainer
+                else -> MaterialTheme.colorScheme.onSurface
             }
         )
     )

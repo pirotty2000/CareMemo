@@ -20,16 +20,25 @@ class UserSettingsRepository(private val context: Context) {
         private val IS_BACKUP_PASSWORD_ENABLED = booleanPreferencesKey("is_backup_password_enabled")
         private val BACKUP_PASSWORD = stringPreferencesKey("backup_password")
         private val THEME_SETTING = stringPreferencesKey("theme_setting")
+        private val AUDIT_LOG_RETENTION_DAYS = intPreferencesKey("audit_log_retention_days")
     }
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[IS_NAME_MASKING_ENABLED] ?: false
+            preferences[IS_NAME_MASKING_ENABLED] ?: true
         }
 
     val isBiometricEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[IS_BIOMETRIC_ENABLED] ?: false
+            preferences[IS_BIOMETRIC_ENABLED] ?: false // 初期値はfalseに戻し、起動時に動的に判定する
+        }
+
+    /**
+     * 生体認証設定が既にユーザーまたはシステムによって初期化済みかどうかを判定するためのFlow
+     */
+    val isBiometricSettingInitialized: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences.contains(IS_BIOMETRIC_ENABLED)
         }
 
     val lockTimeoutMinutes: Flow<Int> = context.dataStore.data
@@ -66,6 +75,12 @@ class UserSettingsRepository(private val context: Context) {
             } catch (_: Exception) {
                 ThemeSetting.SYSTEM
             }
+        }
+
+    val auditLogRetentionDays: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            // デフォルトは30日とする
+            preferences[AUDIT_LOG_RETENTION_DAYS] ?: 30
         }
 
     // 一時的にロックを無効化するためのフラグ（外部アプリ連携時など）
@@ -116,6 +131,12 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setThemeSetting(theme: ThemeSetting) {
         context.dataStore.edit { preferences ->
             preferences[THEME_SETTING] = theme.name
+        }
+    }
+
+    suspend fun setAuditLogRetentionDays(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[AUDIT_LOG_RETENTION_DAYS] = days
         }
     }
 }

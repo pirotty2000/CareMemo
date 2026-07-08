@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.R
@@ -65,7 +67,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateToArchiveManagement: (DeleteOrRestorePersonViewModel.OperationMode) -> Unit,
-    onRequireAuthentication: (onSuccess: () -> Unit) -> Unit,
+    onNavigateToAuditLog: () -> Unit,
+    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
     onBack: () -> Unit,
 ) {
     val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
@@ -75,6 +78,8 @@ fun SettingsScreen(
     val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsState()
     val backupPassword by viewModel.backupPassword.collectAsState()
     val themeSetting by viewModel.themeSetting.collectAsState()
+    val auditLogRetentionDays by viewModel.auditLogRetentionDays.collectAsState()
+    val auditLogCount by viewModel.auditLogCount.collectAsState(initial = 0)
     val endedUserList by viewModel.deletedUserList.collectAsState()
     val isProcessing by viewModel.isProcessing.collectAsState()
     val processingProgress by viewModel.processingProgress.collectAsState()
@@ -102,6 +107,8 @@ fun SettingsScreen(
     var showVersionDialog by rememberSaveable { mutableStateOf(false) }
     var showTimeoutDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+    var showRetentionDialog by rememberSaveable { mutableStateOf(false) }
+    var showLogClearConfirm by rememberSaveable { mutableStateOf(false) }
     var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
 
@@ -205,6 +212,16 @@ fun SettingsScreen(
         )
     }
 
+    if (showLogClearConfirm) {
+        DeleteConfirmDialog(
+            onDismiss = { showLogClearConfirm = false },
+            onDelete = { viewModel.clearAuditLogs() },
+            title = context.getString(R.string.audit_log_clear_confirm_title),
+            message = context.getString(R.string.audit_log_clear_confirm_msg),
+            confirmButtonText = context.getString(R.string.common_delete)
+        )
+    }
+
     // データベース不整合レポート・ダイアログ
     if (inconsistencies.isNotEmpty()) {
         AppDialog(
@@ -293,7 +310,10 @@ fun SettingsScreen(
                                     if ((minutes == -1) && (lockTimeoutMinutes != -1)) {
                                         // 「ロックしない」を新しく選ぶ場合は認証を求める
                                         if (viewModel.canAuthenticate(context)) {
-                                            onRequireAuthentication {
+                                            onRequireAuthentication(
+                                                R.string.security_auth_title,
+                                                R.string.security_auth_reason_change_settings
+                                            ) {
                                                 viewModel.setLockTimeoutMinutes(minutes)
                                                 showTimeoutDialog = false
                                             }
@@ -352,6 +372,40 @@ fun SettingsScreen(
                 AppDialogDismissButton(
                     text = "キャンセル",
                     onClick = { showThemeDialog = false }
+                )
+            }
+        )
+    }
+
+    if (showRetentionDialog) {
+        val options = listOf(7 to "1週間", 14 to "2週間", 30 to "1ヶ月", 90 to "3ヶ月", 180 to "半年", 365 to "1年", 0 to "残さない")
+        AppDialog(
+            onDismissRequest = { showRetentionDialog = false },
+            title = { Text(context.getString(R.string.audit_log_label_retention)) },
+            text = {
+                AppDialogContent {
+                    options.forEach { (days, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setAuditLogRetentionDays(days)
+                                    showRetentionDialog = false
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = auditLogRetentionDays == days, onClick = null)
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                AppDialogDismissButton(
+                    text = "キャンセル",
+                    onClick = { showRetentionDialog = false }
                 )
             }
         )
@@ -422,7 +476,24 @@ fun SettingsScreen(
         localBackupPassword = localBackupPassword,
         isPasswordValid = isPasswordValid,
         isPasswordVisible = isPasswordVisible,
-        onBackupPasswordEnabledChange = { viewModel.setBackupPasswordEnabled(it) },
+        onBackupPasswordEnabledChange = { enabled ->
+            if (enabled) {
+                viewModel.setBackupPasswordEnabled(true)
+                isPasswordVisible = false
+            } else {
+                // OFFにする場合は認証を求める
+                if (viewModel.canAuthenticate(context)) {
+                    onRequireAuthentication(
+                        R.string.security_auth_title,
+                        R.string.security_auth_reason_change_settings
+                    ) {
+                        viewModel.setBackupPasswordEnabled(false)
+                    }
+                } else {
+                    viewModel.setBackupPasswordEnabled(false)
+                }
+            }
+        },
         onBackupPasswordChange = {
             localBackupPassword = it
             if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it)
@@ -434,7 +505,10 @@ fun SettingsScreen(
             } else {
                 // 表示する場合は、デバイスが認証に対応していれば認証を求める
                 if (viewModel.canAuthenticate(context)) {
-                    onRequireAuthentication {
+                    onRequireAuthentication(
+                        R.string.security_auth_title,
+                        R.string.security_auth_reason_show_password
+                    ) {
                         isPasswordVisible = true
                     }
                 } else {
@@ -452,7 +526,23 @@ fun SettingsScreen(
         },
         isBiometricEnabled = isBiometricEnabled,
         lockTimeoutMinutes = lockTimeoutMinutes,
-        onBiometricEnabledChange = { viewModel.setBiometricEnabled(context, it) },
+        onBiometricEnabledChange = { enabled ->
+            if (enabled) {
+                viewModel.setBiometricEnabled(context, true)
+            } else {
+                // OFFにする場合は認証を求める
+                if (viewModel.canAuthenticate(context)) {
+                    onRequireAuthentication(
+                        R.string.security_auth_title,
+                        R.string.security_auth_reason_change_settings
+                    ) {
+                        viewModel.setBiometricEnabled(context, false)
+                    }
+                } else {
+                    viewModel.setBiometricEnabled(context, false)
+                }
+            }
+        },
         onTimeoutClick = { showTimeoutDialog = true },
         themeSetting = themeSetting,
         onThemeClick = { showThemeDialog = true },
@@ -469,7 +559,10 @@ fun SettingsScreen(
         onClearAllClick = {
             // 実行前にまず認証を求める
             if (viewModel.canAuthenticate(context)) {
-                onRequireAuthentication {
+                onRequireAuthentication(
+                    R.string.security_auth_title,
+                    R.string.security_auth_reason_change_settings
+                ) {
                     showDevClearConfirm = true
                 }
             } else {
@@ -478,6 +571,12 @@ fun SettingsScreen(
         },
         onCheckIntegrity = { viewModel.checkIntegrity() },
         onInsertTestInconsistency = { viewModel.insertTestInconsistency() },
+        auditLogRetentionDays = auditLogRetentionDays,
+        auditLogCount = auditLogCount,
+        onRetentionClick = { showRetentionDialog = true },
+        onViewLogsClick = onNavigateToAuditLog,
+        onRotateLogsClick = { viewModel.rotateLogsManually() },
+        onClearLogsClick = { showLogClearConfirm = true },
         isDeveloperModeEnabled = isDeveloperModeEnabled,
         isProcessing = isProcessing,
         processingProgress = processingProgress,
@@ -519,6 +618,12 @@ fun SettingsScreenContent(
     onClearAllClick: () -> Unit,
     onCheckIntegrity: () -> Unit,
     onInsertTestInconsistency: () -> Unit,
+    auditLogRetentionDays: Int,
+    auditLogCount: Int,
+    onRetentionClick: () -> Unit,
+    onViewLogsClick: () -> Unit,
+    onRotateLogsClick: () -> Unit,
+    onClearLogsClick: () -> Unit,
     isDeveloperModeEnabled: Boolean,
     isProcessing: Boolean,
     processingProgress: Int,
@@ -589,7 +694,13 @@ fun SettingsScreenContent(
                     ResetSection(
                         onClearAllClick = onClearAllClick,
                         onCheckIntegrity = onCheckIntegrity,
-                        onInsertTestInconsistency = onInsertTestInconsistency
+                        onInsertTestInconsistency = onInsertTestInconsistency,
+                        auditLogRetentionDays = auditLogRetentionDays,
+                        auditLogCount = auditLogCount,
+                        onRetentionClick = onRetentionClick,
+                        onViewLogsClick = onViewLogsClick,
+                        onRotateLogsClick = onRotateLogsClick,
+                        onClearLogsClick = onClearLogsClick
                     )
                 }
 
@@ -739,6 +850,7 @@ private fun DataManagementSection(
                 },
                 isError = !isPasswordValid && localBackupPassword.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = { 
                     IconButton(onClick = onPasswordVisibilityToggle) { 
                         Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) 
@@ -849,9 +961,59 @@ private fun OtherSection(
 private fun ResetSection(
     onClearAllClick: () -> Unit,
     onCheckIntegrity: () -> Unit,
-    onInsertTestInconsistency: () -> Unit
+    onInsertTestInconsistency: () -> Unit,
+    auditLogRetentionDays: Int,
+    auditLogCount: Int,
+    onRetentionClick: () -> Unit,
+    onViewLogsClick: () -> Unit,
+    onRotateLogsClick: () -> Unit,
+    onClearLogsClick: () -> Unit
 ) {
+    val context = LocalContext.current
     SettingsSection(title = "管理者向けツール") {
+        Text(text = "※ 操作ログの管理を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        
+        val retentionLabel = when (auditLogRetentionDays) {
+            0 -> "残さない"
+            7 -> "1週間"
+            14 -> "2週間"
+            30 -> "1ヶ月"
+            90 -> "3ヶ月"
+            180 -> "半年"
+            365 -> "1年"
+            else -> "${auditLogRetentionDays}日間"
+        }
+        
+        ListItem(
+            headlineContent = { Text(context.getString(R.string.audit_log_label_retention)) },
+            supportingContent = { Text(context.getString(R.string.audit_log_retention_desc)) },
+            trailingContent = { Text(text = retentionLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+            modifier = Modifier.clickable { onRetentionClick() }
+        )
+        
+        ListItem(
+            headlineContent = { Text(context.getString(R.string.settings_btn_view_audit_logs)) },
+            supportingContent = { Text("現在の記録件数: $auditLogCount 件") },
+            leadingContent = { Icon(Icons.Rounded.History, contentDescription = null) },
+            modifier = Modifier.clickable { onViewLogsClick() }
+        )
+
+        ListItem(
+            headlineContent = { Text(context.getString(R.string.settings_btn_rotate_logs)) },
+            supportingContent = { Text("即座に古いログを消去して整理します") },
+            leadingContent = { Icon(Icons.Rounded.CleaningServices, contentDescription = null) },
+            modifier = Modifier.clickable { onRotateLogsClick() }
+        )
+        
+        ListItem(
+            headlineContent = { Text(context.getString(R.string.audit_log_clear_confirm_title), color = MaterialTheme.colorScheme.error) },
+            supportingContent = { Text("全ての操作ログを物理削除します") },
+            leadingContent = { Icon(Icons.Rounded.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            modifier = Modifier.clickable { onClearLogsClick() }
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+
         Text(text = "※ データベースの状態チェックと修復を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         ListItem(
             headlineContent = { Text("データベース整合性チェック") },
@@ -920,6 +1082,12 @@ fun SettingsScreenPreview() {
             onClearAllClick = {},
             onCheckIntegrity = {},
             onInsertTestInconsistency = {},
+            auditLogRetentionDays = 30,
+            auditLogCount = 120,
+            onRetentionClick = {},
+            onViewLogsClick = {},
+            onRotateLogsClick = {},
+            onClearLogsClick = {},
             isDeveloperModeEnabled = true,
             isProcessing = false,
             processingProgress = 0,
@@ -960,6 +1128,12 @@ fun SettingsScreenProcessingPreview() {
             onClearAllClick = {},
             onCheckIntegrity = {},
             onInsertTestInconsistency = {},
+            auditLogRetentionDays = 30,
+            auditLogCount = 120,
+            onRetentionClick = {},
+            onViewLogsClick = {},
+            onRotateLogsClick = {},
+            onClearLogsClick = {},
             isDeveloperModeEnabled = true,
             isProcessing = true,
             processingProgress = 45,

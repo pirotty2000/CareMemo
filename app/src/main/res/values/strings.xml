@@ -61,6 +61,7 @@
     <string name="main_label_note">同姓同名識別用メモ</string>
     <string name="main_search_placeholder">所見メモ検索</string>
     <string name="main_search_hint">特定の症状や出来事を入力…</string>
+    <string name="main_search_hint_short">検索…</string>
     <string name="main_btn_add_new">新規追加</string>
 
     <string name="main_msg_user_added">%1$s さんを登録しました</string>
@@ -198,6 +199,12 @@
     <!-- SettingsScreen -->
     <string name="settings_err_title_biometric">設定できません</string>
     <string name="settings_err_biometric_unsupported">このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。</string>
+
+    <!-- Security Authentication -->
+    <string name="security_auth_title">認証が必要です</string>
+    <string name="security_auth_reason_change_settings">セキュリティ設定を変更するために認証を行ってください</string>
+    <string name="security_auth_reason_show_password">パスワードを表示するために認証を行ってください</string>
+    <string name="security_auth_reason_unlock">アプリをアンロックするために認証を行ってください</string>
     <string name="settings_msg_delete_ended_success">利用終了者のデータを一括で完全に抹消しました。</string>
     <string name="settings_msg_export_success">データと写真のエクスポートが完了しました。</string>
     <string name="settings_msg_import_success">データと写真の復元が完了しました。</string>
@@ -219,4 +226,16 @@
     <!-- BatchInputScreen -->
     <string name="batch_msg_save_success">健康記録を一括保存しました</string>
     <string name="batch_err_save_failure">一括保存に失敗しました: %1$s</string>
+
+    <!-- Audit Log -->
+    <string name="settings_msg_audit_log_cleared">操作ログをすべて消去しました。</string>
+    <string name="settings_msg_rotate_success">古い操作ログを削除しました。</string>
+    <string name="audit_log_title">操作ログ</string>
+    <string name="audit_log_empty">ログはありません</string>
+    <string name="audit_log_label_retention">ログの保持期間</string>
+    <string name="audit_log_retention_desc">指定した日数より前のログを自動的に削除します</string>
+    <string name="audit_log_clear_confirm_title">操作ログの全消去</string>
+    <string name="audit_log_clear_confirm_msg">記録されているすべての操作ログを消去します。よろしいですか？</string>
+    <string name="settings_btn_view_audit_logs">操作ログを参照</string>
+    <string name="settings_btn_rotate_logs">ログの手動ローテーション</string>
 </resources>
