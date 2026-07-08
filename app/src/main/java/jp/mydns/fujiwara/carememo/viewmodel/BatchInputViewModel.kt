@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
@@ -12,9 +13,13 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -51,6 +56,26 @@ class BatchInputViewModel(
     val glucose = MutableStateFlow("")
     val hba1c = MutableStateFlow("")
 
+    /**
+     * 現在の入力内容が保存可能かどうかを判定する（A系統のルールに基づく）。
+     * いずれかのカテゴリが有効な入力を持っていれば true を返す。
+     */
+    val isInputValid: StateFlow<Boolean> = combine(
+        height, weight, bpSystolic, bpDiastolic, pulse, bodyTemperature, glucose, hba1c
+    ) { args: Array<String> ->
+        val h = args[0]
+        val w = args[1]
+        val sys = args[2]
+        val dia = args[3]
+        val p = args[4]
+        val temp = args[5]
+        val glu = args[6]
+        val hb = args[7]
+        AppThresholds.isValidHeightAndWeight(h, w) ||
+        AppThresholds.isValidBpAndPulse(sys, dia, p, temp) ||
+        AppThresholds.isValidGlucoseAndHbA1c(glu, hb)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private val _isSaving = MutableStateFlow(false)
     val isSaving = _isSaving.asStateFlow()
 
@@ -79,8 +104,8 @@ class BatchInputViewModel(
             try {
                 _isSaving.value = true
                 
-                // 身長・体重
-                if (height.value.isNotBlank() || weight.value.isNotBlank()) {
+                // 身長・体重（体重必須）
+                if (AppThresholds.isValidHeightAndWeight(height.value, weight.value)) {
                     healthRepository.insertHeightAndWeight(
                         HeightAndWeight(
                             personId = person.id,
@@ -91,9 +116,8 @@ class BatchInputViewModel(
                     )
                 }
 
-                // バイタル
-                if (bpSystolic.value.isNotBlank() || bpDiastolic.value.isNotBlank() || 
-                    pulse.value.isNotBlank() || bodyTemperature.value.isNotBlank()) {
+                // バイタル（いずれか一つ）
+                if (AppThresholds.isValidBpAndPulse(bpSystolic.value, bpDiastolic.value, pulse.value, bodyTemperature.value)) {
                     healthRepository.insertBpAndPulse(
                         BpAndPulse(
                             personId = person.id,
@@ -106,8 +130,8 @@ class BatchInputViewModel(
                     )
                 }
 
-                // 血糖値
-                if (glucose.value.isNotBlank() || hba1c.value.isNotBlank()) {
+                // 血糖値（いずれか一つ）
+                if (AppThresholds.isValidGlucoseAndHbA1c(glucose.value, hba1c.value)) {
                     healthRepository.insertGlucoseAndHbA1c(
                         GlucoseAndHbA1c(
                             personId = person.id,

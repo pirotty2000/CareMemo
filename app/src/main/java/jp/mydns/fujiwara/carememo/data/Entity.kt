@@ -351,7 +351,8 @@ fun HeightAndWeight.calculateBMI(): Double {
 }
 
 fun HeightAndWeight.getBmiResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
-    val (resId, alert) = AppThresholds.evaluateBMI(calculateBMI())
+    val bmi = calculateBMI()
+    val (resId, alert) = AppThresholds.evaluateBMI(bmi)
     return (resId?.let { context.getString(it) } ?: "---") to alert
 }
 
@@ -383,7 +384,7 @@ fun GlucoseAndHbA1c.getWorstAlertLevel(): AppThresholds.AlertLevel =
 fun GlucoseAndHbA1c.getCombinedResultText(context: Context): String {
     val g = getGlucoseResult(context).first
     val h = getHbA1cResult(context).first
-    return if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else h
+    return if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else if (h != "---") h else "---"
 }
 
 private fun maxOfBySeverity(a: AppThresholds.AlertLevel, b: AppThresholds.AlertLevel): AppThresholds.AlertLevel =

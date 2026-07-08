@@ -17,9 +17,9 @@ package jp.mydns.fujiwara.carememo.ui.screens.main
  * ・カテゴリ遷移（利用者選択時のボトムシートから健康記録・所見メモ・服薬管理・一括入力へ遷移）
  *
  * 【遷移】：
- * → PersonHealthScreen (詳細画面：健康記録)
- * → PersonConditionScreen (詳細画面：所見メモ)
- * → PersonMedicationScreen (詳細画面：服薬管理)
+ * → PersonHealthScreen (詳細画面：健康記録「身長・体重」「バイタル」「血糖値・HbA1c」)
+ * → PersonConditionScreen (詳細画面：「所見メモ」)
+ * → PersonMedicationScreen (詳細画面：「服薬管理」)
  * → BatchInputScreen (健康記録の一括入力)
  * → PersonEditScreen (利用者登録・編集)
  * → SettingsScreen (アプリ設定)
@@ -55,11 +55,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     viewModel: PersonListViewModel,
-    onNavigateToDetail: (Int, Category) -> Unit,
-    onNavigateToBatchInput: (Int) -> Unit,
-    onNavigateToAddPerson: () -> Unit,
-    onNavigateToEditPerson: (Int) -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToDetail: (Int, Category) -> Unit,    // 各カテゴリ
+    onNavigateToBatchInput: (Int) -> Unit,          // 一括入力画面
+    onNavigateToAddPerson: () -> Unit,              // 利用者の新規登録
+    onNavigateToEditPerson: (Int) -> Unit,          // 利用者の編集
+    onNavigateToSettings: () -> Unit                // 設定・管理画面
 ) {
     val userList by viewModel.userList.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -118,14 +118,14 @@ fun MainScreen(
         isNameMaskingEnabled = isNameMaskingEnabled,
         searchQuery = searchQuery,
         selectedSection = selectedSection,
-        onSearchQueryChange = { viewModel.setSearchQuery(it) },
-        onSectionSelect = { viewModel.setSelectedSection(it) },
-        snackbarHostState = snackbarHostState,
-        lazyListState = lazyListState,
-        onUserClick = { person -> selectedPerson = person; showSheet = true },
-        onEditUser = { person -> onNavigateToEditPerson(person.id) },
-        onAddClick = { onNavigateToAddPerson() },
-        onEndUser = { person ->
+        onSearchQueryChange = { viewModel.setSearchQuery(it) },                 // 所見メモ検索
+        onSectionSelect = { viewModel.setSelectedSection(it) },                 // 五十音カナ検索
+        snackbarHostState = snackbarHostState,                                  //
+        lazyListState = lazyListState,                                          //
+        onUserClick = { person -> selectedPerson = person; showSheet = true },  // 選択された利用者
+        onEditUser = { person -> onNavigateToEditPerson(person.id) },           // 利用者情報の編集
+        onAddClick = { onNavigateToAddPerson() },                               // 新規利用者登録
+        onEndUser = { person ->                                                 // 利用終了
             viewModel.logicalDeletePerson(person)
             scope.launch {
                 val fullName = person.getMaskedName(isNameMaskingEnabled)
@@ -155,6 +155,7 @@ fun MainScreen(
         )
     }
 
+    // カテゴリ選択メニュー（下からスライド）
     if (showSheet && selectedPerson != null) {
         ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
             CategorySelectionSheet(

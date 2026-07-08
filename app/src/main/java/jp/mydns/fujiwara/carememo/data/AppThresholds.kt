@@ -172,6 +172,99 @@ object AppThresholds {
         VisualLimit("正常(上限)", BMI_NORMAL_HIGH, true)
     )
 
+    // --- 数値入力・表示制限（A系統） ---
+    // 整数桁数と小数桁数の定義
+    const val DIGITS_HEIGHT_INT = 3
+    const val DIGITS_HEIGHT_DEC = 1
+    const val DIGITS_WEIGHT_INT = 3
+    const val DIGITS_WEIGHT_DEC = 1
+    const val DIGITS_BP_INT = 3
+    const val DIGITS_PULSE_INT = 3
+    const val DIGITS_TEMP_INT = 2
+    const val DIGITS_TEMP_DEC = 1
+    const val DIGITS_GLUCOSE_INT = 3
+    const val DIGITS_HBA1C_INT = 2
+    const val DIGITS_HBA1C_DEC = 1
+
+    // --- 単位定義 ---
+    const val UNIT_HEIGHT = "cm"
+    const val UNIT_WEIGHT = "kg"
+    const val UNIT_BP = "mmHg"
+    const val UNIT_PULSE = "bpm"
+    const val UNIT_BODY_TEMP = "℃"
+    const val UNIT_GLUCOSE = "mg/dL"
+    const val UNIT_HBA1C = "%"
+
+    // --- バリデーション（入力妥当性判定） ---
+
+    /**
+     * 文字列が指定された整数桁・小数桁の形式に合致するか判定する
+     */
+    fun isWithinFormat(value: String, intDigits: Int, decDigits: Int = 0): Boolean {
+        if (value.isBlank()) return true
+        val parts = value.split(".")
+        if (parts.size > 2) return false // ドットが複数ある場合は不正
+
+        val intPart = parts[0]
+        if (intPart.length > intDigits) return false
+
+        if (parts.size == 2) {
+            val decPart = parts[1]
+            if (decPart.length > decDigits) return false
+        }
+
+        // 正の数であることの確認
+        val num = value.toDoubleOrNull()
+        return num != null && num >= 0
+    }
+
+    /**
+     * 身長・体重の入力妥当性判定
+     * ルール：体重が入力されており、かつ形式が正しいこと
+     */
+    fun isValidHeightAndWeight(height: String, weight: String): Boolean {
+        val hValid = isWithinFormat(height, DIGITS_HEIGHT_INT, DIGITS_HEIGHT_DEC)
+        val wValid = isWithinFormat(weight, DIGITS_WEIGHT_INT, DIGITS_WEIGHT_DEC)
+        return weight.isNotBlank() && hValid && wValid
+    }
+
+    /**
+     * バイタルの入力妥当性判定
+     * ルール：いずれか入力があり、かつ入力されている全項目の形式が正しいこと
+     */
+    fun isValidBpAndPulse(systolic: String, diastolic: String, pulse: String, temp: String): Boolean {
+        val sValid = isWithinFormat(systolic, DIGITS_BP_INT)
+        val dValid = isWithinFormat(diastolic, DIGITS_BP_INT)
+        val pValid = isWithinFormat(pulse, DIGITS_PULSE_INT)
+        val tValid = isWithinFormat(temp, DIGITS_TEMP_INT, DIGITS_TEMP_DEC)
+
+        val anyInput = systolic.isNotBlank() || diastolic.isNotBlank() || pulse.isNotBlank() || temp.isNotBlank()
+        return anyInput && sValid && dValid && pValid && tValid
+    }
+
+    /**
+     * 血糖値・HbA1cの入力妥当性判定
+     * ルール：いずれか入力があり、かつ入力されている全項目の形式が正しいこと
+     */
+    fun isValidGlucoseAndHbA1c(glucose: String, hba1c: String): Boolean {
+        val gValid = isWithinFormat(glucose, DIGITS_GLUCOSE_INT)
+        val hValid = isWithinFormat(hba1c, DIGITS_HBA1C_INT, DIGITS_HBA1C_DEC)
+
+        val anyInput = glucose.isNotBlank() || hba1c.isNotBlank()
+        return anyInput && gValid && hValid
+    }
+
+    // --- 表示用フォーマッタ ---
+
+    fun formatHeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatWeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatBodyTemp(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatHbA1c(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatGlucose(value: Int?): String = value?.toString() ?: "---"
+    fun formatBpValue(value: Int?): String = value?.toString() ?: "---"
+    fun formatPulse(value: Int?): String = value?.toString() ?: "---"
+    fun formatBmi(value: Double?): String = if (value != null && value > 0) "%.1f".format(value) else "---"
+
     // --- 判定ロジック ---
 
     /**

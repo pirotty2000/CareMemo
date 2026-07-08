@@ -71,6 +71,7 @@ fun BatchInputScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val isInputValid by viewModel.isInputValid.collectAsState()
 
     val recordTime by viewModel.recordTime.collectAsState()
     val dateTimeState = rememberDateTimeInputState(initialInstant = recordTime)
@@ -165,6 +166,7 @@ fun BatchInputScreen(
         hba1c = hba1c,
         onHba1cChange = { viewModel.hba1c.value = it },
         dateTimeState = dateTimeState,
+        isInputValid = isInputValid,
         flashColor = flashColor,
         snackbarHostState = snackbarHostState,
         scrollState = scrollState,
@@ -214,6 +216,7 @@ fun BatchInputScreenContent(
     hba1c: String,
     onHba1cChange: (String) -> Unit,
     dateTimeState: DateTimeInputState,
+    isInputValid: Boolean,
     flashColor: Color,
     snackbarHostState: SnackbarHostState,
     scrollState: ScrollState,
@@ -269,7 +272,7 @@ fun BatchInputScreenContent(
                                 onValueChange = onHeightChange,
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) },
-                                suffix = { Text("cm") },
+                                suffix = { Text(AppThresholds.UNIT_HEIGHT) },
                                 modifier = Modifier.weight(1f)
                             )
                             AppCompactTextField(
@@ -277,7 +280,7 @@ fun BatchInputScreenContent(
                                 onValueChange = onWeightChange,
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) },
-                                suffix = { Text("kg") },
+                                suffix = { Text(AppThresholds.UNIT_WEIGHT) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -307,7 +310,7 @@ fun BatchInputScreenContent(
                                 onValueChange = onPulseChange,
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) },
-                                suffix = { Text("bpm") },
+                                suffix = { Text(AppThresholds.UNIT_PULSE) },
                                 modifier = Modifier.weight(1f)
                             )
                             AppCompactTextField(
@@ -315,7 +318,7 @@ fun BatchInputScreenContent(
                                 onValueChange = onBodyTemperatureChange,
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
-                                suffix = { Text("℃") },
+                                suffix = { Text(AppThresholds.UNIT_BODY_TEMP) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -329,7 +332,7 @@ fun BatchInputScreenContent(
                                 onValueChange = onGlucoseChange,
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) },
-                                suffix = { Text("mg/dL") },
+                                suffix = { Text(AppThresholds.UNIT_GLUCOSE) },
                                 modifier = Modifier.weight(1f)
                             )
                             AppCompactTextField(
@@ -337,7 +340,7 @@ fun BatchInputScreenContent(
                                 onValueChange = onHba1cChange,
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) },
-                                suffix = { Text("%") },
+                                suffix = { Text(AppThresholds.UNIT_HBA1C) },
                                 modifier = Modifier.weight(1f),
                                 imeAction = ImeAction.Done
                             )
@@ -351,7 +354,7 @@ fun BatchInputScreenContent(
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f),
-                            enabled = !isProcessing && isDateTimeValid
+                            enabled = !isProcessing && isDateTimeValid && isInputValid
                         ) {
                             if (isProcessing) {
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
@@ -432,6 +435,7 @@ fun BatchInputScreenPreview() {
             hba1c = "6.0",
             onHba1cChange = {},
             dateTimeState = dateTimeState,
+            isInputValid = true,
             flashColor = Color.Transparent,
             snackbarHostState = remember { SnackbarHostState() },
             scrollState = rememberScrollState(),

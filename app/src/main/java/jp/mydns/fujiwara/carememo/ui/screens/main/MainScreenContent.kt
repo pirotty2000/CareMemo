@@ -87,11 +87,13 @@ fun MainScreenContent(
                 actions = {
                     IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        // 設定
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                             onClick = { showMenu = false; onNavigateToSettings() }
                         )
+                        // バージョン情報
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_version)) },
                             leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
