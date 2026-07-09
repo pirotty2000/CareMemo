@@ -25,6 +25,7 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 非同期処理のライフサイクル、特に「利用者の切り替え」に伴う
@@ -65,7 +66,7 @@ class PersonLifecycleTest {
 
         // 2. 二人目をロード開始する（レスポンスは遅延させる）
         every { personRepository.getPersonById(2) } returns flow {
-            delay(1000)
+            delay(1000.milliseconds)
             emit(Person(id = 2, lastName = "二人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
         
@@ -85,18 +86,18 @@ class PersonLifecycleTest {
 
         // ID:1 は 2000ms かかる
         every { personRepository.getPersonById(1) } returns flow {
-            delay(2000)
+            delay(2000.milliseconds)
             emit(Person(id = 1, lastName = "遅い", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
         // ID:2 は 500ms かかる
         every { personRepository.getPersonById(2) } returns flow {
-            delay(500)
+            delay(500.milliseconds)
             emit(Person(id = 2, lastName = "速い", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
 
         // ID:1 を開始し、すぐに ID:2 に切り替える
         viewModel.loadPerson(1)
-        advanceTimeBy(100)
+        advanceTimeBy(100.milliseconds)
         viewModel.loadPerson(2)
 
         // 全ての処理が終わるまで時間を進める
@@ -120,7 +121,7 @@ class PersonLifecycleTest {
 
         // ID:2 に切り替え（データロード前）
         every { personRepository.getPersonById(2) } returns flow {
-            delay(1000)
+            delay(1000.milliseconds)
             emit(Person(id = 2, lastName = "B", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
         viewModel.loadPerson(2)

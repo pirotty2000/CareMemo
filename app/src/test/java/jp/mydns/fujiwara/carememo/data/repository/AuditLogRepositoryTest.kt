@@ -8,7 +8,6 @@ import jp.mydns.fujiwara.carememo.data.AuditLogDao
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
-import java.time.Instant
 
 class AuditLogRepositoryTest {
 

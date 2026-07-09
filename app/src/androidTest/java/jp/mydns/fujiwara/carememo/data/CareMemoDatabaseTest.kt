@@ -136,14 +136,14 @@ class CareMemoDatabaseTest {
         val personWithTime = createTestPerson().copy(
             lastName = "山田",
             firstName = "太郎",
-            birthday = baseDate.plus(12, java.time.temporal.ChronoUnit.HOURS).plus(34, java.time.temporal.ChronoUnit.MINUTES)
+            birthday = baseDate.plus(12, ChronoUnit.HOURS).plus(34, ChronoUnit.MINUTES)
         )
         personDao.insert(personWithTime)
 
         // 2. 検索時は「その日の開始時刻」から「翌日の開始時刻」までの範囲で検索する
         // これが PersonRepository.findExistingPerson で行われているロジック
         val startOfDay = baseDate
-        val endOfDay = baseDate.plus(1, java.time.temporal.ChronoUnit.DAYS)
+        val endOfDay = baseDate.plus(1, ChronoUnit.DAYS)
 
         val found = personDao.findExistingPerson(
             lastName = "山田",
