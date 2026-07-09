@@ -40,6 +40,7 @@ class PersonConditionViewModel(
 ) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
+    val selectedConditionId: StateFlow<Int?> = _selectedConditionId.asStateFlow()
 
     /**
      * 現在の利用者に紐づく所見メモ一覧

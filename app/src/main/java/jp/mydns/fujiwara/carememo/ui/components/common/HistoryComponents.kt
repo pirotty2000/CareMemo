@@ -80,7 +80,7 @@ fun PersonHistoryList(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            .padding(start = 12.dp, top = 4.dp, end = 16.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -185,7 +185,7 @@ fun HistoryItemWrapper(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(start = 12.dp, top = 8.dp, end = 16.dp, bottom = 8.dp)
             ) {
                 if (showTime) {
                     Text(

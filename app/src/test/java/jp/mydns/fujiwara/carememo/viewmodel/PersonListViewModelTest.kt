@@ -10,7 +10,7 @@ import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
-import jp.mydns.fujiwara.carememo.data.repository.ArchivedPersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -33,13 +33,16 @@ class PersonListViewModelTest {
 
     // Mockオブジェクトの作成
     private val personRepository = mockk<PersonRepository>(relaxed = true)
-    private val archivedRepository = mockk<ArchivedPersonRepository>(relaxed = true)
+    private val archivedRepository = mockk<DeleteOrRestorePersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
 
     private lateinit var viewModel: PersonListViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
+
+    // テスト用の固定日時
+    private val fixedInstant = Instant.parse("2023-10-27T10:00:00Z")
 
     // テスト用の共通Personオブジェクト
     private val testPerson = Person(
@@ -48,7 +51,7 @@ class PersonListViewModelTest {
         firstName = "太郎",
         lastNameFurigana = "てすと",
         firstNameFurigana = "たろう",
-        birthday = Instant.now()
+        birthday = fixedInstant
     )
 
     @Before
@@ -58,10 +61,11 @@ class PersonListViewModelTest {
 
         // Repositoryの各メソッドが返すFlowのデフォルト値を設定
         every { personRepository.getAllPersons() } returns flowOf(emptyList())
-        every { archivedRepository.getDeletedPersons() } returns flowOf(emptyList())
+        every { archivedRepository.getArchivedPersons() } returns flowOf(emptyList())
         every { summaryRepository.getPersonCategorySummaries() } returns flowOf(emptyMap())
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { conditionRepository.getPersonIdsByConditionKeyword(any()) } returns flowOf(emptyList())
+        coEvery { personRepository.findExistingPerson(any()) } returns null
 
         viewModel = PersonListViewModel(personRepository, archivedRepository, summaryRepository, conditionRepository, userSettingsRepository)
     }
@@ -78,13 +82,13 @@ class PersonListViewModelTest {
         viewModel.addPerson(testPerson)
 
         // 検証: insertPersonが呼ばれたか
-        coVerify { personRepository.insertPerson(testPerson) }
+        coVerify { personRepository.insertPerson(testPerson, any(), any()) }
     }
 
     @Test
     fun `既に登録済みの名前を追加しようとした場合、uiEventFlowにErrorDialogイベントが流れること`() = runTest {
         // insertPersonが呼ばれたらSQLiteConstraintExceptionを投げるように設定
-        coEvery { personRepository.insertPerson(any()) } throws SQLiteConstraintException()
+        coEvery { personRepository.insertPerson(any(), any(), any()) } throws SQLiteConstraintException()
 
         // Turbineライブラリを使用してSharedFlowをテスト
         viewModel.uiEventFlow.test {
@@ -93,8 +97,7 @@ class PersonListViewModelTest {
 
             // エラーイベントが流れることを確認
             val event = awaitItem()
-            assertTrue(event is BaseViewModel.UiEvent.ShowErrorDialog)
-            assertEquals("登録エラー", (event as BaseViewModel.UiEvent.ShowErrorDialog).title)
+            assertTrue(event is BaseViewModel.UiEvent.ShowErrorDialogRes)
         }
     }
 
@@ -104,6 +107,6 @@ class PersonListViewModelTest {
         viewModel.logicalDeletePerson(testPerson)
 
         // 検証
-        coVerify { archivedRepository.logicalDeletePerson(testPerson.id) }
+        coVerify { archivedRepository.logicalDeletePerson(testPerson.id, any(), any()) }
     }
 }

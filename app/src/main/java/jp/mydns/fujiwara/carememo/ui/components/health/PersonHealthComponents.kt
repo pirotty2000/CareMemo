@@ -166,16 +166,16 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
             Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${AppThresholds.formatBpValue(record.bpSystolic)}/${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}", style = textStyle)
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             
             // SATセクション（アイコンなし）
             Text(text = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}", style = textStyle)
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Icon(Icons.Rounded.MonitorHeart, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}", style = textStyle)
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.Rounded.Thermostat, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${AppThresholds.formatBodyTemp(record.bodyTemperature)} ${AppThresholds.UNIT_BODY_TEMP}", style = textStyle)

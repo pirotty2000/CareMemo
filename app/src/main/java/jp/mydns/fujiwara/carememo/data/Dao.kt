@@ -81,7 +81,7 @@ interface HeightAndWeightDao {
     @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<HeightAndWeight>>
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: HeightAndWeight): Long
 
     @Query("UPDATE height_and_weight_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -123,7 +123,7 @@ interface BpAndPulseDao {
     @Query("SELECT * FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<BpAndPulse>>
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: BpAndPulse): Long
 
     @Query("UPDATE bp_and_pulse_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -165,7 +165,7 @@ interface GlucoseAndHbA1cDao {
     @Query("SELECT * FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: Int): Flow<List<GlucoseAndHbA1c>>
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: GlucoseAndHbA1c): Long
 
     @Query("UPDATE glucose_and_hba1c_db SET deleted_at = :timestamp WHERE person_id = :personId")
@@ -313,7 +313,7 @@ interface MedicationRecordDao {
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date LIKE :month || '%' AND deleted_at IS NULL")
     fun getByMonth(personId: Int, month: String): Flow<List<MedicationRecord>>
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: MedicationRecord): Long
 
     @Query("UPDATE medication_record_db SET deleted_at = :timestamp WHERE person_id = :personId")

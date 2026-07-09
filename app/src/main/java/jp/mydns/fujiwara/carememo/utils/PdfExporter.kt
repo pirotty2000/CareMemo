@@ -19,6 +19,7 @@ import jp.mydns.fujiwara.carememo.ui.components.health.HealthChartHelper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateShort
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
 import java.io.File
 import java.io.FileOutputStream
@@ -36,8 +37,8 @@ object PdfExporter {
     private const val PAGE_WIDTH = 595 // A4 width in points
     private const val PAGE_HEIGHT = 842 // A4 height in points
     private const val MARGIN = 50f
-    private const val HEADER_HEIGHT = 140f
-    private const val SINGLE_GRAPH_HEIGHT = 140f
+    private const val HEADER_HEIGHT = 125f
+    private const val SINGLE_GRAPH_HEIGHT = 130f
 
     /**
      * PDF作成時の描画コンテキストを保持する内部クラス。
@@ -165,10 +166,10 @@ object PdfExporter {
             repeat(HealthChartHelper.getGraphCount(category)) { index ->
                 val config = HealthChartHelper.getChartConfig(pageContext.context, category, index, records)
                 if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
-                    val graphHeight = if (category == Category.BP_AND_PULSE && index == 0) 180f else SINGLE_GRAPH_HEIGHT
+                    val graphHeight = if (category == Category.BP_AND_PULSE && index == 0) 170f else SINGLE_GRAPH_HEIGHT
                     pageContext.ensureSpace(graphHeight + 30f)
                     pageContext.currentY = drawSingleGraphFromConfig(pageContext, config, graphHeight, globalMinX, globalMaxX)
-                    pageContext.currentY += 25f
+                    pageContext.currentY += 15f
                 }
             }
             pageContext.currentY += 15f
@@ -352,9 +353,11 @@ object PdfExporter {
 
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
         val columns = listOf(
-            TableColumn<HeightAndWeight>("日付", 160f) { rec, _ -> formatRecordTime(rec.recordTime) },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_HEIGHT)}(cm)", 70f) { rec, _ -> rec.height?.toString() ?: "---" },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_WEIGHT)}(kg)", 75f) { rec, idx ->
+            TableColumn<HeightAndWeight>("日付", 110f) { rec, _ ->
+                "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
+            },
+            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_HEIGHT)}(cm)", 75f) { rec, _ -> rec.height?.toString() ?: "---" },
+            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_WEIGHT)}(kg)", 100f) { rec, idx ->
                 val prev = if (idx < records.size - 1) records[idx + 1] else null
                 rec.weight?.let { cur ->
                     prev?.weight?.let { p ->
@@ -363,13 +366,13 @@ object PdfExporter {
                     } ?: cur.toString()
                 } ?: "---"
             },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BMI), 60f) { rec, _ ->
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BMI), 65f) { rec, _ ->
                 val bmi = rec.calculateBMI()
                 if (bmi > 0) "%.1f".format(bmi) else "---"
             },
             TableColumn(
                 header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
-                width = 130f,
+                width = 145f,
                 getBackgroundColor = { rec -> rec.getBmiResult(ctx.context).second.pdfBgColor }
             ) { rec, _ -> rec.getBmiResult(ctx.context).first }
         )
@@ -378,17 +381,19 @@ object PdfExporter {
 
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
         val columns = listOf(
-            TableColumn<BpAndPulse>("日付", 130f) { rec, _ -> formatRecordTime(rec.recordTime) },
+            TableColumn<BpAndPulse>("日付", 110f) { rec, _ ->
+                "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
+            },
             TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_SYSTOLIC_SHORT), 45f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
             TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_DIASTOLIC_SHORT), 45f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_SAT), 45f) { rec, _ -> rec.sat?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_PULSE_SHORT), 45f) { rec, _ -> rec.pulse?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP), 45f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
+            TableColumn("SAT", 40f) { rec, _ -> rec.sat?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_PULSE_SHORT), 40f) { rec, _ -> rec.pulse?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP).ifEmpty { "体温" }, 45f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
             TableColumn(
                 header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
-                width = 140f,
+                width = 170f,
                 getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
-            ) { rec, _ -> 
+            ) { rec, _ ->
                 val results = rec.getVitalResults(ctx.context)
                 if (results.all { it.second == AppThresholds.AlertLevel.NORMAL }) ctx.context.getString(AppThresholds.VITAL_LABEL_NORMAL)
                 else results.filter { it.second != AppThresholds.AlertLevel.NORMAL }.joinToString("・") { it.first }
@@ -399,18 +404,20 @@ object PdfExporter {
 
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
         val columns = listOf(
-            TableColumn<GlucoseAndHbA1c>("日付", 155f) { rec, _ -> formatRecordTime(rec.recordTime) },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_GLUCOSE)}(mg/dL)", 95f) { rec, idx ->
+            TableColumn<GlucoseAndHbA1c>("日付", 110f) { rec, _ ->
+                "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
+            },
+            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_GLUCOSE)}(mg/dL)", 115f) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 rec.glucose?.let { cur -> pr?.glucose?.let { p -> "$cur(${if (cur-p >= 0) "+${cur-p}" else cur-p})" } ?: cur.toString() } ?: "---"
             },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_HBA1C)}(%)", 95f) { rec, idx ->
+            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_HBA1C)}(%)", 115f) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 rec.hba1c?.let { cur -> pr?.hba1c?.let { p -> val df = cur-p; "%.1f(%s)".format(cur, if (df >= 0) "+%.1f".format(df) else "%.1f".format(df)) } ?: "%.1f".format(cur) } ?: "---"
             },
             TableColumn(
                 header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
-                width = 150f,
+                width = 155f,
                 getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
             ) { rec, _ -> rec.getCombinedResultText(ctx.context) }
         )
@@ -438,8 +445,8 @@ object PdfExporter {
     private data class TableColumn<T>(val header: String, val width: Float, val getBackgroundColor: ((T) -> Int?)? = null, val getValue: (T, Int) -> String)
 
     private fun <T> drawGenericTable(ctx: PdfPageContext, records: List<T>, columns: List<TableColumn<T>>) {
-        val paint = Paint().apply { color = Color.BLACK; textSize = 9.5f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
-        val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 11f; isAntiAlias = true }
+        val paint = Paint().apply { color = Color.BLACK; textSize = 9f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
+        val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 10f; isAntiAlias = true }
 
         fun drawHeaderRow() {
             var cx = MARGIN
