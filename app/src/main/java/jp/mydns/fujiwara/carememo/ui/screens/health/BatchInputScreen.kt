@@ -80,6 +80,7 @@ fun BatchInputScreen(
     val weight by viewModel.weight.collectAsState()
     val bpSystolic by viewModel.bpSystolic.collectAsState()
     val bpDiastolic by viewModel.bpDiastolic.collectAsState()
+    val sat by viewModel.sat.collectAsState()
     val pulse by viewModel.pulse.collectAsState()
     val bodyTemperature by viewModel.bodyTemperature.collectAsState()
     val glucose by viewModel.glucose.collectAsState()
@@ -157,6 +158,8 @@ fun BatchInputScreen(
         onBpSystolicChange = { viewModel.bpSystolic.value = it },
         bpDiastolic = bpDiastolic,
         onBpDiastolicChange = { viewModel.bpDiastolic.value = it },
+        sat = sat,
+        onSatChange = { viewModel.sat.value = it },
         pulse = pulse,
         onPulseChange = { viewModel.pulse.value = it },
         bodyTemperature = bodyTemperature,
@@ -207,6 +210,8 @@ fun BatchInputScreenContent(
     onBpSystolicChange: (String) -> Unit,
     bpDiastolic: String,
     onBpDiastolicChange: (String) -> Unit,
+    sat: String,
+    onSatChange: (String) -> Unit,
     pulse: String,
     onPulseChange: (String) -> Unit,
     bodyTemperature: String,
@@ -306,6 +311,14 @@ fun BatchInputScreenContent(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             AppCompactTextField(
+                                value = sat,
+                                onValueChange = onSatChange,
+                                type = AppTextFieldType.INTEGER,
+                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_SAT)) },
+                                suffix = { Text(AppThresholds.UNIT_SAT) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            AppCompactTextField(
                                 value = pulse,
                                 onValueChange = onPulseChange,
                                 type = AppTextFieldType.INTEGER,
@@ -313,15 +326,15 @@ fun BatchInputScreenContent(
                                 suffix = { Text(AppThresholds.UNIT_PULSE) },
                                 modifier = Modifier.weight(1f)
                             )
-                            AppCompactTextField(
-                                value = bodyTemperature,
-                                onValueChange = onBodyTemperatureChange,
-                                type = AppTextFieldType.DECIMAL,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
-                                suffix = { Text(AppThresholds.UNIT_BODY_TEMP) },
-                                modifier = Modifier.weight(1f)
-                            )
                         }
+                        AppCompactTextField(
+                            value = bodyTemperature,
+                            onValueChange = onBodyTemperatureChange,
+                            type = AppTextFieldType.DECIMAL,
+                            label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
+                            suffix = { Text(AppThresholds.UNIT_BODY_TEMP) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     // 4. 血糖値・HbA1c
@@ -426,6 +439,8 @@ fun BatchInputScreenPreview() {
             onBpSystolicChange = {},
             bpDiastolic = "80",
             onBpDiastolicChange = {},
+            sat = "98",
+            onSatChange = {},
             pulse = "70",
             onPulseChange = {},
             bodyTemperature = "36.5",

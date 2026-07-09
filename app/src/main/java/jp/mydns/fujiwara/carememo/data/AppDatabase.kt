@@ -20,7 +20,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         MedicationRecord::class,
         AuditLog::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -37,6 +37,12 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var Instance: AppDatabase? = null
+
+        private val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE bp_and_pulse_db ADD COLUMN sat INTEGER")
+            }
+        }
 
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
@@ -85,6 +91,7 @@ abstract class AppDatabase : RoomDatabase() {
                     dbName
                 )
                     .openHelperFactory(factory)
+                    .addMigrations(MIGRATION_9_10)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { Instance = it }

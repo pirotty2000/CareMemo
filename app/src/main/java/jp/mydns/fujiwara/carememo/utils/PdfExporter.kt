@@ -378,14 +378,15 @@ object PdfExporter {
 
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
         val columns = listOf(
-            TableColumn<BpAndPulse>("日付", 150f) { rec, _ -> formatRecordTime(rec.recordTime) },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_SYSTOLIC_SHORT), 55f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_DIASTOLIC_SHORT), 55f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_PULSE_SHORT), 50f) { rec, _ -> rec.pulse?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP), 55f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
+            TableColumn<BpAndPulse>("日付", 130f) { rec, _ -> formatRecordTime(rec.recordTime) },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_SYSTOLIC_SHORT), 45f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_DIASTOLIC_SHORT), 45f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_SAT), 45f) { rec, _ -> rec.sat?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_PULSE_SHORT), 45f) { rec, _ -> rec.pulse?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP), 45f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
             TableColumn(
                 header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
-                width = 130f,
+                width = 140f,
                 getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
             ) { rec, _ -> 
                 val results = rec.getVitalResults(ctx.context)

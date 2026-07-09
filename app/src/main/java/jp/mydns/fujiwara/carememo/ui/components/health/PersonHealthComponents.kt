@@ -157,6 +157,7 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
     val lowBpLabel = stringResource(AppThresholds.VITAL_LABEL_LOW_BP)
     val tachycardiaLabel = stringResource(AppThresholds.VITAL_LABEL_TACHYCARDIA)
     val bradycardiaLabel = stringResource(AppThresholds.VITAL_LABEL_BRADYCARDIA)
+    val respiratoryFailureLabel = stringResource(AppThresholds.VITAL_LABEL_LOW_SAT)
     val feverLabel = stringResource(AppThresholds.VITAL_LABEL_FEVER)
     val hypothermiaLabel = stringResource(AppThresholds.VITAL_LABEL_HYPOTHERMIA)
 
@@ -166,6 +167,11 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${AppThresholds.formatBpValue(record.bpSystolic)}/${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}", style = textStyle)
             Spacer(modifier = Modifier.width(12.dp))
+            
+            // SATセクション（アイコンなし）
+            Text(text = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}", style = textStyle)
+            Spacer(modifier = Modifier.width(12.dp))
+
             Icon(Icons.Rounded.MonitorHeart, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}", style = textStyle)
@@ -177,6 +183,7 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             VitalStatusIndicator(label = highBpLabel, isActive = results.any { it.first == highBpLabel }, style = statusLabelStyle)
             VitalStatusIndicator(label = lowBpLabel, isActive = results.any { it.first == lowBpLabel }, style = statusLabelStyle)
+            VitalStatusIndicator(label = respiratoryFailureLabel, isActive = results.any { it.first == respiratoryFailureLabel }, style = statusLabelStyle)
             VitalStatusIndicator(label = tachycardiaLabel, isActive = results.any { it.first == tachycardiaLabel }, style = statusLabelStyle)
             VitalStatusIndicator(label = bradycardiaLabel, isActive = results.any { it.first == bradycardiaLabel }, style = statusLabelStyle)
             VitalStatusIndicator(label = feverLabel, isActive = results.any { it.first == feverLabel }, style = statusLabelStyle)
@@ -224,6 +231,7 @@ fun HealthRecordDetailPane(
     var weightText by remember(recordId) { mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "") }
     var bpSystolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "") }
     var bpDiastolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "") }
+    var satText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.sat?.toString() ?: "" else "") }
     var pulseText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.pulse?.toString() ?: "" else "") }
     var bodyTemperatureText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "") }
     var glucoseText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
@@ -235,16 +243,17 @@ fun HealthRecordDetailPane(
     val initialWeight = remember(recordId) { if (record is HeightAndWeight) record.weight?.toString() ?: "" else "" }
     val initialBpSystolic = remember(recordId) { if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "" }
     val initialBpDiastolic = remember(recordId) { if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "" }
+    val initialSat = remember(recordId) { if (record is BpAndPulse) record.sat?.toString() ?: "" else "" }
     val initialPulse = remember(recordId) { if (record is BpAndPulse) record.pulse?.toString() ?: "" else "" }
     val initialBodyTemp = remember(recordId) { if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "" }
     val initialGlucose = remember(recordId) { if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "" }
     val initialHbA1c = remember(recordId) { if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "" }
 
-    val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
+    val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
         derivedStateOf {
             heightText != initialHeight || weightText != initialWeight ||
             bpSystolicText != initialBpSystolic || bpDiastolicText != initialBpDiastolic ||
-            pulseText != initialPulse || bodyTemperatureText != initialBodyTemp ||
+            satText != initialSat || pulseText != initialPulse || bodyTemperatureText != initialBodyTemp ||
             glucoseText != initialGlucose || hba1cText != initialHbA1c ||
             dateTimeState.toInstant() != initialDateTime
         }
@@ -308,6 +317,7 @@ fun HealthRecordDetailPane(
                     weightText = weightText, onWeightChange = { weightText = it },
                     bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
                     bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
+                    satText = satText, onSatChange = { satText = it },
                     pulseText = pulseText, onPulseChange = { pulseText = it },
                     bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
                     glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
@@ -319,7 +329,7 @@ fun HealthRecordDetailPane(
                         dateTimeState.toInstant()?.let { recordTime ->
                             val newRecord: Any = when (category) {
                                 Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
-                                Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
+                                Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), sat = satText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
                                 Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
                                 else -> throw IllegalStateException("Not supported category")
                             }
@@ -347,6 +357,7 @@ private fun HealthRecordEditForm(
     weightText: String, onWeightChange: (String) -> Unit,
     bpSystolicText: String, onBpSystolicChange: (String) -> Unit,
     bpDiastolicText: String, onBpDiastolicChange: (String) -> Unit,
+    satText: String, onSatChange: (String) -> Unit,
     pulseText: String, onPulseChange: (String) -> Unit,
     bodyTemperatureText: String, onBodyTemperatureChange: (String) -> Unit,
     glucoseText: String, onGlucoseChange: (String) -> Unit,
@@ -374,7 +385,10 @@ private fun HealthRecordEditForm(
                             AppCompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) }, modifier = Modifier.weight(1f))
                             AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) }, modifier = Modifier.weight(1f))
                         }
-                        AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_SAT)) }, suffix = { Text(AppThresholds.UNIT_SAT) }, modifier = Modifier.weight(1f))
+                            AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.weight(1f))
+                        }
                         AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) }, suffix = { Text(AppThresholds.UNIT_BODY_TEMP) }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
                     }
                     Category.GLUCOSE_AND_HBA1C -> {
@@ -391,7 +405,7 @@ private fun HealthRecordEditForm(
                         modifier = Modifier.weight(1f),
                         enabled = (when (category) {
                             Category.HEIGHT_AND_WEIGHT -> AppThresholds.isValidHeightAndWeight(heightText, weightText)
-                            Category.BP_AND_PULSE -> AppThresholds.isValidBpAndPulse(bpSystolicText, bpDiastolicText, pulseText, bodyTemperatureText)
+                            Category.BP_AND_PULSE -> AppThresholds.isValidBpAndPulse(bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText)
                             Category.GLUCOSE_AND_HBA1C -> AppThresholds.isValidGlucoseAndHbA1c(glucoseText, hba1cText)
                             else -> true
                         }) && isDateTimeValid
@@ -426,6 +440,7 @@ private fun HealthRecordDisplayCard(record: Any) {
                 }
                 is BpAndPulse -> {
                     DetailItem(label = stringResource(AppThresholds.HEALTH_LABEL_BP), value = "${AppThresholds.formatBpValue(record.bpSystolic)} / ${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}")
+                    DetailItem(label = stringResource(AppThresholds.HEALTH_LABEL_SAT), value = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}")
                     DetailItem(label = stringResource(AppThresholds.HEALTH_LABEL_PULSE), value = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}")
                     DetailItem(label = stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP), value = "${AppThresholds.formatBodyTemp(record.bodyTemperature)} ${AppThresholds.UNIT_BODY_TEMP}")
                     val statusText = record.getVitalResults(context).joinToString("・") { it.first }

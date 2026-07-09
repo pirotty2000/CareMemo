@@ -66,7 +66,7 @@ object HealthChartHelper {
      */
     fun getGraphCount(category: Category): Int {
         return when (category) {
-            Category.BP_AND_PULSE -> 3
+            Category.BP_AND_PULSE -> 4
             Category.GLUCOSE_AND_HBA1C -> 2
             Category.HEIGHT_AND_WEIGHT -> 2
             Category.CONDITION_AT_VISIT, Category.MEDICATION -> 0
@@ -124,7 +124,7 @@ object HealthChartHelper {
         return when (index) {
             0 -> { // 血圧
                 val sysPoints = sortedData.filter { it.bpSystolic != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(it.bpSystolic, null, null, null)
+                    val noteId = AppThresholds.evaluateVital(it.bpSystolic, null, null, null, null)
                         .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
@@ -133,7 +133,7 @@ object HealthChartHelper {
                     )
                 }
                 val diaPoints = sortedData.filter { it.bpDiastolic != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, it.bpDiastolic, null, null)
+                    val noteId = AppThresholds.evaluateVital(null, it.bpDiastolic, null, null, null)
                         .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
@@ -154,9 +154,29 @@ object HealthChartHelper {
                     maxYConstraint = 160.0
                 )
             }
-            1 -> { // 脈拍
+            1 -> { // 酸素飽和度(SAT)
+                val satPoints = sortedData.filter { it.sat != null }.map { 
+                    val noteId = AppThresholds.evaluateVital(null, null, it.sat, null, null)
+                        .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
+                    ChartPoint(
+                        it.recordTime.toEpochMilli().toDouble(),
+                        it.sat!!.toDouble(),
+                        noteId?.let { id -> context.getString(id) }
+                    )
+                }
+                HealthChartConfig(
+                    title = context.getString(AppThresholds.HEALTH_LABEL_SAT),
+                    helpContent = AppThresholds.getSatExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_SAT), satPoints, Color(0xFF00BCD4), "%")),
+                    ranges = mapRanges(AppThresholds.getSatRanges(), isDark),
+                    stepY = 2.0,
+                    minYConstraint = 85.0,
+                    maxYConstraint = 100.0
+                )
+            }
+            2 -> { // 脈拍
                 val pulsePoints = sortedData.filter { it.pulse != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, null, it.pulse, null)
+                    val noteId = AppThresholds.evaluateVital(null, null, null, it.pulse, null)
                         .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
@@ -174,9 +194,9 @@ object HealthChartHelper {
                     maxYConstraint = 110.0
                 )
             }
-            2 -> { // 体温
+            3 -> { // 体温
                 val tempPoints = sortedData.filter { it.bodyTemperature != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, null, null, it.bodyTemperature)
+                    val noteId = AppThresholds.evaluateVital(null, null, null, null, it.bodyTemperature)
                         .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),

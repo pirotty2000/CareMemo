@@ -51,6 +51,7 @@ class BatchInputViewModel(
     val weight = MutableStateFlow("")
     val bpSystolic = MutableStateFlow("")
     val bpDiastolic = MutableStateFlow("")
+    val sat = MutableStateFlow("")
     val pulse = MutableStateFlow("")
     val bodyTemperature = MutableStateFlow("")
     val glucose = MutableStateFlow("")
@@ -61,18 +62,19 @@ class BatchInputViewModel(
      * いずれかのカテゴリが有効な入力を持っていれば true を返す。
      */
     val isInputValid: StateFlow<Boolean> = combine(
-        height, weight, bpSystolic, bpDiastolic, pulse, bodyTemperature, glucose, hba1c
+        height, weight, bpSystolic, bpDiastolic, sat, pulse, bodyTemperature, glucose, hba1c
     ) { args: Array<String> ->
         val h = args[0]
         val w = args[1]
         val sys = args[2]
         val dia = args[3]
-        val p = args[4]
-        val temp = args[5]
-        val glu = args[6]
-        val hb = args[7]
+        val s = args[4]
+        val p = args[5]
+        val temp = args[6]
+        val glu = args[7]
+        val hb = args[8]
         AppThresholds.isValidHeightAndWeight(h, w) ||
-        AppThresholds.isValidBpAndPulse(sys, dia, p, temp) ||
+        AppThresholds.isValidBpAndPulse(sys, dia, s, p, temp) ||
         AppThresholds.isValidGlucoseAndHbA1c(glu, hb)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -117,12 +119,13 @@ class BatchInputViewModel(
                 }
 
                 // バイタル（いずれか一つ）
-                if (AppThresholds.isValidBpAndPulse(bpSystolic.value, bpDiastolic.value, pulse.value, bodyTemperature.value)) {
+                if (AppThresholds.isValidBpAndPulse(bpSystolic.value, bpDiastolic.value, sat.value, pulse.value, bodyTemperature.value)) {
                     healthRepository.insertBpAndPulse(
                         BpAndPulse(
                             personId = person.id,
                             bpSystolic = bpSystolic.value.toIntOrNull(),
                             bpDiastolic = bpDiastolic.value.toIntOrNull(),
+                            sat = sat.value.toIntOrNull(),
                             pulse = pulse.value.toIntOrNull(),
                             bodyTemperature = bodyTemperature.value.toDoubleOrNull(),
                             recordTime = time
@@ -163,6 +166,7 @@ class BatchInputViewModel(
         weight.value = ""
         bpSystolic.value = ""
         bpDiastolic.value = ""
+        sat.value = ""
         pulse.value = ""
         bodyTemperature.value = ""
         glucose.value = ""

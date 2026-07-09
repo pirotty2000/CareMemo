@@ -20,6 +20,8 @@ object AppThresholds {
     // ***** 脈拍 *****************************************************
     const val PULSE_HIGH = 100.0            // 頻脈：脈拍＞＝100
     const val PULSE_LOW = 50.0              // 徐脈：脈拍＞＝50
+    // ***** 酸素飽和度(SAT) *******************************************
+    const val SAT_LOW = 90.0                // 異常：SAT＜＝90
     // ***** 体温 *****************************************************
     const val TEMP_HIGH = 37.5              // 発熱：体温＞＝37．5
     const val TEMP_LOW = 35.5               // 低体温：体温＜35.5
@@ -64,6 +66,7 @@ object AppThresholds {
     val VITAL_LABEL_LOW_BP = R.string.vital_label_low_bp
     val VITAL_LABEL_TACHYCARDIA = R.string.vital_label_tachycardia
     val VITAL_LABEL_BRADYCARDIA = R.string.vital_label_bradycardia
+    val VITAL_LABEL_LOW_SAT = R.string.vital_label_low_sat
     val VITAL_LABEL_FEVER = R.string.vital_label_fever
     val VITAL_LABEL_HYPOTHERMIA = R.string.vital_label_hypothermia
     val GLUCOSE_LABEL_LOW = R.string.glucose_label_low
@@ -89,6 +92,7 @@ object AppThresholds {
     val HEALTH_LABEL_DIASTOLIC_SHORT = R.string.health_label_diastolic_short
     val HEALTH_LABEL_PULSE = R.string.health_label_pulse
     val HEALTH_LABEL_PULSE_SHORT = R.string.health_label_pulse_short
+    val HEALTH_LABEL_SAT = R.string.health_label_sat
     val HEALTH_LABEL_BODY_TEMP = R.string.health_label_body_temp
     val HEALTH_LABEL_GLUCOSE = R.string.health_label_glucose
     val HEALTH_LABEL_HBA1C = R.string.health_label_hba1c
@@ -128,6 +132,11 @@ object AppThresholds {
         VisualRange(PULSE_HIGH, 300.0, AlertLevel.ALERT),
         VisualRange(PULSE_LOW, PULSE_HIGH, AlertLevel.NORMAL), // 正常
         VisualRange(0.0, PULSE_LOW, AlertLevel.INFO)
+    )
+
+    fun getSatRanges(): List<VisualRange> = listOf(
+        VisualRange(0.0, SAT_LOW, AlertLevel.ALERT),
+        VisualRange(SAT_LOW + 0.1, 100.0, AlertLevel.NORMAL) // 91以上は正常(強調なし)
     )
 
     fun getTempRanges(): List<VisualRange> = listOf(
@@ -180,6 +189,7 @@ object AppThresholds {
     const val DIGITS_WEIGHT_DEC = 1
     const val DIGITS_BP_INT = 3
     const val DIGITS_PULSE_INT = 3
+    const val DIGITS_SAT_INT = 3
     const val DIGITS_TEMP_INT = 2
     const val DIGITS_TEMP_DEC = 1
     const val DIGITS_GLUCOSE_INT = 3
@@ -191,6 +201,7 @@ object AppThresholds {
     const val UNIT_WEIGHT = "kg"
     const val UNIT_BP = "mmHg"
     const val UNIT_PULSE = "bpm"
+    const val UNIT_SAT = "%"
     const val UNIT_BODY_TEMP = "℃"
     const val UNIT_GLUCOSE = "mg/dL"
     const val UNIT_HBA1C = "%"
@@ -232,14 +243,15 @@ object AppThresholds {
      * バイタルの入力妥当性判定
      * ルール：いずれか入力があり、かつ入力されている全項目の形式が正しいこと
      */
-    fun isValidBpAndPulse(systolic: String, diastolic: String, pulse: String, temp: String): Boolean {
+    fun isValidBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String): Boolean {
         val sValid = isWithinFormat(systolic, DIGITS_BP_INT)
         val dValid = isWithinFormat(diastolic, DIGITS_BP_INT)
+        val satValid = isWithinFormat(sat, DIGITS_SAT_INT)
         val pValid = isWithinFormat(pulse, DIGITS_PULSE_INT)
         val tValid = isWithinFormat(temp, DIGITS_TEMP_INT, DIGITS_TEMP_DEC)
 
-        val anyInput = systolic.isNotBlank() || diastolic.isNotBlank() || pulse.isNotBlank() || temp.isNotBlank()
-        return anyInput && sValid && dValid && pValid && tValid
+        val anyInput = systolic.isNotBlank() || diastolic.isNotBlank() || sat.isNotBlank() || pulse.isNotBlank() || temp.isNotBlank()
+        return anyInput && sValid && dValid && satValid && pValid && tValid
     }
 
     /**
@@ -259,6 +271,7 @@ object AppThresholds {
     fun formatHeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
     fun formatWeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
     fun formatBodyTemp(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatSat(value: Int?): String = value?.toString() ?: "---"
     fun formatHbA1c(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
     fun formatGlucose(value: Int?): String = value?.toString() ?: "---"
     fun formatBpValue(value: Int?): String = value?.toString() ?: "---"
@@ -285,7 +298,7 @@ object AppThresholds {
     /**
      * バイタルの判定
      */
-    fun evaluateVital(systolic: Int?, diastolic: Int?, pulse: Int?, temp: Double?): List<Pair<Int, AlertLevel>> {
+    fun evaluateVital(systolic: Int?, diastolic: Int?, sat: Int?, pulse: Int?, temp: Double?): List<Pair<Int, AlertLevel>> {
         val results = mutableListOf<Pair<Int, AlertLevel>>()
         
         systolic?.let {
@@ -295,6 +308,9 @@ object AppThresholds {
         diastolic?.let {
             if (it >= BP_HIGH_DIASTOLIC) results.add(VITAL_LABEL_HIGH_BP to AlertLevel.ALERT)
             else if (it < BP_LOW_DIASTOLIC) results.add(VITAL_LABEL_LOW_BP to AlertLevel.WARNING)
+        }
+        sat?.let {
+            if (it <= SAT_LOW) results.add(VITAL_LABEL_LOW_SAT to AlertLevel.ALERT)
         }
         pulse?.let {
             if (it >= PULSE_HIGH) results.add(VITAL_LABEL_TACHYCARDIA to AlertLevel.ALERT)
@@ -336,6 +352,7 @@ object AppThresholds {
 
     // --- 説明文（グラフ補助用） ---
     fun getBpExplanation(context: Context): String = context.getString(R.string.bp_explanation, BP_LOW_SYSTOLIC.toInt(), BP_HIGH_SYSTOLIC.toInt(), BP_LOW_DIASTOLIC.toInt(), BP_HIGH_DIASTOLIC.toInt())
+    fun getSatExplanation(context: Context): String = context.getString(R.string.sat_explanation, SAT_LOW.toInt())
     fun getPulseExplanation(context: Context): String = context.getString(R.string.pulse_explanation, PULSE_LOW.toInt(), PULSE_HIGH.toInt())
     fun getTempExplanation(context: Context): String = context.getString(R.string.temp_explanation, TEMP_LOW, TEMP_HIGH)
     fun getGlucoseExplanation(context: Context): String = context.getString(R.string.glucose_explanation, GLUCOSE_NORMAL_LOW.toInt(), 99)

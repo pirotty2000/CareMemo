@@ -150,6 +150,7 @@ data class BpAndPulse(
     @ColumnInfo(name = "person_id") override val personId: Int,
     @ColumnInfo(name = "bp_systolic") val bpSystolic: Int? = null,
     @ColumnInfo(name = "bp_diastolic") val bpDiastolic: Int? = null,
+    @ColumnInfo(name = "sat") val sat: Int? = null,
     @ColumnInfo(name = "pulse") val pulse: Int? = null,
     @ColumnInfo(name = "body_temperature") val bodyTemperature: Double? = null,
     @Serializable(with = InstantSerializer::class)
@@ -294,7 +295,7 @@ data class MedicationRecord(
  */
 @Serializable
 data class CareMemoBackup(
-    val version: Int = 3,
+    val version: Int = 4,
     val appVersionCode: Int = 0, // エクスポート時のアプリバージョンコード
     val persons: List<Person>,
     val heightAndWeights: List<HeightAndWeight>,
@@ -410,12 +411,12 @@ fun HeightAndWeight.getBmiResult(context: Context): Pair<String, AppThresholds.A
 }
 
 fun BpAndPulse.getVitalResults(context: Context): List<Pair<String, AppThresholds.AlertLevel>> =
-    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature).map {
+    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, sat, pulse, bodyTemperature).map {
         context.getString(it.first) to it.second
     }
 
 fun BpAndPulse.getWorstAlertLevel(): AppThresholds.AlertLevel =
-    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, pulse, bodyTemperature)
+    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, sat, pulse, bodyTemperature)
         .maxByOrNull { it.second.severity }?.second ?: AppThresholds.AlertLevel.NORMAL
 
 fun GlucoseAndHbA1c.getGlucoseResult(context: Context): Pair<String, AppThresholds.AlertLevel> {

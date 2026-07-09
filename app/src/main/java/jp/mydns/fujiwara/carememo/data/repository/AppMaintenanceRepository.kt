@@ -136,7 +136,7 @@ class AppMaintenanceRepository(
             
             // 存在しない personId = -999 を使ってレコードを挿入
             db.execSQL(
-                "INSERT INTO bp_and_pulse_db (person_id, bp_systolic, bp_diastolic, pulse, record_time, deleted_at) VALUES (-999, 120, 80, 70, ?, NULL)",
+                "INSERT INTO bp_and_pulse_db (person_id, bp_systolic, bp_diastolic, sat, pulse, record_time, deleted_at) VALUES (-999, 120, 80, 98, 70, ?, NULL)",
                 arrayOf(now),
             )
         } finally {

@@ -97,6 +97,7 @@
     <string name="health_label_diastolic_short">下</string>
     <string name="health_label_pulse">脈拍</string>
     <string name="health_label_pulse_short">脈</string>
+    <string name="health_label_sat">酸素飽和度</string>
     <string name="health_label_body_temp">体温</string>
     <string name="health_label_glucose">血糖値</string>
     <string name="health_label_hba1c">HbA1c</string>
@@ -108,6 +109,7 @@
     <string name="vital_label_low_bp">低血圧</string>
     <string name="vital_label_tachycardia">頻脈</string>
     <string name="vital_label_bradycardia">徐脈</string>
+    <string name="vital_label_low_sat">呼吸不全</string>
     <string name="vital_label_fever">発熱</string>
     <string name="vital_label_hypothermia">低体温</string>
 
@@ -130,6 +132,7 @@
 
     <!-- Explanations -->
     <string name="bp_explanation">血圧グラフの見方：\n・%2$d/%4$d以上：高血圧\n・%1$d〜%2$d/%3$d〜%4$d：正常\n・%1$d/%3$d未満：低血圧\n※「上/下」のいずれかが基準値を超えると判定されます。</string>
+    <string name="sat_explanation">酸素飽和度(SAT)グラフの見方：\n・%1$d%%以下で異常（呼吸不全）と判定されます。\n※正常範囲は個人差があるため、あえて定義していません。</string>
     <string name="pulse_explanation">脈拍グラフの見方：\n・%1$d〜%2$d が正常範囲です。</string>
     <string name="temp_explanation">体温グラフの見方：\n・%1$.1f〜%2$.1f が平熱の目安です。</string>
     <string name="glucose_explanation">血糖値グラフの見方：\n・126 mg/dL以上：高血糖\n・100〜125 mg/dL：予備群\n・%1$d〜%2$d mg/dL：正常\n・%1$d mg/dL未満：低血糖</string>
