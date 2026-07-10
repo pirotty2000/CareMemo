@@ -22,6 +22,7 @@ package jp.mydns.fujiwara.carememo.ui.components.common
  * PersonHistoryList, HistoryItemWrapper
  */
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -138,7 +139,7 @@ fun HistoryItemWrapper(
     onItemClick: () -> Unit,
     onDeleteSwipe: () -> Unit,
     isAnyDialogOpen: Boolean,
-    modifier: Modifier = Modifier,
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
