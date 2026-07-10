@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,6 +55,7 @@ fun MainScreenContent(
     if (showVersionDialog) {
         AppDialog(
             onDismissRequest = { showVersionDialog = false },
+            modifier = Modifier.testTag("MainScreen_VersionDialog"),
             title = { Text(stringResource(R.string.main_dialog_version_title)) },
             text = {
                 AppDialogContent {
@@ -85,77 +87,91 @@ fun MainScreenContent(
                 title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
                 colors = appTopAppBarColors(),
                 actions = {
-                    IconButton(onClick = { showMenu = true }) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
+                    IconButton(onClick = { showMenu = true }, modifier = Modifier.testTag("MainScreen_MenuButton")) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         // 設定
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                            onClick = { showMenu = false; onNavigateToSettings() }
+                            onClick = { showMenu = false; onNavigateToSettings() },
+                            modifier = Modifier.testTag("MainScreen_MenuItem_Settings")
                         )
                         // バージョン情報
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_version)) },
                             leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
-                            onClick = { showMenu = false; showVersionDialog = true }
+                            onClick = { showMenu = false; showVersionDialog = true },
+                            modifier = Modifier.testTag("MainScreen_MenuItem_Version")
                         )
                     }
                 }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = { FloatingActionButton(onClick = onAddClick) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.main_user_registration)) } }
+        floatingActionButton = { FloatingActionButton(onClick = onAddClick, modifier = Modifier.testTag("MainScreen_AddButton")) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.main_user_registration)) } }
     ) 
     
     // メインのコンテンツ
     { paddingValues ->
-        Column(modifier = Modifier
-            .fillMaxSize().padding(paddingValues)
-            // 全体の左右の余白
-            .padding(horizontal = 4.dp),
-            // ########## 検索ボックス／五十音かなインデックス／利用者一覧の上下の余白 ##########
-            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // ---------- 所見メモ検索 ----------
-            SearchBox(
-                query = searchQuery,
-                onQueryChange = onSearchQueryChange,
-                label = stringResource(R.string.main_search_placeholder)
-            )
-
-            // ---------- 名前(ふりがな)インデックス ----------
-            KanaIndexBar(
-                selectedSection = selectedSection,
-                onSectionSelect = onSectionSelect
-            )
-
-            //Spacer(modifier = Modifier.height(4.dp))
-            HorizontalDivider()
-
-            // ---------- 利用者一覧 ----------
-            if (isLoading) {
-                LoadingScreen()
-            } else if (userList.isEmpty()) {
-                EmptyState(
-                    message = if (searchQuery.isNotEmpty()) stringResource(R.string.main_no_user_found) else stringResource(R.string.main_no_user_registered),
-                    icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // 全体の左右の余白
+                    .padding(horizontal = 4.dp),
+                // ########## 検索ボックス／五十音かなインデックス／利用者一覧の上下の余白 ##########
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // ---------- 所見メモ検索 ----------
+                SearchBox(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    label = stringResource(R.string.main_search_placeholder),
+                    modifier = Modifier.testTag("MainScreen_SearchBox")
                 )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = lazyListState,
-                    contentPadding = PaddingValues(bottom = 80.dp)
-                ) {
-                    items(userList, key = { it.person.id }) { userUiState ->
-                        UserListItem(
-                            person = userUiState.person,
-                            summary = userUiState.summary,
-                            isNameMaskingEnabled = isNameMaskingEnabled,
-                            onClick = { onUserClick(userUiState.person) },
-                            onEditClick = { onEditUser(userUiState.person) },
-                            onDeleteClick = { onEndUser(userUiState.person) },
-                            modifier = Modifier.animateItem()
-                        )
-                        HorizontalDivider()
+
+                // ---------- 名前(ふりがな)インデックス ----------
+                KanaIndexBar(
+                    selectedSection = selectedSection,
+                    onSectionSelect = onSectionSelect,
+                    modifier = Modifier.testTag("MainScreen_KanaIndexBar")
+                )
+
+                //Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider()
+
+                // ---------- 利用者一覧 ----------
+                if (isLoading) {
+                    LoadingScreen(modifier = Modifier.testTag("MainScreen_Loading"))
+                } else if (userList.isEmpty()) {
+                    EmptyState(
+                        message = if (searchQuery.isNotEmpty()) stringResource(R.string.main_no_user_found) else stringResource(R.string.main_no_user_registered),
+                        icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1,
+                        modifier = Modifier.testTag("MainScreen_EmptyState")
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .testTag("MainScreen_UserList"),
+                        state = lazyListState,
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(userList, key = { it.person.id }) { userUiState ->
+                            UserListItem(
+                                person = userUiState.person,
+                                summary = userUiState.summary,
+                                isNameMaskingEnabled = isNameMaskingEnabled,
+                                onClick = { onUserClick(userUiState.person) },
+                                onEditClick = { onEditUser(userUiState.person) },
+                                onDeleteClick = { onEndUser(userUiState.person) },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .testTag("UserListItem_${userUiState.person.id}")
+                            )
+                            HorizontalDivider()
+                        }
                     }
                 }
             }

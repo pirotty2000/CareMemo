@@ -23,6 +23,8 @@ package jp.mydns.fujiwara.carememo.ui.components.common
  */
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,14 +40,16 @@ fun PersonHeaderTitle(
     person: Person?,
     isNameMaskingEnabled: Boolean,
     defaultTitle: String,
+    modifier: Modifier = Modifier,
 ) {
     person?.let { p ->
         val age = DateTimeUtils.calculateAge(p.birthday)
-        Column {
+        Column(modifier = modifier.testTag("PersonHeader_Title")) {
             Text(
                 text = p.getMaskedFurigana(isNameMaskingEnabled),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                modifier = Modifier.testTag("PersonHeader_Furigana")
             )
             Text(
                 text = buildString {
@@ -58,13 +62,15 @@ fun PersonHeaderTitle(
                 },
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.testTag("PersonHeader_NameAndAge")
             )
         }
     } ?: Text(
         text = defaultTitle,
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onPrimaryContainer
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = modifier.testTag("PersonHeader_DefaultTitle")
     )
 }

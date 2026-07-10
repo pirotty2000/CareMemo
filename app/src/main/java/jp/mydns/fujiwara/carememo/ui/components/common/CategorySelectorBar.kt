@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.data.Category
@@ -62,7 +63,8 @@ fun CategorySelectorBar(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .testTag("CategorySelectorBar"),
         state = categoryListState,
         contentPadding = PaddingValues(horizontal = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -80,6 +82,7 @@ fun CategorySelectorBar(
                 selected = currentCategory == category,
                 onClick = { onCategoryClick(category) },
                 label = { Text(stringResource(category.displayNameRes)) },
+                modifier = Modifier.testTag("CategoryChip_${category.name}"),
                 leadingIcon = if (currentCategory == category) {
                     {
                         Icon(

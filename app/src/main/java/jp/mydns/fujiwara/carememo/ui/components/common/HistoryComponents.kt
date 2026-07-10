@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -65,7 +66,7 @@ fun PersonHistoryList(
             .toSortedMap(compareByDescending { it })
     }
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag("PersonHistoryList"),
         state = lazyListState,
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
@@ -74,7 +75,7 @@ fun PersonHistoryList(
             // スティッキー・ヘッダー
             stickyHeader {
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("HistoryList_Header_${date}"),
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
@@ -111,7 +112,8 @@ fun PersonHistoryList(
                     isSelected = isSelected,
                     onItemClick = { onItemClick(record) },
                     onDeleteSwipe = { onDeleteSwipe(record) },
-                    isAnyDialogOpen = isAnyDialogOpen
+                    isAnyDialogOpen = isAnyDialogOpen,
+                    modifier = Modifier.testTag("HistoryItem_${record.id}")
                 ) {
                     itemContent(record)
                 }
@@ -136,6 +138,7 @@ fun HistoryItemWrapper(
     onItemClick: () -> Unit,
     onDeleteSwipe: () -> Unit,
     isAnyDialogOpen: Boolean,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
@@ -157,6 +160,7 @@ fun HistoryItemWrapper(
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
+        modifier = modifier,
         backgroundContent = {
             val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                 MaterialTheme.colorScheme.error

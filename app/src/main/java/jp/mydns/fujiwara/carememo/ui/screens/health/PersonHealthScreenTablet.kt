@@ -30,6 +30,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
@@ -80,7 +81,10 @@ fun PersonHealthScreenTablet(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("HealthScreen_BackButton")
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowBack,
                                 contentDescription = stringResource(R.string.common_back)
@@ -97,7 +101,10 @@ fun PersonHealthScreenTablet(
                         IconButton(onClick = { onSelectedRecordIdChange(0) }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
-                        IconButton(onClick = onShowPdfSettings) {
+                        IconButton(
+                            onClick = onShowPdfSettings,
+                            modifier = Modifier.testTag("HealthScreen_PdfButton")
+                        ) {
                             Icon(
                                 Icons.Rounded.PictureAsPdf,
                                 contentDescription = stringResource(R.string.common_pdf_export)
@@ -108,7 +115,8 @@ fun PersonHealthScreenTablet(
                 CategorySelectorBar(
                     currentCategory = currentCategory,
                     personCategorySummary = personCategorySummary,
-                    onCategoryClick = onNavigateToCategory
+                    onCategoryClick = onNavigateToCategory,
+                    modifier = Modifier.testTag("CategorySelectorBar")
                 )
             }
         }

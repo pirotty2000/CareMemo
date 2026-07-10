@@ -47,6 +47,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
@@ -89,7 +90,7 @@ fun PersonHealthScreenContent(
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: 履歴リスト (比率 1)
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).testTag("HealthScreen_HistoryList")) {
                 PersonHistoryList(
                     records = historyRecords,
                     selectedRecordId = selectedRecordId,
@@ -105,20 +106,22 @@ fun PersonHealthScreenContent(
             // 右側: グラフ または 詳細入力 (比率 1.5)
             Box(modifier = Modifier.weight(1.5f)) {
                 if (selectedRecordId != -1) {
-                    HealthRecordDetailPane(
-                        personId = personId,
-                        category = currentCategory,
-                        recordId = selectedRecordId,
-                        records = historyRecords,
-                        onCancel = { onSelectedRecordIdChange(-1) },
-                        onSaveRecord = { record ->
-                            onSaveRecord(record)
-                            onSelectedRecordIdChange(-1)
-                        }
-                    )
+                    Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
+                        HealthRecordDetailPane(
+                            personId = personId,
+                            category = currentCategory,
+                            recordId = selectedRecordId,
+                            records = historyRecords,
+                            onCancel = { onSelectedRecordIdChange(-1) },
+                            onSaveRecord = { record ->
+                                onSaveRecord(record)
+                                onSelectedRecordIdChange(-1)
+                            }
+                        )
+                    }
                 } else {
                     val scrollState = rememberScrollState()
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().testTag("HealthScreen_GraphArea")) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -141,21 +144,25 @@ fun PersonHealthScreenContent(
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
         if (selectedRecordId != -1) {
-            HealthRecordDetailPane(
-                personId = personId,
-                category = currentCategory,
-                recordId = selectedRecordId,
-                records = historyRecords,
-                onCancel = { onSelectedRecordIdChange(-1) },
-                onSaveRecord = { record ->
-                    onSaveRecord(record)
-                    onSelectedRecordIdChange(-1)
-                }
-            )
+            Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
+                HealthRecordDetailPane(
+                    personId = personId,
+                    category = currentCategory,
+                    recordId = selectedRecordId,
+                    records = historyRecords,
+                    onCancel = { onSelectedRecordIdChange(-1) },
+                    onSaveRecord = { record ->
+                        onSaveRecord(record)
+                        onSelectedRecordIdChange(-1)
+                    }
+                )
+            }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // 表示切り替えボタン
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth().testTag("HealthScreen_HistoryGraphSwitch")
+                ) {
                     SegmentedButton(
                         selected = preferredShowHistory,
                         onClick = { onPreferredShowHistoryChange(true) },
@@ -164,7 +171,8 @@ fun PersonHealthScreenContent(
                         colors = SegmentedButtonDefaults.colors(
                             activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        ),
+                        modifier = Modifier.testTag("HealthScreen_Tab_History")
                     ) { Text(stringResource(R.string.common_tab_history)) }
                     SegmentedButton(
                         selected = !preferredShowHistory,
@@ -174,7 +182,8 @@ fun PersonHealthScreenContent(
                         colors = SegmentedButtonDefaults.colors(
                             activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        ),
+                        modifier = Modifier.testTag("HealthScreen_Tab_Graph")
                     ) { Text(stringResource(R.string.common_tab_graph)) }
                 }
 
@@ -183,20 +192,22 @@ fun PersonHealthScreenContent(
 
                     if (preferredShowHistory) {
                         // 履歴表示
-                        PersonHistoryList(
-                            records = historyRecords,
-                            onItemClick = onItemClick,
-                            onDeleteSwipe = onDeleteSwipe,
-                            isAnyDialogOpen = isAnyDialogOpen,
-                            lazyListState = historyListState
-                        ) { record ->
-                            HealthHistoryItemBody(category = currentCategory, record = record)
+                        Box(modifier = Modifier.testTag("HealthScreen_HistoryList")) {
+                            PersonHistoryList(
+                                records = historyRecords,
+                                onItemClick = onItemClick,
+                                onDeleteSwipe = onDeleteSwipe,
+                                isAnyDialogOpen = isAnyDialogOpen,
+                                lazyListState = historyListState
+                            ) { record ->
+                                HealthHistoryItemBody(category = currentCategory, record = record)
+                            }
                         }
                         VerticalScrollIndicator(lazyListState = historyListState)
                     } else {
                         // グラフ表示
                         val scrollState = rememberScrollState()
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        Box(modifier = Modifier.fillMaxSize().testTag("HealthScreen_GraphArea")) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()

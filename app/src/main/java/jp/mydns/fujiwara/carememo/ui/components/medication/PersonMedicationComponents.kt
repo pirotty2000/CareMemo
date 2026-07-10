@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -80,95 +81,95 @@ fun MedicationHistoryTable(
     val daysInMonth = yearMonth.lengthOfMonth()
     val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
 
-    if (!hasAnyRecord) {
-        EmptyState(
-            message = "記録がありません",
-            icon = Icons.Outlined.Description
-        )
-        return
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
             .clip(MaterialTheme.shapes.medium)
+            .testTag("Medication_HistoryTable")
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("日", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text("朝", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text("昼", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text("夕", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text("寝る前", modifier = Modifier.weight(1.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-        }
+        if (!hasAnyRecord) {
+            EmptyState(
+                message = "記録がありません",
+                icon = Icons.Outlined.Description
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("日", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text("朝", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text("昼", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text("夕", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text("寝る前", modifier = Modifier.weight(1.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = lazyListState
-        ) {
-            items(count = daysInMonth) { index ->
-                val day = index + 1
-                val date = yearMonth.atDay(day)
-                val dateStr = date.toString()
-                val records = recordsByDate[dateStr] ?: emptyList()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = lazyListState
+            ) {
+                items(count = daysInMonth) { index ->
+                    val day = index + 1
+                    val date = yearMonth.atDay(day)
+                    val dateStr = date.toString()
+                    val records = recordsByDate[dateStr] ?: emptyList()
 
-                val dayOfWeek = date.dayOfWeek
-                val dayOfWeekText = formatShortDayOfWeek(date)
+                    val dayOfWeek = date.dayOfWeek
+                    val dayOfWeekText = formatShortDayOfWeek(date)
 
-                val rowBgColor = when (dayOfWeek) {
-                    DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-                    DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    else -> MaterialTheme.colorScheme.surface
-                }
-
-                val textColor = getDayOfWeekColor(dayOfWeek)
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(rowBgColor)
-                        .padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${day}日($dayOfWeekText)",
-                        modifier = Modifier.weight(1.5f),
-                        textAlign = TextAlign.Center,
-                        color = textColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
-                    timeSlots.forEach { slot ->
-                        val weight = if (slot == AppThresholds.TIME_SLOT_BEDTIME) 1.2f else 1f
-                        val record = records.find { it.timeSlot == slot }
-                        val symbol = getMedicationStatusSymbol(record?.status)
-                        val symbolColor = when (record?.status) {
-                            0 -> getMedicationStatusColor(0)
-                            1, 2 -> getMedicationStatusColor(2)
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        }
-                        Text(
-                            text = symbol,
-                            modifier = Modifier.weight(weight),
-                            textAlign = TextAlign.Center,
-                            color = symbolColor,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                    val rowBgColor = when (dayOfWeek) {
+                        DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                        DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        else -> MaterialTheme.colorScheme.surface
                     }
-                }
-                if (day < daysInMonth) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    val textColor = getDayOfWeekColor(dayOfWeek)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(rowBgColor)
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${day}日($dayOfWeekText)",
+                            modifier = Modifier.weight(1.5f),
+                            textAlign = TextAlign.Center,
+                            color = textColor,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
+                        timeSlots.forEach { slot ->
+                            val weight = if (slot == AppThresholds.TIME_SLOT_BEDTIME) 1.2f else 1f
+                            val record = records.find { it.timeSlot == slot }
+                            val symbol = getMedicationStatusSymbol(record?.status)
+                            val symbolColor = when (record?.status) {
+                                0 -> getMedicationStatusColor(0)
+                                1, 2 -> getMedicationStatusColor(2)
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            }
+                            Text(
+                                text = symbol,
+                                modifier = Modifier.weight(weight),
+                                textAlign = TextAlign.Center,
+                                color = symbolColor,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    if (day < daysInMonth) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    }
                 }
             }
         }
@@ -230,7 +231,9 @@ fun CalendarGrid(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("Medication_Calendar")
         ) {
             items(calendarDays) { date ->
                 if (date != null) {
@@ -268,6 +271,7 @@ private fun DayCell(
                 color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                 shape = MaterialTheme.shapes.small
             )
+            .testTag("Medication_DayCell_${date}")
             .clickable { onClick() }
             .padding(2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -465,13 +469,15 @@ fun MedicationInputDialog(
                     syncCurrentTimeFieldsToTemp()
                     onConfirm(tempRecords)
                     onDismiss()
-                }
+                },
+                modifier = Modifier.testTag("Medication_Dialog_Save")
             )
         },
         dismissButton = {
             AppDialogDismissButton(
                 text = stringResource(R.string.common_cancel),
-                onClick = onDismiss
+                onClick = onDismiss,
+                modifier = Modifier.testTag("Medication_Dialog_Cancel")
             )
         }
     )
@@ -560,7 +566,10 @@ private fun StatusChip(
         shape = MaterialTheme.shapes.medium,
         color = if (isSelected) color else MaterialTheme.colorScheme.surfaceVariant,
         contentColor = if (isSelected) selectedContentColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.height(36.dp).width(56.dp)
+        modifier = Modifier
+            .height(36.dp)
+            .width(56.dp)
+            .testTag("Medication_StatusChip_${text}")
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text, style = MaterialTheme.typography.labelMedium)

@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -331,7 +332,7 @@ private fun ConditionRecordDisplayCard(
     onAddPhotoClick: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().testTag("ConditionDetailPane")) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -445,7 +446,7 @@ private fun ConditionRecordEditForm(
     }
 
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().testTag("ConditionDetailPane")) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -482,7 +483,7 @@ private fun ConditionRecordEditForm(
                         onValueChange = onConditionChange,
                         type = AppTextFieldType.TEXT,
                         label = { Text("所見メモ") },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).testTag("Condition_MemoInput"),
                         singleLine = false,
                         trailingIcon = {
                             IconButton(onClick = {
@@ -504,7 +505,7 @@ private fun ConditionRecordEditForm(
                         ) { Text(stringResource(R.string.common_cancel)) }
                         Button(
                             onClick = onSave,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
                             enabled = author.isNotBlank() && condition.isNotBlank() && isDateTimeValid
                         ) { Text(stringResource(R.string.common_save)) }
                     }
@@ -558,7 +559,7 @@ private fun PhotoGrid(
 ) {
     val context = LocalContext.current
     val rows = photos.chunked(3)
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().testTag("Condition_PhotoList"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { rowPhotos ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowPhotos.forEach { photo ->

@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -220,7 +221,7 @@ fun HealthRecordDetailPane(
     }
 
     if (record == null && recordId != 0) {
-        LoadingScreen()
+        LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         return
     }
 
@@ -300,7 +301,7 @@ fun HealthRecordDetailPane(
     }
 
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
         Column(modifier = Modifier.fillMaxSize().padding(start = 16.dp).verticalScroll(scrollState), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = if (recordId == 0) "新規作成" else "記録の詳細", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

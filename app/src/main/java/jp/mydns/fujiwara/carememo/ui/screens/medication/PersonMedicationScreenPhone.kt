@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
@@ -80,17 +81,24 @@ fun PersonMedicationScreenPhone(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "服薬管理"
+                            defaultTitle = "服薬管理",
+                            modifier = Modifier.testTag("PersonHeader")
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("Medication_BackButton")
+                        ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                         }
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = onShowPdfSettings) {
+                        IconButton(
+                            onClick = onShowPdfSettings,
+                            modifier = Modifier.testTag("Medication_PdfButton")
+                        ) {
                             Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                         }
                     }

@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -115,19 +116,24 @@ fun UserListItem(
         },
         trailingContent = {
             Box {
-                IconButton(onClick = { showItemMenu = true }) { 
+                IconButton(
+                    onClick = { showItemMenu = true },
+                    modifier = Modifier.testTag("UserListItem_MenuButton")
+                ) { 
                     Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") 
                 }
                 DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_edit_user_info)) }, 
                         leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, 
-                        onClick = { showItemMenu = false; onEditClick() }
+                        onClick = { showItemMenu = false; onEditClick() },
+                        modifier = Modifier.testTag("UserListItem_MenuItem_Edit")
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_end_user_service), color = MaterialTheme.colorScheme.error) }, 
                         leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, 
-                        onClick = { showItemMenu = false; onDeleteClick() }
+                        onClick = { showItemMenu = false; onDeleteClick() },
+                        modifier = Modifier.testTag("UserListItem_MenuItem_Delete")
                     )
                 }
             }
@@ -160,7 +166,8 @@ fun CategorySelectionSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+            .testTag("CategorySelectionSheet"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -170,12 +177,13 @@ fun CategorySelectionSheet(
             modifier = Modifier
                 .padding(bottom = 12.dp)
                 .align(Alignment.Start)
+                .testTag("CategorySelectionSheet_Title")
         )
 
         // 一括入力ボタン
         Button(
             onClick = onBatchInputSelect,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp).testTag("CategorySelectionSheet_BatchInput"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -192,7 +200,7 @@ fun CategorySelectionSheet(
         Category.entries.forEach { category ->
             Button(
                 onClick = { onCategorySelect(category) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp).testTag("CategorySelectionSheet_Button_${category.name}"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer

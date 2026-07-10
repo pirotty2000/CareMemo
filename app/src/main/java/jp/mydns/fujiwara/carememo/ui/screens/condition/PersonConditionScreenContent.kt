@@ -43,6 +43,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
@@ -92,11 +93,12 @@ fun PersonConditionScreenContent(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(16.dp)
+                .testTag("Condition_TabletLayout"),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("Condition_HistoryList"),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SearchBox(
@@ -129,6 +131,7 @@ fun PersonConditionScreenContent(
                 modifier = Modifier
                     .weight(2f)
                     .padding(end = 16.dp) // 右端に余白を確保
+                    .testTag("Condition_DetailPane")
             ) {
                 ConditionDetailPane(
                     personId = personId,
@@ -174,7 +177,8 @@ fun PersonConditionScreenContent(
             ) {
                 SearchBox(
                     query = searchQuery,
-                    onQueryChange = onSearchQueryChange
+                    onQueryChange = onSearchQueryChange,
+                    modifier = Modifier.testTag("ConditionScreen_SearchBox")
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     if (records.isEmpty()) {

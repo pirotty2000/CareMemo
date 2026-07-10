@@ -30,6 +30,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -80,11 +81,15 @@ fun PersonConditionScreenTablet(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "所見記録"
+                            defaultTitle = "所見記録",
+                            modifier = Modifier.testTag("PersonHeader_NameAndAge")
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("ConditionScreen_BackButton")
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                         }
                     },
@@ -98,7 +103,10 @@ fun PersonConditionScreenTablet(
                         IconButton(onClick = { onSelectedIdChange(0) }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
-                        IconButton(onClick = onShowPdfSettings) {
+                        IconButton(
+                            onClick = onShowPdfSettings,
+                            modifier = Modifier.testTag("ConditionScreen_PdfButton")
+                        ) {
                             Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                         }
                     }
@@ -106,7 +114,8 @@ fun PersonConditionScreenTablet(
                 CategorySelectorBar(
                     currentCategory = Category.CONDITION_AT_VISIT,
                     personCategorySummary = personCategorySummary,
-                    onCategoryClick = onNavigateToCategory
+                    onCategoryClick = onNavigateToCategory,
+                    modifier = Modifier.testTag("CategorySelectorBar")
                 )
             }
         }

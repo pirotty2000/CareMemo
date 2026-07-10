@@ -41,6 +41,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
@@ -67,7 +68,9 @@ fun PersonMedicationScreenContent(
     onDayClick: (LocalDate) -> Unit,
 ) {
     if (isLoading) {
-        LoadingScreen()
+        Box(modifier = Modifier.fillMaxSize().testTag("Medication_Loading")) {
+            LoadingScreen()
+        }
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -87,15 +90,22 @@ fun PersonMedicationScreenContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onPreviousMonth) {
+                    IconButton(
+                        onClick = onPreviousMonth,
+                        modifier = Modifier.testTag("Medication_MonthPrev")
+                    ) {
                         Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
                     }
                     Text(
                         text = formatYearMonthHeader(selectedMonth),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.testTag("Medication_MonthText")
                     )
-                    IconButton(onClick = onNextMonth) {
+                    IconButton(
+                        onClick = onNextMonth,
+                        modifier = Modifier.testTag("Medication_MonthNext")
+                    ) {
                         Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
                     }
                 }
@@ -123,21 +133,32 @@ fun PersonMedicationScreenContent(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onPreviousMonth) {
+                IconButton(
+                    onClick = onPreviousMonth,
+                    modifier = Modifier.testTag("Medication_MonthPrev")
+                ) {
                     Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
                 }
                 Text(
                     text = formatYearMonthHeader(selectedMonth),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.testTag("Medication_MonthText")
                 )
-                IconButton(onClick = onNextMonth) {
+                IconButton(
+                    onClick = onNextMonth,
+                    modifier = Modifier.testTag("Medication_MonthNext")
+                ) {
                     Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
                 }
             }
 
             // 表示切り替え
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("Medication_ModeSegment")
+            ) {
                 SegmentedButton(
                     selected = !isHistoryMode,
                     onClick = { onHistoryModeChange(false) },

@@ -33,6 +33,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -121,6 +122,7 @@ fun PdfSettingsDialog(
     }
     AppDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("PdfSettingsDialog"),
         title = { Text(stringResource(R.string.pdf_settings_title, stringResource(category.displayNameRes))) },
         text = {
             AppDialogContent {

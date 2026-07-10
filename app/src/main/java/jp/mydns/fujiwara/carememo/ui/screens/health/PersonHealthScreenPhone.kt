@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
@@ -102,7 +103,10 @@ fun PersonHealthScreenPhone(
                     },
                     // 戻る（←）アイコン
                     navigationIcon = {
-                        IconButton(onClick = { if (selectedRecordId != -1) onSelectedRecordIdChange(-1) else onBack() }) {
+                        IconButton(
+                            onClick = { if (selectedRecordId != -1) onSelectedRecordIdChange(-1) else onBack() },
+                            modifier = Modifier.testTag("HealthScreen_BackButton")
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowBack,
                                 contentDescription = stringResource(R.string.common_back)
@@ -113,7 +117,10 @@ fun PersonHealthScreenPhone(
                     // PDF出力
                     actions = {
                         if (selectedRecordId == -1) {
-                            IconButton(onClick = onShowPdfSettings) {
+                            IconButton(
+                                onClick = onShowPdfSettings,
+                                modifier = Modifier.testTag("HealthScreen_PdfButton")
+                            ) {
                                 Icon(
                                     Icons.Rounded.PictureAsPdf,
                                     contentDescription = stringResource(R.string.common_pdf_export)
@@ -126,7 +133,8 @@ fun PersonHealthScreenPhone(
                     CategorySelectorBar(
                         currentCategory = currentCategory,
                         personCategorySummary = personCategorySummary,
-                        onCategoryClick = onNavigateToCategory
+                        onCategoryClick = onNavigateToCategory,
+                        modifier = Modifier.testTag("CategorySelectorBar")
                     )
                 }
             }
@@ -134,9 +142,12 @@ fun PersonHealthScreenPhone(
         // 右下の「＋」
         floatingActionButton = {
             if (selectedRecordId == -1) {
-                FloatingActionButton(onClick = {
-                    onSelectedRecordIdChange(0)
-                }) {
+                FloatingActionButton(
+                    onClick = {
+                        onSelectedRecordIdChange(0)
+                    },
+                    modifier = Modifier.testTag("HealthScreen_AddButton")
+                ) {
                     Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.main_btn_add_new))
                 }
             }

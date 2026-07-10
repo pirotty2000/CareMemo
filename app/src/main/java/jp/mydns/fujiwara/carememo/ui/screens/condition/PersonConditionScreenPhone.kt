@@ -30,6 +30,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
@@ -85,20 +87,26 @@ fun PersonConditionScreenPhone(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = {
-                            if (selectedId != -1) {
-                                onSelectedIdChange(-1)
-                            } else {
-                                onBack()
-                            }
-                        }) {
+                        IconButton(
+                            onClick = {
+                                if (selectedId != -1) {
+                                    onSelectedIdChange(-1)
+                                } else {
+                                    onBack()
+                                }
+                            },
+                            modifier = Modifier.testTag("ConditionScreen_BackButton")
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                         }
                     },
                     colors = appTopAppBarColors(),
                     actions = {
                         if (selectedId == -1) {
-                            IconButton(onClick = onShowPdfSettings) {
+                            IconButton(
+                                onClick = onShowPdfSettings,
+                                modifier = Modifier.testTag("ConditionScreen_PdfButton")
+                            ) {
                                 Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                             }
                         }
@@ -108,14 +116,18 @@ fun PersonConditionScreenPhone(
                     CategorySelectorBar(
                         currentCategory = Category.CONDITION_AT_VISIT,
                         personCategorySummary = personCategorySummary,
-                        onCategoryClick = onNavigateToCategory
+                        onCategoryClick = onNavigateToCategory,
+                        modifier = Modifier.testTag("CategorySelectorBar")
                     )
                 }
             }
         },
         floatingActionButton = {
             if (selectedId == -1) {
-                FloatingActionButton(onClick = { onSelectedIdChange(0) }) {
+                FloatingActionButton(
+                    onClick = { onSelectedIdChange(0) },
+                    modifier = Modifier.testTag("ConditionScreen_AddButton")
+                ) {
                     Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                 }
             }
