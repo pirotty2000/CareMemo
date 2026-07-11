@@ -39,6 +39,8 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
@@ -80,7 +82,39 @@ fun PersonMedicationScreen(
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
+    val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
+    val medicationCategoryName = stringResource(Category.MEDICATION.displayNameRes)
+
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
+    LaunchedEffect(Unit) {
+        medicationViewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is BaseViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                }
+                is BaseViewModel.UiEvent.ShowInfoDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowInfoDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
+                else -> {}
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -133,7 +167,7 @@ fun PersonMedicationScreen(
             onShowPdfSettings = {
                 if (allRecords.isEmpty()) {
                     scope.launch {
-                        snackbarHostState.showSnackbar("服薬記録がないため出力できません")
+                        snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
                     }
                 } else {
                     showPdfSettingsDialog = true
@@ -159,7 +193,7 @@ fun PersonMedicationScreen(
             onShowPdfSettings = {
                 if (allRecords.isEmpty()) {
                     scope.launch {
-                        snackbarHostState.showSnackbar("服薬記録がないため出力できません")
+                        snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
                     }
                 } else {
                     showPdfSettingsDialog = true

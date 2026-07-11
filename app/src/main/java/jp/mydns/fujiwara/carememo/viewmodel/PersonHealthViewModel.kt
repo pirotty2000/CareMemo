@@ -45,15 +45,14 @@ class PersonHealthViewModel(
         person to category
     }.flatMapLatest { (person, category) ->
         if (person == null || category == null) flowOf(emptyList())
-        else when (category) {
-            Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(person.id)
-            Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(person.id)
-            Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
-            else -> flowOf(emptyList())
-        }
-    }.onEach { 
-        if (_currentPerson.value != null && _currentCategory.value != null) {
-            _isLoading.value = false
+        else {
+            val flow = when (category) {
+                Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(person.id)
+                Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(person.id)
+                Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
+                else -> flowOf(emptyList())
+            }
+            flow.onEach { _isLoading.value = false }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

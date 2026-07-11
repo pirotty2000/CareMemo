@@ -171,7 +171,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         // アプリ・ロック
         // 実際にロック画面を表示
         LaunchedEffect(isBiometricEnabled, isAuthenticated) {
-            if ((isBiometricEnabled == true) && !isAuthenticated) {
+            if (!(!isBiometricEnabled || isAuthenticated)) {
                 val biometricManager = androidx.biometric.BiometricManager.from(activity)
                 val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                 
@@ -212,12 +212,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     .setTitle("アプリ・ロック").setSubtitle("認証情報を入力してください")
                     .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL).build()
                 biometricPrompt.authenticate(promptInfo)
-            } else if (isBiometricEnabled == false) {
+            } else if (!isBiometricEnabled) {
                 isAuthenticated = true
             }
         }
 
-        if (isAuthenticated || isBiometricEnabled == false) {
+        if (!(!isAuthenticated && isBiometricEnabled)) {
             // 認証要求を処理する共通関数
             val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
                 val executor = ContextCompat.getMainExecutor(activity)

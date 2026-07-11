@@ -148,6 +148,7 @@
     <string name="slot_lunch">昼</string>
     <string name="slot_dinner">夕</string>
     <string name="slot_bedtime">寝る前</string>
+    <string name="slot_bedtime_short">寝</string>
     <string name="export_range_all">全ての記録</string>
     <string name="export_range_latest">最新の1件のみ</string>
     <string name="export_range_one_month">当月</string>
@@ -199,6 +200,15 @@
     <!-- PersonMedicationScreen -->
     <string name="p_med_msg_update_success">服薬状況を更新しました</string>
     <string name="p_med_err_update_failure">服薬状況の更新に失敗しました: %1$s</string>
+    <string name="common_tab_calendar">カレンダー</string>
+    <string name="p_med_msg_no_edit_in_history">※ ここでは記録の編集はできません</string>
+    <string name="p_med_msg_tap_to_edit">※ 日付のセルをタップして記録を追加／編集しましょう</string>
+    <string name="p_med_history_table_day">日</string>
+    <string name="p_med_dialog_title">%1$s の服薬状況</string>
+    <string name="p_med_status_none">未</string>
+    <string name="p_med_status_assist">介助</string>
+    <string name="p_med_status_taken">服用</string>
+    <string name="p_med_label_check_time">確認日時: %1$s</string>
 
     <!-- SettingsScreen -->
     <string name="settings_err_title_biometric">設定できません</string>

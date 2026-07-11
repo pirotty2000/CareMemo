@@ -89,6 +89,9 @@ fun PersonConditionScreen(
     var dialogMessage by remember { mutableStateOf<String?>(null) }
     var onConfirmOverwrite by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
+    val conditionCategoryName = stringResource(Category.CONDITION_AT_VISIT.displayNameRes)
+
     // アプリからの通知を受け付ける窓口
     LaunchedEffect(Unit) {
         conditionViewModel.uiEventFlow.collect { event ->
@@ -216,7 +219,7 @@ fun PersonConditionScreen(
             onNavigateToFullScreen = onNavigateToFullScreen,
             onShowPdfSettings = {
                 if (records.isEmpty()) {
-                    scope.launch { snackbarHostState.showSnackbar("出力するデータがありません") }
+                    scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(conditionCategoryName)) }
                 } else {
                     showPdfSettingsDialog = true
                 }
@@ -259,7 +262,7 @@ fun PersonConditionScreen(
             onNavigateToFullScreen = onNavigateToFullScreen,
             onShowPdfSettings = {
                 if (records.isEmpty()) {
-                    scope.launch { snackbarHostState.showSnackbar("出力するデータがありません") }
+                    scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(conditionCategoryName)) }
                 } else {
                     showPdfSettingsDialog = true
                 }

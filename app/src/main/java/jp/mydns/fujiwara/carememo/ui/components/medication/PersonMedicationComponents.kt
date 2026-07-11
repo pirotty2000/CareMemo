@@ -90,7 +90,7 @@ fun MedicationHistoryTable(
     ) {
         if (!hasAnyRecord) {
             EmptyState(
-                message = "記録がありません",
+                message = stringResource(R.string.p_detail_empty_records),
                 icon = Icons.Outlined.Description
             )
         } else {
@@ -101,11 +101,11 @@ fun MedicationHistoryTable(
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("日", modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                Text("朝", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                Text("昼", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                Text("夕", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                Text("寝る前", modifier = Modifier.weight(1.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.p_med_history_table_day), modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.slot_morning), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.slot_lunch), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.slot_dinner), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.slot_bedtime), modifier = Modifier.weight(1.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -130,6 +130,7 @@ fun MedicationHistoryTable(
                     }
 
                     val textColor = getDayOfWeekColor(dayOfWeek)
+                    val daySuffix = stringResource(R.string.common_day_suffix)
 
                     Row(
                         modifier = Modifier
@@ -139,7 +140,7 @@ fun MedicationHistoryTable(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${day}日($dayOfWeekText)",
+                            text = "${day}${daySuffix}($dayOfWeekText)",
                             modifier = Modifier.weight(1.5f),
                             textAlign = TextAlign.Center,
                             color = textColor,
@@ -410,7 +411,7 @@ fun MedicationInputDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "${formatMedicationDialogTitle(date)} の服薬状況",
+                text = stringResource(R.string.p_med_dialog_title, formatMedicationDialogTitle(date)),
                 style = MaterialTheme.typography.titleMedium
             )
         },
@@ -507,19 +508,19 @@ private fun MedicationRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 StatusChip(
-                    text = "未",
+                    text = stringResource(R.string.p_med_status_none),
                     isSelected = currentRecord?.status == 0,
                     color = getMedicationStatusColor(0),
                     onClick = { onStatusToggle(0) }
                 )
                 StatusChip(
-                    text = "介助",
+                    text = stringResource(R.string.p_med_status_assist),
                     isSelected = currentRecord?.status == 1,
                     color = getMedicationStatusColor(1),
                     onClick = { onStatusToggle(1) }
                 )
                 StatusChip(
-                    text = "服用",
+                    text = stringResource(R.string.p_med_status_taken),
                     isSelected = currentRecord?.status == 2,
                     color = getMedicationStatusColor(2),
                     onClick = { onStatusToggle(2) }
@@ -528,7 +529,7 @@ private fun MedicationRow(
         }
 
         Text(
-            text = if (currentRecord != null) "確認日時: ${formatRecordTime(currentRecord.recordTime)}" else "",
+            text = if (currentRecord != null) stringResource(R.string.p_med_label_check_time, formatRecordTime(currentRecord.recordTime)) else "",
             style = MaterialTheme.typography.labelSmall,
             color = if (isSelectedForTime) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
             maxLines = 1,
@@ -595,12 +596,13 @@ fun getMedicationStatusSymbol(status: Int?): String {
     }
 }
 
+@Composable
 fun getTimeSlotLabel(slot: Int, isShort: Boolean = false): String {
     return when (slot) {
-        0 -> "朝"
-        1 -> "昼"
-        2 -> "夕"
-        3 -> if (isShort) "寝" else "寝る前"
+        0 -> stringResource(R.string.slot_morning)
+        1 -> stringResource(R.string.slot_lunch)
+        2 -> stringResource(R.string.slot_dinner)
+        3 -> if (isShort) stringResource(R.string.slot_bedtime_short) else stringResource(R.string.slot_bedtime)
         else -> ""
     }
 }

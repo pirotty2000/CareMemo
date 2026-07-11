@@ -84,6 +84,7 @@ fun PersonHealthScreen(
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
+    var lastLoadedPersonId by rememberSaveable { mutableIntStateOf(-1) }
 
     var currentCategory by rememberSaveable { mutableStateOf(initialCategoryType) }
     var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
@@ -153,13 +154,24 @@ fun PersonHealthScreen(
         }
     }
 
-    // 表示内容を最新に保つための更新処理
-    LaunchedEffect(currentCategory, personId) {
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // 利用者コンテキストの確立（利用者ID変更時のみ実行）
+    LaunchedEffect(personId) {
         viewModel.loadPerson(personId)
         healthViewModel.loadPerson(personId)
+        
+        // 実際に別の利用者の画面へ遷移した時だけ、選択状態を完全にリセットする
+        if (lastLoadedPersonId != personId) {
+            selectedRecordId = -1
+            lastLoadedPersonId = personId
+        }
+    }
+
+    // カテゴリコンテキストの同期（カテゴリまたは利用者変更時に実行）
+    LaunchedEffect(currentCategory, personId) {
         viewModel.setCategory(currentCategory)
         healthViewModel.setCategory(currentCategory)
-        // カテゴリが切り替わったら選択をリセット
+        // カテゴリが切り替わったら選択をリセット（異なるデータ構造のIDは維持しない）
         selectedRecordId = -1
     }
 

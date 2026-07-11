@@ -48,12 +48,9 @@ class PersonMedicationViewModel(
     }.flatMapLatest { (person, month) ->
         if (person != null) {
             medicationRepository.getMedicationRecordsByMonth(person.id, month.toString())
+                .onEach { _isLoading.value = false }
         } else {
             flowOf(emptyList())
-        }
-    }.onEach { 
-        if (_currentPerson.value != null) {
-            _isLoading.value = false 
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

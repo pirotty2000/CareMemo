@@ -42,8 +42,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -169,7 +171,7 @@ fun PersonMedicationScreenContent(
                         activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 ) {
-                    Text("カレンダー")
+                    Text(stringResource(R.string.common_tab_calendar))
                 }
                 SegmentedButton(
                     selected = isHistoryMode,
@@ -181,19 +183,19 @@ fun PersonMedicationScreenContent(
                         activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 ) {
-                    Text("履歴")
+                    Text(stringResource(R.string.common_tab_history))
                 }
             }
 
             if (isHistoryMode) {
                 Text(
-                    text = "※ ここでは記録の編集はできません",
+                    text = stringResource(R.string.p_med_msg_no_edit_in_history),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Text(
-                    text = "※ 日付のセルをタップして記録を追加／編集しましょう",
+                    text = stringResource(R.string.p_med_msg_tap_to_edit),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

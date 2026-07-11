@@ -24,7 +24,7 @@ class ImageUtilsTest {
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext()
         runBlocking {
             ImageUtils.clearPhotosDir(context)
         }
