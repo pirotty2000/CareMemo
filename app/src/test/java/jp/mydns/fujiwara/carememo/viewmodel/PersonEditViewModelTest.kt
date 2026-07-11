@@ -5,7 +5,6 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository

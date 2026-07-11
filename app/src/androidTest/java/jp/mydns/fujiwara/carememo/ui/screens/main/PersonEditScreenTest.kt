@@ -47,7 +47,6 @@ class PersonEditScreenTest {
                     year = "",
                     month = "",
                     day = "",
-                    isChanged = false,
                     isValid = false,
                     onLastNameChange = {},
                     onFirstNameChange = {},
@@ -89,7 +88,6 @@ class PersonEditScreenTest {
                     year = "10",
                     month = "5",
                     day = "20",
-                    isChanged = false,
                     isValid = true,
                     onLastNameChange = {},
                     onFirstNameChange = {},
@@ -131,7 +129,6 @@ class PersonEditScreenTest {
                     year = "25",
                     month = "1",
                     day = "1",
-                    isChanged = true,
                     isValid = false, // 未入力があるので false
                     onLastNameChange = {},
                     onFirstNameChange = {},
@@ -169,7 +166,6 @@ class PersonEditScreenTest {
                     year = "25",
                     month = "1",
                     day = "1",
-                    isChanged = true,
                     isValid = true, // 必須項目が埋まっているので true
                     onLastNameChange = {},
                     onFirstNameChange = {},
