@@ -146,6 +146,9 @@ fun SettingsScreen(
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowOverwriteConfirm -> {
+                    // 設定画面では直接的なデータ保存時の重複チェックは発生しないため無視
+                }
                 jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> showPasswordInputDialog = true
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
                     // 全消去成功時など
@@ -159,7 +162,7 @@ fun SettingsScreen(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { showImportUri = it } }
 
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {
@@ -193,7 +196,7 @@ fun SettingsScreen(
     }
 
     if (showEraseConfirm) {
-        DeleteConfirmDialog(
+        AppDeleteConfirmDialog(
             onDismiss = { showEraseConfirm = false },
             onDelete = { viewModel.deleteEndedPersons() },
             title = "個人情報の完全抹消",
@@ -203,7 +206,7 @@ fun SettingsScreen(
     }
 
     if (showDevClearConfirm) {
-        DeleteConfirmDialog(
+        AppDeleteConfirmDialog(
             onDismiss = { showDevClearConfirm = false },
             onDelete = { viewModel.clearAllData(context) },
             title = "(管理者) 全データ消去",
@@ -213,7 +216,7 @@ fun SettingsScreen(
     }
 
     if (showLogClearConfirm) {
-        DeleteConfirmDialog(
+        AppDeleteConfirmDialog(
             onDismiss = { showLogClearConfirm = false },
             onDelete = { viewModel.clearAuditLogs() },
             title = context.getString(R.string.audit_log_clear_confirm_title),
@@ -288,7 +291,7 @@ fun SettingsScreen(
     }
 
     if (showVersionDialog) {
-        InfoDialog(
+        AppInfoDialog(
             title = "バージョン情報",
             message = "CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy",
             onDismiss = { showVersionDialog = false }

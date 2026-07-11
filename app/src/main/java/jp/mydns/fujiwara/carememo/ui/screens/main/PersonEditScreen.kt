@@ -105,7 +105,7 @@ fun PersonEditScreen(
 
     // エラーダイアログ
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {

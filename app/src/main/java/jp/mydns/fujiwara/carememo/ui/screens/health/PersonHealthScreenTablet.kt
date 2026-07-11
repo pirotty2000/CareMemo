@@ -37,7 +37,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
@@ -123,7 +123,7 @@ fun PersonHealthScreenTablet(
     ) { paddingValues ->
         var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
         if (recordToDelete != null) {
-            DeleteConfirmDialog(
+            AppDeleteConfirmDialog(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {

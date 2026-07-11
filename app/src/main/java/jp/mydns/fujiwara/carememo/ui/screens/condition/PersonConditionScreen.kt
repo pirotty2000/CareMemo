@@ -27,8 +27,8 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  * 【使用するComponents】：
  * ・PersonConditionScreenPhone / PersonConditionScreenTablet / PersonConditionScreenContent
  * ・common/PdfExportActionHandler.kt
- * ・base/DeleteConfirmDialog.kt
- * ・base/InfoDialog.kt
+ * ・base/AppDeleteConfirmDialog.kt
+ * ・base/AppInfoDialog.kt
  *
  * 【備考】：
  * 画面サイズ（WindowWidthSizeClass）に基づき、Phone版とTablet版を自動的に切り替える。
@@ -42,12 +42,13 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
-import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
@@ -86,8 +87,33 @@ fun PersonConditionScreen(
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var onConfirmOverwrite by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // アプリからの通知を受け付ける窓口
+    LaunchedEffect(Unit) {
+        conditionViewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is BaseViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                }
+                is BaseViewModel.UiEvent.ShowOverwriteConfirm -> {
+                    onConfirmOverwrite = event.onConfirm
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
+                else -> {}
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -270,7 +296,7 @@ fun PersonConditionScreen(
 
     // 削除確認ダイアログ
     if (recordToDelete != null) {
-        DeleteConfirmDialog(
+        AppDeleteConfirmDialog(
             onDismiss = { recordToDelete = null },
             onDelete = {
                 recordToDelete?.let { record ->
@@ -284,12 +310,37 @@ fun PersonConditionScreen(
     }
 
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {
                 dialogMessage = null
                 dialogTitle = null
+            }
+        )
+    }
+
+    if (onConfirmOverwrite != null) {
+        AppDialog(
+            onDismissRequest = { onConfirmOverwrite = null },
+            title = { Text(stringResource(R.string.common_confirm_overwrite_title)) },
+            text = {
+                AppDialogContent(text = stringResource(R.string.common_confirm_overwrite_message))
+            },
+            confirmButton = {
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_save),
+                    onClick = {
+                        onConfirmOverwrite?.invoke()
+                        onConfirmOverwrite = null
+                    }
+                )
+            },
+            dismissButton = {
+                AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { onConfirmOverwrite = null }
+                )
             }
         )
     }

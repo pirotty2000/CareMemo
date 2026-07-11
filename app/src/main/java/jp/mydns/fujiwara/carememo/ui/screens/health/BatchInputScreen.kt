@@ -138,7 +138,19 @@ fun BatchInputScreen(
                 }
                 is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
-                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                    val processedArgs = event.args.map { arg ->
+                        if (arg is String) {
+                            // 文字列内の "__RES__12345" のようなパターンをすべて探し、実際のリソース文字列に置換する
+                            val regex = "__RES__(\\d+)".toRegex()
+                            regex.replace(arg) { matchResult ->
+                                val resId = matchResult.groupValues[1].toIntOrNull()
+                                if (resId != null) context.getString(resId) else matchResult.value
+                            }
+                        } else {
+                            arg
+                        }
+                    }
+                    dialogMessage = context.getString(event.messageResId, *processedArgs.toTypedArray())
                 }
                 else -> {}
             }
@@ -184,7 +196,7 @@ fun BatchInputScreen(
 
     // 通知ダイアログの表示
     if (dialogMessage != null) {
-        jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog(
+        jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {

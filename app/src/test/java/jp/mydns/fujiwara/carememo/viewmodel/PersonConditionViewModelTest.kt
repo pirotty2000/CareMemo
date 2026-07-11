@@ -73,6 +73,7 @@ class PersonConditionViewModelTest {
         every { userSettingsRepository.defaultRecorderName } returns flowOf("テスト記録者")
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
         every { conditionRepository.getConditionAtVisitByPersonId(any()) } returns flowOf(testRecords)
+        coEvery { conditionRepository.findConditionAtTime(any(), any()) } returns null
         
         viewModel = PersonConditionViewModel(
             conditionRepository,

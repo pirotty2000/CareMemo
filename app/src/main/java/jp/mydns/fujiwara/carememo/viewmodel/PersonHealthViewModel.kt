@@ -94,7 +94,25 @@ class PersonHealthViewModel(
         viewModelScope.launch {
             try {
                 val isUpdate = if (record is HistoryRecord) record.id != 0 else false
+                
+                // --- 重複チェック (新規登録、または日時変更時) ---
+                if (record is HistoryRecord) {
+                    val existing = when (record) {
+                        is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
+                        is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
+                        is GlucoseAndHbA1c -> healthRepository.findGlucoseAndHbA1cAtTime(record.personId, record.recordTime)
+                        else -> null
+                    }
+
+                    // 自分自身以外（IDが異なる）の既存データがある場合は保存をブロック
+                    if (existing != null && (record.id == 0 || existing.id != record.id)) {
+                        showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
+                        return@launch
+                    }
+                }
+
                 performSave(record)
+                sendUiEvent(BaseViewModel.UiEvent.SaveSuccess)
                 showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
             } catch (e: Exception) {
                 showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")

@@ -29,7 +29,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  * ・detail/health/PersonHealthScreenPhone.kt
  * ・detail/health/PersonHealthScreenTablet.kt
  * ・detail/common/PdfExportActionHandler.kt
- * ・base/InfoDialog.kt
+ * ・base/AppInfoDialog.kt
  *
  * 【備考】：
  * カテゴリ間の移動がスムーズに行えるよう、共通のヘッダーUIとナビゲーション構造を採用している。
@@ -45,7 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
@@ -90,8 +90,36 @@ fun PersonHealthScreen(
     val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf) // PDF出力時のデータ無しメッセージ用フォーマット
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var onConfirmOverwrite by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // アプリからの通知を受け付ける窓口
+    LaunchedEffect(Unit) {
+        healthViewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is BaseViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                }
+                is BaseViewModel.UiEvent.ShowOverwriteConfirm -> {
+                    onConfirmOverwrite = event.onConfirm
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
+                is BaseViewModel.UiEvent.SaveSuccess -> {
+                    selectedRecordId = -1
+                }
+                else -> {}
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -116,6 +144,9 @@ fun PersonHealthScreen(
                 is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
+                is BaseViewModel.UiEvent.SaveSuccess -> {
+                    selectedRecordId = -1
                 }
                 else -> {}
             }
@@ -206,12 +237,37 @@ fun PersonHealthScreen(
     }
 
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {
                 dialogMessage = null
                 dialogTitle = null
+            }
+        )
+    }
+
+    if (onConfirmOverwrite != null) {
+        AppDialog(
+            onDismissRequest = { onConfirmOverwrite = null },
+            title = { Text(stringResource(R.string.common_confirm_overwrite_title)) },
+            text = {
+                AppDialogContent(text = stringResource(R.string.common_confirm_overwrite_message))
+            },
+            confirmButton = {
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_save),
+                    onClick = {
+                        onConfirmOverwrite?.invoke()
+                        onConfirmOverwrite = null
+                    }
+                )
+            },
+            dismissButton = {
+                AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { onConfirmOverwrite = null }
+                )
             }
         )
     }

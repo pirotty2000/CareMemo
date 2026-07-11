@@ -10,6 +10,17 @@ import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import io.mockk.every
+import io.mockk.mockk
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -258,5 +269,68 @@ class PersonConditionScreenTest {
         // サムネイルをタップ
         composeTestRule.onNodeWithContentDescription("表情").performClick()
         assert(expandCalled)
+    }
+
+    @Test
+    fun bh03_duplicate_date_shows_error_dialog() {
+        val detailViewModel = mockk<PersonDetailViewModel>(relaxed = true)
+        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
+        
+        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>()
+        every { conditionViewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
+        every { detailViewModel.uiEventFlow } returns MutableSharedFlow<BaseViewModel.UiEvent>().asSharedFlow()
+        
+        // StateFlows の初期値を設定
+        every { conditionViewModel.filteredRecords } returns MutableStateFlow(emptyList())
+        every { conditionViewModel.isLoading } returns MutableStateFlow(false)
+        every { detailViewModel.currentPerson } returns MutableStateFlow(mockPerson)
+        every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
+        every { detailViewModel.personCategorySummary } returns MutableStateFlow(null)
+        every { conditionViewModel.searchQuery } returns MutableStateFlow("")
+        every { conditionViewModel.conditionPhotoMap } returns MutableStateFlow(emptyMap())
+        every { conditionViewModel.currentConditionPhotos } returns MutableStateFlow(emptyList())
+        every { conditionViewModel.isProcessing } returns MutableStateFlow(false)
+        every { detailViewModel.defaultRecorderName } returns MutableStateFlow("テスト者")
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreen(
+                    viewModel = detailViewModel,
+                    conditionViewModel = conditionViewModel,
+                    personId = 1,
+                    widthSizeClass = WindowWidthSizeClass.Compact,
+                    onBack = {},
+                    onNavigateToCategory = {},
+                    onNavigateToPhotoPreview = { _, _, _ -> },
+                    onNavigateToFullScreen = { _, _ -> }
+                )
+            }
+        }
+
+        // 初期描画と LaunchedEffect の起動を待機
+        composeTestRule.waitForIdle()
+
+        // 重複エラーイベントを発生させる
+        composeTestRule.runOnUiThread {
+            runBlocking {
+                uiEventFlow.emit(BaseViewModel.UiEvent.ShowErrorDialogRes(
+                    R.string.common_error_title_save,
+                    R.string.common_err_duplicate_blocked_simple
+                ))
+            }
+        }
+
+        // ダイアログが表示されるまで待機
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("保存エラー").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // ダイアログが表示されているか確認
+        composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
+        composeTestRule.onNodeWithText("閉じる").assertIsDisplayed()
+        
+        // 閉じるボタンをタップしてダイアログが消えることを確認
+        composeTestRule.onNodeWithText("閉じる").performClick()
+        composeTestRule.onNodeWithText("閉じる").assertDoesNotExist()
     }
 }

@@ -8,6 +8,17 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import io.mockk.every
+import io.mockk.mockk
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -260,5 +271,71 @@ class PersonHealthScreenTest {
             .performClick()
 
         assert(expandCalled)
+    }
+
+    @Test
+    fun bh03_duplicate_date_shows_error_dialog() {
+        val detailViewModel = mockk<PersonDetailViewModel>(relaxed = true)
+        val healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
+        
+        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>()
+        every { healthViewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
+        every { detailViewModel.uiEventFlow } returns MutableSharedFlow<BaseViewModel.UiEvent>().asSharedFlow()
+        
+        // StateFlows の初期値を設定
+        val mockPerson = Person(
+            id = 1, 
+            lastName = "山田", 
+            firstName = "太郎", 
+            lastNameFurigana = "ヤマダ", 
+            firstNameFurigana = "タロウ", 
+            birthday = Instant.now()
+        )
+        every { healthViewModel.records } returns MutableStateFlow(emptyList())
+        every { healthViewModel.isLoading } returns MutableStateFlow(false)
+        every { detailViewModel.currentPerson } returns MutableStateFlow(mockPerson)
+        every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
+        every { detailViewModel.personCategorySummary } returns MutableStateFlow(null)
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonHealthScreen(
+                    viewModel = detailViewModel,
+                    healthViewModel = healthViewModel,
+                    initialCategoryType = Category.BP_AND_PULSE,
+                    personId = 1,
+                    widthSizeClass = WindowWidthSizeClass.Compact,
+                    onBack = {},
+                    onNavigateToGraphExpansion = { _, _, _ -> },
+                    onNavigateToCategory = {}
+                )
+            }
+        }
+
+        // 初期描画と LaunchedEffect の起動を待機
+        composeTestRule.waitForIdle()
+
+        // 重複エラーイベントを発生させる
+        composeTestRule.runOnUiThread {
+            runBlocking {
+                uiEventFlow.emit(BaseViewModel.UiEvent.ShowErrorDialogRes(
+                    R.string.common_error_title_save,
+                    R.string.common_err_duplicate_blocked_simple
+                ))
+            }
+        }
+
+        // ダイアログが表示されるまで待機 (タイムアウト 5秒)
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("保存エラー").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // ダイアログが表示されているか確認
+        composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
+        composeTestRule.onNodeWithText("閉じる").assertIsDisplayed()
+        
+        // 閉じるボタンをタップしてダイアログが消えることを確認
+        composeTestRule.onNodeWithText("閉じる").performClick()
+        composeTestRule.onNodeWithText("閉じる").assertDoesNotExist()
     }
 }

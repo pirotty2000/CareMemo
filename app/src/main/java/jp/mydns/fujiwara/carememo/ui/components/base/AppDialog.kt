@@ -19,7 +19,7 @@ package jp.mydns.fujiwara.carememo.ui.components.base
  * 3. ポジティブアクションの色分け：保存系＝Primary、削除系＝Error、その他実行系＝Tertiary。
  *
  * 【想定する利用場所】：
- * アプリ内のすべてのダイアログ（InfoDialog, DeleteConfirmDialog, 各種入力ダイアログ等）の基盤。
+ * アプリ内のすべてのダイアログ（AppInfoDialog, AppDeleteConfirmDialog, 各種入力ダイアログ等）の基盤。
  *
  * 【公開composable】：
  * ・AppDialog : ダイアログの外枠（コンテナ）

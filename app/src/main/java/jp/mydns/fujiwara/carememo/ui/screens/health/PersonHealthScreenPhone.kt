@@ -27,7 +27,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  * ・screens/detail/health/PersonHealthScreenContent.kt
  * ・detail/common/CategorySelectorBar.kt
  * ・detail/common/PersonHeaderTitle.kt
- * ・base/DeleteConfirmDialog.kt
+ * ・base/AppDeleteConfirmDialog.kt
  * ・base/EmptyState.kt
  * ・base/AppTopAppBarColors.kt
  *
@@ -53,7 +53,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.base.DeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
@@ -155,7 +155,7 @@ fun PersonHealthScreenPhone(
     ) { paddingValues ->
         var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
         if (recordToDelete != null) {
-            DeleteConfirmDialog(
+            AppDeleteConfirmDialog(
                 onDismiss = { recordToDelete = null },
                 onDelete = { recordToDelete?.let { onDeleteRecord(it) } }
             )

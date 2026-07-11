@@ -40,7 +40,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
@@ -196,7 +196,7 @@ fun PersonMedicationScreen(
     }
 
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {

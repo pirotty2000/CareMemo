@@ -229,6 +229,12 @@
     <!-- BatchInputScreen -->
     <string name="batch_msg_save_success">健康記録を一括保存しました</string>
     <string name="batch_err_save_failure">一括保存に失敗しました: %1$s</string>
+    <string name="batch_err_duplicate_blocked">指定された日時には、既に以下のデータが登録されています：\n・%1$s\n\n一括入力画面では既存データの更新はできません。内容を修正する場合は履歴画面から行ってください。または、記録日時を変更してください。</string>
+
+    <!-- Overwrite Confirm -->
+    <string name="common_confirm_overwrite_title">データの上書き確認</string>
+    <string name="common_confirm_overwrite_message">指定された日時のデータが既に登録されています。既存のデータを上書きして更新しますか？</string>
+    <string name="common_err_duplicate_blocked_simple">指定された日時には既にデータが存在するため、保存できません。日時を変更するか、既存のデータを履歴から編集してください。</string>
 
     <!-- Audit Log -->
     <string name="settings_msg_audit_log_cleared">操作ログをすべて消去しました。</string>

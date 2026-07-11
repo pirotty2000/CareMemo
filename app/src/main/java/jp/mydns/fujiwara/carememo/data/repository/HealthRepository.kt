@@ -15,8 +15,11 @@ class HealthRepository(
     // --- 身長・体重 ---
     fun getHeightAndWeightByPersonId(personId: Int): Flow<List<HeightAndWeight>> = 
         heightAndWeightDao.getByPersonId(personId)
+
+    suspend fun findHeightAndWeightAtTime(personId: Int, time: java.time.Instant): HeightAndWeight? =
+        heightAndWeightDao.findAtTime(personId, time)
     
-    suspend fun insertHeightAndWeight(item: HeightAndWeight, screenName: String = "", operation: String = "") {
+    suspend fun insertHeightAndWeight(item: HeightAndWeight, screenName: String = "", operation: String = ""): Long {
         val id = heightAndWeightDao.insert(item)
         auditLogRepository?.log(
             screenName = screenName,
@@ -26,6 +29,7 @@ class HealthRepository(
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
             details = "PersonId: ${item.personId}"
         )
+        return id
     }
     
     suspend fun deleteHeightAndWeight(item: HeightAndWeight, screenName: String = "", operation: String = "") {
@@ -43,8 +47,11 @@ class HealthRepository(
     // --- 血圧・脈拍・体温 ---
     fun getBpAndPulseByPersonId(personId: Int): Flow<List<BpAndPulse>> = 
         bpAndPulseDao.getByPersonId(personId)
+
+    suspend fun findBpAndPulseAtTime(personId: Int, time: java.time.Instant): BpAndPulse? =
+        bpAndPulseDao.findAtTime(personId, time)
     
-    suspend fun insertBpAndPulse(item: BpAndPulse, screenName: String = "", operation: String = "") {
+    suspend fun insertBpAndPulse(item: BpAndPulse, screenName: String = "", operation: String = ""): Long {
         val id = bpAndPulseDao.insert(item)
         auditLogRepository?.log(
             screenName = screenName,
@@ -54,6 +61,7 @@ class HealthRepository(
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
             details = "PersonId: ${item.personId}"
         )
+        return id
     }
     
     suspend fun deleteBpAndPulse(item: BpAndPulse, screenName: String = "", operation: String = "") {
@@ -71,8 +79,11 @@ class HealthRepository(
     // --- 血糖値・HbA1c ---
     fun getGlucoseAndHbA1cByPersonId(personId: Int): Flow<List<GlucoseAndHbA1c>> = 
         glucoseAndHbA1cDao.getByPersonId(personId)
+
+    suspend fun findGlucoseAndHbA1cAtTime(personId: Int, time: java.time.Instant): GlucoseAndHbA1c? =
+        glucoseAndHbA1cDao.findAtTime(personId, time)
     
-    suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c, screenName: String = "", operation: String = "") {
+    suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c, screenName: String = "", operation: String = ""): Long {
         val id = glucoseAndHbA1cDao.insert(item)
         auditLogRepository?.log(
             screenName = screenName,
@@ -82,6 +93,7 @@ class HealthRepository(
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
             details = "PersonId: ${item.personId}"
         )
+        return id
     }
     
     suspend fun deleteGlucoseAndHbA1c(item: GlucoseAndHbA1c, screenName: String = "", operation: String = "") {

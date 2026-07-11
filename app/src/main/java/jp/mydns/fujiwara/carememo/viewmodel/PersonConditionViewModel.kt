@@ -133,6 +133,15 @@ class PersonConditionViewModel(
             try {
                 _isProcessing.value = true
                 val isUpdate = record.id != 0
+
+                // --- 重複チェック (新規登録、または日時変更時) ---
+                val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
+                if (existing != null && (record.id == 0 || existing.id != record.id)) {
+                    _isProcessing.value = false // 重複時は処理中フラグを先に下げる
+                    showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
+                    return@launch
+                }
+
                 val newId = conditionRepository.insertConditionAtVisit(record, "PersonCondition", "saveRecord")
                 
                 // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける

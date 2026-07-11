@@ -13,6 +13,9 @@ class ConditionRepository(
 ) {
     fun getConditionAtVisitByPersonId(personId: Int): Flow<List<ConditionAtVisit>> = 
         conditionAtVisitDao.getByPersonId(personId)
+
+    suspend fun findConditionAtTime(personId: Int, time: java.time.Instant): ConditionAtVisit? =
+        conditionAtVisitDao.findAtTime(personId, time)
     
     suspend fun insertConditionAtVisit(item: ConditionAtVisit, screenName: String = "", operation: String = ""): Long {
         val id = conditionAtVisitDao.insert(item)

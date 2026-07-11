@@ -307,7 +307,7 @@ fun DeleteOrRestorePersonScreen(
     }
 
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {

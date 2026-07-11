@@ -310,7 +310,7 @@ fun ConditionDetailPane(
     }
 
     if (photoToDelete != null) {
-        DeleteConfirmDialog(
+        AppDeleteConfirmDialog(
             onDismiss = { photoToDelete = null },
             onDelete = { 
                 photoToDelete?.let { onDeletePhoto(it) }

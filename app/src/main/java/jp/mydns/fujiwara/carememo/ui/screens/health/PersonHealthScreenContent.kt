@@ -115,7 +115,6 @@ fun PersonHealthScreenContent(
                             onCancel = { onSelectedRecordIdChange(-1) },
                             onSaveRecord = { record ->
                                 onSaveRecord(record)
-                                onSelectedRecordIdChange(-1)
                             }
                         )
                     }
@@ -153,7 +152,6 @@ fun PersonHealthScreenContent(
                     onCancel = { onSelectedRecordIdChange(-1) },
                     onSaveRecord = { record ->
                         onSaveRecord(record)
-                        onSelectedRecordIdChange(-1)
                     }
                 )
             }

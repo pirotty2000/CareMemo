@@ -100,7 +100,7 @@ interface HeightAndWeightDao {
     @Query("DELETE FROM height_and_weight_db")
     suspend fun deleteAll()
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<HeightAndWeight>)
 
     // --- 整合性チェック用 ---
@@ -116,6 +116,9 @@ interface HeightAndWeightDao {
 
     @Query("DELETE FROM height_and_weight_db WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
+    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): HeightAndWeight?
 }
 
 @Dao
@@ -142,7 +145,7 @@ interface BpAndPulseDao {
     @Query("DELETE FROM bp_and_pulse_db")
     suspend fun deleteAll()
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<BpAndPulse>)
 
     // --- 整合性チェック用 ---
@@ -158,6 +161,9 @@ interface BpAndPulseDao {
 
     @Query("DELETE FROM bp_and_pulse_db WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("SELECT * FROM bp_and_pulse_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
+    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): BpAndPulse?
 }
 
 @Dao
@@ -184,7 +190,7 @@ interface GlucoseAndHbA1cDao {
     @Query("DELETE FROM glucose_and_hba1c_db")
     suspend fun deleteAll()
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<GlucoseAndHbA1c>)
 
     // --- 整合性チェック用 ---
@@ -200,6 +206,9 @@ interface GlucoseAndHbA1cDao {
 
     @Query("DELETE FROM glucose_and_hba1c_db WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("SELECT * FROM glucose_and_hba1c_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
+    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): GlucoseAndHbA1c?
 }
 
 @Dao
@@ -249,6 +258,9 @@ interface ConditionAtVisitDao {
 
     @Query("DELETE FROM condition_at_visit_db WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("SELECT * FROM condition_at_visit_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
+    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): ConditionAtVisit?
 }
 
 @Dao

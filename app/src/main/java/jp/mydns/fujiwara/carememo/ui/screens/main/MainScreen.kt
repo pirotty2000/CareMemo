@@ -42,7 +42,7 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.ui.components.base.InfoDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.coroutines.launch
@@ -145,7 +145,7 @@ fun MainScreen(
 
     // 通知ダイアログの表示
     if (dialogMessage != null) {
-        InfoDialog(
+        AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
             onDismiss = {

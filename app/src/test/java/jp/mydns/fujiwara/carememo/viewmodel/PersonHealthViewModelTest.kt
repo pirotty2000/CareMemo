@@ -3,6 +3,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import app.cash.turbine.test
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -53,6 +54,9 @@ class PersonHealthViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
+        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
+        coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
+        coEvery { healthRepository.findGlucoseAndHbA1cAtTime(any(), any()) } returns null
         
         viewModel = PersonHealthViewModel(
             healthRepository,

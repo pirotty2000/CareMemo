@@ -28,6 +28,7 @@ abstract class BaseViewModel(
         data class ShowInfoDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
         data class ShowErrorDialog(val title: String, val message: String) : UiEvent
         data class ShowErrorDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
+        data class ShowOverwriteConfirm(val onConfirm: () -> Unit) : UiEvent
         object RequestPassword : UiEvent
         object SaveSuccess : UiEvent
     }
