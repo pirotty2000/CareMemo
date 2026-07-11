@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
@@ -50,7 +51,7 @@ fun ConditionPhotoFullScreen(
     val photos by viewModel.currentConditionPhotos.collectAsState()
 
     if (photos.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Loading"), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color.White)
         }
         return
@@ -71,7 +72,7 @@ fun ConditionPhotoFullScreen(
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().testTag("PhotoFullScreen_Pager"),
             pageSpacing = 16.dp,
             userScrollEnabled = !isAnyImageZoomed
         ) { page ->
@@ -91,7 +92,8 @@ fun ConditionPhotoFullScreen(
             onClick = onBack,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = 32.dp, start = 16.dp),
+                .padding(top = 32.dp, start = 16.dp)
+                .testTag("PhotoFullScreen_BackButton"),
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = Color.Black.copy(alpha = 0.5f),
                 contentColor = Color.White
@@ -106,7 +108,8 @@ fun ConditionPhotoFullScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp),
+                    .padding(bottom = 32.dp)
+                    .testTag("PhotoFullScreen_Caption"),
                 color = Color.Black.copy(alpha = 0.5f),
                 contentColor = Color.White
             ) {
@@ -145,6 +148,7 @@ fun ZoomableImage(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("PhotoFullScreen_Image_${photo.id}")
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = {

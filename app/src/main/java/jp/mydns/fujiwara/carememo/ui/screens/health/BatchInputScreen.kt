@@ -33,6 +33,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -255,7 +256,7 @@ fun BatchInputScreenContent(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -273,12 +274,17 @@ fun BatchInputScreenContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(scrollState)
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .testTag("BatchInputScreen_InputScrollColumn"),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     // 1. 記録日時
                     InputSectionCard(title = "") {
-                        DateTimeInputFields(state = dateTimeState, autoFocusHour = true)
+                        DateTimeInputFields(
+                            state = dateTimeState,
+                            autoFocusHour = true,
+                            modifier = Modifier.testTag("BatchInputScreen_DateTimeInput")
+                        )
                     }
 
                     // 2. 身長・体重
@@ -290,7 +296,7 @@ fun BatchInputScreenContent(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) },
                                 suffix = { Text(AppThresholds.UNIT_HEIGHT) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_HeightField")
                             )
                             AppCompactTextField(
                                 value = weight,
@@ -298,7 +304,7 @@ fun BatchInputScreenContent(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) },
                                 suffix = { Text(AppThresholds.UNIT_WEIGHT) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_WeightField")
                             )
                         }
                     }
@@ -311,14 +317,14 @@ fun BatchInputScreenContent(
                                 onValueChange = onBpSystolicChange,
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_BpSystolicField")
                             )
                             AppCompactTextField(
                                 value = bpDiastolic,
                                 onValueChange = onBpDiastolicChange,
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_BpDiastolicField")
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -328,7 +334,7 @@ fun BatchInputScreenContent(
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_SAT)) },
                                 suffix = { Text(AppThresholds.UNIT_SAT) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_SatField")
                             )
                             AppCompactTextField(
                                 value = pulse,
@@ -336,7 +342,7 @@ fun BatchInputScreenContent(
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) },
                                 suffix = { Text(AppThresholds.UNIT_PULSE) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_PulseField")
                             )
                         }
                         AppCompactTextField(
@@ -345,7 +351,7 @@ fun BatchInputScreenContent(
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
                             suffix = { Text(AppThresholds.UNIT_BODY_TEMP) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().testTag("BatchInputScreen_TempField")
                         )
                     }
 
@@ -358,7 +364,7 @@ fun BatchInputScreenContent(
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) },
                                 suffix = { Text(AppThresholds.UNIT_GLUCOSE) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_GlucoseField")
                             )
                             AppCompactTextField(
                                 value = hba1c,
@@ -366,19 +372,23 @@ fun BatchInputScreenContent(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) },
                                 suffix = { Text(AppThresholds.UNIT_HBA1C) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).testTag("BatchInputScreen_Hba1cField"),
                                 imeAction = ImeAction.Done
                             )
                         }
                     }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f), enabled = !isProcessing) {
+                        OutlinedButton(
+                            onClick = onBack,
+                            modifier = Modifier.weight(1f).testTag("BatchInputScreen_CancelButton"),
+                            enabled = !isProcessing
+                        ) {
                             Text(stringResource(R.string.common_cancel))
                         }
                         Button(
                             onClick = onSave,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("BatchInputScreen_SaveButton"),
                             enabled = !isProcessing && isDateTimeValid && isInputValid
                         ) {
                             if (isProcessing) {

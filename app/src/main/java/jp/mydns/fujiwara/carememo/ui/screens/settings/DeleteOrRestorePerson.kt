@@ -40,6 +40,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -138,7 +139,7 @@ fun DeleteOrRestorePersonScreen(
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -152,7 +153,8 @@ fun DeleteOrRestorePersonScreen(
                                 } else {
                                     viewModel.selectAll(archivedPersons)
                                 }
-                            }
+                            },
+                            modifier = Modifier.testTag("DeleteOrRestore_SelectAllButton")
                         ) {
                             Text(
                                 text = if (selectedIds.size == archivedPersons.size) "全解除" else "全選択",
@@ -181,7 +183,8 @@ fun DeleteOrRestorePersonScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(16.dp)
+                            .testTag("DeleteOrRestore_ActionButton"),
                         colors = if (isDeleteMode) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()
                     ) {
                         val actionLabel = if (isDeleteMode) "完全に抹消する" else "復帰させる"
@@ -200,7 +203,8 @@ fun DeleteOrRestorePersonScreen(
             if (archivedPersons.isEmpty()) {
                 EmptyState(
                     message = "終了した利用者はいません",
-                    icon = Icons.Outlined.PersonOff
+                    icon = Icons.Outlined.PersonOff,
+                    modifier = Modifier.testTag("DeleteOrRestore_EmptyState")
                 )
             } else {
                 val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -209,7 +213,8 @@ fun DeleteOrRestorePersonScreen(
                         // DELETEモード時の警告文
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.testTag("DeleteOrRestore_WarningBanner")
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -227,7 +232,7 @@ fun DeleteOrRestorePersonScreen(
 
                     Box(modifier = Modifier.weight(1f)) {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().testTag("DeleteOrRestore_List"),
                             state = listState
                         ) {
                             items(archivedPersons, key = { it.id }) { person ->
@@ -263,10 +268,12 @@ fun DeleteOrRestorePersonScreen(
                                                     checkedColor = MaterialTheme.colorScheme.error,
                                                     uncheckedColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
                                                 )
-                                            } else CheckboxDefaults.colors()
+                                            } else CheckboxDefaults.colors(),
+                                            modifier = Modifier.testTag("DeleteOrRestore_Checkbox_${person.id}")
                                         )
                                     },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    modifier = Modifier.testTag("DeleteOrRestore_Item_${person.id}")
                                 )
                                 HorizontalDivider(thickness = 0.5.dp)
                             }
@@ -283,7 +290,7 @@ fun DeleteOrRestorePersonScreen(
         AppDialog(
             onDismissRequest = { showFinalConfirmDialog = false },
             icon = { Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("データの完全抹消") },
+            title = { Text("データの完全抹消", modifier = Modifier.testTag("DeleteOrRestore_ConfirmDialog")) },
             text = {
                 AppDialogContent(text = "選択された ${selectedIds.size} 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？")
             },

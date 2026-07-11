@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.AuditLog
@@ -54,7 +55,7 @@ fun AuditLogScreen(
             TopAppBar(
                 title = { Text("操作ログ", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("AuditLog_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -82,18 +83,18 @@ fun AuditLogScreen(
                     message = if (isFiltered) "条件に合うログはありません" else "ログはありません",
                     icon = Icons.Rounded.History,
                     description = if (isFiltered) "フィルター設定を変更してください" else "操作を行うとここに履歴が記録されます",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testTag("AuditLog_EmptyState"),
                 )
             } else {
                 Box(modifier = Modifier.weight(1f)) {
                     LazyColumn(
                         state = lazyListState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testTag("AuditLog_List"),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(auditLogs) { log ->
-                            AuditLogItem(log)
+                            AuditLogItem(log, modifier = Modifier.testTag("AuditLogItem_${log.id}"))
                         }
                     }
 
@@ -136,6 +137,7 @@ private fun AuditLogFilterBar(
                     leadingIcon = if (selectedTable != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     } else null,
+                    modifier = Modifier.testTag("AuditLog_TableFilter")
                 )
                 DropdownMenu(expanded = showTableMenu, onDismissRequest = { showTableMenu = false }) {
                     DropdownMenuItem(
@@ -169,6 +171,7 @@ private fun AuditLogFilterBar(
                     leadingIcon = if (selectedScreen != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     } else null,
+                    modifier = Modifier.testTag("AuditLog_ScreenFilter")
                 )
                 DropdownMenu(expanded = showScreenMenu, onDismissRequest = { showScreenMenu = false }) {
                     DropdownMenuItem(
@@ -194,7 +197,7 @@ private fun AuditLogFilterBar(
         // クリアボタン
         if ((selectedTable != null) || (selectedScreen != null)) {
             item {
-                IconButton(onClick = onClear) {
+                IconButton(onClick = onClear, modifier = Modifier.testTag("AuditLog_FilterClear")) {
                     Icon(
                         Icons.Rounded.ClearAll,
                         contentDescription = "フィルター解除",
@@ -207,9 +210,9 @@ private fun AuditLogFilterBar(
 }
 
 @Composable
-fun AuditLogItem(log: AuditLog) {
+fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         ),

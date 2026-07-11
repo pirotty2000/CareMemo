@@ -45,44 +45,66 @@ class PersonHealthScreenTest {
     // ======================================================================================
 
     @Test
-    fun com01_to_03_header_components_displayed_and_work() {
+    fun com01_header_backButton_works() {
         var backCalled = false
-        var pdfSettingsCalled = false
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonHealthScreenPhone(
+                    personId = 1, currentCategory = Category.BP_AND_PULSE, records = emptyList(), isLoading = false,
+                    currentPerson = null, personCategorySummary = null, isNameMaskingEnabled = false,
+                    preferredShowHistory = true, onPreferredShowHistoryChange = {}, selectedRecordId = -1,
+                    onSelectedRecordIdChange = {}, onBack = { backCalled = true }, 
+                    onNavigateToGraphExpansion = { _, _, _ -> },
+                    onNavigateToCategory = {}, onShowPdfSettings = {}, 
+                    onDeleteRecord = {}, onSaveRecord = {},
+                    snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("HealthScreen_BackButton").assertIsDisplayed().performClick()
+        assert(backCalled)
+    }
+
+    @Test
+    fun com02_header_personInfo_isDisplayed() {
         val mockPerson = Person(
-            id = 1, 
-            lastName = "山田", 
-            firstName = "太郎", 
-            lastNameFurigana = "ヤマダ", 
-            firstNameFurigana = "タロウ", 
+            id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", 
             birthday = Instant.parse("1950-01-01T00:00:00Z")
         )
-
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreenPhone(
                     personId = 1, currentCategory = Category.BP_AND_PULSE, records = emptyList(), isLoading = false,
                     currentPerson = mockPerson, personCategorySummary = null, isNameMaskingEnabled = false,
                     preferredShowHistory = true, onPreferredShowHistoryChange = {}, selectedRecordId = -1,
-                    onSelectedRecordIdChange = {}, onBack = { backCalled = true }, 
-                    onNavigateToGraphExpansion = { _, _, _ -> },
+                    onSelectedRecordIdChange = {}, onBack = {}, onNavigateToGraphExpansion = { _, _, _ -> },
+                    onNavigateToCategory = {}, onShowPdfSettings = {}, onDeleteRecord = {}, onSaveRecord = {},
+                    snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("PersonHeader_NameAndAge", useUnmergedTree = true)
+            .assertIsDisplayed()
+            .assertTextContains("山田", substring = true)
+            .assertTextContains("歳", substring = true)
+    }
+
+    @Test
+    fun com03_header_pdfButton_works() {
+        var pdfSettingsCalled = false
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonHealthScreenPhone(
+                    personId = 1, currentCategory = Category.BP_AND_PULSE, records = emptyList(), isLoading = false,
+                    currentPerson = null, personCategorySummary = null, isNameMaskingEnabled = false,
+                    preferredShowHistory = true, onPreferredShowHistoryChange = {}, selectedRecordId = -1,
+                    onSelectedRecordIdChange = {}, onBack = {}, onNavigateToGraphExpansion = { _, _, _ -> },
                     onNavigateToCategory = {}, onShowPdfSettings = { pdfSettingsCalled = true }, 
                     onDeleteRecord = {}, onSaveRecord = {},
                     snackbarHostState = remember { SnackbarHostState() }
                 )
             }
         }
-
-        // COM-01: 戻るボタン
-        composeTestRule.onNodeWithTag("HealthScreen_BackButton").assertIsDisplayed().performClick()
-        assert(backCalled)
-
-        // COM-02: 利用者情報 (氏名と年齢)
-        composeTestRule.onNodeWithTag("PersonHeader_NameAndAge", useUnmergedTree = true)
-            .assertIsDisplayed()
-            .assertTextContains("山田", substring = true)
-            .assertTextContains("歳", substring = true)
-
-        // COM-03: PDF出力ボタン
         composeTestRule.onNodeWithTag("HealthScreen_PdfButton").assertIsDisplayed().performClick()
         assert(pdfSettingsCalled)
     }

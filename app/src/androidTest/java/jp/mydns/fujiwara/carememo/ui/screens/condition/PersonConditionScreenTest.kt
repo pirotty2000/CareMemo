@@ -140,7 +140,49 @@ class PersonConditionScreenTest {
     // ======================================================================================
 
     @Test
-    fun cp01_to_03_detail_display_works() {
+    fun cp01_dateSelection_isDisplayed_withEra() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    personCategorySummary = null, records = mockRecords, isLoading = false,
+                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
+                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
+                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
+                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
+                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
+                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
+                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        // CP-01: 日付選択表示 (和暦付き)
+        composeTestRule.onNodeWithText("(", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun cp02_memoInputArea_showsExistingMemo() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    personCategorySummary = null, records = mockRecords, isLoading = false,
+                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
+                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
+                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
+                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
+                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
+                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
+                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        // CP-02: メモ入力エリア (閲覧モード)
+        composeTestRule.onNodeWithText("顔色もよく、元気に過ごされています。").assertIsDisplayed()
+    }
+
+    @Test
+    fun cp03_photoList_isDisplayed() {
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreenPhone(
@@ -148,23 +190,14 @@ class PersonConditionScreenTest {
                     personCategorySummary = null, records = mockRecords, isLoading = false,
                     searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = mapOf(1 to true),
                     photos = mockPhotos, isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", 
-                    selectedId = 1, // 既存データ表示モード
-                    onSelectedIdChange = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> }, 
-                    onShowPdfSettings = {}, onDeleteRecord = {}, onSaveRecord = { _, _ -> }, 
-                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
+                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
+                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
+                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
+                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
                 )
             }
         }
-
-        // CP-01: 日付選択表示 (和暦付き)
-        // 履歴リストのヘッダーに和暦が表示されていること
-        composeTestRule.onNodeWithText("(", substring = true).assertIsDisplayed()
-
-        // CP-02: メモ入力エリア (閲覧モード)
-        composeTestRule.onNodeWithText("顔色もよく、元気に過ごされています。").assertIsDisplayed()
-
         // CP-03: 写真リスト表示
         composeTestRule.onNodeWithTag("Condition_PhotoList").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("表情").assertIsDisplayed()

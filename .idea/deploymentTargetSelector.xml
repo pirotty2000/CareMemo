@@ -39,9 +39,9 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="cp01_loadingState_isDisplayed()">
+      <SelectionState runConfigName="All Tests">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-10T10:04:58.757046300Z">
+        <DropdownSelection timestamp="2026-07-11T11:28:50.024521800Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=57080112140" />
@@ -50,9 +50,9 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonMedicationScreenTest">
+      <SelectionState runConfigName="ConditionPhotoFullScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-10T10:04:58.757046300Z">
+        <DropdownSelection timestamp="2026-07-11T11:28:50.024521800Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=57080112140" />
@@ -61,9 +61,9 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonEditScreenTest">
+      <SelectionState runConfigName="GraphExpansionScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-10T10:04:58.757046300Z">
+        <DropdownSelection timestamp="2026-07-11T11:28:50.024521800Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=57080112140" />
@@ -72,9 +72,9 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="SettingsScreenTest">
+      <SelectionState runConfigName="cp02_graph_list_shows_correct_number_of_cards()">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-10T10:04:58.757046300Z">
+        <DropdownSelection timestamp="2026-07-11T11:28:50.024521800Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=57080112140" />
@@ -83,9 +83,9 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="MainScreenTest">
+      <SelectionState runConfigName="bh02_invalid_date_disables_save_button()">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-10T10:04:58.757046300Z">
+        <DropdownSelection timestamp="2026-07-11T11:28:50.024521800Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=57080112140" />

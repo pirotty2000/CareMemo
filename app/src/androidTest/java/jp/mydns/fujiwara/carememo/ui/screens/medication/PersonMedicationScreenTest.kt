@@ -199,10 +199,8 @@ class PersonMedicationScreenTest {
     }
 
     @Test
-    fun bh02_bh03_dialogInteraction_and_Save() {
+    fun bh02_dayClick_opensDialog() {
         var clickedDate: LocalDate? = null
-        var savedRecords: List<MedicationRecord?>? = null
-
         composeTestRule.setContent {
             CareMemoTheme {
                 var showDialogDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -215,60 +213,42 @@ class PersonMedicationScreenTest {
                         onDayClick = { showDialogDate = it; clickedDate = it },
                         snackbarHostState = remember { SnackbarHostState() }
                     )
-                    
                     if (showDialogDate != null) {
                         jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
-                            date = showDialogDate!!,
-                            personId = 1,
-                            records = emptyList(),
-                            onDismiss = { showDialogDate = null },
-                            onConfirm = { savedRecords = it }
+                            date = showDialogDate!!, personId = 1, records = emptyList(),
+                            onDismiss = { showDialogDate = null }, onConfirm = {}
                         )
                     }
                 }
             }
         }
-
-        // --- BH-02: ダイアログの表示 ---
-        // 10日をクリック
-        composeTestRule.onNodeWithTag("Medication_DayCell_2026-07-10")
-            .performScrollTo()
-            .performClick()
-        
+        composeTestRule.onNodeWithTag("Medication_DayCell_2026-07-10").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-
-        // ダイアログ出現を待機
-        composeTestRule.waitUntil(5000) {
-            composeTestRule.onAllNodesWithTag("Medication_Dialog_Save").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // --- BH-03: 保存の動作 ---
-        // ダイアログのアニメーション完了を待つ
-        composeTestRule.waitForIdle()
-        Thread.sleep(500)
-
-        // 「服用」というテキストを持つノード（チップ内の文字）を直接クリック
-        // 画面内で最初に見つかる「服用」テキスト（＝朝の時間枠）をクリックする
-        composeTestRule.onAllNodesWithText("服用")
-            .onFirst()
-            .assertIsDisplayed()
-            .performClick()
-        
-        composeTestRule.waitForIdle()
-
-        // 保存ボタンをクリック
-        composeTestRule.onNodeWithTag("Medication_Dialog_Save")
-            .assertIsDisplayed()
-            .performClick()
-        
-        composeTestRule.waitForIdle()
-        
-        // コールバック結果を待機
-        composeTestRule.waitUntil(3000) { savedRecords != null }
-        
-        // アサーション
+        composeTestRule.onNodeWithTag("Medication_Dialog_Save").assertIsDisplayed()
         assert(clickedDate == LocalDate.of(2026, 7, 10))
+    }
+
+    @Test
+    fun bh03_dialogSave_callsCallback() {
+        var savedRecords: List<MedicationRecord?>? = null
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
+                    date = LocalDate.of(2026, 7, 10),
+                    personId = 1,
+                    records = emptyList(),
+                    onDismiss = {},
+                    onConfirm = { savedRecords = it }
+                )
+            }
+        }
+        // 「服用」テキスト（朝の枠）をクリック
+        composeTestRule.onAllNodesWithText("服用").onFirst().performClick()
+        // 保存ボタンをクリック
+        composeTestRule.onNodeWithTag("Medication_Dialog_Save").performClick()
+        composeTestRule.waitForIdle()
+        
         assert(savedRecords != null)
-        assert(savedRecords!![0]?.status == 2) // 朝(index 0) が 服用(2)
+        assert(savedRecords!![0]?.status == 2)
     }
 }

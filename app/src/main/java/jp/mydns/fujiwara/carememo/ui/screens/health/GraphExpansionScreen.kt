@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -116,13 +117,19 @@ fun GraphExpansionScreen(
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("GraphExpansion_BackButton")
+                    ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), modifier = Modifier.size(20.dp))
                     }
                     Text(
                         text = "${currentPerson?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${stringResource(category.displayNameRes)}",
                         style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1
+                        maxLines = 1,
+                        modifier = Modifier.testTag("GraphExpansion_HeaderTitle")
                     )
                 }
             }
@@ -130,16 +137,20 @@ fun GraphExpansionScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             if (isLoading) {
-                LoadingScreen()
+                Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_Loading")) {
+                    LoadingScreen()
+                }
             } else if (records.isEmpty()) {
-                EmptyState(
-                    message = stringResource(R.string.p_detail_empty_records),
-                    icon = Icons.AutoMirrored.Rounded.ShowChart
-                )
+                Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_EmptyState")) {
+                    EmptyState(
+                        message = stringResource(R.string.p_detail_empty_records),
+                        icon = Icons.AutoMirrored.Rounded.ShowChart
+                    )
+                }
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag("GraphExpansion_GraphList"),
                     contentPadding = PaddingValues(2.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -156,7 +167,8 @@ fun GraphExpansionScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, borderColor, MaterialTheme.shapes.medium),
+                                .border(1.dp, borderColor, MaterialTheme.shapes.medium)
+                                .testTag("GraphExpansion_GraphCard_$index"),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
                             Box(modifier = Modifier.padding(4.dp).height(210.dp)) { // 360dp高に最適化

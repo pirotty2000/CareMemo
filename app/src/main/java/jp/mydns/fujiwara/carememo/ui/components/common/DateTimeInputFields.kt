@@ -89,6 +89,7 @@ fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputSt
 @Composable
 fun DateTimeInputFields(
     state: DateTimeInputState,
+    modifier: Modifier = Modifier,
     autoFocusHour: Boolean = true
 ) {
     DateTimeInputFields(
@@ -102,6 +103,7 @@ fun DateTimeInputFields(
         onHourChange = { state.hour.value = it },
         minute = state.minute.value,
         onMinuteChange = { state.minute.value = it },
+        modifier = modifier,
         autoFocusHour = autoFocusHour
     )
 }
@@ -118,9 +120,10 @@ fun DateTimeInputFields(
     onHourChange: (String) -> Unit,
     minute: String,
     onMinuteChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     autoFocusHour: Boolean = true
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = "記録日時",
             style = MaterialTheme.typography.labelMedium,

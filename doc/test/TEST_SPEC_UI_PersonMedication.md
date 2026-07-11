@@ -42,3 +42,12 @@
 - `Medication_MonthPrev` / `Medication_MonthNext`: 月移動ボタン
 - `Medication_MonthText`: 現在の年月表示
 - `Medication_Dialog_Save` / `Medication_Dialog_Cancel`: ダイアログボタン
+
+## 5. 実装状況
+今回のUIテスト実装（`PersonMedicationScreenTest.kt`）において、定義されたすべての項目が実装され、検証されている。
+
+| セクション | 項目 ID | ステータス | 備考 |
+|:---|:---|:---:|:---|
+| 1. 共通コンポーネント | COM-01 〜 COM-04 | ✅ 実装済み | ヘッダーおよびカテゴリ選択の動作。 |
+| 2. コンポーネント単体 | CP-01 〜 CP-06 | ✅ 実装済み | カレンダー・履歴の切替、年月表示。 |
+| 3. 画面挙動・結合 | BH-01 〜 BH-03 | ✅ 実装済み | 前後月移動、ダイアログ表示と保存動作。 |
