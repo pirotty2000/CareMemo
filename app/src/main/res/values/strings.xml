@@ -4,6 +4,7 @@
     <string name="common_close">閉じる</string>
     <string name="common_save">保存</string>
     <string name="common_cancel">キャンセル</string>
+    <string name="common_continue_editing">編集を続ける</string>
     <string name="common_clear">クリア</string>
     <string name="common_back">戻る</string>
     <string name="common_delete">削除</string>

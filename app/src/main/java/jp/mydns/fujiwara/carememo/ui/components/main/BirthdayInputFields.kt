@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
@@ -141,7 +142,9 @@ fun BirthdayInputFields(
                     suffix = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded)
                     },
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    modifier = Modifier
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        .testTag("PersonEdit_EraSelector")
                 )
                 ExposedDropdownMenu(
                     expanded = eraExpanded,
@@ -163,7 +166,7 @@ fun BirthdayInputFields(
             AppCompactTextField(
                 value = state.year.value,
                 onValueChange = { state.year.value = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("PersonEdit_BirthYear"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = if (state.era.value == BirthEra.AD) 4 else 2,
                 isError = state.isYearError,
@@ -180,7 +183,7 @@ fun BirthdayInputFields(
             AppCompactTextField(
                 value = state.month.value,
                 onValueChange = { state.month.value = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("PersonEdit_BirthMonth"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = 2,
                 isError = state.isMonthError,
@@ -191,7 +194,7 @@ fun BirthdayInputFields(
             AppCompactTextField(
                 value = state.day.value,
                 onValueChange = { state.day.value = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("PersonEdit_BirthDay"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = 2,
                 isError = state.isDayError,

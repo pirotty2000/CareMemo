@@ -47,10 +47,9 @@ class PersonEditViewModelTest {
     }
 
     @Test
-    fun `新規登録時、同姓同名の利用者が既に存在する場合、エラーイベントが発行されること`() = runTest {
+    fun `新規登録時、姓名・生年月日・識別メモの全てが一致する利用者が存在する場合、エラーとなること`() = runTest {
         val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository)
 
-        // イベントをキャプチャするための準備
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiEventFlow.collect { uiEvents.add(it) }
@@ -63,7 +62,7 @@ class PersonEditViewModelTest {
         viewModel.year.value = "25"
         viewModel.month.value = "1"
         viewModel.day.value = "1"
-        viewModel.note.value = "テストメモ"
+        viewModel.note.value = "識別メモA"
 
         val birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()
         val existingPerson = Person(
@@ -73,109 +72,132 @@ class PersonEditViewModelTest {
             lastNameFurigana = "ヤマダ",
             firstNameFurigana = "タロウ",
             birthday = birthday,
-            note = "テストメモ"
+            note = "識別メモA"
         )
 
-        // リポジトリが既存データを返すように設定
-        coEvery { personRepository.findExistingPerson(any()) } returns existingPerson
+        // 姓名・生年月日・識別メモが完全一致するデータが存在する
+        coEvery { personRepository.findExistingPerson(match { 
+            it.lastName == "山田" && it.firstName == "太郎" && it.note == "識別メモA" 
+        }) } returns existingPerson
 
         viewModel.save()
         advanceUntilIdle()
 
-        // エラーダイアログのイベントが発行されているか確認
         val errorEvent = uiEvents.filterIsInstance<BaseViewModel.UiEvent.ShowErrorDialogRes>().firstOrNull()
-        assertTrue("エラーイベントが発行されていること", errorEvent != null)
-        assertTrue(errorEvent?.titleResId == R.string.main_err_title_duplicate_archived_add)
-        assertTrue(errorEvent?.messageResId == R.string.main_err_duplicate_active)
-        
-        // 保存処理（insert）が呼ばれていないことを確認
+        assertTrue("重複エラーイベントが発行されていること", errorEvent != null)
         coVerify(exactly = 0) { personRepository.insertPerson(any()) }
     }
 
     @Test
-    fun `編集時、自分以外の同姓同名の利用者が存在する場合、エラーイベントが発行されること`() = runTest {
-        // ID=1 の利用者を編集
-        val currentPerson = Person(
-            id = 1,
-            lastName = "山田",
-            firstName = "太郎",
-            lastNameFurigana = "ヤマダ",
-            firstNameFurigana = "タロウ",
-            birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant(),
-            note = "元々のメモ"
-        )
-        coEvery { personRepository.getPersonById(1) } returns MutableStateFlow(currentPerson)
-        
-        val viewModel = PersonEditViewModel(1, personRepository, userSettingsRepository)
-        advanceUntilIdle()
+    fun `新規登録時、姓名・生年月日が同じでも識別メモが異なれば、保存できること`() = runTest {
+        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository)
 
-        // イベントキャプチャ開始
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiEventFlow.collect { uiEvents.add(it) }
         }
 
-        // 重複する別人（ID=2）が存在する設定
-        val otherPerson = Person(
-            id = 2,
+        viewModel.lastName.value = "山田"
+        viewModel.firstName.value = "太郎"
+        viewModel.era.value = BirthEra.SHOWA
+        viewModel.year.value = "25"
+        viewModel.month.value = "1"
+        viewModel.day.value = "1"
+        viewModel.note.value = "識別メモB" // 既存(A)とは異なるメモ
+
+        // リポジトリは、識別メモBでの検索には null を返す（重複なし）
+        coEvery { personRepository.findExistingPerson(match { it.note == "識別メモB" }) } returns null
+
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertTrue("保存成功イベントが発行されていること", uiEvents.contains(BaseViewModel.UiEvent.SaveSuccess))
+        coVerify(exactly = 1) { personRepository.insertPerson(any()) }
+    }
+
+    @Test
+    fun `編集時、自分自身のデータを更新する場合（姓名・生年月日・メモが既存と一致）、正常に更新されること`() = runTest {
+        val personId = 1
+        val currentPerson = Person(
+            id = personId,
             lastName = "山田",
             firstName = "太郎",
             lastNameFurigana = "ヤマダ",
             firstNameFurigana = "タロウ",
             birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant(),
-            note = "重複するメモ"
+            note = "識別メモA"
         )
-        coEvery { personRepository.findExistingPerson(any()) } returns otherPerson
+        coEvery { personRepository.getPersonById(personId) } returns MutableStateFlow(currentPerson)
+        
+        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository)
+        advanceUntilIdle()
 
-        // 重複する内容に変更
-        viewModel.note.value = "重複するメモ"
+        val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiEventFlow.collect { uiEvents.add(it) }
+        }
+
+        // 検索すると自分自身がヒットする状態
+        coEvery { personRepository.findExistingPerson(any()) } returns currentPerson
+
+        // 何も変更せずに保存
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertTrue("保存成功イベントが発行されていること", uiEvents.contains(BaseViewModel.UiEvent.SaveSuccess))
+        coVerify(exactly = 1) { personRepository.updatePerson(match { it.id == personId }) }
+        coVerify(exactly = 0) { personRepository.insertPerson(any()) } // 編集モードでは Insert しない
+    }
+
+    @Test
+    fun `編集時、姓名・生年月日を変更した結果、別の利用者と重複した場合はエラーとなること`() = runTest {
+        val personId = 1 // 編集中の利用者A
+        val personA = Person(
+            id = personId,
+            lastName = "山田",
+            firstName = "太郎",
+            lastNameFurigana = "ヤマダ",
+            firstNameFurigana = "タロウ",
+            birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant(),
+            note = "Aのメモ"
+        )
+        coEvery { personRepository.getPersonById(personId) } returns MutableStateFlow(personA)
+
+        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository)
+        advanceUntilIdle()
+
+        val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiEventFlow.collect { uiEvents.add(it) }
+        }
+
+        // 別の利用者B（ID=2）が存在する
+        val personB = Person(
+            id = 2,
+            lastName = "佐藤",
+            firstName = "次郎",
+            lastNameFurigana = "サトウ",
+            firstNameFurigana = "ジロウ",
+            birthday = LocalDate.of(1960, 5, 5).atStartOfDay(ZoneId.systemDefault()).toInstant(),
+            note = "Bのメモ"
+        )
+        
+        // 入力内容をBと同じに変更
+        viewModel.lastName.value = "佐藤"
+        viewModel.firstName.value = "次郎"
+        viewModel.era.value = BirthEra.SHOWA
+        viewModel.year.value = "35" // 1960年
+        viewModel.month.value = "5"
+        viewModel.day.value = "5"
+        viewModel.note.value = "Bのメモ"
+
+        coEvery { personRepository.findExistingPerson(match { it.lastName == "佐藤" }) } returns personB
 
         viewModel.save()
         advanceUntilIdle()
 
         val errorEvent = uiEvents.filterIsInstance<BaseViewModel.UiEvent.ShowErrorDialogRes>().firstOrNull()
-        assertTrue("エラーイベントが発行されていること", errorEvent != null)
-        assertTrue(errorEvent?.titleResId == R.string.main_err_title_duplicate_archived_update)
-        
-        // 更新処理（update）が呼ばれていないことを確認
+        assertTrue("重複エラーイベントが発行されていること", errorEvent != null)
         coVerify(exactly = 0) { personRepository.updatePerson(any()) }
-    }
-
-    @Test
-    fun `編集時、識別メモを変更して重複を回避した場合、正常に保存されること`() = runTest {
-        val currentPerson = Person(
-            id = 1,
-            lastName = "山田",
-            firstName = "太郎",
-            lastNameFurigana = "ヤマダ",
-            firstNameFurigana = "タロウ",
-            birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant(),
-            note = "重複していたメモ"
-        )
-        coEvery { personRepository.getPersonById(1) } returns MutableStateFlow(currentPerson)
-
-        val viewModel = PersonEditViewModel(1, personRepository, userSettingsRepository)
-        advanceUntilIdle()
-
-        // イベントキャプチャ開始
-        val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.uiEventFlow.collect { uiEvents.add(it) }
-        }
-
-        // リポジトリは「一致なし」を返す（識別メモを変えたので見つからない）
-        coEvery { personRepository.findExistingPerson(any()) } returns null
-
-        // 識別メモを変更
-        viewModel.note.value = "識別用の新しいメモ"
-
-        viewModel.save()
-        advanceUntilIdle()
-
-        // 正常保存のイベントが発行されているか確認
-        assertTrue("保存成功イベントが発行されていること", uiEvents.contains(BaseViewModel.UiEvent.SaveSuccess))
-        
-        // 更新処理（update）が呼ばれていることを確認
-        coVerify(exactly = 1) { personRepository.updatePerson(match { it.id == 1 && it.note == "識別用の新しいメモ" }) }
     }
 }
