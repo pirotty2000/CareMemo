@@ -112,7 +112,7 @@ class PersonHealthViewModel(
                 }
 
                 performSave(record)
-                sendUiEvent(BaseViewModel.UiEvent.SaveSuccess)
+                sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
             } catch (e: Exception) {
                 showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
