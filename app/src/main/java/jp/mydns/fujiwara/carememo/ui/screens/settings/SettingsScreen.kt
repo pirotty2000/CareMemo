@@ -5,29 +5,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
  *
  * 【画面名】
  * 設定・管理画面
- *
- * 【役割】
- * アプリ全体の動作設定、利用者のデータ管理（復元・抹消）、セキュリティ設定、
- * およびバックアップ・リストア等のシステムメンテナンス機能を提供する画面。
- *
- * 【主な機能】
- * ・表示・記録設定：氏名の伏せ字表示（マスキング）の切替、デフォルト記録者名の設定。
- * ・利用者管理：利用終了（論理削除）した利用者の復帰操作、およびデータの完全抹消（物理削除）。
- * ・データ管理：全データと写真のバックアップ（Zip形式）および復元（インポート）機能。
- * ・セキュリティ：生体認証によるアプリロックの制御、再ロック待機時間の設定、バックアップのパスワード保護。
- * ・テーマ設定：アプリ全体の配色モード（ライト/ダーク/システム連携等）の切り替え。
- * ・システム情報：操作ヘルプの閲覧、アプリのバージョン情報確認、および全データのリセット機能。
- *
- * 【遷移】
- * ← MainScreen（戻るボタン）
- * → UserRestoreScreen（「利用終了者の復帰」選択時）
- *
- * 【使用するViewModel】
- * SettingsViewModel
- *
- * 【備考】
- * ストレージアクセスフレームワーク（SAF）を利用したファイル入出力や、生体認証（BiometricPrompt）の制御、
- * 外部アプリ連携時のロックバイパス管理など、アプリの基盤となる重要な管理ロジックを担当する。
  */
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -147,12 +124,9 @@ fun SettingsScreen(
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowOverwriteConfirm -> {
-                    // 設定画面では直接的なデータ保存時の重複チェックは発生しないため無視
-                }
+                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowOverwriteConfirm -> {}
                 jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> showPasswordInputDialog = true
                 is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
-                    // 全消去成功時など
                     onBack()
                 }
             }
@@ -312,7 +286,6 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     if ((minutes == -1) && (lockTimeoutMinutes != -1)) {
-                                        // 「ロックしない」を新しく選ぶ場合は認証を求める
                                         if (viewModel.canAuthenticate(context)) {
                                             onRequireAuthentication(
                                                 R.string.security_auth_title,
@@ -485,7 +458,6 @@ fun SettingsScreen(
                 viewModel.setBackupPasswordEnabled(true)
                 isPasswordVisible = false
             } else {
-                // OFFにする場合は認証を求める
                 if (viewModel.canAuthenticate(context)) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
@@ -504,10 +476,8 @@ fun SettingsScreen(
         },
         onPasswordVisibilityToggle = {
             if (isPasswordVisible) {
-                // 非表示にする場合は認証不要
                 isPasswordVisible = false
             } else {
-                // 表示する場合は、デバイスが認証に対応していれば認証を求める
                 if (viewModel.canAuthenticate(context)) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
@@ -534,7 +504,6 @@ fun SettingsScreen(
             if (enabled) {
                 viewModel.setBiometricEnabled(context, true)
             } else {
-                // OFFにする場合は認証を求める
                 if (viewModel.canAuthenticate(context)) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
@@ -561,7 +530,6 @@ fun SettingsScreen(
             showVersionDialog = true
         },
         onClearAllClick = {
-            // 実行前にまず認証を求める
             if (viewModel.canAuthenticate(context)) {
                 onRequireAuthentication(
                     R.string.security_auth_title,
@@ -590,7 +558,6 @@ fun SettingsScreen(
 
 /**
  * 設定画面のUIレイアウト本体。
- * ViewModelに依存しないStatelessな設計により、プレビューを可能にしている。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -649,7 +616,7 @@ fun SettingsScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .navigationBarsPadding() // スクロール最下部がナビゲーションバーに隠れないようにする
+                    .navigationBarsPadding()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -717,7 +684,7 @@ fun SettingsScreenContent(
 
     if (isProcessing) {
         AppDialog(
-            onDismissRequest = { }, // 処理中は閉じられない
+            onDismissRequest = { },
             modifier = Modifier.testTag("Settings_ProcessingDialog"),
             properties = androidx.compose.ui.window.DialogProperties(
                 dismissOnBackPress = false,
@@ -739,15 +706,11 @@ fun SettingsScreenContent(
                     }
                 }
             },
-            confirmButton = {} // 処理完了までアクションなし
+            confirmButton = {}
         )
     }
 }
 
-/**
- * 表示・記録に関する設定セクション。
- * 氏名のマスキング設定や、記録時に入力されるデフォルトの名前を管理する。
- */
 @Composable
 private fun DisplayAndRecordingSection(
     isMaskingEnabled: Boolean,
@@ -774,10 +737,6 @@ private fun DisplayAndRecordingSection(
     }
 }
 
-/**
- * 利用者データに関する管理セクション。
- * 論理削除された利用者の復帰や、データの完全抹消操作を管理する。
- */
 @Composable
 private fun UserManagementSection(
     endedUserCount: Int,
@@ -808,10 +767,6 @@ private fun UserManagementSection(
     }
 }
 
-/**
- * データのバックアップと復元に関するセクション。
- * パスワード保護の設定、Zip形式でのエクスポート、およびインポート機能を管理する。
- */
 @Composable
 private fun DataManagementSection(
     isBackupPasswordEnabled: Boolean,
@@ -884,10 +839,6 @@ private fun DataManagementSection(
     }
 }
 
-/**
- * アプリのセキュリティに関するセクション。
- * 生体認証ロックの有効化や、自動再ロックまでの待機時間を管理する。
- */
 @Composable
 private fun SecuritySection(
     isBiometricEnabled: Boolean,
@@ -912,10 +863,6 @@ private fun SecuritySection(
     }
 }
 
-/**
- * アプリの表示テーマに関するセクション。
- * ダークモードやライトモード、システム連携などの配色設定を管理する。
- */
 @Composable
 private fun ThemeSection(
     themeSetting: ThemeSetting,
@@ -943,9 +890,6 @@ private fun ThemeSection(
     }
 }
 
-/**
- * 操作ヘルプやアプリ情報に関するセクション。
- */
 @Composable
 private fun OtherSection(
     onVersionClick: () -> Unit
@@ -959,9 +903,6 @@ private fun OtherSection(
     }
 }
 
-/**
- * アプリデータのリセットに関するセクション。
- */
 @Composable
 private fun ResetSection(
     onClearAllClick: () -> Unit,
@@ -1026,6 +967,7 @@ private fun ResetSection(
             leadingContent = { Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null) },
             modifier = Modifier.clickable { onCheckIntegrity() }.testTag("Settings_IntegrityCheckButton")
         )
+
         ListItem(
             headlineContent = { Text("[テスト] 不整合データを挿入") },
             supportingContent = { Text("検証用の孤立レコード(バイタル)を1件作成します") },
@@ -1044,9 +986,6 @@ private fun ResetSection(
     }
 }
 
-/**
- * 設定画面の各セクションを共通のスタイル（背景、タイトル、余白）で描画するための枠組み。
- */
 @Composable
 private fun SettingsSection(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1096,52 +1035,6 @@ fun SettingsScreenPreview() {
             isDeveloperModeEnabled = true,
             isProcessing = false,
             processingProgress = 0,
-            onBack = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SettingsScreenProcessingPreview() {
-    CareMemoTheme {
-        SettingsScreenContent(
-            snackbarHostState = remember { SnackbarHostState() },
-            isMaskingEnabled = false,
-            localRecorderName = "記録者名",
-            onMaskingChange = {},
-            onRecorderNameChange = {},
-            endedUserCount = 2,
-            onNavigateToRestore = {},
-            onEraseClick = {},
-            isBackupPasswordEnabled = true,
-            localBackupPassword = "password",
-            isPasswordValid = true,
-            isPasswordVisible = false,
-            onBackupPasswordEnabledChange = {},
-            onBackupPasswordChange = {},
-            onPasswordVisibilityToggle = {},
-            onExportClick = {},
-            onImportClick = {},
-            isBiometricEnabled = true,
-            lockTimeoutMinutes = 5,
-            onBiometricEnabledChange = {},
-            onTimeoutClick = {},
-            themeSetting = ThemeSetting.SYSTEM,
-            onThemeClick = {},
-            onVersionClick = {},
-            onClearAllClick = {},
-            onCheckIntegrity = {},
-            onInsertTestInconsistency = {},
-            auditLogRetentionDays = 30,
-            auditLogCount = 120,
-            onRetentionClick = {},
-            onViewLogsClick = {},
-            onRotateLogsClick = {},
-            onClearLogsClick = {},
-            isDeveloperModeEnabled = true,
-            isProcessing = true,
-            processingProgress = 45,
             onBack = {}
         )
     }

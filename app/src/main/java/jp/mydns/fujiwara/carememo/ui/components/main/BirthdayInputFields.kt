@@ -24,11 +24,11 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 /**
  * 生年月日の元号定義
@@ -65,10 +65,9 @@ class BirthdayInputState(
         }
 
         return try {
-            val instant = LocalDate.of(westernYear, m, d)
-                .atStartOfDay(ZoneId.systemDefault())
+            LocalDate.of(westernYear, m, d)
+                .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
-            DateTimeUtils.normalizeBirthday(instant)
         } catch (_: Exception) {
             null
         }

@@ -9,13 +9,13 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 /**
  * 利用者の新規登録・編集画面用の ViewModel
@@ -63,7 +63,8 @@ class PersonEditViewModel(
                 firstNameFurigana.value = person.firstNameFurigana
                 note.value = person.note
 
-                val date = person.birthday.atZone(ZoneId.systemDefault()).toLocalDate()
+                // 誕生日は常に UTC 基準で読み込む
+                val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
                 val (initialEra, initialYearText) = calculateEraAndYear(date)
                 era.value = initialEra
                 year.value = initialYearText
@@ -124,7 +125,7 @@ class PersonEditViewModel(
             currentMonth.isNotBlank() || currentDay.isNotBlank()
         } else {
             val p = initialPerson!!
-            val date = p.birthday.atZone(ZoneId.systemDefault()).toLocalDate()
+            val date = p.birthday.atZone(ZoneOffset.UTC).toLocalDate()
             val (initEra, initYear) = calculateEraAndYear(date)
 
             currentLastName != p.lastName ||
@@ -237,10 +238,9 @@ class PersonEditViewModel(
         }
 
         return try {
-            val instant = LocalDate.of(westernYear, m, d)
-                .atStartOfDay(ZoneId.systemDefault())
+            LocalDate.of(westernYear, m, d)
+                .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
-            DateTimeUtils.normalizeBirthday(instant)
         } catch (_: Exception) {
             null
         }

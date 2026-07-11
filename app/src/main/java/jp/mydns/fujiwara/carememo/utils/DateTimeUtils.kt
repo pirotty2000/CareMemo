@@ -5,6 +5,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.chrono.JapaneseDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
@@ -86,19 +87,21 @@ object DateTimeUtils {
     }
 
     /**
-     * 誕生日から年齢を計算する
+     * 誕生日から年齢を計算する。
+     * 時差の影響を避けるため、誕生日は常に UTC として扱う。
      */
     fun calculateAge(birthday: Instant): Int {
-        val birthDate = birthday.atZone(DEFAULT_ZONE).toLocalDate()
-        val now = LocalDate.now()
+        val birthDate = birthday.atZone(ZoneOffset.UTC).toLocalDate()
+        val now = LocalDate.now(DEFAULT_ZONE)
         return java.time.Period.between(birthDate, now).years
     }
 
     /**
-     * インスタントを和暦形式でフォーマットする (例: 昭和25年1月1日)
+     * 誕生日（Instant）を和暦形式でフォーマットする (例: 昭和25年1月1日)
+     * 時差の影響を避けるため UTC として扱う。
      */
     fun formatDateJapaneseEra(instant: Instant): String {
-        val localDate = instant.atZone(DEFAULT_ZONE).toLocalDate()
+        val localDate = instant.atZone(ZoneOffset.UTC).toLocalDate()
         val japaneseDate = JapaneseDate.from(localDate)
         return japaneseDate.format(JAPANESE_ERA_FULL_FORMATTER)
     }
@@ -114,11 +117,12 @@ object DateTimeUtils {
     fun getCurrentPhotoCaption(): String = formatPhotoCaption(Instant.now())
 
     /**
-     * 誕生日が現在から指定された日数以内（誕生日を含む）かどうかを判定する
+     * 誕生日が現在から指定された日数以内（誕生日を含む）かどうかを判定する。
+     * 時差の影響を避けるため誕生日は UTC。
      */
     fun isBirthdaySoon(birthday: Instant, daysIn: Int = 30): Boolean {
         val today = LocalDate.now(DEFAULT_ZONE)
-        val birthDate = birthday.atZone(DEFAULT_ZONE).toLocalDate()
+        val birthDate = birthday.atZone(ZoneOffset.UTC).toLocalDate()
 
         var nextBirthday = birthDate.withYear(today.year)
         if (nextBirthday.isBefore(today)) {
@@ -134,15 +138,16 @@ object DateTimeUtils {
      */
     fun isBirthdayToday(birthday: Instant): Boolean {
         val today = LocalDate.now(DEFAULT_ZONE)
-        val birthDate = birthday.atZone(DEFAULT_ZONE).toLocalDate()
+        val birthDate = birthday.atZone(ZoneOffset.UTC).toLocalDate()
         return today.monthValue == birthDate.monthValue && today.dayOfMonth == birthDate.dayOfMonth
     }
 
     /**
      * 誕生日を表示用にフォーマットする (例: 1950年1月1日 (昭和25年))
+     * 時差の影響を避けるため UTC。
      */
     fun formatBirthday(birthday: Instant): String {
-        val date = birthday.atZone(DEFAULT_ZONE).toLocalDate()
+        val date = birthday.atZone(ZoneOffset.UTC).toLocalDate()
         val japaneseDate = JapaneseDate.from(date)
         val eraName = japaneseDate.format(ERA_NAME_FORMATTER)
         val eraYear = japaneseDate[ChronoField.YEAR_OF_ERA]
@@ -150,12 +155,14 @@ object DateTimeUtils {
     }
 
     /**
-     * 生年月日を正規化する（時刻情報を切り捨てて UTC 00:00:00 に固定する）
-     * 同姓同名・同生年月日の重複判定を確実にするために使用。
+     * 生年月日を正規化する（時刻情報を切り捨てて UTC 00:00:00 に固定する）。
+     * 入力元がいかなるタイムゾーンであっても、日付部分のみを UTC に固定して保存する。
      */
     fun normalizeBirthday(instant: Instant): Instant {
+        // 入力時のタイムゾーンにおける「日付」を取得
         val localDate = instant.atZone(DEFAULT_ZONE).toLocalDate()
-        return localDate.atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+        // その日付の 00:00:00 UTC を作成して返す
+        return localDate.atStartOfDay(ZoneOffset.UTC).toInstant()
     }
 
     /**
