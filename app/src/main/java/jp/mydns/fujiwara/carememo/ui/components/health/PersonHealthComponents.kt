@@ -228,7 +228,18 @@ fun HealthRecordDetailPane(
     var isEditing by remember(recordId) { mutableStateOf(recordId == 0) }
     val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
-    var heightText by remember(recordId) { mutableStateOf(if (record is HeightAndWeight) record.height?.toString() ?: "" else "") }
+    var heightText by remember(recordId, category, records) {
+        val initialValue = if (record is HeightAndWeight) {
+            record.height?.toString() ?: ""
+        } else if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
+            records.filterIsInstance<HeightAndWeight>()
+                .filter { it.height != null }
+                .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
+        } else {
+            ""
+        }
+        mutableStateOf(initialValue)
+    }
     var weightText by remember(recordId) { mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "") }
     var bpSystolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "") }
     var bpDiastolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "") }
@@ -240,7 +251,17 @@ fun HealthRecordDetailPane(
 
     // 変更検知用の初期状態
     val initialDateTime = remember(recordId) { record?.recordTime }
-    val initialHeight = remember(recordId) { if (record is HeightAndWeight) record.height?.toString() ?: "" else "" }
+    val initialHeight = remember(recordId, category, records) {
+        if (record is HeightAndWeight) {
+            record.height?.toString() ?: ""
+        } else if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
+            records.filterIsInstance<HeightAndWeight>()
+                .filter { it.height != null }
+                .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
+        } else {
+            ""
+        }
+    }
     val initialWeight = remember(recordId) { if (record is HeightAndWeight) record.weight?.toString() ?: "" else "" }
     val initialBpSystolic = remember(recordId) { if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "" }
     val initialBpDiastolic = remember(recordId) { if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "" }
@@ -291,13 +312,6 @@ fun HealthRecordDetailPane(
                 )
             }
         )
-    }
-
-    LaunchedEffect(recordId, category) {
-        if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
-            val latestHeight = records.filterIsInstance<HeightAndWeight>().filter { it.height != null }.maxByOrNull { it.recordTime }?.height
-            if (latestHeight != null) { heightText = latestHeight.toString() }
-        }
     }
 
     val scrollState = rememberScrollState()

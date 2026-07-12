@@ -14,6 +14,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
@@ -33,20 +34,11 @@ fun PersonEditScreen(
     viewModel: PersonEditViewModel,
     onBack: () -> Unit
 ) {
-    val lastName by viewModel.lastName.collectAsState()
-    val firstName by viewModel.firstName.collectAsState()
-    val lastNameFurigana by viewModel.lastNameFurigana.collectAsState()
-    val firstNameFurigana by viewModel.firstNameFurigana.collectAsState()
-    val note by viewModel.note.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val era by viewModel.era.collectAsState()
-    val year by viewModel.year.collectAsState()
-    val month by viewModel.month.collectAsState()
-    val day by viewModel.day.collectAsState()
-
-    val isChanged by viewModel.isChanged.collectAsState()
-    val isValid by viewModel.isValid.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val isChanged by viewModel.isChanged.collectAsStateWithLifecycle()
+    val isValid by viewModel.isValid.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -133,25 +125,25 @@ fun PersonEditScreen(
     PersonEditScreenContent(
         isNew = viewModel.isNew,
         isLoading = isLoading,
-        lastName = lastName,
-        firstName = firstName,
-        lastNameFurigana = lastNameFurigana,
-        firstNameFurigana = firstNameFurigana,
-        note = note,
-        era = era,
-        year = year,
-        month = month,
-        day = day,
+        lastName = uiState.lastName,
+        firstName = uiState.firstName,
+        lastNameFurigana = uiState.lastNameFurigana,
+        firstNameFurigana = uiState.firstNameFurigana,
+        note = uiState.note,
+        era = uiState.era,
+        year = uiState.year,
+        month = uiState.month,
+        day = uiState.day,
         isValid = isValid,
-        onLastNameChange = { viewModel.lastName.value = it },
-        onFirstNameChange = { viewModel.firstName.value = it },
-        onLastNameFuriganaChange = { viewModel.lastNameFurigana.value = it },
-        onFirstNameFuriganaChange = { viewModel.firstNameFurigana.value = it },
-        onNoteChange = { viewModel.note.value = it },
-        onEraChange = { viewModel.era.value = it },
-        onYearChange = { viewModel.year.value = it },
-        onMonthChange = { viewModel.month.value = it },
-        onDayChange = { viewModel.day.value = it },
+        onLastNameChange = { viewModel.updateLastName(it) },
+        onFirstNameChange = { viewModel.updateFirstName(it) },
+        onLastNameFuriganaChange = { viewModel.updateLastNameFurigana(it) },
+        onFirstNameFuriganaChange = { viewModel.updateFirstNameFurigana(it) },
+        onNoteChange = { viewModel.updateNote(it) },
+        onEraChange = { viewModel.updateEra(it) },
+        onYearChange = { viewModel.updateYear(it) },
+        onMonthChange = { viewModel.updateMonth(it) },
+        onDayChange = { viewModel.updateDay(it) },
         onSave = { viewModel.save() },
         onCancel = { if (isChanged) showDiscardDialog = true else onBack() },
         snackbarHostState = snackbarHostState,
@@ -319,26 +311,51 @@ private fun BirthdayInputSection(
     onMonthChange: (String) -> Unit,
     onDayChange: (String) -> Unit
 ) {
-    // BirthdayInputFields が MutableState を要求するため、橋渡し役の State を作成
-    val eraState = remember { mutableStateOf(era) }
-    val yearState = remember { mutableStateOf(year) }
-    val monthState = remember { mutableStateOf(month) }
-    val dayState = remember { mutableStateOf(day) }
+    // 外部（ViewModel）からの値を常に最新状態で参照するための State
+    val currentEra by rememberUpdatedState(era)
+    val currentYear by rememberUpdatedState(year)
+    val currentMonth by rememberUpdatedState(month)
+    val currentDay by rememberUpdatedState(day)
 
-    // 内部状態が変わったら コールバック を呼ぶ
-    LaunchedEffect(eraState.value) { onEraChange(eraState.value) }
-    LaunchedEffect(yearState.value) { onYearChange(yearState.value) }
-    LaunchedEffect(monthState.value) { onMonthChange(monthState.value) }
-    LaunchedEffect(dayState.value) { onDayChange(dayState.value) }
+    // コールバックを常に最新状態で保持
+    val currentOnEraChange by rememberUpdatedState(onEraChange)
+    val currentOnYearChange by rememberUpdatedState(onYearChange)
+    val currentOnMonthChange by rememberUpdatedState(onMonthChange)
+    val currentOnDayChange by rememberUpdatedState(onDayChange)
 
-    // 外部からデータがロードされた際に、UIの状態を同期
-    LaunchedEffect(era) { eraState.value = era }
-    LaunchedEffect(year) { yearState.value = year }
-    LaunchedEffect(month) { monthState.value = month }
-    LaunchedEffect(day) { dayState.value = day }
-
+    // BirthdayInputFields が要求する MutableState インターフェースをデリゲート形式で実装
+    // これにより、LaunchedEffect による非同期同期を排除し、ViewModel と UI を直結（パターン①）させる。
     val birthdayState = remember {
-        BirthdayInputState(eraState, yearState, monthState, dayState)
+        BirthdayInputState(
+            era = object : MutableState<BirthEra> {
+                override var value: BirthEra
+                    get() = currentEra
+                    set(v) { currentOnEraChange(v) }
+                override fun component1() = value
+                override fun component2(): (BirthEra) -> Unit = { value = it }
+            },
+            year = object : MutableState<String> {
+                override var value: String
+                    get() = currentYear
+                    set(v) { currentOnYearChange(v) }
+                override fun component1() = value
+                override fun component2(): (String) -> Unit = { value = it }
+            },
+            month = object : MutableState<String> {
+                override var value: String
+                    get() = currentMonth
+                    set(v) { currentOnMonthChange(v) }
+                override fun component1() = value
+                override fun component2(): (String) -> Unit = { value = it }
+            },
+            day = object : MutableState<String> {
+                override var value: String
+                    get() = currentDay
+                    set(v) { currentOnDayChange(v) }
+                override fun component1() = value
+                override fun component2(): (String) -> Unit = { value = it }
+            }
+        )
     }
 
     BirthdayInputFields(state = birthdayState)

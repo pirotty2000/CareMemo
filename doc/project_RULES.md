@@ -79,10 +79,26 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 ## 3.3. 状態管理とパフォーマンス
 
 ### 3.3.1. UI状態の初期化とブランキング抑制
-- IDに基づいてデータを表示・編集する場合、状態変数の初期化に `LaunchedEffect` を使用しない。
-- **推奨**: `val text = remember(id) { mutableStateOf(record?.field ?: "") }`
-- **理由**: `LaunchedEffect` による初期化は非同期で行われるため、1フレーム目に空の値が表示され、2フレーム目に実際の値が表示される「ブランキング（チラつき）」の原因となるため。
-- 
+- IDに基づく編集画面・入力画面では、状態変数の初期化に LaunchedEffect を使用しない。
+- 第一選択: 編集対象の状態は ViewModel が保持し、Composable はその状態を表示・更新すること。
+- 簡易入力や一時的なUI状態 に限り、remember(key) による初期化を許可する。
+- derivedStateOf は変更検知や入力可否などの派生状態の算出に使用し、初期値設定には使用しない。
+- 理由: LaunchedEffect による初期化は非同期で実行されるため、初回表示時のブランキング（チラつき）の原因となる。
+
+#### 実装パターン（①/②/③）
+- **パターン①：ViewModel による状態管理（推奨）**
+  - 編集対象のデータは ViewModel 内で `MutableStateFlow` や `mutableStateOf` として保持する。
+  - Composable はこれらを直接参照し、イベント（`onValueChange`）で ViewModel を更新する。
+  - **用途**: 主要な入力画面（利用者編集、記録入力、設定等）。
+- **パターン②：`remember(key)` による即時初期化**
+  - ViewModel を介さない一時的な状態や、引数の変更に即座に追従すべき状態に使用する。
+  - `val state = remember(key) { mutableStateOf(初期値) }` の形式を徹底する。
+  - **用途**: ダイアログ内の一時入力、検索フィルタ等。
+  - **例外**: `AppTextField` 等の低レイヤー共通部品において、IME状態やカーソル位置の保持が最優先される場合は、内部状態との同期に `LaunchedEffect` を使用することを許容する（日本語入力の堅牢性維持のため）。
+- **パターン③：`LaunchedEffect` は「アクション」に限定**
+  - スナックバー表示、ナビゲーション、データロードの開始（`loadPerson`）など、「副作用を伴う一度きりの動作」にのみ使用する。
+  - **禁止**: `LaunchedEffect` 内で UI ローカルな `mutableStateOf` を書き換えて初期値をセットする行為。
+
 ### 3.3.2. 入力データの保護（破棄確認の必須化）
 - **原則**: 文字列入力（名前、メモ等）を伴う「新規作成」および「編集」画面・パネルにおいては、未保存の変更がある状態で「戻る」操作（システム戻るボタン、画面上のキャンセル/戻るボタン）を行った際、必ず**破棄確認ダイアログ**を表示すること。
 - **実装**: `BackHandler` および `derivedStateOf` による変更検知（`isChanged`）を組み合わせて実装する。
@@ -126,8 +142,8 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 予期せぬエラー発生時もユーザーが迷わないよう、以下のパターンに従って一貫したフィードバックを提供してください。
 
 ## 4.1. 責務の分割
-- **Repository**: 例外を捕捉し、必要に応じてログ記録（AuditLog）を行った後、例外を再スローするか、ドメイン固有の Result 型等に変換する。
-- **ViewModel**: Repository からの例外を `try-catch` または `Flow.catch` で捕捉し、適切な `UiEvent` を発行する。
+- **Repository**: **例外の「再スロー」を基本とする。** データの不整合チェックや AuditLog への「正常操作（INSERT等）」の記録は行うが、例外自体をキャッチして `ERROR` ログを記録することは原則行わない。発生した例外は上位（ViewModel）へそのまま伝搬させ、コルーチンのキャンセル状態（`CancellationException`）を維持すること。
+- **ViewModel**: Repository からの例外を `try-catch` または `Flow.catch` で捕捉し、適切な `UiEvent` を発行する。**この層で `CancellationException` の判定とエラーログ記録の選別を行う。**
 - **Screen (UI)**: `UiEvent` を監視し、共通ダイアログ（`AppInfoDialog`）またはスナックバーでユーザーに通知する。
 
 ##  4.2. 通知の使い分け
@@ -139,6 +155,21 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 - **実装パターンの徹底**:
   - **Flow (監視)**: `flatMapLatest` 内のデータ Flow に対し、**`onEach { _isLoading.value = false }`** で解除する（3.4.1項参照）。
   - **単発処理 (Job)**: 保存や同期などの処理は、必ず **`try-finally` の `finally` ブロック** で解除を保証する。
+
+## 4.4. コルーチンのキャンセルはエラーとして扱わない
+- 画面遷移等に伴う `viewModelScope` のキャンセルによって発生する **`CancellationException` は正常な動作**です。
+- `try-catch` ブロックや Flow の `.catch` オペレータ内で例外を捕捉する際は、必ず冒頭で `CancellationException` かどうかを確認し、そうである場合は**ログ記録やエラー通知を行わずに再スロー**してください。
+- **理由**: これを行わないと、画面を閉じるたびに「操作ログ（監査ログ）」に身に覚えのないエラーが記録され、ユーザーや開発者を混乱させるため。
+- **実装例**:
+  ```kotlin
+  try {
+      // 処理
+  } catch (e: Exception) {
+      if (e is CancellationException) throw e // 必須
+      // エラーログ記録・通知
+  }
+  ```
+- **補足（Repository層）**: リポジトリ内で独自に `try-catch` を実装し、そこで `ERROR` ログを記録することは避けてください。もし実装が必要な場合も、必ず `CancellationException` を再スローするようにし、ViewModel 側での正常なキャンセル処理を妨げないようにしてください。
 
 ---
 

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.PersonOff
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,9 +56,9 @@ fun DeleteOrRestorePersonScreen(
     mode: DeleteOrRestorePersonViewModel.OperationMode,
     onBack: () -> Unit,
 ) {
-    val archivedPersons by viewModel.archivedPersonList.collectAsState()
-    val selectedIds by viewModel.selectedIds.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val archivedPersons by viewModel.archivedPersonList.collectAsStateWithLifecycle()
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
     var dialogTitle by remember { mutableStateOf<String?>(null) }

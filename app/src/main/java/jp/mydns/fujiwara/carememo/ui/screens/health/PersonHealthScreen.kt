@@ -43,6 +43,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -73,12 +74,12 @@ fun PersonHealthScreen(
     val scope = rememberCoroutineScope() // コルーチンスコープ
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val records by healthViewModel.records.collectAsState() // 記録データのリスト
+    val records by healthViewModel.records.collectAsStateWithLifecycle() // 記録データのリスト
 
-    val isLoading by healthViewModel.isLoading.collectAsState() // ローディング状態
-    val currentPerson by viewModel.currentPerson.collectAsState() // 現在選択されている利用者情報
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState() // 名前マスキング設定の有効状態
-    val personCategorySummary by viewModel.personCategorySummary.collectAsState() // 各カテゴリの記録有無サマリー
+    val isLoading by healthViewModel.isLoading.collectAsStateWithLifecycle() // ローディング状態
+    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle() // 現在選択されている利用者情報
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle() // 名前マスキング設定の有効状態
+    val personCategorySummary by viewModel.personCategorySummary.collectAsStateWithLifecycle() // 各カテゴリの記録有無サマリー
 
     val snackbarHostState = remember { SnackbarHostState() } // スナックバー制御用
     var showPdfSettingsDialog by remember { mutableStateOf(false) }

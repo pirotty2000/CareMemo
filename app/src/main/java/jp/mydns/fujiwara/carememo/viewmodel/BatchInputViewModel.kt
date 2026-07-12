@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,8 @@ import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,8 +34,11 @@ class BatchInputViewModel(
     private val healthRepository: HealthRepository,
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
-    userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
+    userSettingsRepository: UserSettingsRepository,
+    auditLogRepository: AuditLogRepository
+) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
+
+    private val TAG = "BatchInputViewModel"
 
     init {
         // 利用者情報がロードされたらローディング状態を解除する
@@ -103,9 +109,8 @@ class BatchInputViewModel(
         val time = _recordTime.value
 
         viewModelScope.launch {
+            _isSaving.value = true
             try {
-                _isSaving.value = true
-
                 // --- 重複チェック (新規登録のみを許可するため) ---
                 val duplicateCategories = mutableListOf<Int>()
                 
@@ -186,6 +191,16 @@ class BatchInputViewModel(
                 // 保存成功後に一部をクリア（連続入力のため、身長などは残す運用もあるが、基本はリセット）
                 resetInputs()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Batch save error", e)
+                auditLogRepository.log(
+                    screenName = "BatchInput",
+                    operation = "saveBatch",
+                    tableName = "health_db",
+                    actionType = "ERROR",
+                    affectedId = person.id.toString(),
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_save, R.string.batch_err_save_failure, e.localizedMessage ?: "")
             } finally {
                 _isSaving.value = false
@@ -212,12 +227,19 @@ class BatchInputViewModel(
         private val personRepository: PersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val healthRepository: HealthRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(BatchInputViewModel::class.java)) {
-                return BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository) as T
+                return BatchInputViewModel(
+                    healthRepository,
+                    personRepository,
+                    summaryRepository,
+                    userSettingsRepository,
+                    auditLogRepository
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

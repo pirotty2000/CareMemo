@@ -280,7 +280,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val personId = backStackEntry.arguments?.getInt("personId") ?: -1
                     val editViewModel: PersonEditViewModel = viewModel(
                         factory = PersonEditViewModel.Factory(
-                            personId, personRepository, userSettingsRepository))
+                            personId, personRepository, userSettingsRepository, auditLogRepository))
                     PersonEditScreen(
                         viewModel = editViewModel,
                         onBack = { navController.popBackStack() }
@@ -301,7 +301,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val category = Category.valueOf(categoryName)
                     val detailViewModel: PersonDetailViewModel = viewModel(
                         factory = PersonDetailViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val healthViewModel: PersonHealthViewModel = viewModel(
                         factory = PersonHealthViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
@@ -336,7 +336,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
                     val detailViewModel: PersonDetailViewModel = viewModel(
                         factory = PersonDetailViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     GraphExpansionScreen(viewModel = detailViewModel,
                         healthViewModel = healthViewModel,
                         personId = personId,
@@ -351,7 +351,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val batchViewModel: BatchInputViewModel = viewModel(
                         factory = BatchInputViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
                     BatchInputScreen(viewModel = batchViewModel, personId = personId, onBack = { navController.popBackStack() })
                 }
 
@@ -365,10 +365,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
                     val detailViewModel: PersonDetailViewModel = viewModel(
                         factory = PersonDetailViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(
                         factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
 
                     PersonConditionScreen(
                         viewModel = detailViewModel,
@@ -402,8 +402,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
+                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
+                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     ConditionPhotoPreviewScreen(viewModel = detailViewModel, conditionViewModel = conditionViewModel, uri = uri, personId = personId, conditionId = conditionId, onBack = { navController.popBackStack() }, onSaved = { navController.popBackStack() })
                 }
 
@@ -417,7 +417,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 ) { backStackEntry ->
                     val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
                     val initialPhotoId = backStackEntry.arguments?.getInt("initialPhotoId") ?: 0
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository))
+                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
 
                     ConditionPhotoFullScreen(
                         conditionId = conditionId,
@@ -430,8 +430,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 // ---------- 「服薬管理」 ----------
                 composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository))
-                    val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository))
+                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
+                    val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository, auditLogRepository))
                     PersonMedicationScreen(
                         viewModel = detailViewModel,
                         medicationViewModel = medicationViewModel,
@@ -482,7 +482,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val mode = DeleteOrRestorePersonViewModel.OperationMode.valueOf(modeName)
                     val archiveViewModel: DeleteOrRestorePersonViewModel = viewModel(
                         factory = DeleteOrRestorePersonViewModel.Factory(
-                            deleteOrRestorePersonRepository, userSettingsRepository))
+                            deleteOrRestorePersonRepository, userSettingsRepository, auditLogRepository))
                     DeleteOrRestorePersonScreen(
                         viewModel = archiveViewModel,
                         mode = mode,

@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
@@ -69,10 +70,10 @@ fun GraphExpansionScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val records by remember(category) { healthViewModel.getHealthRecords(category) }.collectAsState()
-    val isLoading by healthViewModel.isLoading.collectAsState()
-    val currentPerson by viewModel.currentPerson.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val records by remember(category) { healthViewModel.getHealthRecords(category) }.collectAsStateWithLifecycle()
+    val isLoading by healthViewModel.isLoading.collectAsStateWithLifecycle()
+    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
     // 画面を横向きに固定
     DisposableEffect(Unit) {

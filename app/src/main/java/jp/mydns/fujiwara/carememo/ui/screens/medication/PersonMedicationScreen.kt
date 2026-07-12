@@ -40,6 +40,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
@@ -65,17 +66,17 @@ fun PersonMedicationScreen(
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val isLoading by medicationViewModel.isLoading.collectAsState()
-    val currentPerson by viewModel.currentPerson.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
+    val isLoading by medicationViewModel.isLoading.collectAsStateWithLifecycle()
+    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val personCategorySummary by viewModel.personCategorySummary.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
-    val selectedMonth by medicationViewModel.selectedMonth.collectAsState()
-    val recordsByDate by medicationViewModel.recordsByDate.collectAsState()
-    val allRecords by medicationViewModel.allRecords.collectAsState()
+    val selectedMonth by medicationViewModel.selectedMonth.collectAsStateWithLifecycle()
+    val recordsByDate by medicationViewModel.recordsByDate.collectAsStateWithLifecycle()
+    val allRecords by medicationViewModel.allRecords.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf<LocalDate?>(null) }
     var isHistoryMode by rememberSaveable { mutableStateOf(false) }
 

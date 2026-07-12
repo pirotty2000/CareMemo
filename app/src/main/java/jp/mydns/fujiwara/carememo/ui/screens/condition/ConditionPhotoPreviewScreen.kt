@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -61,9 +62,9 @@ fun ConditionPhotoPreviewScreen(
     onSaved: () -> Unit,
 ) {
     val context = LocalContext.current
-    val isProcessing by conditionViewModel.isProcessing.collectAsState()
-    val currentPerson by viewModel.currentPerson.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
+    val isProcessing by conditionViewModel.isProcessing.collectAsStateWithLifecycle()
+    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
     // キャプションの初期値を現在の日時に設定
     var caption by remember { 

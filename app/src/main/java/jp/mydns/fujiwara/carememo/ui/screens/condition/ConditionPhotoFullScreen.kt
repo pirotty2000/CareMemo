@@ -31,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
@@ -48,7 +49,7 @@ fun ConditionPhotoFullScreen(
         viewModel.setSelectedConditionId(conditionId)
     }
 
-    val photos by viewModel.currentConditionPhotos.collectAsState()
+    val photos by viewModel.currentConditionPhotos.collectAsStateWithLifecycle()
 
     if (photos.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Loading"), contentAlignment = Alignment.Center) {

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,35 +50,26 @@ fun SettingsScreen(
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
     onBack: () -> Unit,
 ) {
-    val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
-    val lockTimeoutMinutes by viewModel.lockTimeoutMinutes.collectAsState()
-    val persistedRecorderName by viewModel.defaultRecorderName.collectAsState()
-    val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsState()
-    val backupPassword by viewModel.backupPassword.collectAsState()
-    val themeSetting by viewModel.themeSetting.collectAsState()
-    val auditLogRetentionDays by viewModel.auditLogRetentionDays.collectAsState()
-    val auditLogCount by viewModel.auditLogCount.collectAsState(initial = 0)
-    val endedUserList by viewModel.deletedUserList.collectAsState()
-    val isProcessing by viewModel.isProcessing.collectAsState()
-    val processingProgress by viewModel.processingProgress.collectAsState()
-    val inconsistencies: List<DatabaseInconsistency> by viewModel.inconsistencies.collectAsState()
+    val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
+    val lockTimeoutMinutes by viewModel.lockTimeoutMinutes.collectAsStateWithLifecycle()
+    val persistedRecorderName by viewModel.defaultRecorderName.collectAsStateWithLifecycle()
+    val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsStateWithLifecycle()
+    val backupPassword by viewModel.backupPassword.collectAsStateWithLifecycle()
+    val themeSetting by viewModel.themeSetting.collectAsStateWithLifecycle()
+    val auditLogRetentionDays by viewModel.auditLogRetentionDays.collectAsStateWithLifecycle()
+    val auditLogCount by viewModel.auditLogCount.collectAsStateWithLifecycle(initialValue = 0)
+    val endedUserList by viewModel.deletedUserList.collectAsStateWithLifecycle()
+    val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
+    val processingProgress by viewModel.processingProgress.collectAsStateWithLifecycle()
+    val inconsistencies: List<DatabaseInconsistency> by viewModel.inconsistencies.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var localRecorderName by remember { mutableStateOf(persistedRecorderName) }
-    var localBackupPassword by remember { mutableStateOf(backupPassword) }
     var isPasswordVisible by remember { mutableStateOf(false) }
-    val isPasswordValid = localBackupPassword.length >= 6
-
-    LaunchedEffect(persistedRecorderName) {
-        if (localRecorderName != persistedRecorderName) localRecorderName = persistedRecorderName
-    }
-    LaunchedEffect(backupPassword) {
-        if (localBackupPassword != backupPassword) localBackupPassword = backupPassword
-    }
+    val isPasswordValid = backupPassword.length >= 6
 
     var showImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
     var showEraseConfirm by rememberSaveable { mutableStateOf(false) }
@@ -440,17 +432,16 @@ fun SettingsScreen(
     SettingsScreenContent(
         snackbarHostState = snackbarHostState,
         isMaskingEnabled = isMaskingEnabled,
-        localRecorderName = localRecorderName,
+        defaultRecorderName = persistedRecorderName,
         onMaskingChange = { viewModel.setNameMaskingEnabled(it) },
         onRecorderNameChange = {
-            localRecorderName = it
             viewModel.setDefaultRecorderName(it)
         },
         endedUserCount = endedUserList.size,
         onNavigateToRestore = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
         onEraseClick = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.DELETE) },
         isBackupPasswordEnabled = isBackupPasswordEnabled,
-        localBackupPassword = localBackupPassword,
+        backupPassword = backupPassword,
         isPasswordValid = isPasswordValid,
         isPasswordVisible = isPasswordVisible,
         onBackupPasswordEnabledChange = { enabled ->
@@ -471,7 +462,6 @@ fun SettingsScreen(
             }
         },
         onBackupPasswordChange = {
-            localBackupPassword = it
             if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it)
         },
         onPasswordVisibilityToggle = {
@@ -564,14 +554,14 @@ fun SettingsScreen(
 fun SettingsScreenContent(
     snackbarHostState: SnackbarHostState,
     isMaskingEnabled: Boolean,
-    localRecorderName: String,
+    defaultRecorderName: String,
     onMaskingChange: (Boolean) -> Unit,
     onRecorderNameChange: (String) -> Unit,
     endedUserCount: Int,
     onNavigateToRestore: () -> Unit,
     onEraseClick: () -> Unit,
     isBackupPasswordEnabled: Boolean,
-    localBackupPassword: String,
+    backupPassword: String,
     isPasswordValid: Boolean,
     isPasswordVisible: Boolean,
     onBackupPasswordEnabledChange: (Boolean) -> Unit,
@@ -622,7 +612,7 @@ fun SettingsScreenContent(
             ) {
                 DisplayAndRecordingSection(
                     isMaskingEnabled = isMaskingEnabled,
-                    localRecorderName = localRecorderName,
+                    defaultRecorderName = defaultRecorderName,
                     onMaskingChange = onMaskingChange,
                     onRecorderNameChange = onRecorderNameChange
                 )
@@ -635,7 +625,7 @@ fun SettingsScreenContent(
 
                 DataManagementSection(
                     isBackupPasswordEnabled = isBackupPasswordEnabled,
-                    localBackupPassword = localBackupPassword,
+                    backupPassword = backupPassword,
                     isPasswordValid = isPasswordValid,
                     isPasswordVisible = isPasswordVisible,
                     onBackupPasswordEnabledChange = onBackupPasswordEnabledChange,
@@ -714,7 +704,7 @@ fun SettingsScreenContent(
 @Composable
 private fun DisplayAndRecordingSection(
     isMaskingEnabled: Boolean,
-    localRecorderName: String,
+    defaultRecorderName: String,
     onMaskingChange: (Boolean) -> Unit,
     onRecorderNameChange: (String) -> Unit
 ) {
@@ -725,7 +715,7 @@ private fun DisplayAndRecordingSection(
             trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = onMaskingChange, modifier = Modifier.testTag("Settings_MaskingSwitch")) }
         )
         AppTextField(
-            value = localRecorderName,
+            value = defaultRecorderName,
             onValueChange = onRecorderNameChange,
             type = AppTextFieldType.TEXT,
             label = { Text("記録者の名前(デフォルト)") },
@@ -770,7 +760,7 @@ private fun UserManagementSection(
 @Composable
 private fun DataManagementSection(
     isBackupPasswordEnabled: Boolean,
-    localBackupPassword: String,
+    backupPassword: String,
     isPasswordValid: Boolean,
     isPasswordVisible: Boolean,
     onBackupPasswordEnabledChange: (Boolean) -> Unit,
@@ -798,17 +788,17 @@ private fun DataManagementSection(
         )
         if (isBackupPasswordEnabled) {
             AppTextField(
-                value = localBackupPassword,
+                value = backupPassword,
                 onValueChange = onBackupPasswordChange,
                 type = AppTextFieldType.PASSWORD,
                 label = { Text("デフォルトのパスワード") },
                 placeholder = { Text("6桁以上の数字を推奨") },
                 supportingText = { 
-                    if (!isPasswordValid && localBackupPassword.isNotEmpty()) 
+                    if (!isPasswordValid && backupPassword.isNotEmpty()) 
                         Text("6文字以上で入力してください", color = MaterialTheme.colorScheme.error) 
                     else Text("バックアップ作成時に使用されます") 
                 },
-                isError = !isPasswordValid && localBackupPassword.isNotEmpty(),
+                isError = !isPasswordValid && backupPassword.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("Settings_BackupPasswordInput"),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = { 
@@ -1001,14 +991,14 @@ fun SettingsScreenPreview() {
         SettingsScreenContent(
             snackbarHostState = remember { SnackbarHostState() },
             isMaskingEnabled = false,
-            localRecorderName = "記録者名",
+            defaultRecorderName = "記録者名",
             onMaskingChange = {},
             onRecorderNameChange = {},
             endedUserCount = 2,
             onNavigateToRestore = {},
             onEraseClick = {},
             isBackupPasswordEnabled = true,
-            localBackupPassword = "password",
+            backupPassword = "password",
             isPasswordValid = true,
             isPasswordVisible = false,
             onBackupPasswordEnabledChange = {},

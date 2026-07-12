@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.database.sqlite.SQLiteConstraintException
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,7 +9,9 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -17,26 +20,35 @@ import java.time.YearMonth
 import java.time.ZoneOffset
 
 /**
+ * 利用者の新規登録・編集画面用の UI 状態
+ */
+data class PersonEditUiState(
+    val lastName: String = "",
+    val firstName: String = "",
+    val lastNameFurigana: String = "",
+    val firstNameFurigana: String = "",
+    val note: String = "",
+    val era: BirthEra = BirthEra.SHOWA,
+    val year: String = "",
+    val month: String = "",
+    val day: String = ""
+)
+
+/**
  * 利用者の新規登録・編集画面用の ViewModel
  */
 class PersonEditViewModel(
     private val personId: Int,
     private val repository: PersonRepository,
-    userSettingsRepository: UserSettingsRepository
+    userSettingsRepository: UserSettingsRepository,
+    private val auditLogRepository: AuditLogRepository
 ) : BaseViewModel(userSettingsRepository) {
 
-    // 入力項目の StateFlow
-    val lastName = MutableStateFlow("")
-    val firstName = MutableStateFlow("")
-    val lastNameFurigana = MutableStateFlow("")
-    val firstNameFurigana = MutableStateFlow("")
-    val note = MutableStateFlow("")
+    private val TAG = "PersonEditViewModel"
 
-    // 生年月日関連
-    val era = MutableStateFlow(BirthEra.SHOWA)
-    val year = MutableStateFlow("")
-    val month = MutableStateFlow("")
-    val day = MutableStateFlow("")
+    // UI状態の一括管理
+    private val _uiState = MutableStateFlow(PersonEditUiState())
+    val uiState: StateFlow<PersonEditUiState> = _uiState.asStateFlow()
 
     // ロードされた初期データ（変更検知用）
     private var initialPerson: Person? = null
@@ -54,22 +66,38 @@ class PersonEditViewModel(
 
     private fun loadPerson(id: Int) {
         viewModelScope.launch {
-            repository.getPersonById(id).filterNotNull().first().let { person ->
-                initialPerson = person
-                lastName.value = person.lastName
-                firstName.value = person.firstName
-                lastNameFurigana.value = person.lastNameFurigana
-                firstNameFurigana.value = person.firstNameFurigana
-                note.value = person.note
+            try {
+                repository.getPersonById(id).filterNotNull().first().let { person ->
+                    initialPerson = person
+                    // 誕生日は常に UTC 基準で読み込む
+                    val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
+                    val (initialEra, initialYearText) = calculateEraAndYear(date)
 
-                // 誕生日は常に UTC 基準で読み込む
-                val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
-                val (initialEra, initialYearText) = calculateEraAndYear(date)
-                era.value = initialEra
-                year.value = initialYearText
-                month.value = date.monthValue.toString()
-                day.value = date.dayOfMonth.toString()
-                
+                    _uiState.value = PersonEditUiState(
+                        lastName = person.lastName,
+                        firstName = person.firstName,
+                        lastNameFurigana = person.lastNameFurigana,
+                        firstNameFurigana = person.firstNameFurigana,
+                        note = person.note,
+                        era = initialEra,
+                        year = initialYearText,
+                        month = date.monthValue.toString(),
+                        day = date.dayOfMonth.toString()
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "loadPerson error", e)
+                auditLogRepository.log(
+                    screenName = "PersonEdit",
+                    operation = "loadPerson",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = id.toString(),
+                    details = e.toString()
+                )
+                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
+            } finally {
                 _isLoading.value = false
             }
         }
@@ -100,61 +128,51 @@ class PersonEditViewModel(
         }
     }
 
+    // 更新用メソッド群
+    fun updateLastName(value: String) { _uiState.update { it.copy(lastName = value) } }
+    fun updateFirstName(value: String) { _uiState.update { it.copy(firstName = value) } }
+    fun updateLastNameFurigana(value: String) { _uiState.update { it.copy(lastNameFurigana = value) } }
+    fun updateFirstNameFurigana(value: String) { _uiState.update { it.copy(firstNameFurigana = value) } }
+    fun updateNote(value: String) { _uiState.update { it.copy(note = value) } }
+    fun updateEra(value: BirthEra) { _uiState.update { it.copy(era = value) } }
+    fun updateYear(value: String) { _uiState.update { it.copy(year = value) } }
+    fun updateMonth(value: String) { _uiState.update { it.copy(month = value) } }
+    fun updateDay(value: String) { _uiState.update { it.copy(day = value) } }
+
     /**
      * 現在の入力内容が初期状態から変更されているかどうか
      */
-    val isChanged: StateFlow<Boolean> = combine<Any, Boolean>(
-        lastName, firstName, lastNameFurigana, firstNameFurigana, note, era, year, month, day
-    ) { params ->
-        val currentLastName = params[0] as String
-        val currentFirstName = params[1] as String
-        val currentLastNameFurigana = params[2] as String
-        val currentFirstNameFurigana = params[3] as String
-        val currentNote = params[4] as String
-        val currentEra = params[5] as BirthEra
-        val currentYear = params[6] as String
-        val currentMonth = params[7] as String
-        val currentDay = params[8] as String
-
+    val isChanged: StateFlow<Boolean> = uiState.map { current ->
         if (initialPerson == null) {
             // 新規登録時は、何かしら入力があれば変更ありとみなす
-            currentLastName.isNotBlank() || currentFirstName.isNotBlank() || 
-            currentLastNameFurigana.isNotBlank() || currentFirstNameFurigana.isNotBlank() ||
-            currentNote.isNotBlank() || currentYear.isNotBlank() || 
-            currentMonth.isNotBlank() || currentDay.isNotBlank()
+            current.lastName.isNotBlank() || current.firstName.isNotBlank() || 
+            current.lastNameFurigana.isNotBlank() || current.firstNameFurigana.isNotBlank() ||
+            current.note.isNotBlank() || current.year.isNotBlank() || 
+            current.month.isNotBlank() || current.day.isNotBlank()
         } else {
             val p = initialPerson!!
             val date = p.birthday.atZone(ZoneOffset.UTC).toLocalDate()
             val (initEra, initYear) = calculateEraAndYear(date)
 
-            currentLastName != p.lastName ||
-            currentFirstName != p.firstName ||
-            currentLastNameFurigana != p.lastNameFurigana ||
-            currentFirstNameFurigana != p.firstNameFurigana ||
-            currentNote != p.note ||
-            currentEra != initEra ||
-            currentYear != initYear ||
-            currentMonth != date.monthValue.toString() ||
-            currentDay != date.dayOfMonth.toString()
+            current.lastName != p.lastName ||
+            current.firstName != p.firstName ||
+            current.lastNameFurigana != p.lastNameFurigana ||
+            current.firstNameFurigana != p.firstNameFurigana ||
+            current.note != p.note ||
+            current.era != initEra ||
+            current.year != initYear ||
+            current.month != date.monthValue.toString() ||
+            current.day != date.dayOfMonth.toString()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /**
      * 保存可能かどうか（バリデーション）
      */
-    val isValid: StateFlow<Boolean> = combine<Any, Boolean>(
-        lastName, firstName, era, year, month, day
-    ) { params ->
-        val lName = params[0] as String
-        val fName = params[1] as String
-        val cEra = params[2] as BirthEra
-        val cYear = params[3] as String
-        val cMonth = params[4] as String
-        val cDay = params[5] as String
-
-        lName.isNotBlank() && fName.isNotBlank() &&
-        cYear.isNotBlank() && cMonth.isNotBlank() && cDay.isNotBlank() &&
-        validateDate(cEra, cYear, cMonth, cDay)
+    val isValid: StateFlow<Boolean> = uiState.map { current ->
+        current.lastName.isNotBlank() && current.firstName.isNotBlank() &&
+        current.year.isNotBlank() && current.month.isNotBlank() && current.day.isNotBlank() &&
+        validateDate(current.era, current.year, current.month, current.day)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private fun validateDate(e: BirthEra, yStr: String, mStr: String, dStr: String): Boolean {
@@ -180,23 +198,25 @@ class PersonEditViewModel(
 
     fun save() {
         val birthday = calculateInstant() ?: return
+        val current = _uiState.value
         val person = (initialPerson?.copy(
-            lastName = lastName.value.trim(),
-            firstName = firstName.value.trim(),
-            lastNameFurigana = lastNameFurigana.value.trim(),
-            firstNameFurigana = firstNameFurigana.value.trim(),
-            note = note.value.trim(),
+            lastName = current.lastName.trim(),
+            firstName = current.firstName.trim(),
+            lastNameFurigana = current.lastNameFurigana.trim(),
+            firstNameFurigana = current.firstNameFurigana.trim(),
+            note = current.note.trim(),
             birthday = birthday
         ) ?: Person(
-            lastName = lastName.value.trim(),
-            firstName = firstName.value.trim(),
-            lastNameFurigana = lastNameFurigana.value.trim(),
-            firstNameFurigana = firstNameFurigana.value.trim(),
-            note = note.value.trim(),
+            lastName = current.lastName.trim(),
+            firstName = current.firstName.trim(),
+            lastNameFurigana = current.lastNameFurigana.trim(),
+            firstNameFurigana = current.firstNameFurigana.trim(),
+            note = current.note.trim(),
             birthday = birthday
         ))
 
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 // 重複チェック
                 val existing = repository.findExistingPerson(person)
@@ -206,30 +226,50 @@ class PersonEditViewModel(
                 }
 
                 if (personId == -1) {
-                    repository.insertPerson(person)
+                    repository.insertPerson(person, "PersonEdit", "save")
                     showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
                 } else {
-                    repository.updatePerson(person)
+                    repository.updatePerson(person, "PersonEdit", "save")
                     showSnackbar(R.string.main_msg_user_updated)
                 }
                 sendUiEvent(UiEvent.SaveSuccess)
-            } catch (_: SQLiteConstraintException) {
+            } catch (e: SQLiteConstraintException) {
+                // 重複の可能性が高いが、一応ログとエラー表示
+                Log.e(TAG, "Save constraint error", e)
+                auditLogRepository.log(
+                    screenName = "PersonEdit",
+                    operation = "save",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = person.id.toString(),
+                    details = e.toString()
+                )
                 showError(R.string.common_error_save, R.string.common_error_save)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Save error", e)
+                auditLogRepository.log(
+                    screenName = "PersonEdit",
+                    operation = "save",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = person.id.toString(),
+                    details = e.toString()
+                )
+                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
     private fun calculateInstant(): Instant? {
-        val yStr = year.value
-        val mStr = month.value
-        val dStr = day.value
-        val e = era.value
+        val current = _uiState.value
+        val y = current.year.toIntOrNull() ?: return null
+        val m = current.month.toIntOrNull() ?: return null
+        val d = current.day.toIntOrNull() ?: return null
 
-        val y = yStr.toIntOrNull() ?: return null
-        val m = mStr.toIntOrNull() ?: return null
-        val d = dStr.toIntOrNull() ?: return null
-
-        val westernYear = when (e) {
+        val westernYear = when (current.era) {
             BirthEra.SHOWA -> y + 1925
             BirthEra.HEISEI -> y + 1988
             BirthEra.REIWA -> y + 2018
@@ -259,11 +299,12 @@ class PersonEditViewModel(
     class Factory(
         private val personId: Int,
         private val repository: PersonRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return PersonEditViewModel(personId, repository, userSettingsRepository) as T
+            return PersonEditViewModel(personId, repository, userSettingsRepository, auditLogRepository) as T
         }
     }
 }

@@ -15,6 +15,7 @@ import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,8 +38,8 @@ class PersonHealthViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
-    private val auditLogRepository: AuditLogRepository // 追加
-) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
+    auditLogRepository: AuditLogRepository
+) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
 
     private val TAG = "PersonHealthViewModel"
     private val _currentCategory = MutableStateFlow<Category?>(null)
@@ -61,6 +62,7 @@ class PersonHealthViewModel(
     }.onEach {
         _isLoading.value = false
     }.catch { e ->
+        if (e is CancellationException) throw e
         _isLoading.value = false
         Log.e(TAG, "Data load error", e)
         auditLogRepository.log(
@@ -99,6 +101,7 @@ class PersonHealthViewModel(
         }.onEach {
             _isLoading.value = false
         }.catch { e ->
+            if (e is CancellationException) throw e
             _isLoading.value = false
             Log.e(TAG, "getHealthRecords error", e)
             auditLogRepository.log(
@@ -143,6 +146,7 @@ class PersonHealthViewModel(
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "Save error", e)
                 auditLogRepository.log(
                     screenName = "PersonHealth",
@@ -176,6 +180,7 @@ class PersonHealthViewModel(
                 performDelete(record)
                 showSnackbar(R.string.p_health_msg_delete_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "Delete error", e)
                 auditLogRepository.log(
                     screenName = "PersonHealth",

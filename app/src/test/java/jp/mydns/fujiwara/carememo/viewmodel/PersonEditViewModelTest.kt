@@ -2,16 +2,22 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -20,6 +26,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -31,23 +38,28 @@ class PersonEditViewModelTest {
 
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+
         Dispatchers.setMain(testDispatcher)
-        coEvery { userSettingsRepository.isNameMaskingEnabled } returns MutableStateFlow(false)
-        coEvery { userSettingsRepository.defaultRecorderName } returns MutableStateFlow("")
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
+        every { userSettingsRepository.defaultRecorderName } returns flowOf("")
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Log::class)
     }
 
     @Test
     fun `新規登録時、姓名・生年月日・識別メモの全てが一致する利用者が存在する場合、エラーとなること`() = runTest {
-        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository)
+        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
 
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -84,12 +96,12 @@ class PersonEditViewModelTest {
 
         val errorEvent = uiEvents.filterIsInstance<BaseViewModel.UiEvent.ShowErrorDialogRes>().firstOrNull()
         assertTrue("重複エラーイベントが発行されていること", errorEvent != null)
-        coVerify(exactly = 0) { personRepository.insertPerson(any()) }
+        coVerify(exactly = 0) { personRepository.insertPerson(any(), any(), any()) }
     }
 
     @Test
     fun `新規登録時、姓名・生年月日が同じでも識別メモが異なれば、保存できること`() = runTest {
-        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository)
+        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
 
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -111,7 +123,7 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         assertTrue("保存成功イベントが発行されていること", uiEvents.contains(BaseViewModel.UiEvent.SaveSuccess))
-        coVerify(exactly = 1) { personRepository.insertPerson(any()) }
+        coVerify(exactly = 1) { personRepository.insertPerson(any(), any(), any()) }
     }
 
     @Test
@@ -126,9 +138,9 @@ class PersonEditViewModelTest {
             birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant(),
             note = "識別メモA"
         )
-        coEvery { personRepository.getPersonById(personId) } returns MutableStateFlow(currentPerson)
+        coEvery { personRepository.getPersonById(personId) } returns flowOf(currentPerson)
         
-        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository)
+        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
@@ -144,8 +156,8 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         assertTrue("保存成功イベントが発行されていること", uiEvents.contains(BaseViewModel.UiEvent.SaveSuccess))
-        coVerify(exactly = 1) { personRepository.updatePerson(match { it.id == personId }) }
-        coVerify(exactly = 0) { personRepository.insertPerson(any()) } // 編集モードでは Insert しない
+        coVerify(exactly = 1) { personRepository.updatePerson(match { it.id == personId }, any(), any()) }
+        coVerify(exactly = 0) { personRepository.insertPerson(any(), any(), any()) } // 編集モードでは Insert しない
     }
 
     @Test
@@ -160,9 +172,9 @@ class PersonEditViewModelTest {
             birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant(),
             note = "Aのメモ"
         )
-        coEvery { personRepository.getPersonById(personId) } returns MutableStateFlow(personA)
+        coEvery { personRepository.getPersonById(personId) } returns flowOf(personA)
 
-        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository)
+        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
@@ -197,6 +209,58 @@ class PersonEditViewModelTest {
 
         val errorEvent = uiEvents.filterIsInstance<BaseViewModel.UiEvent.ShowErrorDialogRes>().firstOrNull()
         assertTrue("重複エラーイベントが発行されていること", errorEvent != null)
-        coVerify(exactly = 0) { personRepository.updatePerson(any()) }
+        coVerify(exactly = 0) { personRepository.updatePerson(any(), any(), any()) }
+    }
+
+    @Test
+    fun `LG-01_データ読み込み失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+        val personId = 1
+        coEvery { personRepository.getPersonById(personId) } returns flow { throw RuntimeException("Load Error") }
+
+        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository, auditLogRepository)
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.isLoading.value)
+        coVerify {
+            auditLogRepository.log(
+                screenName = "PersonEdit",
+                operation = "loadPerson",
+                tableName = "person_db",
+                actionType = "ERROR",
+                affectedId = personId.toString(),
+                details = match { it?.contains("Load Error") == true }
+            )
+        }
+    }
+
+    @Test
+    fun `LG-02_保存失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
+        advanceUntilIdle()
+
+        // 必須項目入力
+        viewModel.lastName.value = "山田"
+        viewModel.firstName.value = "太郎"
+        viewModel.year.value = "25"
+        viewModel.month.value = "1"
+        viewModel.day.value = "1"
+
+        coEvery { personRepository.findExistingPerson(any()) } returns null
+        coEvery { personRepository.insertPerson(any(), any(), any()) } throws RuntimeException("Save Error")
+
+        viewModel.save()
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.isLoading.value)
+        coVerify {
+            auditLogRepository.log(
+                screenName = "PersonEdit",
+                operation = "save",
+                tableName = "person_db",
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it?.contains("Save Error") == true }
+            )
+        }
     }
 }

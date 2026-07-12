@@ -7,14 +7,15 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.ZoneId
+import java.time.ZoneOffset
 
 /**
  * DateTimeUtils のロジックを検証する単体テスト
  */
 class DateTimeUtilsTest {
 
-    private val zoneId = ZoneId.systemDefault()
+    // 誕生日はアプリの仕様（DateTimeUtils）に合わせて UTC 基準でテストデータを作成する
+    private val birthdayZone = ZoneOffset.UTC
 
     @Test
     fun formatDateHeader_和暦と曜日が正しく付与される() {
@@ -40,14 +41,15 @@ class DateTimeUtilsTest {
     @Test
     fun calculateAge_年齢が正しく計算される() {
         // テスト実行時の「今日」に依存しないように相対的な値でテストする
+        // 実装側は LocalDate.now(systemDefault) を使用しているため、ここでの now はローカル基準
         val now = LocalDate.now()
         
         // 20年前の今日生まれ
-        val b1 = now.minusYears(20).atStartOfDay(zoneId).toInstant()
+        val b1 = now.minusYears(20).atStartOfDay(birthdayZone).toInstant()
         assertEquals(20, DateTimeUtils.calculateAge(b1))
 
         // 20年前の明日生まれ（まだ19歳）
-        val b2 = now.minusYears(20).plusDays(1).atStartOfDay(zoneId).toInstant()
+        val b2 = now.minusYears(20).plusDays(1).atStartOfDay(birthdayZone).toInstant()
         assertEquals(19, DateTimeUtils.calculateAge(b2))
     }
 
@@ -56,15 +58,15 @@ class DateTimeUtilsTest {
         val now = LocalDate.now()
         
         // 今日
-        val bToday = now.atStartOfDay(zoneId).toInstant()
+        val bToday = now.atStartOfDay(birthdayZone).toInstant()
         assertTrue(DateTimeUtils.isBirthdaySoon(bToday, 30))
 
         // 29日後
-        val bSoon = now.plusDays(29).atStartOfDay(zoneId).toInstant()
+        val bSoon = now.plusDays(29).atStartOfDay(birthdayZone).toInstant()
         assertTrue(DateTimeUtils.isBirthdaySoon(bSoon, 30))
 
         // 31日後
-        val bFar = now.plusDays(31).atStartOfDay(zoneId).toInstant()
+        val bFar = now.plusDays(31).atStartOfDay(birthdayZone).toInstant()
         assertFalse(DateTimeUtils.isBirthdaySoon(bFar, 30))
     }
 
@@ -73,18 +75,18 @@ class DateTimeUtilsTest {
         val now = LocalDate.now()
         
         // 今日の日付 (年は違っても良い)
-        val bToday = now.minusYears(50).atStartOfDay(zoneId).toInstant()
+        val bToday = now.minusYears(50).atStartOfDay(birthdayZone).toInstant()
         assertTrue(DateTimeUtils.isBirthdayToday(bToday))
 
         // 明日の日付
-        val bTomorrow = now.plusDays(1).atStartOfDay(zoneId).toInstant()
+        val bTomorrow = now.plusDays(1).atStartOfDay(birthdayZone).toInstant()
         assertFalse(DateTimeUtils.isBirthdayToday(bTomorrow))
     }
 
     @Test
     fun formatBirthday_和暦併記のフォーマット() {
         val date = LocalDate.of(1950, 1, 1)
-        val instant = date.atStartOfDay(zoneId).toInstant()
+        val instant = date.atStartOfDay(birthdayZone).toInstant()
         val result = DateTimeUtils.formatBirthday(instant)
         
         // 期待値: 1950年1月1日 (昭和25年)

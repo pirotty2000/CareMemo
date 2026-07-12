@@ -43,6 +43,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
@@ -73,12 +74,12 @@ fun PersonConditionScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val records by conditionViewModel.filteredRecords.collectAsState()
+    val records by conditionViewModel.filteredRecords.collectAsStateWithLifecycle()
 
-    val isLoading by conditionViewModel.isLoading.collectAsState()
-    val currentPerson by viewModel.currentPerson.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val personCategorySummary by viewModel.personCategorySummary.collectAsState()
+    val isLoading by conditionViewModel.isLoading.collectAsStateWithLifecycle()
+    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val personCategorySummary by viewModel.personCategorySummary.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
@@ -162,11 +163,11 @@ fun PersonConditionScreen(
     }
 
 
-    val searchQuery by conditionViewModel.searchQuery.collectAsState()
-    val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsState()
-    val photos by conditionViewModel.currentConditionPhotos.collectAsState()
-    val isProcessing by conditionViewModel.isProcessing.collectAsState()
-    val defaultRecorderName by viewModel.defaultRecorderName.collectAsState()
+    val searchQuery by conditionViewModel.searchQuery.collectAsStateWithLifecycle()
+    val conditionPhotoMap by conditionViewModel.conditionPhotoMap.collectAsStateWithLifecycle()
+    val photos by conditionViewModel.currentConditionPhotos.collectAsStateWithLifecycle()
+    val isProcessing by conditionViewModel.isProcessing.collectAsStateWithLifecycle()
+    val defaultRecorderName by viewModel.defaultRecorderName.collectAsStateWithLifecycle()
     
     var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
 

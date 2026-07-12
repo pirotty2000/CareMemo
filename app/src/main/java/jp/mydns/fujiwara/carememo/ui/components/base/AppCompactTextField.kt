@@ -129,7 +129,8 @@ fun AppCompactTextField(
         },
         modifier = modifier.onFocusChanged { focusState ->
             onFocusChanged(focusState)
-            if (focusState.isFocused) {
+            // フォーカス取得時にのみ実行し、かつ現在のカーソル位置が末尾でない場合のみ移動
+            if (focusState.isFocused && textFieldValueState.selection.start != textFieldValueState.text.length) {
                 textFieldValueState = textFieldValueState.copy(
                     selection = TextRange(textFieldValueState.text.length)
                 )

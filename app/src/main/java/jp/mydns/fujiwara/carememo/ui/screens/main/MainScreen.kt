@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
@@ -61,11 +62,11 @@ fun MainScreen(
     onNavigateToEditPerson: (Int) -> Unit,          // 利用者の編集
     onNavigateToSettings: () -> Unit                // 設定・管理画面
 ) {
-    val userList by viewModel.userList.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val selectedSection by viewModel.selectedSection.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val userList by viewModel.userList.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val selectedSection by viewModel.selectedSection.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

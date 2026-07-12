@@ -2,9 +2,13 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
@@ -38,11 +42,15 @@ class PersonLifecycleTest {
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
+    private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { userSettingsRepository.defaultRecorderName } returns flowOf("")
@@ -51,11 +59,12 @@ class PersonLifecycleTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Log::class)
     }
 
     @Test
     fun `loadPersonを呼んだ瞬間、現在の状態が即座にクリアされること`() = runTest {
-        val viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         val person1 = Person(id = 1, lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         // 1. 一人目をロード完了させる
@@ -82,7 +91,7 @@ class PersonLifecycleTest {
 
     @Test
     fun `高速な切り替え時、古いロード処理がキャンセルされ、最後の要求のみが反映されること`() = runTest {
-        val viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
 
         // ID:1 は 2000ms かかる
         every { personRepository.getPersonById(1) } returns flow {
@@ -110,7 +119,7 @@ class PersonLifecycleTest {
 
     @Test
     fun `利用者の切り替え時にサブクラス固有の状態もリセットされること`() = runTest {
-        val viewModel = PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         
         // ID:1 で検索クエリを入力済み
         every { personRepository.getPersonById(1) } returns flowOf(Person(id = 1, lastName = "A", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
@@ -132,7 +141,7 @@ class PersonLifecycleTest {
 
     @Test
     fun `同じIDで再度loadPersonを呼んだ場合、リロードやクリアが発生しないこと`() = runTest {
-        val viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         val person1 = Person(id = 1, lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         every { personRepository.getPersonById(1) } returns flowOf(person1)

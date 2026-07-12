@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.Person
@@ -68,24 +69,24 @@ fun BatchInputScreen(
     personId: Int,
     onBack: () -> Unit
 ) {
-    val currentPerson by viewModel.currentPerson.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsState()
-    val isSaving by viewModel.isSaving.collectAsState()
-    val isInputValid by viewModel.isInputValid.collectAsState()
+    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+    val isInputValid by viewModel.isInputValid.collectAsStateWithLifecycle()
 
-    val recordTime by viewModel.recordTime.collectAsState()
+    val recordTime by viewModel.recordTime.collectAsStateWithLifecycle()
     val dateTimeState = rememberDateTimeInputState(initialInstant = recordTime)
 
-    val height by viewModel.height.collectAsState()
-    val weight by viewModel.weight.collectAsState()
-    val bpSystolic by viewModel.bpSystolic.collectAsState()
-    val bpDiastolic by viewModel.bpDiastolic.collectAsState()
-    val sat by viewModel.sat.collectAsState()
-    val pulse by viewModel.pulse.collectAsState()
-    val bodyTemperature by viewModel.bodyTemperature.collectAsState()
-    val glucose by viewModel.glucose.collectAsState()
-    val hba1c by viewModel.hba1c.collectAsState()
+    val height by viewModel.height.collectAsStateWithLifecycle()
+    val weight by viewModel.weight.collectAsStateWithLifecycle()
+    val bpSystolic by viewModel.bpSystolic.collectAsStateWithLifecycle()
+    val bpDiastolic by viewModel.bpDiastolic.collectAsStateWithLifecycle()
+    val sat by viewModel.sat.collectAsStateWithLifecycle()
+    val pulse by viewModel.pulse.collectAsStateWithLifecycle()
+    val bodyTemperature by viewModel.bodyTemperature.collectAsStateWithLifecycle()
+    val glucose by viewModel.glucose.collectAsStateWithLifecycle()
+    val hba1c by viewModel.hba1c.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

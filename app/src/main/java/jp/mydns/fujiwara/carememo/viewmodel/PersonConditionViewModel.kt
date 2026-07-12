@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,12 +12,15 @@ import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -36,8 +40,11 @@ class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
-    userSettingsRepository: UserSettingsRepository
-) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
+    userSettingsRepository: UserSettingsRepository,
+    auditLogRepository: AuditLogRepository
+) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
+
+    private val TAG = "PersonConditionViewModel"
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
     val selectedConditionId: StateFlow<Int?> = _selectedConditionId.asStateFlow()
@@ -54,6 +61,20 @@ class PersonConditionViewModel(
             if (_currentPerson.value != null) {
                 _isLoading.value = false
             }
+        }
+        .catch { e ->
+            if (e is CancellationException) throw e
+            _isLoading.value = false
+            Log.e(TAG, "Records load error", e)
+            auditLogRepository.log(
+                screenName = "PersonCondition",
+                operation = "recordsFlow",
+                tableName = "condition_db",
+                actionType = "ERROR",
+                affectedId = _currentPerson.value?.id?.toString() ?: "0",
+                details = e.toString()
+            )
+            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -82,6 +103,18 @@ class PersonConditionViewModel(
             if (id != null) conditionRepository.getConditionPhotosByConditionId(id)
             else flowOf(emptyList())
         }
+        .catch { e ->
+            if (e is CancellationException) throw e
+            Log.e(TAG, "Photos load error", e)
+            auditLogRepository.log(
+                screenName = "PersonCondition",
+                operation = "photosFlow",
+                tableName = "condition_db",
+                actionType = "ERROR",
+                affectedId = _selectedConditionId.value?.toString() ?: "0",
+                details = e.toString()
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
@@ -99,6 +132,9 @@ class PersonConditionViewModel(
                 }
             }
         }
+    }.catch { e ->
+        if (e is CancellationException) throw e
+        Log.e(TAG, "Photo map error", e)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val _isProcessing = MutableStateFlow(false)
@@ -130,14 +166,13 @@ class PersonConditionViewModel(
      */
     fun saveRecord(record: ConditionAtVisit, onSuccess: (Int) -> Unit = {}) {
         viewModelScope.launch {
+            _isProcessing.value = true
             try {
-                _isProcessing.value = true
                 val isUpdate = record.id != 0
 
                 // --- 重複チェック (新規登録、または日時変更時) ---
                 val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
                 if (existing != null && (record.id == 0 || existing.id != record.id)) {
-                    _isProcessing.value = false // 重複時は処理中フラグを先に下げる
                     showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
                     return@launch
                 }
@@ -157,6 +192,16 @@ class PersonConditionViewModel(
                 // コールバックを実行
                 onSuccess(if (isUpdate) record.id else newId.toInt())
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Save error", e)
+                auditLogRepository.log(
+                    screenName = "PersonCondition",
+                    operation = "saveRecord",
+                    tableName = "condition_db",
+                    actionType = "ERROR",
+                    affectedId = record.id.toString(),
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -169,11 +214,24 @@ class PersonConditionViewModel(
      */
     fun deleteRecord(record: ConditionAtVisit) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 conditionRepository.deleteConditionAtVisit(record, "PersonCondition", "deleteRecord")
                 showSnackbar(R.string.p_cond_msg_delete_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Delete error", e)
+                auditLogRepository.log(
+                    screenName = "PersonCondition",
+                    operation = "deleteRecord",
+                    tableName = "condition_db",
+                    actionType = "ERROR",
+                    affectedId = record.id.toString(),
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -192,7 +250,7 @@ class PersonConditionViewModel(
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "deleteTempFile error", e)
             }
         }
     }
@@ -231,6 +289,16 @@ class PersonConditionViewModel(
                     showError(R.string.common_error_title_save, R.string.p_cond_err_photo_process_failure)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Photo save error", e)
+                auditLogRepository.log(
+                    screenName = "PersonCondition",
+                    operation = "processAndSavePhoto",
+                    tableName = "condition_db",
+                    actionType = "ERROR",
+                    affectedId = conditionId.toString(),
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -243,12 +311,25 @@ class PersonConditionViewModel(
      */
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
         viewModelScope.launch {
+            _isProcessing.value = true
             try {
                 conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, "PersonCondition", "deletePhoto")
                 ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
                 showSnackbar(R.string.p_cond_msg_photo_delete_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Photo delete error", e)
+                auditLogRepository.log(
+                    screenName = "PersonCondition",
+                    operation = "deletePhoto",
+                    tableName = "condition_db",
+                    actionType = "ERROR",
+                    affectedId = photo.id.toString(),
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
+            } finally {
+                _isProcessing.value = false
             }
         }
     }
@@ -261,12 +342,19 @@ class PersonConditionViewModel(
         private val personRepository: PersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonConditionViewModel::class.java)) {
-                return PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository) as T
+                return PersonConditionViewModel(
+                    conditionRepository,
+                    personRepository,
+                    summaryRepository,
+                    userSettingsRepository,
+                    auditLogRepository
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

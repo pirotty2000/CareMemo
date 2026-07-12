@@ -11,6 +11,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonEditUiState
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -191,17 +192,14 @@ class PersonEditScreenTest {
     fun cp06_eraSelector_changeUpdatesYear() {
         // UI操作のテスト
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val eraFlow = MutableStateFlow(BirthEra.SHOWA)
+        val uiStateFlow = MutableStateFlow(PersonEditUiState(
+            year = "25",
+            month = "1",
+            day = "1",
+            era = BirthEra.SHOWA
+        ))
         
-        every { viewModel.lastName } returns MutableStateFlow("")
-        every { viewModel.firstName } returns MutableStateFlow("")
-        every { viewModel.lastNameFurigana } returns MutableStateFlow("")
-        every { viewModel.firstNameFurigana } returns MutableStateFlow("")
-        every { viewModel.note } returns MutableStateFlow("")
-        every { viewModel.era } returns eraFlow
-        every { viewModel.year } returns MutableStateFlow("25")
-        every { viewModel.month } returns MutableStateFlow("1")
-        every { viewModel.day } returns MutableStateFlow("1")
+        every { viewModel.uiState } returns uiStateFlow
         every { viewModel.isChanged } returns MutableStateFlow(false)
         every { viewModel.isValid } returns MutableStateFlow(true)
         every { viewModel.isLoading } returns MutableStateFlow(false)
@@ -224,7 +222,7 @@ class PersonEditScreenTest {
         composeTestRule.onNodeWithText("西暦").performClick()
         
         // UI側の状態変更を反映させる（モック側を更新）
-        eraFlow.value = BirthEra.AD
+        uiStateFlow.value = uiStateFlow.value.copy(era = BirthEra.AD)
         composeTestRule.waitForIdle()
         
         // セレクタの表示が変わったことを確認
@@ -240,16 +238,17 @@ class PersonEditScreenTest {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
         // replay = 1 を指定して、イベントの消失を防ぐ
         val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(replay = 1)
+        val uiState = PersonEditUiState(
+            lastName = "山田",
+            firstName = "太郎",
+            note = "既存のメモ",
+            era = BirthEra.SHOWA,
+            year = "25",
+            month = "1",
+            day = "1"
+        )
 
-        every { viewModel.lastName } returns MutableStateFlow("山田")
-        every { viewModel.firstName } returns MutableStateFlow("太郎")
-        every { viewModel.lastNameFurigana } returns MutableStateFlow("")
-        every { viewModel.firstNameFurigana } returns MutableStateFlow("")
-        every { viewModel.note } returns MutableStateFlow("既存のメモ")
-        every { viewModel.era } returns MutableStateFlow(BirthEra.SHOWA)
-        every { viewModel.year } returns MutableStateFlow("25")
-        every { viewModel.month } returns MutableStateFlow("1")
-        every { viewModel.day } returns MutableStateFlow("1")
+        every { viewModel.uiState } returns MutableStateFlow(uiState)
         every { viewModel.isChanged } returns MutableStateFlow(true)
         every { viewModel.isValid } returns MutableStateFlow(true)
         every { viewModel.isLoading } returns MutableStateFlow(false)
@@ -293,18 +292,14 @@ class PersonEditScreenTest {
     @Test
     fun bh05_cancelOperation_showsDiscardDialog() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
+        val uiState = PersonEditUiState(
+            lastName = "編集中の名前",
+            era = BirthEra.SHOWA
+        )
         
         // 変更ありの状態にする
+        every { viewModel.uiState } returns MutableStateFlow(uiState)
         every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.lastName } returns MutableStateFlow("編集中の名前")
-        every { viewModel.firstName } returns MutableStateFlow("")
-        every { viewModel.lastNameFurigana } returns MutableStateFlow("")
-        every { viewModel.firstNameFurigana } returns MutableStateFlow("")
-        every { viewModel.note } returns MutableStateFlow("")
-        every { viewModel.era } returns MutableStateFlow(BirthEra.SHOWA)
-        every { viewModel.year } returns MutableStateFlow("")
-        every { viewModel.month } returns MutableStateFlow("")
-        every { viewModel.day } returns MutableStateFlow("")
         every { viewModel.isValid } returns MutableStateFlow(false)
         every { viewModel.isLoading } returns MutableStateFlow(false)
         every { viewModel.isNew } returns true

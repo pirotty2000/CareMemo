@@ -2,12 +2,17 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
@@ -15,6 +20,7 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -39,6 +45,7 @@ class BatchInputViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testPerson = Person(
@@ -52,24 +59,30 @@ class BatchInputViewModelTest {
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+
         Dispatchers.setMain(testDispatcher)
-        coEvery { personRepository.getPersonById(any()) } returns MutableStateFlow(testPerson)
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
+        every { userSettingsRepository.defaultRecorderName } returns flowOf("")
+        coEvery { personRepository.getPersonById(any()) } returns flowOf(testPerson)
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Log::class)
     }
 
     @Test
     fun `初期状態では入力バリデーションは false であること`() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         assertFalse("初期状態では無効", viewModel.isInputValid.value)
     }
 
     @Test
     fun `有効な入力が行われた場合、バリデーションが true になること`() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         
         // 状態の変化を監視するために収集を開始する（stateIn のため）
         backgroundScope.launch(testDispatcher) {
@@ -90,7 +103,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun `記録日時に既にデータが存在する場合、保存がブロックされエラーが表示されること`() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         viewModel.loadPerson(1)
 
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
@@ -113,7 +126,7 @@ class BatchInputViewModelTest {
         // エラーダイアログのイベントが発行されているか確認
         val errorEvent = uiEvents.filterIsInstance<BaseViewModel.UiEvent.ShowErrorDialogRes>().firstOrNull()
         assertTrue("エラーイベントが発行されていること", errorEvent != null)
-        assertEquals(R.string.batch_err_duplicate_blocked, errorEvent?.messageResId)
+        assertEquals(R.string.common_error_title_save, errorEvent?.titleResId)
         
         // 保存処理が呼ばれていないこと
         coVerify(exactly = 0) { healthRepository.insertHeightAndWeight(any(), any(), any()) }
@@ -121,7 +134,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun `重複がない場合、複数のカテゴリが正常に一括保存されること`() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         viewModel.loadPerson(1)
 
         val uiEvents = mutableListOf<BaseViewModel.UiEvent>()
@@ -161,7 +174,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun `利用者切り替え時、入力内容と時刻がリセットされること`() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository)
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         
         // 最初の利用者
         viewModel.loadPerson(1)
@@ -171,10 +184,36 @@ class BatchInputViewModelTest {
         viewModel.setRecordTime(oldTime)
         
         // 別の利用者に切り替え
-        coEvery { personRepository.getPersonById(2) } returns MutableStateFlow(testPerson.copy(id = 2))
+        coEvery { personRepository.getPersonById(2) } returns flowOf(testPerson.copy(id = 2))
         viewModel.loadPerson(2)
         
         assertEquals("入力がリセットされている", "", viewModel.weight.value)
         assertTrue("時刻が更新されている", viewModel.recordTime.value.isAfter(oldTime))
+    }
+
+    @Test
+    fun `LG-01_一括保存失敗時にisSavingがfalseになり監査ログが記録されること`() = runTest {
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
+        viewModel.loadPerson(1)
+
+        // 体重を入力
+        viewModel.weight.value = "60"
+        
+        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
+        coEvery { healthRepository.insertHeightAndWeight(any(), any(), any()) } throws RuntimeException("Batch Save Error")
+
+        viewModel.saveBatch()
+
+        assertEquals(false, viewModel.isSaving.value)
+        coVerify {
+            auditLogRepository.log(
+                screenName = "BatchInput",
+                operation = "saveBatch",
+                tableName = "health_db",
+                actionType = "ERROR",
+                affectedId = "1",
+                details = match { it?.contains("Batch Save Error") == true }
+            )
+        }
     }
 }

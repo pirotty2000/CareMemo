@@ -1,16 +1,21 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -24,8 +29,11 @@ import kotlinx.coroutines.launch
 abstract class PersonBaseViewModel(
     protected val repository: PersonRepository,
     protected val summaryRepository: PersonSummaryRepository,
-    userSettingsRepository: UserSettingsRepository
+    userSettingsRepository: UserSettingsRepository,
+    protected val auditLogRepository: AuditLogRepository // 追加
 ) : BaseViewModel(userSettingsRepository) {
+
+    private val TAG_BASE = "PersonBaseViewModel"
 
     protected val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -33,10 +41,10 @@ abstract class PersonBaseViewModel(
     protected val _currentPerson = MutableStateFlow<Person?>(null)
     val currentPerson: StateFlow<Person?> = _currentPerson.asStateFlow()
 
-    private var loadPersonJob: Job? = null
+    protected var loadPersonJob: Job? = null
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
+    open val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
         .flatMapLatest { person ->
             if (person != null) summaryRepository.getPersonCategorySummaryById(person.id)
             else flowOf(null)
@@ -51,20 +59,43 @@ abstract class PersonBaseViewModel(
      * 利用者情報をロードします。
      */
     open fun loadPerson(personId: Int) {
-        // すでに同じ利用者がロードされている場合は、不必要に _isLoading を true にしない。
-        // これにより、画面回転等による再コンポーズ時に「読み込み中」で固まるのを防ぐ。
         if (_currentPerson.value?.id == personId) return
 
         _isLoading.value = true
-        _currentPerson.value = null // 新しい利用者をロードする前に、現在の情報をクリアして「忘れる」
+        _currentPerson.value = null
 
-        loadPersonJob?.cancel() // 既存のロード処理がある場合はキャンセルし、重複を防ぐ
+        loadPersonJob?.cancel()
         loadPersonJob = viewModelScope.launch {
-            repository.getPersonById(personId).collectLatest {
-                _currentPerson.value = it
-                // loadPerson 自体は基本情報のロード完了のみを扱う。
-                // データのロード中フラグの解除は、各サブクラスのデータ取得 Flow (flatMapLatest) 側で行う。
+            try {
+                repository.getPersonById(personId)
+                    .catch { e ->
+                        handleLoadError(personId, e)
+                    }
+                    .collectLatest {
+                        _currentPerson.value = it
+                        if (it == null) {
+                            _isLoading.value = false
+                        }
+                    }
+            } catch (e: Exception) {
+                handleLoadError(personId, e)
             }
         }
+    }
+
+    private suspend fun handleLoadError(personId: Int, e: Throwable) {
+        if (e is CancellationException) throw e
+
+        _isLoading.value = false
+        Log.e(TAG_BASE, "loadPerson error", e)
+        auditLogRepository.log(
+            screenName = "PersonBase",
+            operation = "loadPerson",
+            tableName = "person_db",
+            actionType = "ERROR",
+            affectedId = personId.toString(),
+            details = e.toString()
+        )
+        showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
     }
 }

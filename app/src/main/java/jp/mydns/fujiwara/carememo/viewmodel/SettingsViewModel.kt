@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.content.Context
 import android.net.Uri
 import android.os.StatFs
+import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -24,10 +25,12 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import android.util.Base64
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -48,6 +51,7 @@ class SettingsViewModel(
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
+    private val TAG = "SettingsViewModel"
     private val json = Json { prettyPrint = true }
 
     val isBiometricEnabled: StateFlow<Boolean> = userSettingsRepository.isBiometricEnabled
@@ -97,6 +101,9 @@ class SettingsViewModel(
             emit(auditLogRepository.getLogCount())
             kotlinx.coroutines.delay(5000.milliseconds)
         }
+    }.catch { e ->
+        if (e is CancellationException) throw e
+        Log.e(TAG, "auditLogCount flow error", e)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     // 絞り込み状態
@@ -116,6 +123,17 @@ class SettingsViewModel(
             ((table == null) || (log.tableName == table)) &&
                     ((screen == null) || (log.screenName == screen))
         }
+    }.catch { e ->
+        if (e is CancellationException) throw e
+        Log.e(TAG, "auditLogs flow error", e)
+        auditLogRepository.log(
+            screenName = "Settings",
+            operation = "auditLogsFlow",
+            tableName = "audit_log",
+            actionType = "ERROR",
+            affectedId = "0",
+            details = e.toString()
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 存在する項目の一覧（フィルター選択用）
@@ -123,11 +141,19 @@ class SettingsViewModel(
         .map { logs ->
             logs.asSequence().map { it.tableName }.distinct().sorted().toList()
         }
+        .catch { e ->
+            if (e is CancellationException) throw e
+            Log.e(TAG, "availableTables flow error", e)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableScreens: StateFlow<List<String>> = auditLogRepository.allLogs
         .map { logs ->
             logs.asSequence().map { it.screenName }.distinct().sorted().toList()
+        }
+        .catch { e ->
+            if (e is CancellationException) throw e
+            Log.e(TAG, "availableScreens flow error", e)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -149,6 +175,18 @@ class SettingsViewModel(
     private var pendingImportUri: Uri? = null
 
     val deletedUserList: StateFlow<List<Person>> = archivedPersonRepository.getArchivedPersons()
+        .catch { e ->
+            if (e is CancellationException) throw e
+            Log.e(TAG, "deletedUserList flow error", e)
+            auditLogRepository.log(
+                screenName = "Settings",
+                operation = "deletedUserListFlow",
+                tableName = "person_db",
+                actionType = "ERROR",
+                affectedId = "0",
+                details = e.toString()
+            )
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -232,6 +270,16 @@ class SettingsViewModel(
                 auditLogRepository.deleteAllLogs()
                 showSnackbar(R.string.settings_msg_audit_log_cleared)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "clearAuditLogs error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "clearAuditLogs",
+                    tableName = "audit_log",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_delete, e.localizedMessage ?: "")
             }
         }
@@ -245,6 +293,16 @@ class SettingsViewModel(
                 auditLogRepository.deleteOldLogs(days)
                 showInfo(R.string.common_error_title_info, R.string.settings_msg_rotate_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "rotateLogsManually error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "rotateLogsManually",
+                    tableName = "audit_log",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -258,6 +316,16 @@ class SettingsViewModel(
                 archivedPersonRepository.deleteAllEndedPersons()
                 showInfo(R.string.common_error_title_info, R.string.settings_msg_delete_ended_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "deleteEndedPersons error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "deleteEndedPersons",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
             }
         }
@@ -316,6 +384,16 @@ class SettingsViewModel(
                 }
                 showInfo(R.string.common_error_title_info, R.string.settings_msg_export_success)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "exportData error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "exportData",
+                    tableName = "all_db",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -415,6 +493,16 @@ class SettingsViewModel(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "importData error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "importData",
+                    tableName = "all_db",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
                 clearPendingImport()
             }
@@ -471,6 +559,16 @@ class SettingsViewModel(
             
             showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "proceedImportZip error", e)
+            auditLogRepository.log(
+                screenName = "Settings",
+                operation = "proceedImportZip",
+                tableName = "all_db",
+                actionType = "ERROR",
+                affectedId = "0",
+                details = e.toString()
+            )
             // 失敗時は写真をロールバック
             if (backupPhotosDir.exists()) {
                 appPhotosDir.deleteRecursively()
@@ -522,6 +620,16 @@ class SettingsViewModel(
                 // メイン画面へ戻るための通知（必要に応じて）
                 sendUiEvent(UiEvent.SaveSuccess) 
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "clearAllData error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "clearAllData",
+                    tableName = "all_db",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_delete, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -543,6 +651,16 @@ class SettingsViewModel(
                     showInfo(R.string.common_error_title_info, R.string.settings_msg_integrity_ok)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "checkIntegrity error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "checkIntegrity",
+                    tableName = "maintenance",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -562,6 +680,16 @@ class SettingsViewModel(
                 _inconsistencies.value = emptyList()
                 showInfo(R.string.common_error_title_info, R.string.settings_msg_fix_success, count)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "fixInconsistencies error", e)
+                auditLogRepository.log(
+                    screenName = "Settings",
+                    operation = "fixInconsistencies",
+                    tableName = "maintenance",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
                 _isProcessing.value = false
@@ -585,6 +713,7 @@ class SettingsViewModel(
                 maintenanceRepository.insertTestInconsistency()
                 showSnackbar(R.string.settings_msg_test_inconsistency_added)
             } catch (e: Exception) {
+                Log.e(TAG, "insertTestInconsistency error", e)
                 showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             }
         }

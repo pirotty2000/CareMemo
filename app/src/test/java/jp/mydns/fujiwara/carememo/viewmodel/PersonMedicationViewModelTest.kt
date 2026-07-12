@@ -2,18 +2,24 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import app.cash.turbine.test
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.MedicationRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -33,6 +39,7 @@ class PersonMedicationViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private lateinit var viewModel: PersonMedicationViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -50,6 +57,9 @@ class PersonMedicationViewModelTest {
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
@@ -58,13 +68,15 @@ class PersonMedicationViewModelTest {
             medicationRepository,
             personRepository,
             summaryRepository,
-            userSettingsRepository
+            userSettingsRepository,
+            auditLogRepository
         )
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Log::class)
     }
 
     @Test
@@ -143,6 +155,60 @@ class PersonMedicationViewModelTest {
                     any()
                 ) 
             }
+        }
+    }
+
+    // --- ロジック・安全性テスト (LG-01 〜 LG-02) ---
+
+    @Test
+    fun `LG-01_データ取得失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flow {
+            throw RuntimeException("Flow Error")
+        }
+        
+        // ViewModel 再生成
+        val errorViewModel = PersonMedicationViewModel(
+            medicationRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository
+        )
+        
+        errorViewModel.loadPerson(1)
+
+        errorViewModel.monthlyRecords.test {
+            awaitItem() 
+            assertEquals(false, errorViewModel.isLoading.value)
+            coVerify {
+                auditLogRepository.log(
+                    screenName = "PersonMedication",
+                    operation = "monthlyRecordsFlow",
+                    tableName = "medication_db",
+                    actionType = "ERROR",
+                    affectedId = any(),
+                    details = match { it?.contains("Flow Error") == true }
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `LG-02_同期失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+        coEvery { medicationRepository.insertMedicationRecord(any(), any(), any()) } throws RuntimeException("Sync Error")
+        
+        val date = "2023-10-27"
+        val newRecord = MedicationRecord(id = 0, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
+        val slotRecords = listOf(newRecord, null, null, null)
+
+        viewModel.syncMedicationDay(date, slotRecords)
+
+        assertEquals(false, viewModel.isLoading.value)
+        coVerify {
+            auditLogRepository.log(
+                screenName = "PersonMedication",
+                operation = "syncMedicationDay",
+                tableName = "medication_db",
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it?.contains("Sync Error") == true }
+            )
         }
     }
 }

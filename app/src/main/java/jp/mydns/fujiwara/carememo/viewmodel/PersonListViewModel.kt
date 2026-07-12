@@ -15,6 +15,7 @@ import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepositor
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -118,6 +119,7 @@ class PersonListViewModel(
             )
         }
     }.catch { e ->
+        if (e is CancellationException) throw e
         _isLoading.value = false
         Log.e(TAG, "User list load error", e)
         auditLogRepository.log(
@@ -172,6 +174,7 @@ class PersonListViewModel(
                     showError(R.string.main_err_title_duplicate_archived_add, R.string.common_error_save, e.localizedMessage ?: "")
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "addPerson error", e)
                 auditLogRepository.log(
                     screenName = "PersonList",
@@ -214,6 +217,7 @@ class PersonListViewModel(
                 archivedRepository.logicalDeletePerson(person.id, "PersonList", "logicalDeletePerson")
                 showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "logicalDeletePerson error", e)
                 auditLogRepository.log(
                     screenName = "PersonList",
@@ -237,6 +241,7 @@ class PersonListViewModel(
                 archivedRepository.restorePerson(person.id, "PersonList", "restorePerson")
                 showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "restorePerson error", e)
                 auditLogRepository.log(
                     screenName = "PersonList",

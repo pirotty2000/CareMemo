@@ -177,7 +177,7 @@ fun ConditionDetailPane(
     
     var title by remember(conditionId) { mutableStateOf(memo?.title ?: "") }
     var condition by remember(conditionId) { mutableStateOf(memo?.condition ?: "") }
-    var author by remember(conditionId) { 
+    var author by remember(conditionId, defaultRecorderName) { 
         mutableStateOf(memo?.author ?: defaultRecorderName) 
     }
 
@@ -227,12 +227,6 @@ fun ConditionDetailPane(
                 )
             }
         )
-    }
-
-    LaunchedEffect(defaultRecorderName) {
-        if (conditionId == 0 && author.isBlank()) {
-            author = defaultRecorderName
-        }
     }
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }

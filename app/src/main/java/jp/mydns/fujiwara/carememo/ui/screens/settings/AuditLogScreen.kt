@@ -13,11 +13,11 @@ import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,11 +41,11 @@ fun AuditLogScreen(
     // ここではSettingsViewModelにallLogsを追加したと仮定
     // (実際には前工程で AuditLogRepository に allLogs を追加したので、ViewModel経由で取得できるようにする)
     
-    val auditLogs by viewModel.auditLogs.collectAsState()
-    val selectedTable by viewModel.selectedTable.collectAsState()
-    val selectedScreen by viewModel.selectedScreen.collectAsState()
-    val availableTables by viewModel.availableTables.collectAsState()
-    val availableScreens by viewModel.availableScreens.collectAsState()
+    val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
+    val selectedTable by viewModel.selectedTable.collectAsStateWithLifecycle()
+    val selectedScreen by viewModel.selectedScreen.collectAsStateWithLifecycle()
+    val availableTables by viewModel.availableTables.collectAsStateWithLifecycle()
+    val availableScreens by viewModel.availableScreens.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
     val isFiltered = (selectedTable != null) || (selectedScreen != null)
