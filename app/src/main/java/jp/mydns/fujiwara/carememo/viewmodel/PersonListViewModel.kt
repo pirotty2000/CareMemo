@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.database.sqlite.SQLiteConstraintException
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,6 +10,7 @@ import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -45,8 +48,10 @@ class PersonListViewModel(
     summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
+    private val auditLogRepository: AuditLogRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
+    private val TAG = "PersonListViewModel"
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -112,6 +117,18 @@ class PersonListViewModel(
                 summary = summaries[person.id] ?: PersonCategorySummary()
             )
         }
+    }.catch { e ->
+        _isLoading.value = false
+        Log.e(TAG, "User list load error", e)
+        auditLogRepository.log(
+            screenName = "PersonList",
+            operation = "userListFlow",
+            tableName = "person_db",
+            actionType = "ERROR",
+            affectedId = "0",
+            details = e.toString()
+        )
+        showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun getSectionForName(furigana: String): String {
@@ -133,6 +150,7 @@ class PersonListViewModel(
 
     fun addPerson(person: Person) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 // 1. 保存前に論理的な重複をチェック
                 val existing = repository.findExistingPerson(person)
@@ -145,14 +163,27 @@ class PersonListViewModel(
                 repository.insertPerson(person, "PersonList", "addPerson")
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
-            } catch (_: SQLiteConstraintException) {
+            } catch (e: SQLiteConstraintException) {
                 // 万が一、事前のチェックをすり抜けた場合
                 val existing = repository.findExistingPerson(person)
                 if (existing != null) {
                     handleDuplicateError(existing, person, isUpdate = false)
                 } else {
-                    showError(R.string.main_err_title_duplicate_archived_add, R.string.common_error_save, "")
+                    showError(R.string.main_err_title_duplicate_archived_add, R.string.common_error_save, e.localizedMessage ?: "")
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "addPerson error", e)
+                auditLogRepository.log(
+                    screenName = "PersonList",
+                    operation = "addPerson",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = "0",
+                    details = e.toString()
+                )
+                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -178,15 +209,47 @@ class PersonListViewModel(
 
     fun logicalDeletePerson(person: Person) {
         viewModelScope.launch {
-            archivedRepository.logicalDeletePerson(person.id, "PersonList", "logicalDeletePerson")
-            showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
+            _isLoading.value = true
+            try {
+                archivedRepository.logicalDeletePerson(person.id, "PersonList", "logicalDeletePerson")
+                showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
+            } catch (e: Exception) {
+                Log.e(TAG, "logicalDeletePerson error", e)
+                auditLogRepository.log(
+                    screenName = "PersonList",
+                    operation = "logicalDeletePerson",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = person.id.toString(),
+                    details = e.toString()
+                )
+                showError(R.string.common_error_title_delete, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
     fun restorePerson(person: Person) {
         viewModelScope.launch {
-            archivedRepository.restorePerson(person.id, "PersonList", "restorePerson")
-            showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
+            _isLoading.value = true
+            try {
+                archivedRepository.restorePerson(person.id, "PersonList", "restorePerson")
+                showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
+            } catch (e: Exception) {
+                Log.e(TAG, "restorePerson error", e)
+                auditLogRepository.log(
+                    screenName = "PersonList",
+                    operation = "restorePerson",
+                    tableName = "person_db",
+                    actionType = "ERROR",
+                    affectedId = person.id.toString(),
+                    details = e.toString()
+                )
+                showError(R.string.common_error_title_update, R.string.archive_err_restore_failure, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -195,12 +258,20 @@ class PersonListViewModel(
         private val archivedRepository: DeleteOrRestorePersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonListViewModel::class.java)) {
-                return PersonListViewModel(repository, archivedRepository, summaryRepository, conditionRepository, userSettingsRepository) as T
+                return PersonListViewModel(
+                    repository,
+                    archivedRepository,
+                    summaryRepository,
+                    conditionRepository,
+                    userSettingsRepository,
+                    auditLogRepository
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -1,5 +1,9 @@
 # UI層テスト仕様書 - Settings (設定・管理)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/settings/SettingsScreenTest.kt`
+    - `androidTest/java/jp/mydns/fujiwara/carememo/data/repository/UserSettingsRepositoryTest.kt`
+
 ## 1. コンポーネント単体テスト (SettingsScreenContent)
 **目的:** 設定項目の表示、初期値の反映、スイッチの切り替えによるUIの変化などを検証する。
 

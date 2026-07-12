@@ -2,7 +2,9 @@ package jp.mydns.fujiwara.carememo.data.repository
 
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import java.time.Instant
 
 /**
@@ -27,15 +29,24 @@ class AuditLogRepository(
         affectedId: String,
         details: String? = null
     ) {
-        val entry = AuditLog(
-            screenName = screenName,
-            operation = operation,
-            tableName = tableName,
-            actionType = actionType,
-            affectedId = affectedId,
-            details = details
-        )
-        auditLogDao.insert(entry)
+        // NonCancellable を指定し、呼び出し元のキャンセル（画面遷移等）に影響されず
+        // ログの書き込みを試行するようにする
+        withContext(NonCancellable) {
+            try {
+                val entry = AuditLog(
+                    screenName = screenName,
+                    operation = operation,
+                    tableName = tableName,
+                    actionType = actionType,
+                    affectedId = affectedId,
+                    details = details
+                )
+                auditLogDao.insert(entry)
+            } catch (e: Exception) {
+                // ログ記録の失敗は業務処理を中断させないよう、例外をキャッチする。
+                // ログ自体の失敗によりアプリがクラッシュまたは中断することを防ぐ。
+            }
+        }
     }
 
     /**

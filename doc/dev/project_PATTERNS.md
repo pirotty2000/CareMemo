@@ -1,80 +1,114 @@
-# CareMemo 実装パターン集 (project_PATTERNS.md)
+# CareMemo 開発パターン集 (project_PATTERNS.md)
 
-このドキュメントでは、CareMemo プロジェクトで推奨される具体的なコード実装例を定義します。設計思想やルールについては `project_RULES.md` を参照してください。
+このドキュメントは、プロジェクト内で確立された「黄金パターン（ベストプラクティス）」を記録し、AI Agent および開発者が一貫した実装を行うためのリファレンスです。
 
 ---
 
-# 1. 操作ログ (監査ログ) の実装パターン
+## 1. ViewModel における堅牢なエラーハンドリングと可視化
 
-データの変更を伴う操作（CRUD）における、Repository と ViewModel の具体的な連携例です。
+### 1.1. 実装パターン (PersonHealthViewModel を基準とする)
+エラー発生時、ユーザーを迷わせず（ローディング解除）、開発者が追跡可能にする（Logcat + 監査ログ）ための標準構成です。
 
-## Repository の実装
-`AuditLogRepository` を使用し、業務処理の後にログを記録します。
-
+#### Flow (監視系)
 ```kotlin
-// Repositoryの実装例
-suspend fun insertData(item: Data, screenName: String = "", operation: String = "") {
-    dao.insert(item)
-    // 最後にログを記録
+repository.getDataFlow(id)
+    .onStart { _isLoading.value = true }
+    .onEach { _isLoading.value = false }
+    .catch { e ->
+        _isLoading.value = false
+        Log.e(TAG, "Data load error", e) // Logcat出力
+        auditLogRepository.log( // 監査ログにERRORとして記録
+            screenName = "ScreenName",
+            operation = "operationName",
+            tableName = "target_db",
+            actionType = "ERROR",
+            affectedId = id.toString(),
+            details = e.toString()
+        )
+        showError(R.string.title, R.string.message, e.localizedMessage ?: "")
+    }
+```
+
+#### Suspend関数 (保存・削除系)
+```kotlin
+viewModelScope.launch {
+    _isLoading.value = true
     try {
-        auditLogRepository.log(
-            tableName = "data_table",
-            actionType = "INSERT",
-            affectedId = item.id.toString(),
-            screenName = screenName,
-            operation = operation
-        )
+        repository.saveData(data)
+        showSnackbar(R.string.success_msg)
     } catch (e: Exception) {
-        // ログ記録の失敗が本来の業務処理を妨げないようにする
-        e.printStackTrace()
+        Log.e(TAG, "Save error", e)
+        auditLogRepository.log( /* catch内でも上記と同様にログ記録 */ )
+        showError(R.string.err_title, R.string.err_msg, e.localizedMessage ?: "")
+    } finally {
+        _isLoading.value = false // finallyで確実に解除
     }
 }
 ```
-
-## ViewModel からの呼び出し
-UIイベント発生時に、論理的な画面名と操作内容を渡します。
-
-```kotlin
-// ViewModelの実装例
-fun saveData() {
-    viewModelScope.launch {
-        repository.insertData(
-            item = currentData,
-            screenName = "データ登録画面",  // 日本語で論理的な画面名を指定
-            operation = "保存ボタン押下"    // 「何をしたか」を指定
-        )
-    }
-}
-```
-# ソースファイル・コメントテンプレート
-
-新規作成や大規模な修正時には、以下のテンプレートをファイルヘッダー等に適用してください。
-
-## ui/screens 用
-```kotlin
-/*
-Screen :
-【画面名】：
-【役割】：
-【主な機能】：
-【遷移】：
-【使用するViewModel】：
-【使用するComponents】：
-【備考】：
-*/
-```
-
-## ui/components 用
-```kotlin
-/*
-Component：
-【役割】：
-【主な機能】：
-【想定する利用場所】：
-【このコンポーネントでは行わないこと】：
-【公開composable】：
-*/
 
 ---
 
-最終更新日: 2026/07/12
+## 2. ユニットテストにおける Android 依存の排除
+
+### 2.1. Log クラスのモック化パターン
+JVM 上のユニットテストで `android.util.Log` を使用しているコードをテストする場合、`Method e in android.util.Log not mocked` エラーを防ぐために以下の設定を必須とします。
+
+```kotlin
+@Before
+fun setup() {
+    mockkStatic(Log::class)
+    every { Log.e(any(), any(), any()) } returns 0 // Log.e を無効化
+    // ... 他のセットアップ
+}
+
+@After
+fun tearDown() {
+    unmockkStatic(Log::class) // 終了後に必ず解除
+}
+```
+
+### 2.2. 例外発生時の挙動検証
+`isLoading` が `false` に戻ることと、監査ログに `"ERROR"` が記録されたことをセットで検証します。
+
+```kotlin
+@Test
+fun `例外発生時にisLoadingがfalseになりエラーログが記録されること`() = runTest {
+    coEvery { repository.action() } throws RuntimeException("Error Message")
+
+    viewModel.executeAction()
+
+    assertEquals(false, viewModel.isLoading.value)
+    coVerify(exactly = 1) { 
+        auditLogRepository.log(
+            actionType = "ERROR",
+            details = match { it?.contains("Error Message") == true },
+            // ... 他のパラメータ
+        )
+    }
+}
+```
+
+---
+
+## 3. ユニットテストにおけるモックの反映とタイミング
+
+### 3.1. クラス初期化時に構築される Flow のテスト
+ViewModel のプロパティとして定義されている `StateFlow`（例: `val userList = combine(...).stateIn(...)`）は、**ViewModel のインスタンス化時に一度だけリポジトリのメソッドを呼び出します。**
+
+そのため、テストメソッド内で `every { repository.getAll() } throws ...` のようにモックを上書きしても、既に生成済みの Flow には反映されません。
+
+#### 対策：例外系のテストでは ViewModel を再生成する
+```kotlin
+@Test
+fun `例外発生時のテスト`() = runTest {
+    // 1. ViewModel を作る「前」に、例外を投げるようにモックを設定
+    every { repository.getAll() } returns flow { throw RuntimeException("Error") }
+
+    // 2. その設定を反映させるために、テスト内で ViewModel を新規作成する
+    val errorViewModel = PersonListViewModel(repository, ...)
+
+    // 3. 検証を行う
+    errorViewModel.userList.test { ... }
+}
+```
+※ `flatMapLatest` を使用している Flow の場合は引数の変化で再実行されるため、ViewModel の再生成なしでモック上書きが効く場合がありますが、常に「モック設定 → ViewModel生成」の順序を守るのが最も安全です。

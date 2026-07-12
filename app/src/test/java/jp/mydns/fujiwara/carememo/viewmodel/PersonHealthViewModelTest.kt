@@ -2,22 +2,27 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import app.cash.turbine.test
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -36,6 +41,7 @@ class PersonHealthViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private lateinit var viewModel: PersonHealthViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -51,6 +57,9 @@ class PersonHealthViewModelTest {
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
@@ -62,13 +71,15 @@ class PersonHealthViewModelTest {
             healthRepository,
             personRepository,
             summaryRepository,
-            userSettingsRepository
+            userSettingsRepository,
+            auditLogRepository
         )
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Log::class)
     }
 
     @Test
@@ -120,5 +131,60 @@ class PersonHealthViewModelTest {
         val record = HeightAndWeight(id = 1, personId = 1, height = 170.0, weight = 60.0, recordTime = Instant.now())
         viewModel.deleteRecord(record)
         coVerify { healthRepository.deleteHeightAndWeight(record, any(), any()) }
+    }
+
+    @Test
+    fun `データ取得時に例外が発生した場合、isLoadingがfalseになり、エラーログが記録されること`() = runTest {
+        // 例外を投げるFlowを作成
+        every { healthRepository.getHeightAndWeightByPersonId(any()) } returns flow {
+            throw RuntimeException("Load Error")
+        }
+
+        viewModel.loadPerson(1)
+        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
+
+        // StateFlowの収集を開始して例外を発生させる
+        viewModel.records.test {
+            awaitItem() // 初期値の空リスト
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        // isLoadingがfalseに戻ることを確認
+        assertEquals(false, viewModel.isLoading.value)
+
+        // 監査ログが記録されたか検証
+        coVerify(exactly = 1) { 
+            auditLogRepository.log(
+                screenName = "PersonHealth",
+                operation = any(),
+                tableName = any(),
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it?.contains("Load Error") == true }
+            ) 
+        }
+    }
+
+    @Test
+    fun `保存時に例外が発生した場合、isLoadingがfalseになり、エラーログが記録されること`() = runTest {
+        val record = HeightAndWeight(id = 0, personId = 1, height = 170.0, weight = 60.0, recordTime = Instant.now())
+        coEvery { healthRepository.insertHeightAndWeight(any(), any(), any()) } throws RuntimeException("Save Error")
+
+        viewModel.saveRecord(record)
+
+        // isLoadingがfalseに戻ることを確認
+        assertEquals(false, viewModel.isLoading.value)
+
+        // 監査ログが記録されたか検証
+        coVerify(exactly = 1) { 
+            auditLogRepository.log(
+                screenName = "PersonHealth",
+                operation = "saveRecord",
+                tableName = any(),
+                actionType = "ERROR",
+                affectedId = "0",
+                details = match { it?.contains("Save Error") == true }
+            ) 
+        }
     }
 }

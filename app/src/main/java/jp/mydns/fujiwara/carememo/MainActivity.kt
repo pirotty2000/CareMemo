@@ -251,7 +251,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             deleteOrRestorePersonRepository,
                             personSummaryRepository,
                             conditionRepository,
-                            userSettingsRepository))
+                            userSettingsRepository,
+                            auditLogRepository))
                     MainScreen(
                         viewModel = listViewModel, 
                         onNavigateToDetail = { personId, category ->
@@ -303,7 +304,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             personRepository, personSummaryRepository, userSettingsRepository))
                     val healthViewModel: PersonHealthViewModel = viewModel(
                         factory = PersonHealthViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
                     PersonHealthScreen(
                         viewModel = detailViewModel,
                         healthViewModel = healthViewModel,
@@ -332,7 +333,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
                     val healthViewModel: PersonHealthViewModel = viewModel(
                         factory = PersonHealthViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository))
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
                     val detailViewModel: PersonDetailViewModel = viewModel(
                         factory = PersonDetailViewModel.Factory(
                             personRepository, personSummaryRepository, userSettingsRepository))

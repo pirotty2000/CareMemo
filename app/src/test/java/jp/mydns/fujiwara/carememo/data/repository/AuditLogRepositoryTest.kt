@@ -2,6 +2,7 @@
 
 package jp.mydns.fujiwara.carememo.data.repository
 
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
@@ -32,5 +33,16 @@ class AuditLogRepositoryTest {
     fun `deleteAllLogsを実行したとき、DAOのdeleteAllが呼ばれること`() = runTest {
         repository.deleteAllLogs()
         coVerify { auditLogDao.deleteAll() }
+    }
+
+    @Test
+    fun `log実行時に例外が発生しても、呼び出し元に例外が伝播しないこと`() = runTest {
+        // DAOが例外を投げるように設定
+        coEvery { auditLogDao.insert(any()) } throws RuntimeException("DB Error")
+
+        // 例外が発生しても、ここで例外がスローされないことを確認
+        repository.log("Screen", "Op", "Table", "Type", "1")
+
+        coVerify { auditLogDao.insert(any()) }
     }
 }

@@ -1,5 +1,8 @@
 # UI層テスト仕様書 - GraphExpansion (グラフ拡大表示)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/health/GraphExpansionScreenTest.kt`
+
 ## 1. 画面表示テスト (GraphExpansionScreen)
 **目的:** 横画面に固定された状態で、グラフが大きく、正しく表示されていることを検証する。
 

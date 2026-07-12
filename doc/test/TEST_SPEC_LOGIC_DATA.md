@@ -1,5 +1,12 @@
 # CareMemo テスト仕様書 (ロジック・データ層)
 
+- **対象テストコード:**
+    - `test/java/jp/mydns/fujiwara/carememo/data/` (AppThresholdsTest等)
+    - `test/java/jp/mydns/fujiwara/carememo/viewmodel/` (PersonLifecycleTest等)
+    - `test/java/jp/mydns/fujiwara/carememo/utils/` (DateTimeUtilsTest等)
+    - `androidTest/java/jp/mydns/fujiwara/carememo/data/` (CareMemoDatabaseTest等)
+    - `androidTest/java/jp/mydns/fujiwara/carememo/utils/` (ImageUtilsTest等)
+
 このドキュメントは、CareMemo における「目に見えない部分（ロジック、データ整合性、非同期安全性）」を担保するために実装された自動テストの仕様をまとめたものです。
 現在、合計 81 件のテストケース（Unit: 55件, Instrumented: 26件）が実装され、全て合格しています。
 

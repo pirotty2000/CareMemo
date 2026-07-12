@@ -1,5 +1,9 @@
 # UI層テスト仕様書 - PersonMedication (服薬管理)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/medication/PersonMedicationScreenTest.kt`
+    - `test/java/jp/mydns/fujiwara/carememo/viewmodel/PersonMedicationViewModelTest.kt`
+
 ## 1. 詳細画面共通コンポーネント (Header / CategoryBar)
 **目的:** 全詳細画面で共通となる上部エリアの表示と基本操作を検証する。
 

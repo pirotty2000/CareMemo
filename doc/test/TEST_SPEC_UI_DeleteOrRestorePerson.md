@@ -1,5 +1,8 @@
 # UI層テスト仕様書 - DeleteOrRestorePerson (利用者復帰・完全抹消)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/settings/DeleteOrRestorePersonTest.kt`
+
 ## 1. 画面表示テスト (DeleteOrRestorePersonScreen)
 **目的:** 復帰・抹消の各モードに応じてUIが適切に切り替わり、利用者の情報が正しく表示されることを検証する。
 

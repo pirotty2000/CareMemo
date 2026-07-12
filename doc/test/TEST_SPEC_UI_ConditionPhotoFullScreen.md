@@ -1,5 +1,8 @@
 # UI層テスト仕様書 - ConditionPhotoFullScreen (写真フル画面表示)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/condition/ConditionPhotoFullScreenTest.kt`
+
 ## 1. 画面表示テスト (ConditionPhotoFullScreen)
 **目的:** 写真が画面いっぱいに正しく表示され、付随する情報（キャプション等）が適切に配置されていることを検証する。
 

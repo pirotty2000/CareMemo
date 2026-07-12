@@ -1,5 +1,9 @@
 # UI層テスト仕様書 - PersonEdit (利用者登録・編集)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/main/PersonEditScreenTest.kt`
+    - `test/java/jp/mydns/fujiwara/carememo/viewmodel/PersonEditViewModelTest.kt`
+
 ## 1. コンポーネント単体テスト (PersonEditScreenContent)
 **目的:** 入力項目の表示、バリデーションによる保存ボタンの活性・非活性状態、初期値の反映などを検証する。
 

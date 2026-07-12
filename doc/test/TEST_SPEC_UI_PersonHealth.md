@@ -1,5 +1,9 @@
 # UI層テスト仕様書 - PersonHealth (バイタル管理)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/health/PersonHealthScreenTest.kt`
+    - `test/java/jp/mydns/fujiwara/carememo/viewmodel/PersonHealthViewModelTest.kt`
+
 ## 1. 詳細画面共通コンポーネント (Header / CategoryBar)
 **目的:** 全詳細画面で共通となる上部エリアの表示と基本操作を検証する。
 
@@ -30,7 +34,15 @@
 | BH-03 | 日時重複時の保存ガード | 既存データと同一日時の入力を保存しようとした際、エラーダイアログが表示され、画面が閉じないこと。 |
 | (移動) | 一括入力：重複ガード | `TEST_SPEC_UI_BatchInput.md` へ移設。 |
 
-## 4. テスト用タグ (testTag) 定義
+## 4. ロジック・安全性テスト (PersonHealthViewModel)
+**目的:** 例外発生時もローディング状態が適切に解除され、画面がフリーズしないことを検証する。
+
+| ID | テスト項目 | 検証内容 |
+|:---|:---|:---|
+| LG-01 | データ取得失敗時の安全性 | 履歴データ取得中（Flow）に例外が発生した際、`isLoading` が `false` になり、エラーダイアログが表示され、監査ログに "ERROR" が記録されること。 |
+| LG-02 | 保存失敗時の安全性 | データの保存中に例外が発生した際、`isLoading` が `false` になり、エラーダイアログが表示され、監査ログに "ERROR" が記録されること。 |
+
+## 5. テスト用タグ (testTag) 定義
 - `HealthScreen_BackButton`: 戻るボタン
 - `PersonHeader_NameAndAge`: 利用者氏名・年齢
 - `HealthScreen_PdfButton`: PDF出力ボタン
@@ -39,11 +51,12 @@
 - `HealthScreen_HistoryList`: 履歴リスト
 - `HealthScreen_HistoryGraphSwitch`: 履歴/グラフ切り替え
 
-## 5. 実装状況
-今回のUIテスト実装（`PersonHealthScreenTest.kt`）において、定義されたすべての項目が実装され、検証されている。
+## 6. 実装状況
+今回のUIテストおよびロジックテストの実装において、定義されたすべての項目が実装され、検証されている。
 
 | セクション | 項目 ID | ステータス | 備考 |
 |:---|:---|:---:|:---|
 | 1. 共通コンポーネント | COM-01 〜 COM-04 | ✅ 実装済み | ヘッダーおよびカテゴリ選択の動作。 |
 | 2. コンポーネント単体 | CP-01 〜 CP-04 | ✅ 実装済み | スマホ版（各モード）およびタブレット版の表示。 |
 | 3. 画面挙動・結合 | BH-01 〜 BH-03 | ✅ 実装済み | 保存動作、グラフ拡大、重複ガード。 |
+| 4. ロジック・安全性 | LG-01 〜 LG-02 | ✅ 実装済み | 例外発生時のローディング解除検証。 |

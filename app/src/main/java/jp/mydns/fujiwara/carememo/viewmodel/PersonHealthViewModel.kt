@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
@@ -33,9 +36,11 @@ class PersonHealthViewModel(
     private val healthRepository: HealthRepository,
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
-    userSettingsRepository: UserSettingsRepository
+    userSettingsRepository: UserSettingsRepository,
+    private val auditLogRepository: AuditLogRepository // 追加
 ) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository) {
 
+    private val TAG = "PersonHealthViewModel"
     private val _currentCategory = MutableStateFlow<Category?>(null)
 
     /**
@@ -46,14 +51,27 @@ class PersonHealthViewModel(
     }.flatMapLatest { (person, category) ->
         if (person == null || category == null) flowOf(emptyList())
         else {
-            val flow = when (category) {
+            when (category) {
                 Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(person.id)
                 Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(person.id)
                 Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
                 else -> flowOf(emptyList())
             }
-            flow.onEach { _isLoading.value = false }
         }
+    }.onEach {
+        _isLoading.value = false
+    }.catch { e ->
+        _isLoading.value = false
+        Log.e(TAG, "Data load error", e)
+        auditLogRepository.log(
+            screenName = "PersonHealth",
+            operation = "recordsFlow",
+            tableName = "health_db",
+            actionType = "ERROR",
+            affectedId = _currentPerson.value?.id?.toString() ?: "0",
+            details = e.toString()
+        )
+        showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
@@ -79,9 +97,19 @@ class PersonHealthViewModel(
                 else -> flowOf(emptyList())
             }
         }.onEach {
-            if (_currentPerson.value != null) {
-                _isLoading.value = false
-            }
+            _isLoading.value = false
+        }.catch { e ->
+            _isLoading.value = false
+            Log.e(TAG, "getHealthRecords error", e)
+            auditLogRepository.log(
+                screenName = "PersonHealth",
+                operation = "getHealthRecords",
+                tableName = "health_db",
+                actionType = "ERROR",
+                affectedId = _currentPerson.value?.id?.toString() ?: "0",
+                details = e.toString()
+            )
+            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
 
@@ -91,6 +119,7 @@ class PersonHealthViewModel(
     fun saveRecord(record: Any?) {
         if (record == null) return
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 val isUpdate = if (record is HistoryRecord) record.id != 0 else false
                 
@@ -114,7 +143,18 @@ class PersonHealthViewModel(
                 sendUiEvent(UiEvent.SaveSuccess)
                 showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
             } catch (e: Exception) {
+                Log.e(TAG, "Save error", e)
+                auditLogRepository.log(
+                    screenName = "PersonHealth",
+                    operation = "saveRecord",
+                    tableName = "health_db",
+                    actionType = "ERROR",
+                    affectedId = (record as? HistoryRecord)?.id?.toString() ?: "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -131,11 +171,23 @@ class PersonHealthViewModel(
      */
     fun deleteRecord(record: Any) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 performDelete(record)
                 showSnackbar(R.string.p_health_msg_delete_success)
             } catch (e: Exception) {
+                Log.e(TAG, "Delete error", e)
+                auditLogRepository.log(
+                    screenName = "PersonHealth",
+                    operation = "deleteRecord",
+                    tableName = "health_db",
+                    actionType = "ERROR",
+                    affectedId = (record as? HistoryRecord)?.id?.toString() ?: "0",
+                    details = e.toString()
+                )
                 showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -151,12 +203,19 @@ class PersonHealthViewModel(
         private val personRepository: PersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val healthRepository: HealthRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PersonHealthViewModel::class.java)) {
-                return PersonHealthViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository) as T
+                return PersonHealthViewModel(
+                    healthRepository,
+                    personRepository,
+                    summaryRepository,
+                    userSettingsRepository,
+                    auditLogRepository
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -1,5 +1,9 @@
 # UI層テスト仕様書 - BatchInput (健康記録一括入力)
 
+- **対象テストコード:**
+    - `androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/health/BatchInputScreenTest.kt`
+    - `test/java/jp/mydns/fujiwara/carememo/viewmodel/BatchInputViewModelTest.kt`
+
 ## 1. 画面表示テスト (BatchInputScreenContent)
 **目的:** 一括入力画面の各項目が正しく表示されていることを検証する。
 
