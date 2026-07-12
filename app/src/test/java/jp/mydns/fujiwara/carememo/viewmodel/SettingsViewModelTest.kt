@@ -93,7 +93,7 @@ class SettingsViewModelTest {
 
         coVerify {
             auditLogRepository.log(
-                screenName = "Settings",
+                featureName = "Settings",
                 operation = "clearAuditLogs",
                 tableName = any(),
                 actionType = "ERROR",
@@ -113,7 +113,7 @@ class SettingsViewModelTest {
         assertEquals(false, viewModel.isProcessing.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "Settings",
+                featureName = "Settings",
                 operation = "rotateLogsManually",
                 tableName = any(),
                 actionType = "ERROR",
@@ -134,7 +134,7 @@ class SettingsViewModelTest {
         assertEquals(false, viewModel.isProcessing.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "Settings",
+                featureName = "Settings",
                 operation = "clearAllData",
                 tableName = any(),
                 actionType = "ERROR",
@@ -154,7 +154,7 @@ class SettingsViewModelTest {
         assertEquals(false, viewModel.isProcessing.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "Settings",
+                featureName = "Settings",
                 operation = "checkIntegrity",
                 tableName = any(),
                 actionType = "ERROR",
@@ -182,7 +182,7 @@ class SettingsViewModelTest {
             
             coVerify {
                 auditLogRepository.log(
-                    screenName = "Settings",
+                    featureName = "Settings",
                     operation = "auditLogsFlow",
                     tableName = any(),
                     actionType = "ERROR",
@@ -210,7 +210,7 @@ class SettingsViewModelTest {
             
             coVerify {
                 auditLogRepository.log(
-                    screenName = "Settings",
+                    featureName = "Settings",
                     operation = "deletedUserListFlow",
                     tableName = any(),
                     actionType = "ERROR",

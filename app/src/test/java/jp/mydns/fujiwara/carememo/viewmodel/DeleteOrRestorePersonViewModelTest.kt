@@ -130,7 +130,7 @@ class DeleteOrRestorePersonViewModelTest {
             assertEquals(false, errorViewModel.isLoading.value)
             coVerify {
                 auditLogRepository.log(
-                    screenName = "DeleteOrRestorePerson",
+                    featureName = "DeleteOrRestorePerson",
                     operation = "archivedPersonListFlow",
                     tableName = "person_db",
                     actionType = "ERROR",
@@ -152,7 +152,7 @@ class DeleteOrRestorePersonViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "DeleteOrRestorePerson",
+                featureName = "DeleteOrRestorePerson",
                 operation = "restoreSelectedPersons",
                 tableName = "person_db",
                 actionType = "ERROR",
@@ -173,7 +173,7 @@ class DeleteOrRestorePersonViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "DeleteOrRestorePerson",
+                featureName = "DeleteOrRestorePerson",
                 operation = "deleteSelectedPersons",
                 tableName = "person_db",
                 actionType = "ERROR",

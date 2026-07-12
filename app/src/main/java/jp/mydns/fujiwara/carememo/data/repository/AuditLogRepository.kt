@@ -22,7 +22,7 @@ class AuditLogRepository(
      * ログを記録する
      */
     suspend fun log(
-        screenName: String,
+        featureName: String,
         operation: String,
         tableName: String,
         actionType: String,
@@ -34,7 +34,7 @@ class AuditLogRepository(
         withContext(NonCancellable) {
             try {
                 val entry = AuditLog(
-                    screenName = screenName,
+                    featureName = featureName,
                     operation = operation,
                     tableName = tableName,
                     actionType = actionType,

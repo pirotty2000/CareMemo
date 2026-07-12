@@ -34,7 +34,7 @@ class PersonRepositoryTest {
         coVerify { personDao.insert(person) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "登録",
                 tableName = "person_db",
                 actionType = "INSERT",
@@ -53,7 +53,7 @@ class PersonRepositoryTest {
         coVerify { personDao.update(person) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "更新",
                 tableName = "person_db",
                 actionType = "UPDATE",

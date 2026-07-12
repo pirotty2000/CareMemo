@@ -30,8 +30,8 @@ class AuditLogScreenTest {
     private lateinit var viewModel: SettingsViewModel
 
     private val mockLogs = listOf(
-        AuditLog(id = 1, timestamp = Instant.now(), screenName = "利用者一覧", operation = "新規登録", tableName = "person_db", actionType = "INSERT", affectedId = "1"),
-        AuditLog(id = 2, timestamp = Instant.now(), screenName = "健康記録", operation = "保存", tableName = "health_db", actionType = "UPDATE", affectedId = "10")
+        AuditLog(id = 1, timestamp = Instant.now(), featureName = "利用者一覧", operation = "新規登録", tableName = "person_db", actionType = "INSERT", affectedId = "1"),
+        AuditLog(id = 2, timestamp = Instant.now(), featureName = "健康記録", operation = "保存", tableName = "health_db", actionType = "UPDATE", affectedId = "10")
     )
 
     @Before
@@ -41,9 +41,9 @@ class AuditLogScreenTest {
         // デフォルトのモック設定
         every { viewModel.auditLogs } returns MutableStateFlow(mockLogs)
         every { viewModel.selectedTable } returns MutableStateFlow(null)
-        every { viewModel.selectedScreen } returns MutableStateFlow(null)
+        every { viewModel.selectedFeature } returns MutableStateFlow(null)
         every { viewModel.availableTables } returns MutableStateFlow(listOf("person_db", "health_db"))
-        every { viewModel.availableScreens } returns MutableStateFlow(listOf("利用者一覧", "健康記録"))
+        every { viewModel.availableFeatures } returns MutableStateFlow(listOf("利用者一覧", "健康記録"))
     }
 
     private fun setContent() {
@@ -76,7 +76,7 @@ class AuditLogScreenTest {
     fun cp02_empty_state_is_displayed() {
         every { viewModel.auditLogs } returns MutableStateFlow(emptyList())
         every { viewModel.availableTables } returns MutableStateFlow(emptyList())
-        every { viewModel.availableScreens } returns MutableStateFlow(emptyList())
+        every { viewModel.availableFeatures } returns MutableStateFlow(emptyList())
         
         setContent()
         
@@ -102,7 +102,7 @@ class AuditLogScreenTest {
         setContent()
         
         composeTestRule.onNodeWithTag("AuditLog_TableFilter").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("AuditLog_ScreenFilter").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("AuditLog_FeatureFilter").assertIsDisplayed()
     }
 
     @Test
@@ -140,13 +140,13 @@ class AuditLogScreenTest {
         setContent()
         
         // チップをタップ
-        composeTestRule.onNodeWithTag("AuditLog_ScreenFilter").performClick()
+        composeTestRule.onNodeWithTag("AuditLog_FeatureFilter").performClick()
         
         // メニュー項目を選択
         composeTestRule.onNodeWithText("健康記録").performClick()
         
         // ViewModelが呼ばれたこと
-        verify { viewModel.setScreenFilter("健康記録") }
+        verify { viewModel.setFeatureFilter("健康記録") }
     }
 
     @Test

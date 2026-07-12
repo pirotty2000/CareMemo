@@ -67,13 +67,13 @@ class PersonEditViewModelTest {
         }
 
         // 入力値をセット
-        viewModel.lastName.value = "山田"
-        viewModel.firstName.value = "太郎"
-        viewModel.era.value = BirthEra.SHOWA
-        viewModel.year.value = "25"
-        viewModel.month.value = "1"
-        viewModel.day.value = "1"
-        viewModel.note.value = "識別メモA"
+        viewModel.updateLastName("山田")
+        viewModel.updateFirstName("太郎")
+        viewModel.updateEra(BirthEra.SHOWA)
+        viewModel.updateYear("25")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
+        viewModel.updateNote("識別メモA")
 
         val birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant()
         val existingPerson = Person(
@@ -108,13 +108,13 @@ class PersonEditViewModelTest {
             viewModel.uiEventFlow.collect { uiEvents.add(it) }
         }
 
-        viewModel.lastName.value = "山田"
-        viewModel.firstName.value = "太郎"
-        viewModel.era.value = BirthEra.SHOWA
-        viewModel.year.value = "25"
-        viewModel.month.value = "1"
-        viewModel.day.value = "1"
-        viewModel.note.value = "識別メモB" // 既存(A)とは異なるメモ
+        viewModel.updateLastName("山田")
+        viewModel.updateFirstName("太郎")
+        viewModel.updateEra(BirthEra.SHOWA)
+        viewModel.updateYear("25")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
+        viewModel.updateNote("識別メモB") // 既存(A)とは異なるメモ
 
         // リポジトリは、識別メモBでの検索には null を返す（重複なし）
         coEvery { personRepository.findExistingPerson(match { it.note == "識別メモB" }) } returns null
@@ -194,13 +194,13 @@ class PersonEditViewModelTest {
         )
         
         // 入力内容をBと同じに変更
-        viewModel.lastName.value = "佐藤"
-        viewModel.firstName.value = "次郎"
-        viewModel.era.value = BirthEra.SHOWA
-        viewModel.year.value = "35" // 1960年
-        viewModel.month.value = "5"
-        viewModel.day.value = "5"
-        viewModel.note.value = "Bのメモ"
+        viewModel.updateLastName("佐藤")
+        viewModel.updateFirstName("次郎")
+        viewModel.updateEra(BirthEra.SHOWA)
+        viewModel.updateYear("35") // 1960年
+        viewModel.updateMonth("5")
+        viewModel.updateDay("5")
+        viewModel.updateNote("Bのメモ")
 
         coEvery { personRepository.findExistingPerson(match { it.lastName == "佐藤" }) } returns personB
 
@@ -223,7 +223,7 @@ class PersonEditViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonEdit",
+                featureName = "PersonEdit",
                 operation = "loadPerson",
                 tableName = "person_db",
                 actionType = "ERROR",
@@ -239,11 +239,11 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         // 必須項目入力
-        viewModel.lastName.value = "山田"
-        viewModel.firstName.value = "太郎"
-        viewModel.year.value = "25"
-        viewModel.month.value = "1"
-        viewModel.day.value = "1"
+        viewModel.updateLastName("山田")
+        viewModel.updateFirstName("太郎")
+        viewModel.updateYear("25")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
 
         coEvery { personRepository.findExistingPerson(any()) } returns null
         coEvery { personRepository.insertPerson(any(), any(), any()) } throws RuntimeException("Save Error")
@@ -254,7 +254,7 @@ class PersonEditViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonEdit",
+                featureName = "PersonEdit",
                 operation = "save",
                 tableName = "person_db",
                 actionType = "ERROR",

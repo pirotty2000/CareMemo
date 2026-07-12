@@ -40,30 +40,43 @@
 
 ---
 
-## 🏗️ 次回実施予定のリファクタリング（検討中）
+## 🏗️ 次回実施予定のリファクタリング（実施中）
 
 ### BaseViewModel への共通処理（safeLaunch）の導入
 - **背景**: 現状、各 ViewModel に `try-catch` と `isLoading` の制御コードが散在しており、今回の `CancellationException` のように共通の修正が必要になった際の影響範囲が大きい。
-- **基本方針**： `BaseViewModel` は「コルーチンのライフサイクル管理」と「例外の分類」を担当し、例外への具体的な対応（ログ出力・UiEvent生成など）は委譲先へ任せる。
-- **方針**: `BaseViewModel` にコルーチン実行と例外ハンドリングを一手に引き受ける共通関数（例: `safeLaunch`）を実装する。ただし、ログ記録の具体的実装を `BaseViewModel` が直接持つ（`AuditLogRepository` を保持する）ことは避け、インターフェース等を介して将来的に `ErrorLogger` や `ExceptionHandler` といった専用クラスへ委譲できる構成とする。
-- **期待されるメリット**:
-    - **自動的なキャンセル除外**: `CancellationException` の判定を一箇所で行うだけで、全 ViewModel に反映される。
-    - **ローディング解除の保証**: `finally` ブロックでの `isLoading = false` を共通化し、画面フリーズを根絶する。
-    - **責務の分離**: 「ログを記録すべき事態の判定」は `BaseViewModel` が行い、「どう記録するか」は外部へ委譲することで、アーキテクチャの柔軟性を確保する。
-    - **コードの純粋化**: 各 ViewModel のビジネスロジックがボイラープレートに埋もれず、読みやすくなる。
+- **基本方針**: `BaseViewModel` は「コルーチンのライフサイクル管理」と「例外の分類」を担当し、例外への具体的な対応（ログ出力・UiEvent生成など）は委譲先へ任せる。
 - **TODO**:
-    - エラー記録・通知の責務を抽象化したインターフェース（例: `CoroutineErrorHandler`）の定義。
-    - `BaseViewModel` への `safeLaunch` 関数のプロトタイプ作成と、委譲の仕組みの検証。
-    - `PersonBaseViewModel` 等への段階的な適用。
+    - **フェーズ 1: 基盤構築と検証**
+        - ✅ エラー記録・通知の責務を抽象化したインターフェース（`CoroutineErrorHandler`）の定義。
+        - ✅ `BaseViewModel` への `safeLaunch` / `safeCollect` 仕様策定（`project_BASE_VIEWMODEL_SPEC.md`）。
+        - ✅ `BaseViewModel` への実装と標準ハンドラの作成。
+        - ✅ `BaseViewModelTest.kt` による基盤ロジックの網羅的検証。
+        - ✅ 既存 ViewModel への `screenName` 実装とコンパイルエラーの解消。
+    - **フェーズ 2: 段階的な移行（ViewModel への適用）**
+        - [✅] `PersonBaseViewModel`（`loadPerson` の完全リファクタリング）
+        - [✅] `PersonHealthViewModel`
+        - [✅] `PersonMedicationViewModel`
+        - [✅] `PersonConditionViewModel`
+        - [✅] `PersonListViewModel`
+        - [✅] `PersonEditViewModel`
+        - [✅] `SettingsViewModel`
+        - [✅] `DeleteOrRestorePersonViewModel`
+        - [✅] `BatchInputViewModel`
+        - [✅] `PersonDetailViewModel`
+    - **フェーズ 3: ルールの確定とクリーンアップ**
+        - [✅] `project_RULES.md` のエラーハンドリング規定を `safeLaunch` 推奨に更新。
+        - [✅] 各 ViewModel 内の重複するプライベート・エラーハンドリング関数の削除。
+    - **フェーズ 4: 最終検証**
+        - [✅] 実機での例外発生時の挙動（監査ログ記録・UI通知）の最終確認。
 
 ---
 
 ## 🟡 重要度：中（UX・リソース効率・ライフサイクル管理）
 
-| 課題内容                                                                             | 対象ファイル                                   | ルール参照 | ステータス |
-|:---------------------------------------------------------------------------------|:-----------------------------------------|:------|:------|
-| **ブランキング（チラつき）抑制**: 新規作成時の初期値セットに `LaunchedEffect` を使用している。                      | 主要な `ui.components.*` および `ui.screens.*` | 3.3.1 | ✅ 完了  |
-| **ライフサイクル対応の状態収集**: `collectAsState()` を `collectAsStateWithLifecycle()` に置き換える。 | 各 `ui.screens.*`                         | 10    | ✅ 完了  |
+| 課題内容                                                                               | 対象ファイル                                   | ルール参照 | ステータス |
+|:-----------------------------------------------------------------------------------|:-----------------------------------------|:------|:------|
+| **ブランキング（チラつき）抑制**: 新規作成時の初期値セットに `LaunchedEffect` を使用している。                        | 主要な `ui.components.*` および `ui.screens.*` | 3.3.1 | ✅ 完了  |
+| **ライフサイクル対応の状態収集**: `collectAsState()` に代わり `collectAsStateWithLifecycle()` を使用する。 | 各 `ui.screens.*`                         | 10    | ✅ 完了  |
 
 ## 🔵 重要度：低（コーディング規約・保守性）
 

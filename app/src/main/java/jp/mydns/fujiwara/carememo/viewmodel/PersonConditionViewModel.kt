@@ -2,17 +2,17 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
+import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,7 +44,16 @@ class PersonConditionViewModel(
     auditLogRepository: AuditLogRepository
 ) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
 
-    private val TAG = "PersonConditionViewModel"
+    companion object {
+        private const val FEATURE_NAME = "PersonCondition"
+        private const val OP_SAVE = "saveRecord"
+        private const val OP_DELETE = "deleteRecord"
+        private const val OP_SAVE_PHOTO = "processAndSavePhoto"
+        private const val OP_DELETE_PHOTO = "deletePhoto"
+        private const val TABLE_CONDITION = "condition_db"
+    }
+
+    override val featureName: String = FEATURE_NAME
 
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
     val selectedConditionId: StateFlow<Int?> = _selectedConditionId.asStateFlow()
@@ -64,17 +73,8 @@ class PersonConditionViewModel(
         }
         .catch { e ->
             if (e is CancellationException) throw e
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "recordsFlow", TABLE_CONDITION))
             _isLoading.value = false
-            Log.e(TAG, "Records load error", e)
-            auditLogRepository.log(
-                screenName = "PersonCondition",
-                operation = "recordsFlow",
-                tableName = "condition_db",
-                actionType = "ERROR",
-                affectedId = _currentPerson.value?.id?.toString() ?: "0",
-                details = e.toString()
-            )
-            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -105,15 +105,7 @@ class PersonConditionViewModel(
         }
         .catch { e ->
             if (e is CancellationException) throw e
-            Log.e(TAG, "Photos load error", e)
-            auditLogRepository.log(
-                screenName = "PersonCondition",
-                operation = "photosFlow",
-                tableName = "condition_db",
-                actionType = "ERROR",
-                affectedId = _selectedConditionId.value?.toString() ?: "0",
-                details = e.toString()
-            )
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "photosFlow", TABLE_CONDITION))
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -134,7 +126,7 @@ class PersonConditionViewModel(
         }
     }.catch { e ->
         if (e is CancellationException) throw e
-        Log.e(TAG, "Photo map error", e)
+        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "photoMapFlow", TABLE_CONDITION))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     private val _isProcessing = MutableStateFlow(false)
@@ -165,47 +157,37 @@ class PersonConditionViewModel(
      * 所見メモを保存または更新します。
      */
     fun saveRecord(record: ConditionAtVisit, onSuccess: (Int) -> Unit = {}) {
-        viewModelScope.launch {
-            _isProcessing.value = true
-            try {
-                val isUpdate = record.id != 0
-
-                // --- 重複チェック (新規登録、または日時変更時) ---
-                val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
-                if (existing != null && (record.id == 0 || existing.id != record.id)) {
-                    showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
-                    return@launch
-                }
-
-                val newId = conditionRepository.insertConditionAtVisit(record, "PersonCondition", "saveRecord")
-                
-                // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける
-                if (!isUpdate) {
-                    conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt(), "PersonCondition", "saveRecord(link)")
-                }
-
-                showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
-                
-                // 選択中IDを更新して、詳細画面が新しいIDを参照するようにする
-                setSelectedConditionId(if (isUpdate) record.id else newId.toInt())
-
-                // コールバックを実行
-                onSuccess(if (isUpdate) record.id else newId.toInt())
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Save error", e)
-                auditLogRepository.log(
-                    screenName = "PersonCondition",
-                    operation = "saveRecord",
-                    tableName = "condition_db",
-                    actionType = "ERROR",
-                    affectedId = record.id.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
+        safeLaunch(
+            operation = OP_SAVE,
+            loadingState = _isProcessing,
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = record.id.toString()
             }
+        ) {
+            val isUpdate = record.id != 0
+
+            // --- 重複チェック (新規登録、または日時変更時) ---
+            val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
+            if (existing != null && (record.id == 0 || existing.id != record.id)) {
+                showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
+                return@safeLaunch
+            }
+
+            val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE)
+            
+            // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける
+            if (!isUpdate) {
+                conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt(), featureName, "${OP_SAVE}(link)")
+            }
+
+            showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
+            
+            // 選択中IDを更新して、詳細画面が新しいIDを参照するようにする
+            setSelectedConditionId(if (isUpdate) record.id else newId.toInt())
+
+            // コールバックを実行
+            onSuccess(if (isUpdate) record.id else newId.toInt())
         }
     }
 
@@ -213,26 +195,16 @@ class PersonConditionViewModel(
      * 所見メモを削除します。
      */
     fun deleteRecord(record: ConditionAtVisit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                conditionRepository.deleteConditionAtVisit(record, "PersonCondition", "deleteRecord")
-                showSnackbar(R.string.p_cond_msg_delete_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Delete error", e)
-                auditLogRepository.log(
-                    screenName = "PersonCondition",
-                    operation = "deleteRecord",
-                    tableName = "condition_db",
-                    actionType = "ERROR",
-                    affectedId = record.id.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_DELETE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = record.id.toString()
             }
+        ) {
+            conditionRepository.deleteConditionAtVisit(record, featureName, OP_DELETE)
+            showSnackbar(R.string.p_cond_msg_delete_success)
         }
     }
 
@@ -250,7 +222,7 @@ class PersonConditionViewModel(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "deleteTempFile error", e)
+                // ここは補助的な処理なのでハンドリングのみ
             }
         }
     }
@@ -259,49 +231,39 @@ class PersonConditionViewModel(
      * 写真をリサイズ・保存し、データベースに登録します。
      */
     fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int, caption: String) {
-        viewModelScope.launch {
-            _isProcessing.value = true
-            try {
-                val fileNames = ImageUtils.processAndSaveImage(context, uri)
-                if (fileNames != null) {
-                    val (photoName, thumbName) = fileNames
-                    val photo = ConditionPhoto(
-                        conditionId = conditionId,
-                        personId = personId,
-                        photoFileName = photoName,
-                        thumbnailFileName = thumbName,
-                        capturedAt = Instant.now(),
-                        caption = caption
-                    )
-                    conditionRepository.insertConditionPhoto(photo, "PersonCondition", "processAndSavePhoto")
-                    
-                    // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
-                    if (uri.scheme == "file" || uri.scheme == "content") {
-                        try {
-                            context.contentResolver.delete(uri, null, null)
-                        } catch (_: Exception) {
-                            uri.path?.let { File(it).delete() }
-                        }
-                    }
-
-                    showSnackbar(R.string.p_cond_msg_photo_save_success)
-                } else {
-                    showError(R.string.common_error_title_save, R.string.p_cond_err_photo_process_failure)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Photo save error", e)
-                auditLogRepository.log(
-                    screenName = "PersonCondition",
-                    operation = "processAndSavePhoto",
-                    tableName = "condition_db",
-                    actionType = "ERROR",
-                    affectedId = conditionId.toString(),
-                    details = e.toString()
+        safeLaunch(
+            operation = OP_SAVE_PHOTO,
+            loadingState = _isProcessing,
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = conditionId.toString()
+            }
+        ) {
+            val fileNames = ImageUtils.processAndSaveImage(context, uri)
+            if (fileNames != null) {
+                val (photoName, thumbName) = fileNames
+                val photo = ConditionPhoto(
+                    conditionId = conditionId,
+                    personId = personId,
+                    photoFileName = photoName,
+                    thumbnailFileName = thumbName,
+                    capturedAt = Instant.now(),
+                    caption = caption
                 )
-                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
+                conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
+                
+                // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
+                if (uri.scheme == "file" || uri.scheme == "content") {
+                    try {
+                        context.contentResolver.delete(uri, null, null)
+                    } catch (_: Exception) {
+                        uri.path?.let { File(it).delete() }
+                    }
+                }
+
+                showSnackbar(R.string.p_cond_msg_photo_save_success)
+            } else {
+                showError(R.string.common_error_title_save, R.string.p_cond_err_photo_process_failure)
             }
         }
     }
@@ -310,27 +272,17 @@ class PersonConditionViewModel(
      * 写真データおよび物理ファイルを削除します。
      */
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
-        viewModelScope.launch {
-            _isProcessing.value = true
-            try {
-                conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, "PersonCondition", "deletePhoto")
-                ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
-                showSnackbar(R.string.p_cond_msg_photo_delete_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Photo delete error", e)
-                auditLogRepository.log(
-                    screenName = "PersonCondition",
-                    operation = "deletePhoto",
-                    tableName = "condition_db",
-                    actionType = "ERROR",
-                    affectedId = photo.id.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
+        safeLaunch(
+            operation = OP_DELETE_PHOTO,
+            loadingState = _isProcessing,
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = photo.id.toString()
             }
+        ) {
+            conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, featureName, OP_DELETE_PHOTO)
+            ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+            showSnackbar(R.string.p_cond_msg_photo_delete_success)
         }
     }
 

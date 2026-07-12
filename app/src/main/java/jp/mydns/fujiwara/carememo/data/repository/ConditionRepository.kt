@@ -17,10 +17,10 @@ class ConditionRepository(
     suspend fun findConditionAtTime(personId: Int, time: java.time.Instant): ConditionAtVisit? =
         conditionAtVisitDao.findAtTime(personId, time)
     
-    suspend fun insertConditionAtVisit(item: ConditionAtVisit, screenName: String = "", operation: String = ""): Long {
+    suspend fun insertConditionAtVisit(item: ConditionAtVisit, featureName: String = "", operation: String = ""): Long {
         val id = conditionAtVisitDao.insert(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "condition_at_visit_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
@@ -30,10 +30,10 @@ class ConditionRepository(
         return id
     }
     
-    suspend fun deleteConditionAtVisit(item: ConditionAtVisit, screenName: String = "", operation: String = "") {
+    suspend fun deleteConditionAtVisit(item: ConditionAtVisit, featureName: String = "", operation: String = "") {
         conditionAtVisitDao.delete(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "condition_at_visit_db",
             actionType = "DELETE",
@@ -46,10 +46,10 @@ class ConditionRepository(
     fun getConditionPhotosByConditionId(conditionId: Int): Flow<List<ConditionPhoto>> = 
         conditionPhotoDao.getByConditionId(conditionId)
 
-    suspend fun insertConditionPhoto(item: ConditionPhoto, screenName: String = "", operation: String = ""): Long {
+    suspend fun insertConditionPhoto(item: ConditionPhoto, featureName: String = "", operation: String = ""): Long {
         val id = conditionPhotoDao.insert(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "condition_photo_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
@@ -59,10 +59,10 @@ class ConditionRepository(
         return id
     }
 
-    suspend fun linkTemporaryPhotosToRecord(personId: Int, newConditionId: Int, screenName: String = "", operation: String = "") {
+    suspend fun linkTemporaryPhotosToRecord(personId: Int, newConditionId: Int, featureName: String = "", operation: String = "") {
         conditionPhotoDao.linkTemporaryPhotosToRecord(personId, newConditionId)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "condition_photo_db",
             actionType = "UPDATE",
@@ -71,10 +71,10 @@ class ConditionRepository(
         )
     }
 
-    suspend fun deleteConditionPhotoById(id: Int, personId: Int = 0, screenName: String = "", operation: String = "") {
+    suspend fun deleteConditionPhotoById(id: Int, personId: Int = 0, featureName: String = "", operation: String = "") {
         conditionPhotoDao.deleteById(id)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "condition_photo_db",
             actionType = "DELETE",

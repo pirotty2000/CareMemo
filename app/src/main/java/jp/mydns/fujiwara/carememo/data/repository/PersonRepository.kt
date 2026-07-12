@@ -15,10 +15,10 @@ class PersonRepository(
     
     fun getPersonById(id: Int): Flow<Person?> = personDao.getPersonById(id)
     
-    suspend fun insertPerson(person: Person, screenName: String = "", operation: String = "") {
+    suspend fun insertPerson(person: Person, featureName: String = "", operation: String = "") {
         val id = personDao.insert(person)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "person_db",
             actionType = "INSERT",
@@ -27,10 +27,10 @@ class PersonRepository(
         )
     }
     
-    suspend fun updatePerson(person: Person, screenName: String = "", operation: String = "") {
+    suspend fun updatePerson(person: Person, featureName: String = "", operation: String = "") {
         personDao.update(person)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "person_db",
             actionType = "UPDATE",

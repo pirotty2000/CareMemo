@@ -1,17 +1,16 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.database.sqlite.SQLiteConstraintException
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
-import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
+import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * 利用者一覧の各項目の表示状態を保持するクラス
@@ -52,7 +50,22 @@ class PersonListViewModel(
     private val auditLogRepository: AuditLogRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
-    private val TAG = "PersonListViewModel"
+    companion object {
+        private const val FEATURE_NAME = "PersonList"
+        private const val OP_ADD = "addPerson"
+        private const val OP_DELETE = "logicalDeletePerson"
+        private const val OP_RESTORE = "restorePerson"
+        private const val TABLE_PERSON = "person_db"
+    }
+
+    override val featureName: String = FEATURE_NAME
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+    }
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -120,17 +133,8 @@ class PersonListViewModel(
         }
     }.catch { e ->
         if (e is CancellationException) throw e
+        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "userListFlow", TABLE_PERSON))
         _isLoading.value = false
-        Log.e(TAG, "User list load error", e)
-        auditLogRepository.log(
-            screenName = "PersonList",
-            operation = "userListFlow",
-            tableName = "person_db",
-            actionType = "ERROR",
-            affectedId = "0",
-            details = e.toString()
-        )
-        showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun getSectionForName(furigana: String): String {
@@ -151,43 +155,24 @@ class PersonListViewModel(
     }
 
     fun addPerson(person: Person) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                // 1. 保存前に論理的な重複をチェック
-                val existing = repository.findExistingPerson(person)
-                if (existing != null) {
-                    handleDuplicateError(existing, person, isUpdate = false)
-                    return@launch
-                }
-
-                // 2. データベースへ保存
-                repository.insertPerson(person, "PersonList", "addPerson")
-                sendUiEvent(UiEvent.SaveSuccess)
-                showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
-            } catch (e: SQLiteConstraintException) {
-                // 万が一、事前のチェックをすり抜けた場合
-                val existing = repository.findExistingPerson(person)
-                if (existing != null) {
-                    handleDuplicateError(existing, person, isUpdate = false)
-                } else {
-                    showError(R.string.main_err_title_duplicate_archived_add, R.string.common_error_save, e.localizedMessage ?: "")
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "addPerson error", e)
-                auditLogRepository.log(
-                    screenName = "PersonList",
-                    operation = "addPerson",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_ADD,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
             }
+        ) {
+            // 1. 保存前に論理的な重複をチェック
+            val existing = repository.findExistingPerson(person)
+            if (existing != null) {
+                handleDuplicateError(existing, person, isUpdate = false)
+                return@safeLaunch
+            }
+
+            // 2. データベースへ保存
+            repository.insertPerson(person, featureName, OP_ADD)
+            sendUiEvent(UiEvent.SaveSuccess)
+            showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }
 
@@ -211,50 +196,30 @@ class PersonListViewModel(
     }
 
     fun logicalDeletePerson(person: Person) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                archivedRepository.logicalDeletePerson(person.id, "PersonList", "logicalDeletePerson")
-                showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "logicalDeletePerson error", e)
-                auditLogRepository.log(
-                    screenName = "PersonList",
-                    operation = "logicalDeletePerson",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = person.id.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_delete, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_DELETE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
+                affectedId = person.id.toString()
             }
+        ) {
+            archivedRepository.logicalDeletePerson(person.id, featureName, OP_DELETE)
+            showSnackbar(R.string.main_msg_user_archived, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }
 
     fun restorePerson(person: Person) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                archivedRepository.restorePerson(person.id, "PersonList", "restorePerson")
-                showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "restorePerson error", e)
-                auditLogRepository.log(
-                    screenName = "PersonList",
-                    operation = "restorePerson",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = person.id.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_update, R.string.archive_err_restore_failure, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_RESTORE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
+                affectedId = person.id.toString()
             }
+        ) {
+            archivedRepository.restorePerson(person.id, featureName, OP_RESTORE)
+            showSnackbar(R.string.main_msg_user_restored, person.getMaskedName(isNameMaskingEnabled.value))
         }
     }
 

@@ -45,7 +45,7 @@ class HealthRepositoryTest {
         coVerify { heightAndWeightDao.insert(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "保存",
                 tableName = "height_and_weight_db",
                 actionType = "INSERT",
@@ -65,7 +65,7 @@ class HealthRepositoryTest {
         coVerify { bpAndPulseDao.insert(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "保存",
                 tableName = "bp_and_pulse_db",
                 actionType = "INSERT",
@@ -85,7 +85,7 @@ class HealthRepositoryTest {
         coVerify { glucoseAndHbA1cDao.insert(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "保存",
                 tableName = "glucose_and_hba1c_db",
                 actionType = "INSERT",

@@ -3,28 +3,27 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.content.Context
 import android.net.Uri
 import android.os.StatFs
-import android.util.Log
+import android.util.Base64
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.CareMemoBackup
 import jp.mydns.fujiwara.carememo.BuildConfig
-import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
-import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AuditLog
+import jp.mydns.fujiwara.carememo.data.CareMemoBackup
+import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
 import jp.mydns.fujiwara.carememo.data.DatabaseKeyManager
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
-import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
-import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
+import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
-import android.util.Base64
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,7 +50,28 @@ class SettingsViewModel(
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
-    private val TAG = "SettingsViewModel"
+    companion object {
+        private const val FEATURE_NAME = "Settings"
+        private const val OP_EXPORT = "exportData"
+        private const val OP_IMPORT = "importData"
+        private const val OP_PROCEED_IMPORT = "proceedImportZip"
+        private const val OP_CLEAR_ALL = "clearAllData"
+        private const val OP_CLEAR_LOGS = "clearAuditLogs"
+        private const val OP_ROTATE_LOGS = "rotateLogsManually"
+        private const val OP_DELETE_ENDED = "deleteEndedPersons"
+        private const val OP_INTEGRITY = "checkIntegrity"
+        private const val OP_FIX_INCONSISTENCY = "fixInconsistencies"
+        private const val OP_TEST_INCONSISTENCY = "insertTestInconsistency"
+    }
+
+    override val featureName: String = FEATURE_NAME
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+    }
+
     private val json = Json { prettyPrint = true }
 
     val isBiometricEnabled: StateFlow<Boolean> = userSettingsRepository.isBiometricEnabled
@@ -103,37 +123,29 @@ class SettingsViewModel(
         }
     }.catch { e ->
         if (e is CancellationException) throw e
-        Log.e(TAG, "auditLogCount flow error", e)
+        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogCountFlow"))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     // 絞り込み状態
     private val _selectedTable = MutableStateFlow<String?>(null)
     val selectedTable = _selectedTable.asStateFlow()
 
-    private val _selectedScreen = MutableStateFlow<String?>(null)
-    val selectedScreen = _selectedScreen.asStateFlow()
+    private val _selectedFeature = MutableStateFlow<String?>(null)
+    val selectedFeature = _selectedFeature.asStateFlow()
 
     // 絞り込み済みのログリスト
     val auditLogs: StateFlow<List<AuditLog>> = combine(
         auditLogRepository.allLogs,
         _selectedTable,
-        _selectedScreen,
-    ) { logs, table, screen ->
+        _selectedFeature,
+    ) { logs, table, feature ->
         logs.filter { log ->
             ((table == null) || (log.tableName == table)) &&
-                    ((screen == null) || (log.screenName == screen))
+                    ((feature == null) || (log.featureName == feature))
         }
     }.catch { e ->
         if (e is CancellationException) throw e
-        Log.e(TAG, "auditLogs flow error", e)
-        auditLogRepository.log(
-            screenName = "Settings",
-            operation = "auditLogsFlow",
-            tableName = "audit_log",
-            actionType = "ERROR",
-            affectedId = "0",
-            details = e.toString()
-        )
+        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogsFlow", "audit_log"))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 存在する項目の一覧（フィルター選択用）
@@ -143,17 +155,17 @@ class SettingsViewModel(
         }
         .catch { e ->
             if (e is CancellationException) throw e
-            Log.e(TAG, "availableTables flow error", e)
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableTablesFlow"))
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val availableScreens: StateFlow<List<String>> = auditLogRepository.allLogs
+    val availableFeatures: StateFlow<List<String>> = auditLogRepository.allLogs
         .map { logs ->
-            logs.asSequence().map { it.screenName }.distinct().sorted().toList()
+            logs.asSequence().map { it.featureName }.distinct().sorted().toList()
         }
         .catch { e ->
             if (e is CancellationException) throw e
-            Log.e(TAG, "availableScreens flow error", e)
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableFeaturesFlow"))
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -161,13 +173,13 @@ class SettingsViewModel(
         _selectedTable.value = table
     }
 
-    fun setScreenFilter(screen: String?) {
-        _selectedScreen.value = screen
+    fun setFeatureFilter(feature: String?) {
+        _selectedFeature.value = feature
     }
 
     fun clearFilters() {
         _selectedTable.value = null
-        _selectedScreen.value = null
+        _selectedFeature.value = null
     }
 
     // 復元処理用の一時保持
@@ -177,15 +189,7 @@ class SettingsViewModel(
     val deletedUserList: StateFlow<List<Person>> = archivedPersonRepository.getArchivedPersons()
         .catch { e ->
             if (e is CancellationException) throw e
-            Log.e(TAG, "deletedUserList flow error", e)
-            auditLogRepository.log(
-                screenName = "Settings",
-                operation = "deletedUserListFlow",
-                tableName = "person_db",
-                actionType = "ERROR",
-                affectedId = "0",
-                details = e.toString()
-            )
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "deletedUserListFlow", "person_db"))
         }
         .stateIn(
             scope = viewModelScope,
@@ -265,81 +269,50 @@ class SettingsViewModel(
     }
 
     fun clearAuditLogs() {
-        viewModelScope.launch {
-            try {
-                auditLogRepository.deleteAllLogs()
-                showSnackbar(R.string.settings_msg_audit_log_cleared)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "clearAuditLogs error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "clearAuditLogs",
-                    tableName = "audit_log",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_delete, e.localizedMessage ?: "")
-            }
+        safeLaunch(
+            operation = OP_CLEAR_LOGS,
+            contextBuilder = { tableName = "audit_log" }
+        ) {
+            auditLogRepository.deleteAllLogs()
+            showSnackbar(R.string.settings_msg_audit_log_cleared)
         }
     }
 
     fun rotateLogsManually() {
-        viewModelScope.launch {
-            try {
-                _isProcessing.value = true
-                val days = auditLogRetentionDays.value
-                auditLogRepository.deleteOldLogs(days)
-                showInfo(R.string.common_error_title_info, R.string.settings_msg_rotate_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "rotateLogsManually error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "rotateLogsManually",
-                    tableName = "audit_log",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
-            }
+        safeLaunch(
+            operation = OP_ROTATE_LOGS,
+            loadingState = _isProcessing,
+            contextBuilder = { tableName = "audit_log" }
+        ) {
+            val days = auditLogRetentionDays.value
+            auditLogRepository.deleteOldLogs(days)
+            showInfo(R.string.common_error_title_info, R.string.settings_msg_rotate_success)
         }
     }
 
     fun deleteEndedPersons() {
-        viewModelScope.launch {
-            try {
-                archivedPersonRepository.deleteAllEndedPersons()
-                showInfo(R.string.common_error_title_info, R.string.settings_msg_delete_ended_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "deleteEndedPersons error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "deleteEndedPersons",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
-            }
+        safeLaunch(
+            operation = OP_DELETE_ENDED,
+            contextBuilder = { tableName = "person_db" }
+        ) {
+            archivedPersonRepository.deleteAllEndedPersons()
+            showInfo(R.string.common_error_title_info, R.string.settings_msg_delete_ended_success)
         }
     }
 
     fun exportData(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            var tempDir: File? = null
-            var tempZipFile: File? = null
+        var tempDir: File? = null
+        var tempZipFile: File? = null
+        safeLaunch(
+            operation = OP_EXPORT,
+            loadingState = _isProcessing,
+            contextBuilder = { tableName = "all_db" }
+        ) {
             try {
                 // 容量チェック
                 if (!hasAvailableSpace(context.cacheDir, 50 * 1024 * 1024)) { // 最低 50MB 
                     showError(R.string.common_error_title_error, R.string.common_error_no_space, "50MB")
-                    return@launch
+                    return@safeLaunch
                 }
 
                 val backup = maintenanceRepository.getBackupData()
@@ -366,7 +339,6 @@ class SettingsViewModel(
                     Base64.encodeToString(dbKey, Base64.NO_WRAP)
                 }
 
-                _isProcessing.value = true
                 _processingProgress.value = 0
                 
                 ZipUtils.zip(
@@ -383,20 +355,7 @@ class SettingsViewModel(
                     }
                 }
                 showInfo(R.string.common_error_title_info, R.string.settings_msg_export_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "exportData error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "exportData",
-                    tableName = "all_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
             } finally {
-                _isProcessing.value = false
                 // 一時ファイルの確実な削除
                 tempDir?.deleteRecursively()
                 tempZipFile?.delete()
@@ -405,106 +364,93 @@ class SettingsViewModel(
     }
 
     fun importData(context: Context, uri: Uri, passwordOverride: String? = null) {
-        viewModelScope.launch {
-            try {
-                if (passwordOverride == null) {
-                    // 初回試行：一時ディレクトリの作成とファイルのコピー
-                    clearPendingImport()
-                    
-                    // 容量チェック
-                    val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-                    val fileSize = pfd?.statSize ?: 0L
-                    pfd?.close()
-                    
-                    if (!hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
-                        showError(R.string.common_error_title_error, R.string.common_error_no_space, (fileSize * 2.5).toLong())
-                        return@launch
-                    }
+        safeLaunch(
+            operation = OP_IMPORT,
+            contextBuilder = { tableName = "all_db" }
+        ) {
+            if (passwordOverride == null) {
+                // 初回試行：一時ディレクトリの作成とファイルのコピー
+                clearPendingImport()
+                
+                // 容量チェック
+                val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                val fileSize = pfd?.statSize ?: 0L
+                pfd?.close()
+                
+                if (!hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
+                    showError(R.string.common_error_title_error, R.string.common_error_no_space, (fileSize * 2.5).toLong())
+                    return@safeLaunch
+                }
 
-                    val tempDir = File(context.cacheDir, "import_check_${System.currentTimeMillis()}")
-                    tempDir.mkdirs()
-                    val tempZipFile = File(tempDir, "temp_import.zip")
-                    
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        tempZipFile.outputStream().use { output -> input.copyTo(output) }
-                    }
+                val tempDir = File(context.cacheDir, "import_check_${System.currentTimeMillis()}")
+                tempDir.mkdirs()
+                val tempZipFile = File(tempDir, "temp_import.zip")
+                
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tempZipFile.outputStream().use { output -> input.copyTo(output) }
+                }
 
-                    // ファイル形式チェック (Zipマジックナンバー)
-                    val isZip = tempZipFile.inputStream().use { input ->
-                        val header = ByteArray(4)
-                        val read = input.read(header)
-                        (read == 4) &&
-                                (header[0] == 0x50.toByte()) &&
-                                (header[1] == 0x4B.toByte()) &&
-                                (header[2] == 0x03.toByte()) &&
-                                (header[3] == 0x04.toByte())
-                    }
+                // ファイル形式チェック (Zipマジックナンバー)
+                val isZip = tempZipFile.inputStream().use { input ->
+                    val header = ByteArray(4)
+                    val read = input.read(header)
+                    (read == 4) &&
+                            (header[0] == 0x50.toByte()) &&
+                            (header[1] == 0x4B.toByte()) &&
+                            (header[2] == 0x03.toByte()) &&
+                            (header[3] == 0x04.toByte())
+                }
 
-                    if (isZip) {
-                        if (ZipUtils.isEncrypted(tempZipFile)) {
-                            // 1. アプリ設定のパスワードで試行
-                            val userPw = backupPassword.value
-                            if (userPw.isNotEmpty() && ZipUtils.isValidPassword(tempZipFile, userPw)) {
-                                proceedImportZip(context, tempZipFile, userPw)
-                                return@launch
-                            }
-
-                            // 2. 現在のデバイスのDBキー（Base64）で試行（同じ端末内での移行）
-                            val dbKey = DatabaseKeyManager(context).getOrCreatePassphrase()
-                            val dbPw = Base64.encodeToString(dbKey, Base64.NO_WRAP)
-                            if (ZipUtils.isValidPassword(tempZipFile, dbPw)) {
-                                proceedImportZip(context, tempZipFile, dbPw)
-                                return@launch
-                            }
-
-                            // 3. 自動一致しなかった場合はパスワード入力を求める（エラーは出さない）
-                            pendingImportFile = tempZipFile
-                            pendingImportUri = uri
-                            sendUiEvent(UiEvent.RequestPassword)
-                        } else {
-                            proceedImportZip(context, tempZipFile, null)
+                if (isZip) {
+                    if (ZipUtils.isEncrypted(tempZipFile)) {
+                        // 1. アプリ設定のパスワードで試行
+                        val userPw = backupPassword.value
+                        if (userPw.isNotEmpty() && ZipUtils.isValidPassword(tempZipFile, userPw)) {
+                            proceedImportZip(context, tempZipFile, userPw)
+                            return@safeLaunch
                         }
+
+                        // 2. 現在のデバイスのDBキー（Base64）で試行（同じ端末内での移行）
+                        val dbKey = DatabaseKeyManager(context).getOrCreatePassphrase()
+                        val dbPw = Base64.encodeToString(dbKey, Base64.NO_WRAP)
+                        if (ZipUtils.isValidPassword(tempZipFile, dbPw)) {
+                            proceedImportZip(context, tempZipFile, dbPw)
+                            return@safeLaunch
+                        }
+
+                        // 3. 自動一致しなかった場合はパスワード入力を求める（エラーは出さない）
+                        pendingImportFile = tempZipFile
+                        pendingImportUri = uri
+                        sendUiEvent(UiEvent.RequestPassword)
                     } else {
-                        // 直接JSONファイルとして処理
-                        val jsonString = tempZipFile.readText()
-                        val backup = json.decodeFromString<CareMemoBackup>(jsonString)
-                        
-                        // バージョンチェック
-                        if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
-                            showError(R.string.common_error_title_update, R.string.settings_err_import_version_mismatch)
-                            tempDir.deleteRecursively()
-                            return@launch
-                        }
-
-                        maintenanceRepository.replaceAllData(backup)
-                        tempDir.deleteRecursively()
-                        showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success_data_only)
+                        proceedImportZip(context, tempZipFile, null)
                     }
                 } else {
-                    // パスワード入力後の再試行
-                    val file = pendingImportFile ?: throw Exception("一時ファイルが見つかりません。")
-                    if (ZipUtils.isValidPassword(file, passwordOverride)) {
-                        proceedImportZip(context, file, passwordOverride)
-                        clearPendingImport()
-                    } else {
-                        showError(R.string.common_error_title_error, R.string.settings_err_import_wrong_password)
-                        // パスワードが違う場合はダイアログを閉じるか再入力を促す（ここでは再度RequestPasswordを送るのも手だが、UI側で制御）
-                        sendUiEvent(UiEvent.RequestPassword)
+                    // 直接JSONファイルとして処理
+                    val jsonString = tempZipFile.readText()
+                    val backup = json.decodeFromString<CareMemoBackup>(jsonString)
+                    
+                    // バージョンチェック
+                    if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
+                        showError(R.string.common_error_title_update, R.string.settings_err_import_version_mismatch)
+                        tempDir.deleteRecursively()
+                        return@safeLaunch
                     }
+
+                    maintenanceRepository.replaceAllData(backup)
+                    tempDir.deleteRecursively()
+                    showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success_data_only)
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "importData error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "importData",
-                    tableName = "all_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
-                clearPendingImport()
+            } else {
+                // パスワード入力後の再試行
+                val file = pendingImportFile ?: throw Exception("一時ファイルが見つかりません。")
+                if (ZipUtils.isValidPassword(file, passwordOverride)) {
+                    proceedImportZip(context, file, passwordOverride)
+                    clearPendingImport()
+                } else {
+                    showError(R.string.common_error_title_error, R.string.settings_err_import_wrong_password)
+                    sendUiEvent(UiEvent.RequestPassword)
+                }
             }
         }
     }
@@ -560,15 +506,7 @@ class SettingsViewModel(
             showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "proceedImportZip error", e)
-            auditLogRepository.log(
-                screenName = "Settings",
-                operation = "proceedImportZip",
-                tableName = "all_db",
-                actionType = "ERROR",
-                affectedId = "0",
-                details = e.toString()
-            )
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, OP_PROCEED_IMPORT, "all_db"))
             // 失敗時は写真をロールバック
             if (backupPhotosDir.exists()) {
                 appPhotosDir.deleteRecursively()
@@ -600,40 +538,26 @@ class SettingsViewModel(
     }
 
     fun clearAllData(context: Context) {
-        viewModelScope.launch {
-            try {
-                _isProcessing.value = true
-                _processingProgress.value = 0
+        safeLaunch(
+            operation = OP_CLEAR_ALL,
+            loadingState = _isProcessing,
+            contextBuilder = { tableName = "all_db" }
+        ) {
+            _processingProgress.value = 0
 
-                // 1. 写真ファイルの全消去を先に試める
-                val success = ImageUtils.clearPhotosDir(context)
-                if (!success) {
-                    throw Exception("写真データの物理削除に失敗しました。")
-                }
-                _processingProgress.value = 50
-
-                // 2. データベースの全消去（トランザクション）
-                maintenanceRepository.clearAllData()
-                _processingProgress.value = 100
-
-                showInfo(R.string.common_error_title_info, R.string.settings_msg_clear_all_success)
-                // メイン画面へ戻るための通知（必要に応じて）
-                sendUiEvent(UiEvent.SaveSuccess) 
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "clearAllData error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "clearAllData",
-                    tableName = "all_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_delete, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
+            // 1. 写真ファイルの全消去を先に試める
+            val success = ImageUtils.clearPhotosDir(context)
+            if (!success) {
+                throw Exception("写真データの物理削除に失敗しました。")
             }
+            _processingProgress.value = 50
+
+            // 2. データベースの全消去（トランザクション）
+            maintenanceRepository.clearAllData()
+            _processingProgress.value = 100
+
+            showInfo(R.string.common_error_title_info, R.string.settings_msg_clear_all_success)
+            sendUiEvent(UiEvent.SaveSuccess) 
         }
     }
 
@@ -641,29 +565,16 @@ class SettingsViewModel(
      * データベースの不整合をスキャンします。
      */
     fun checkIntegrity() {
-        viewModelScope.launch {
-            try {
-                _isProcessing.value = true
-                val results = maintenanceRepository.scanInconsistencies()
-                _inconsistencies.value = results
-                
-                if (results.isEmpty()) {
-                    showInfo(R.string.common_error_title_info, R.string.settings_msg_integrity_ok)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "checkIntegrity error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "checkIntegrity",
-                    tableName = "maintenance",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
+        safeLaunch(
+            operation = OP_INTEGRITY,
+            loadingState = _isProcessing,
+            contextBuilder = { tableName = "maintenance" }
+        ) {
+            val results = maintenanceRepository.scanInconsistencies()
+            _inconsistencies.value = results
+            
+            if (results.isEmpty()) {
+                showInfo(R.string.common_error_title_info, R.string.settings_msg_integrity_ok)
             }
         }
     }
@@ -672,28 +583,15 @@ class SettingsViewModel(
      * 検出された不整合を修正（削除）します。
      */
     fun fixInconsistencies() {
-        viewModelScope.launch {
-            try {
-                _isProcessing.value = true
-                maintenanceRepository.cleanInconsistencies(_inconsistencies.value)
-                val count = _inconsistencies.value.size
-                _inconsistencies.value = emptyList()
-                showInfo(R.string.common_error_title_info, R.string.settings_msg_fix_success, count)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "fixInconsistencies error", e)
-                auditLogRepository.log(
-                    screenName = "Settings",
-                    operation = "fixInconsistencies",
-                    tableName = "maintenance",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
-            } finally {
-                _isProcessing.value = false
-            }
+        safeLaunch(
+            operation = OP_FIX_INCONSISTENCY,
+            loadingState = _isProcessing,
+            contextBuilder = { tableName = "maintenance" }
+        ) {
+            maintenanceRepository.cleanInconsistencies(_inconsistencies.value)
+            val count = _inconsistencies.value.size
+            _inconsistencies.value = emptyList()
+            showInfo(R.string.common_error_title_info, R.string.settings_msg_fix_success, count)
         }
     }
 
@@ -708,14 +606,9 @@ class SettingsViewModel(
      * 【テスト用】あえて不整合なデータを挿入します。
      */
     fun insertTestInconsistency() {
-        viewModelScope.launch {
-            try {
-                maintenanceRepository.insertTestInconsistency()
-                showSnackbar(R.string.settings_msg_test_inconsistency_added)
-            } catch (e: Exception) {
-                Log.e(TAG, "insertTestInconsistency error", e)
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
-            }
+        safeLaunch(operation = OP_TEST_INCONSISTENCY) {
+            maintenanceRepository.insertTestInconsistency()
+            showSnackbar(R.string.settings_msg_test_inconsistency_added)
         }
     }
 

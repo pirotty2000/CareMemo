@@ -1,26 +1,20 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
+import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * 利用者情報を扱う ViewModel の共通基底クラス。
@@ -30,10 +24,23 @@ abstract class PersonBaseViewModel(
     protected val repository: PersonRepository,
     protected val summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
-    protected val auditLogRepository: AuditLogRepository // 追加
+    protected val auditLogRepository: AuditLogRepository
 ) : BaseViewModel(userSettingsRepository) {
 
-    private val TAG_BASE = "PersonBaseViewModel"
+    companion object {
+        private const val FEATURE_NAME = "PersonBase"
+        private const val OP_LOAD_PERSON = "loadPerson"
+        private const val TABLE_PERSON = "person_db"
+    }
+
+    override val featureName: String = FEATURE_NAME
+
+    init {
+        // 標準ハンドラのセットアップ
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+    }
 
     protected val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -61,41 +68,19 @@ abstract class PersonBaseViewModel(
     open fun loadPerson(personId: Int) {
         if (_currentPerson.value?.id == personId) return
 
-        _isLoading.value = true
         _currentPerson.value = null
 
         loadPersonJob?.cancel()
-        loadPersonJob = viewModelScope.launch {
-            try {
-                repository.getPersonById(personId)
-                    .catch { e ->
-                        handleLoadError(personId, e)
-                    }
-                    .collectLatest {
-                        _currentPerson.value = it
-                        if (it == null) {
-                            _isLoading.value = false
-                        }
-                    }
-            } catch (e: Exception) {
-                handleLoadError(personId, e)
-            }
+        loadPersonJob = safeCollect(
+            operation = OP_LOAD_PERSON,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
+                affectedId = personId.toString()
+            },
+            flowProvider = { repository.getPersonById(personId) }
+        ) {
+            _currentPerson.value = it
         }
-    }
-
-    private suspend fun handleLoadError(personId: Int, e: Throwable) {
-        if (e is CancellationException) throw e
-
-        _isLoading.value = false
-        Log.e(TAG_BASE, "loadPerson error", e)
-        auditLogRepository.log(
-            screenName = "PersonBase",
-            operation = "loadPerson",
-            tableName = "person_db",
-            actionType = "ERROR",
-            affectedId = personId.toString(),
-            details = e.toString()
-        )
-        showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
     }
 }

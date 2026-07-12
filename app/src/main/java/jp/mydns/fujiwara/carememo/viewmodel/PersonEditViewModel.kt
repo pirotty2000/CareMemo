@@ -1,22 +1,26 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.database.sqlite.SQLiteConstraintException
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import java.time.Instant
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.ZoneOffset
 
 /**
@@ -41,10 +45,23 @@ class PersonEditViewModel(
     private val personId: Int,
     private val repository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
-    private val auditLogRepository: AuditLogRepository
+    auditLogRepository: AuditLogRepository
 ) : BaseViewModel(userSettingsRepository) {
 
-    private val TAG = "PersonEditViewModel"
+    companion object {
+        private const val FEATURE_NAME = "PersonEdit"
+        private const val OP_LOAD = "loadPerson"
+        private const val OP_SAVE = "save"
+        private const val TABLE_PERSON = "person_db"
+    }
+
+    override val featureName: String = FEATURE_NAME
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+    }
 
     // UI状態の一括管理
     private val _uiState = MutableStateFlow(PersonEditUiState())
@@ -65,40 +82,31 @@ class PersonEditViewModel(
     }
 
     private fun loadPerson(id: Int) {
-        viewModelScope.launch {
-            try {
-                repository.getPersonById(id).filterNotNull().first().let { person ->
-                    initialPerson = person
-                    // 誕生日は常に UTC 基準で読み込む
-                    val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
-                    val (initialEra, initialYearText) = calculateEraAndYear(date)
+        safeLaunch(
+            operation = OP_LOAD,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
+                affectedId = id.toString()
+            }
+        ) {
+            repository.getPersonById(id).filterNotNull().first().let { person ->
+                initialPerson = person
+                // 誕生日は常に UTC 基準で読み込む
+                val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
+                val (initialEra, initialYearText) = calculateEraAndYear(date)
 
-                    _uiState.value = PersonEditUiState(
-                        lastName = person.lastName,
-                        firstName = person.firstName,
-                        lastNameFurigana = person.lastNameFurigana,
-                        firstNameFurigana = person.firstNameFurigana,
-                        note = person.note,
-                        era = initialEra,
-                        year = initialYearText,
-                        month = date.monthValue.toString(),
-                        day = date.dayOfMonth.toString()
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "loadPerson error", e)
-                auditLogRepository.log(
-                    screenName = "PersonEdit",
-                    operation = "loadPerson",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = id.toString(),
-                    details = e.toString()
+                _uiState.value = PersonEditUiState(
+                    lastName = person.lastName,
+                    firstName = person.firstName,
+                    lastNameFurigana = person.lastNameFurigana,
+                    firstNameFurigana = person.firstNameFurigana,
+                    note = person.note,
+                    era = initialEra,
+                    year = initialYearText,
+                    month = date.monthValue.toString(),
+                    day = date.dayOfMonth.toString()
                 )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
             }
         }
     }
@@ -190,7 +198,7 @@ class PersonEditViewModel(
         }
 
         return try {
-            d in 1..YearMonth.of(westernYear, m).lengthOfMonth()
+            d in 1..java.time.YearMonth.of(westernYear, m).lengthOfMonth()
         } catch (_: Exception) {
             false
         }
@@ -215,50 +223,34 @@ class PersonEditViewModel(
             birthday = birthday
         ))
 
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                // 重複チェック
-                val existing = repository.findExistingPerson(person)
-                if (existing != null && (personId == -1 || existing.id != personId)) {
-                    handleDuplicateError(existing, person, isUpdate = personId != -1)
-                    return@launch
-                }
+        safeLaunch(
+            operation = OP_SAVE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
+                affectedId = person.id.toString()
+            }
+        ) {
+            // 重複チェック
+            val existing = repository.findExistingPerson(person)
+            if (existing != null && (personId == -1 || existing.id != personId)) {
+                handleDuplicateError(existing, person, isUpdate = personId != -1)
+                return@safeLaunch
+            }
 
+            try {
                 if (personId == -1) {
-                    repository.insertPerson(person, "PersonEdit", "save")
+                    repository.insertPerson(person, featureName, OP_SAVE)
                     showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
                 } else {
-                    repository.updatePerson(person, "PersonEdit", "save")
+                    repository.updatePerson(person, featureName, OP_SAVE)
                     showSnackbar(R.string.main_msg_user_updated)
                 }
                 sendUiEvent(UiEvent.SaveSuccess)
             } catch (e: SQLiteConstraintException) {
                 // 重複の可能性が高いが、一応ログとエラー表示
-                Log.e(TAG, "Save constraint error", e)
-                auditLogRepository.log(
-                    screenName = "PersonEdit",
-                    operation = "save",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = person.id.toString(),
-                    details = e.toString()
-                )
                 showError(R.string.common_error_save, R.string.common_error_save)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Save error", e)
-                auditLogRepository.log(
-                    screenName = "PersonEdit",
-                    operation = "save",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = person.id.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+                throw e // 再スローしてハンドラに記録させる
             }
         }
     }

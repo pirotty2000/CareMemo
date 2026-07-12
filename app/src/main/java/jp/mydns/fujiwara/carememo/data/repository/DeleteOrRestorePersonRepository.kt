@@ -27,7 +27,7 @@ class DeleteOrRestorePersonRepository(
      * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
      * ※現在は主にSettingsScreenなどから利用されます。
      */
-    suspend fun logicalDeletePerson(personId: Int, screenName: String = "", operation: String = "") {
+    suspend fun logicalDeletePerson(personId: Int, featureName: String = "", operation: String = "") {
         database.withTransaction {
             val timestamp = System.currentTimeMillis()
             personDao.logicalDelete(personId, timestamp)
@@ -39,7 +39,7 @@ class DeleteOrRestorePersonRepository(
             medicationRecordDao.logicalDeleteByPersonId(personId, timestamp)
 
             auditLogRepository?.log(
-                screenName = screenName,
+                featureName = featureName,
                 operation = operation,
                 tableName = "person_db",
                 actionType = "LOGICAL_DELETE",
@@ -52,7 +52,7 @@ class DeleteOrRestorePersonRepository(
     /**
      * 論理削除された利用者と、紐づくすべての記録を復帰させます。
      */
-    suspend fun restorePerson(personId: Int, screenName: String = "", operation: String = "") {
+    suspend fun restorePerson(personId: Int, featureName: String = "", operation: String = "") {
         database.withTransaction {
             personDao.restore(personId)
             heightAndWeightDao.restoreByPersonId(personId)
@@ -63,7 +63,7 @@ class DeleteOrRestorePersonRepository(
             medicationRecordDao.restoreByPersonId(personId)
 
             auditLogRepository?.log(
-                screenName = screenName,
+                featureName = featureName,
                 operation = operation,
                 tableName = "person_db",
                 actionType = "RESTORE",
@@ -76,10 +76,10 @@ class DeleteOrRestorePersonRepository(
     /**
      * 指定された利用者を完全に抹消（物理削除）します。
      */
-    suspend fun permanentlyDeletePerson(personId: Int, screenName: String = "", operation: String = "") {
+    suspend fun permanentlyDeletePerson(personId: Int, featureName: String = "", operation: String = "") {
         personDao.deletePersonPhysically(personId)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "person_db",
             actionType = "PERMANENT_DELETE",
@@ -90,10 +90,10 @@ class DeleteOrRestorePersonRepository(
     /**
      * 全ての利用終了者（論理削除された利用者）と、そのすべての記録を物理削除します。
      */
-    suspend fun deleteAllEndedPersons(screenName: String = "", operation: String = "") {
+    suspend fun deleteAllEndedPersons(featureName: String = "", operation: String = "") {
         personDao.deleteEndedPersons()
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "person_db",
             actionType = "CLEAR_ALL_ARCHIVED",

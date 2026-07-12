@@ -323,10 +323,10 @@ data class AuditLog(
     val timestamp: Instant = Instant.now(),
 
     /**
-     * 実行された画面名 (例: "PersonConditionScreen")
+     * 実行された機能・コンテキスト名 (例: "PersonCondition", "Detail/Health")
      */
-    @ColumnInfo(name = "screen_name")
-    val screenName: String,
+    @ColumnInfo(name = "feature_name")
+    val featureName: String,
 
     /**
      * 実行された操作・トリガー (例: "onSaveButtonClick", "swipeToDelete")

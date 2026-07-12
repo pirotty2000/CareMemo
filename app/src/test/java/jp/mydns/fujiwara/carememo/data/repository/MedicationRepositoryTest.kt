@@ -41,7 +41,7 @@ class MedicationRepositoryTest {
         coVerify { medicationRecordDao.insert(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "服薬登録",
                 tableName = "medication_record_db",
                 actionType = "INSERT",
@@ -67,7 +67,7 @@ class MedicationRepositoryTest {
         coVerify { medicationRecordDao.delete(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "削除",
                 tableName = "medication_record_db",
                 actionType = "DELETE",

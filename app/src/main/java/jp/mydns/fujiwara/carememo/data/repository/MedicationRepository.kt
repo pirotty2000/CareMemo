@@ -16,10 +16,10 @@ class MedicationRepository(
     fun getMedicationRecordsByMonth(personId: Int, month: String): Flow<List<MedicationRecord>> =
         medicationRecordDao.getByMonth(personId, month)
 
-    suspend fun insertMedicationRecord(item: MedicationRecord, screenName: String = "", operation: String = "") {
+    suspend fun insertMedicationRecord(item: MedicationRecord, featureName: String = "", operation: String = "") {
         val id = medicationRecordDao.insert(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "medication_record_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
@@ -28,10 +28,10 @@ class MedicationRepository(
         )
     }
 
-    suspend fun deleteMedicationRecord(item: MedicationRecord, screenName: String = "", operation: String = "") {
+    suspend fun deleteMedicationRecord(item: MedicationRecord, featureName: String = "", operation: String = "") {
         medicationRecordDao.delete(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "medication_record_db",
             actionType = "DELETE",

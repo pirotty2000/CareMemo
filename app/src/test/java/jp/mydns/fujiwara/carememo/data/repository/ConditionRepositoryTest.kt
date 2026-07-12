@@ -49,7 +49,7 @@ class ConditionRepositoryTest {
         coVerify { conditionAtVisitDao.insert(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = screen,
+                featureName = screen,
                 operation = op,
                 tableName = "condition_at_visit_db",
                 actionType = "INSERT",
@@ -75,7 +75,7 @@ class ConditionRepositoryTest {
         coVerify { conditionAtVisitDao.delete(record) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "削除",
                 tableName = "condition_at_visit_db",
                 actionType = "DELETE",
@@ -103,7 +103,7 @@ class ConditionRepositoryTest {
         coVerify { conditionPhotoDao.insert(photo) }
         coVerify {
             auditLogRepository.log(
-                screenName = "画面",
+                featureName = "画面",
                 operation = "写真保存",
                 tableName = "condition_photo_db",
                 actionType = "INSERT",

@@ -178,7 +178,7 @@ class PersonMedicationViewModelTest {
             assertEquals(false, errorViewModel.isLoading.value)
             coVerify {
                 auditLogRepository.log(
-                    screenName = "PersonMedication",
+                    featureName = "PersonMedication",
                     operation = "monthlyRecordsFlow",
                     tableName = "medication_db",
                     actionType = "ERROR",
@@ -202,7 +202,7 @@ class PersonMedicationViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonMedication",
+                featureName = "PersonMedication",
                 operation = "syncMedicationDay",
                 tableName = "medication_db",
                 actionType = "ERROR",

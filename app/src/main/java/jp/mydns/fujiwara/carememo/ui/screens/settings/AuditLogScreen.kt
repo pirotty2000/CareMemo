@@ -37,18 +37,14 @@ fun AuditLogScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
 ) {
-    // 実際には専用のViewModelを作るか、SettingsViewModelにリストを持たせる
-    // ここではSettingsViewModelにallLogsを追加したと仮定
-    // (実際には前工程で AuditLogRepository に allLogs を追加したので、ViewModel経由で取得できるようにする)
-    
     val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
     val selectedTable by viewModel.selectedTable.collectAsStateWithLifecycle()
-    val selectedScreen by viewModel.selectedScreen.collectAsStateWithLifecycle()
+    val selectedFeature by viewModel.selectedFeature.collectAsStateWithLifecycle()
     val availableTables by viewModel.availableTables.collectAsStateWithLifecycle()
-    val availableScreens by viewModel.availableScreens.collectAsStateWithLifecycle()
+    val availableFeatures by viewModel.availableFeatures.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
-    val isFiltered = (selectedTable != null) || (selectedScreen != null)
+    val isFiltered = (selectedTable != null) || (selectedFeature != null)
 
     Scaffold(
         topBar = {
@@ -65,14 +61,14 @@ fun AuditLogScreen(
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // フィルターバー
-            if (availableTables.isNotEmpty() || availableScreens.isNotEmpty() || isFiltered) {
+            if (availableTables.isNotEmpty() || availableFeatures.isNotEmpty() || isFiltered) {
                 AuditLogFilterBar(
                     selectedTable = selectedTable,
-                    selectedScreen = selectedScreen,
+                    selectedFeature = selectedFeature,
                     availableTables = availableTables,
-                    availableScreens = availableScreens,
+                    availableFeatures = availableFeatures,
                     onTableSelect = { viewModel.setTableFilter(it) },
-                    onScreenSelect = { viewModel.setScreenFilter(it) },
+                    onFeatureSelect = { viewModel.setFeatureFilter(it) },
                 ) {
                     viewModel.clearFilters()
                 }
@@ -109,15 +105,15 @@ fun AuditLogScreen(
 @Composable
 private fun AuditLogFilterBar(
     selectedTable: String?,
-    selectedScreen: String?,
+    selectedFeature: String?,
     availableTables: List<String>,
-    availableScreens: List<String>,
+    availableFeatures: List<String>,
     onTableSelect: (String?) -> Unit,
-    onScreenSelect: (String?) -> Unit,
+    onFeatureSelect: (String?) -> Unit,
     onClear: () -> Unit,
 ) {
     var showTableMenu by remember { mutableStateOf(value = false) }
-    var showScreenMenu by remember { mutableStateOf(value = false) }
+    var showFeatureMenu by remember { mutableStateOf(value = false) }
 
     LazyRow(
         modifier = Modifier
@@ -160,33 +156,33 @@ private fun AuditLogFilterBar(
             }
         }
 
-        // 画面絞り込み
+        // 機能絞り込み
         item {
             Box {
                 FilterChip(
-                    selected = selectedScreen != null,
-                    onClick = { showScreenMenu = true },
-                    label = { Text(selectedScreen ?: "画面: 全て") },
+                    selected = selectedFeature != null,
+                    onClick = { showFeatureMenu = true },
+                    label = { Text(selectedFeature ?: "機能: 全て") },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
-                    leadingIcon = if (selectedScreen != null) {
+                    leadingIcon = if (selectedFeature != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     } else null,
-                    modifier = Modifier.testTag("AuditLog_ScreenFilter")
+                    modifier = Modifier.testTag("AuditLog_FeatureFilter")
                 )
-                DropdownMenu(expanded = showScreenMenu, onDismissRequest = { showScreenMenu = false }) {
+                DropdownMenu(expanded = showFeatureMenu, onDismissRequest = { showFeatureMenu = false }) {
                     DropdownMenuItem(
                         text = { Text("全て") },
                         onClick = {
-                            onScreenSelect(null)
-                            showScreenMenu = false
+                            onFeatureSelect(null)
+                            showFeatureMenu = false
                         },
                     )
-                    availableScreens.forEach { screen ->
+                    availableFeatures.forEach { feature ->
                         DropdownMenuItem(
-                            text = { Text(screen) },
+                            text = { Text(feature) },
                             onClick = {
-                                onScreenSelect(screen)
-                                showScreenMenu = false
+                                onFeatureSelect(feature)
+                                showFeatureMenu = false
                             },
                         )
                     }
@@ -195,7 +191,7 @@ private fun AuditLogFilterBar(
         }
 
         // クリアボタン
-        if ((selectedTable != null) || (selectedScreen != null)) {
+        if ((selectedTable != null) || (selectedFeature != null)) {
             item {
                 IconButton(onClick = onClear, modifier = Modifier.testTag("AuditLog_FilterClear")) {
                     Icon(
@@ -237,6 +233,7 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                         "DELETE" -> Color(0xFFF44336)
                         "LOGICAL_DELETE" -> Color(0xFFFF9800)
                         "RESTORE" -> Color(0xFF9C27B0)
+                        "ERROR" -> MaterialTheme.colorScheme.error
                         else -> MaterialTheme.colorScheme.primary
                     },
                 )
@@ -245,7 +242,7 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = "${log.screenName} > ${log.operation}",
+                text = "${log.featureName} > ${log.operation}",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
             )

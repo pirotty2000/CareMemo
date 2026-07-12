@@ -121,7 +121,7 @@ class PersonBaseViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonBase",
+                featureName = "PersonBase",
                 operation = "loadPerson",
                 tableName = "person_db",
                 actionType = "ERROR",

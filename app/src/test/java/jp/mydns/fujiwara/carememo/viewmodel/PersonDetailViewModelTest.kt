@@ -106,7 +106,7 @@ class PersonDetailViewModelTest {
             assertEquals(false, errorViewModel.isLoading.value)
             coVerify {
                 auditLogRepository.log(
-                    screenName = any(),
+                    featureName = any(),
                     operation = "personCategorySummaryFlow",
                     tableName = any(),
                     actionType = "ERROR",
@@ -128,7 +128,7 @@ class PersonDetailViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = any(),
+                featureName = any(),
                 operation = "loadPerson",
                 tableName = any(),
                 actionType = "ERROR",

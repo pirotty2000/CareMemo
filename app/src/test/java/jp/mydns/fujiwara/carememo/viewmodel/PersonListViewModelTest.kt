@@ -157,7 +157,7 @@ class PersonListViewModelTest {
             
             coVerify(exactly = 1) {
                 auditLogRepository.log(
-                    screenName = "PersonList",
+                    featureName = "PersonList",
                     operation = "userListFlow",
                     tableName = "person_db",
                     actionType = "ERROR",
@@ -182,7 +182,7 @@ class PersonListViewModelTest {
         
         coVerify(exactly = 1) {
             auditLogRepository.log(
-                screenName = "PersonList",
+                featureName = "PersonList",
                 operation = "addPerson",
                 tableName = "person_db",
                 actionType = "ERROR",

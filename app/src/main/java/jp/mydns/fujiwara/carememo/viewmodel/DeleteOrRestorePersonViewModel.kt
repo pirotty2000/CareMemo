@@ -1,14 +1,13 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * 利用者の復帰（論理削除解除）および完全抹消（物理削除）を担当する ViewModel
@@ -28,7 +26,20 @@ class DeleteOrRestorePersonViewModel(
     private val auditLogRepository: AuditLogRepository
 ) : BaseViewModel(userSettingsRepository) {
 
-    private val TAG = "DeleteOrRestorePersonViewModel"
+    companion object {
+        private const val FEATURE_NAME = "DeleteOrRestorePerson"
+        private const val OP_RESTORE = "restoreSelectedPersons"
+        private const val OP_DELETE = "deleteSelectedPersons"
+        private const val TABLE_PERSON = "person_db"
+    }
+
+    override val featureName: String = FEATURE_NAME
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+    }
 
     private val _isLoading = MutableStateFlow(true) // 初期状態を true に変更（ロード開始するため）
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -61,17 +72,8 @@ class DeleteOrRestorePersonViewModel(
         }
         .catch { e ->
             if (e is CancellationException) throw e
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "archivedPersonListFlow", TABLE_PERSON))
             _isLoading.value = false
-            Log.e(TAG, "archivedPersonList flow error", e)
-            auditLogRepository.log(
-                screenName = "DeleteOrRestorePerson",
-                operation = "archivedPersonListFlow",
-                tableName = "person_db",
-                actionType = "ERROR",
-                affectedId = "0",
-                details = e.toString()
-            )
-            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         }
         .stateIn(
             scope = viewModelScope,
@@ -113,31 +115,20 @@ class DeleteOrRestorePersonViewModel(
      * 選択された利用者を一覧（アクティブ）に復元します。
      */
     fun restoreSelectedPersons(persons: List<Person>) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val targets = persons.filter { _selectedIds.value.contains(it.id) }
-                targets.forEach { 
-                    repository.restorePerson(it.id, "DeleteOrRestorePerson", "restoreSelectedPersons") 
-                }
-                
-                showSnackbar(R.string.archive_msg_restored, targets.size)
-                clearSelection()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Restore error", e)
-                auditLogRepository.log(
-                    screenName = "DeleteOrRestorePerson",
-                    operation = "restoreSelectedPersons",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.archive_err_restore_failure, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_RESTORE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
             }
+        ) {
+            val targets = persons.filter { _selectedIds.value.contains(it.id) }
+            targets.forEach { 
+                repository.restorePerson(it.id, featureName, OP_RESTORE) 
+            }
+            
+            showSnackbar(R.string.archive_msg_restored, targets.size)
+            clearSelection()
         }
     }
 
@@ -145,31 +136,20 @@ class DeleteOrRestorePersonViewModel(
      * 選択された利用者を完全に抹消（物理削除）します。
      */
     fun deleteSelectedPersons(persons: List<Person>) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val targets = persons.filter { _selectedIds.value.contains(it.id) }
-                targets.forEach { 
-                    repository.permanentlyDeletePerson(it.id, "DeleteOrRestorePerson", "deleteSelectedPersons") 
-                }
-                
-                showSnackbar(R.string.archive_msg_deleted, targets.size)
-                clearSelection()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Permanent delete error", e)
-                auditLogRepository.log(
-                    screenName = "DeleteOrRestorePerson",
-                    operation = "deleteSelectedPersons",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_delete, R.string.archive_err_delete_failure, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_DELETE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_PERSON
             }
+        ) {
+            val targets = persons.filter { _selectedIds.value.contains(it.id) }
+            targets.forEach { 
+                repository.permanentlyDeletePerson(it.id, featureName, OP_DELETE)
+            }
+            
+            showSnackbar(R.string.archive_msg_deleted, targets.size)
+            clearSelection()
         }
     }
 

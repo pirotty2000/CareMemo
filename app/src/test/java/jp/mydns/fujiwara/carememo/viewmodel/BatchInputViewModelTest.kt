@@ -207,7 +207,7 @@ class BatchInputViewModelTest {
         assertEquals(false, viewModel.isSaving.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "BatchInput",
+                featureName = "BatchInput",
                 operation = "saveBatch",
                 tableName = "health_db",
                 actionType = "ERROR",

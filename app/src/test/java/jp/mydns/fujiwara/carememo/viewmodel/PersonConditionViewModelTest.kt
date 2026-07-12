@@ -206,7 +206,7 @@ class PersonConditionViewModelTest {
             assertEquals(false, errorViewModel.isLoading.value)
             coVerify {
                 auditLogRepository.log(
-                    screenName = "PersonCondition",
+                    featureName = "PersonCondition",
                     operation = "recordsFlow",
                     tableName = "condition_db",
                     actionType = "ERROR",
@@ -227,7 +227,7 @@ class PersonConditionViewModelTest {
         assertEquals(false, viewModel.isProcessing.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonCondition",
+                featureName = "PersonCondition",
                 operation = "saveRecord",
                 tableName = "condition_db",
                 actionType = "ERROR",
@@ -247,7 +247,7 @@ class PersonConditionViewModelTest {
         assertEquals(false, viewModel.isLoading.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonCondition",
+                featureName = "PersonCondition",
                 operation = "deleteRecord",
                 tableName = "condition_db",
                 actionType = "ERROR",
@@ -272,7 +272,7 @@ class PersonConditionViewModelTest {
         assertEquals(false, viewModel.isProcessing.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonCondition",
+                featureName = "PersonCondition",
                 operation = "processAndSavePhoto",
                 tableName = "condition_db",
                 actionType = "ERROR",
@@ -292,7 +292,7 @@ class PersonConditionViewModelTest {
         assertEquals(false, viewModel.isProcessing.value)
         coVerify {
             auditLogRepository.log(
-                screenName = "PersonCondition",
+                featureName = "PersonCondition",
                 operation = "deletePhoto",
                 tableName = "condition_db",
                 actionType = "ERROR",

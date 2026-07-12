@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -18,12 +17,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * 利用者詳細画面の共通フレームワーク（カテゴリ切り替え、共通状態管理）を担当する ViewModel
@@ -36,7 +33,14 @@ class PersonDetailViewModel(
     auditLogRepository: AuditLogRepository,
 ) : PersonBaseViewModel(repository, summaryRepository, userSettingsRepository, auditLogRepository) {
 
-    private val TAG = "PersonDetailViewModel"
+    companion object {
+        private const val FEATURE_BASE_NAME = "PersonDetail"
+        private const val TABLE_PERSON = "person_db"
+        private const val TABLE_SUMMARY = "summary_view"
+    }
+
+    override val featureName: String 
+        get() = "$FEATURE_BASE_NAME/${currentCategory.value?.name ?: "Base"}"
 
     private val _currentCategory = MutableStateFlow<Category?>(null)
     val currentCategory: StateFlow<Category?> = _currentCategory.asStateFlow()
@@ -47,8 +51,6 @@ class PersonDetailViewModel(
     override val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
         .flatMapLatest { person ->
             if (person == null) {
-                // 利用者が指定されていない場合は、ロード完了とみなして null を流すが、
-                // loadPerson 中（isLoading=true）は勝手に解除しない。
                 flowOf(null)
             } else {
                 summaryRepository.getPersonCategorySummaryById(person.id)
@@ -57,17 +59,8 @@ class PersonDetailViewModel(
         }
         .catch { e ->
             if (e is CancellationException) throw e
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "personCategorySummaryFlow", TABLE_SUMMARY))
             _isLoading.value = false
-            Log.e(TAG, "Frame summary load error", e)
-            auditLogRepository.log(
-                screenName = "PersonDetail",
-                operation = "personCategorySummaryFlow",
-                tableName = "summary_view",
-                actionType = "ERROR",
-                affectedId = _currentPerson.value?.id?.toString() ?: "0",
-                details = e.toString()
-            )
-            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         }
         .stateIn(
             scope = viewModelScope,
@@ -84,6 +77,7 @@ class PersonDetailViewModel(
 
     /**
      * 利用者情報をロードします。
+     * 詳細画面ではサマリー取得まで完了を待ちたいため、基底クラスの実装をオーバーライドします。
      */
     override fun loadPerson(personId: Int) {
         if (_currentPerson.value?.id == personId) return
@@ -92,25 +86,25 @@ class PersonDetailViewModel(
         _currentPerson.value = null
 
         loadPersonJob?.cancel()
-        loadPersonJob = viewModelScope.launch {
+        loadPersonJob = safeLaunch(
+            operation = "loadPerson",
+            contextBuilder = {
+                tableName = TABLE_PERSON
+                affectedId = personId.toString()
+            }
+        ) {
             try {
-                repository.getPersonById(personId).collectLatest {
+                repository.getPersonById(personId).collect {
                     _currentPerson.value = it
-                    if (it == null) _isLoading.value = false // 利用者が見つからない場合も解除
+                    // 利用者が見つからない場合のみ、ここでロード完了とする
+                    if (it == null) {
+                        _isLoading.value = false
+                    }
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            } catch (t: Throwable) {
+                // 例外発生時は確実に解除する
                 _isLoading.value = false
-                Log.e(TAG, "loadPerson error", e)
-                auditLogRepository.log(
-                    screenName = "PersonDetail",
-                    operation = "loadPerson",
-                    tableName = "person_db",
-                    actionType = "ERROR",
-                    affectedId = personId.toString(),
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
+                throw t // safeLaunch に再スローしてハンドルさせる
             }
         }
     }

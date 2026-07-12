@@ -1,18 +1,17 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.BpAndPulse
+import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
+import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.CancellationException
@@ -20,13 +19,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * 利用者健康記録（身長体重、バイタル、血糖値）固有のロジックを扱う ViewModel。
@@ -41,7 +39,16 @@ class PersonHealthViewModel(
     auditLogRepository: AuditLogRepository
 ) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
 
-    private val TAG = "PersonHealthViewModel"
+    companion object {
+        private const val FEATURE_NAME = "PersonHealth"
+        private const val OP_SAVE = "saveRecord"
+        private const val OP_DELETE = "deleteRecord"
+        private const val OP_RECORDS_FLOW = "recordsFlow"
+        private const val TABLE_HEALTH = "health_db"
+    }
+
+    override val featureName: String = FEATURE_NAME
+
     private val _currentCategory = MutableStateFlow<Category?>(null)
 
     /**
@@ -63,17 +70,8 @@ class PersonHealthViewModel(
         _isLoading.value = false
     }.catch { e ->
         if (e is CancellationException) throw e
+        coroutineErrorHandler.handleException(e, ErrorContext(featureName, OP_RECORDS_FLOW, TABLE_HEALTH))
         _isLoading.value = false
-        Log.e(TAG, "Data load error", e)
-        auditLogRepository.log(
-            screenName = "PersonHealth",
-            operation = "recordsFlow",
-            tableName = "health_db",
-            actionType = "ERROR",
-            affectedId = _currentPerson.value?.id?.toString() ?: "0",
-            details = e.toString()
-        )
-        showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
@@ -102,17 +100,8 @@ class PersonHealthViewModel(
             _isLoading.value = false
         }.catch { e ->
             if (e is CancellationException) throw e
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "getHealthRecords", TABLE_HEALTH))
             _isLoading.value = false
-            Log.e(TAG, "getHealthRecords error", e)
-            auditLogRepository.log(
-                screenName = "PersonHealth",
-                operation = "getHealthRecords",
-                tableName = "health_db",
-                actionType = "ERROR",
-                affectedId = _currentPerson.value?.id?.toString() ?: "0",
-                details = e.toString()
-            )
-            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
 
@@ -121,52 +110,42 @@ class PersonHealthViewModel(
      */
     fun saveRecord(record: Any?) {
         if (record == null) return
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val isUpdate = if (record is HistoryRecord) record.id != 0 else false
-                
-                // --- 重複チェック (新規登録、または日時変更時) ---
-                if (record is HistoryRecord) {
-                    val existing = when (record) {
-                        is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
-                        is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
-                        is GlucoseAndHbA1c -> healthRepository.findGlucoseAndHbA1cAtTime(record.personId, record.recordTime)
-                        else -> null
-                    }
+        safeLaunch(
+            operation = OP_SAVE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_HEALTH
+                affectedId = (record as? HistoryRecord)?.id?.toString()
+            }
+        ) {
+            val isUpdate = if (record is HistoryRecord) record.id != 0 else false
 
-                    // 自分自身以外（IDが異なる）の既存データがある場合は保存をブロック
-                    if (existing != null && (record.id == 0 || existing.id != record.id)) {
-                        showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
-                        return@launch
-                    }
+            // --- 重複チェック (新規登録、または日時変更時) ---
+            if (record is HistoryRecord) {
+                val existing = when (record) {
+                    is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
+                    is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
+                    is GlucoseAndHbA1c -> healthRepository.findGlucoseAndHbA1cAtTime(record.personId, record.recordTime)
+                    else -> null
                 }
 
-                performSave(record)
-                sendUiEvent(UiEvent.SaveSuccess)
-                showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Save error", e)
-                auditLogRepository.log(
-                    screenName = "PersonHealth",
-                    operation = "saveRecord",
-                    tableName = "health_db",
-                    actionType = "ERROR",
-                    affectedId = (record as? HistoryRecord)?.id?.toString() ?: "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+                // 自分自身以外（IDが異なる）の既存データがある場合は保存をブロック
+                if (existing != null && (record.id == 0 || existing.id != record.id)) {
+                    showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
+                    return@safeLaunch
+                }
             }
+
+            performSave(record)
+            sendUiEvent(UiEvent.SaveSuccess)
+            showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
         }
     }
 
     private suspend fun performSave(record: Any) = when (record) {
-        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record, "PersonHealth", "saveRecord")
-        is BpAndPulse -> healthRepository.insertBpAndPulse(record, "PersonHealth", "saveRecord")
-        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record, "PersonHealth", "saveRecord")
+        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record, featureName, OP_SAVE)
+        is BpAndPulse -> healthRepository.insertBpAndPulse(record, featureName, OP_SAVE)
+        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record, featureName, OP_SAVE)
         else -> {}
     }
 
@@ -174,33 +153,23 @@ class PersonHealthViewModel(
      * 数値系レコードを削除します。
      */
     fun deleteRecord(record: Any) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                performDelete(record)
-                showSnackbar(R.string.p_health_msg_delete_success)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "Delete error", e)
-                auditLogRepository.log(
-                    screenName = "PersonHealth",
-                    operation = "deleteRecord",
-                    tableName = "health_db",
-                    actionType = "ERROR",
-                    affectedId = (record as? HistoryRecord)?.id?.toString() ?: "0",
-                    details = e.toString()
-                )
-                showError(R.string.common_error_title_delete, R.string.common_error_delete, e.localizedMessage ?: "")
-            } finally {
-                _isLoading.value = false
+        safeLaunch(
+            operation = OP_DELETE,
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_HEALTH
+                affectedId = (record as? HistoryRecord)?.id?.toString()
             }
+        ) {
+            performDelete(record)
+            showSnackbar(R.string.p_health_msg_delete_success)
         }
     }
 
     private suspend fun performDelete(record: Any) = when (record) {
-        is HeightAndWeight -> healthRepository.deleteHeightAndWeight(record, "PersonHealth", "deleteRecord")
-        is BpAndPulse -> healthRepository.deleteBpAndPulse(record, "PersonHealth", "deleteRecord")
-        is GlucoseAndHbA1c -> healthRepository.deleteGlucoseAndHbA1c(record, "PersonHealth", "deleteRecord")
+        is HeightAndWeight -> healthRepository.deleteHeightAndWeight(record, featureName, OP_DELETE)
+        is BpAndPulse -> healthRepository.deleteBpAndPulse(record, featureName, OP_DELETE)
+        is GlucoseAndHbA1c -> healthRepository.deleteGlucoseAndHbA1c(record, featureName, OP_DELETE)
         else -> {}
     }
 

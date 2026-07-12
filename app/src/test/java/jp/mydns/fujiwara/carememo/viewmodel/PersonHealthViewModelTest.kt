@@ -155,7 +155,7 @@ class PersonHealthViewModelTest {
         // 監査ログが記録されたか検証
         coVerify(exactly = 1) { 
             auditLogRepository.log(
-                screenName = "PersonHealth",
+                featureName = "PersonHealth",
                 operation = any(),
                 tableName = any(),
                 actionType = "ERROR",
@@ -178,7 +178,7 @@ class PersonHealthViewModelTest {
         // 監査ログが記録されたか検証
         coVerify(exactly = 1) { 
             auditLogRepository.log(
-                screenName = "PersonHealth",
+                featureName = "PersonHealth",
                 operation = "saveRecord",
                 tableName = any(),
                 actionType = "ERROR",

@@ -204,13 +204,13 @@ class CareMemoDatabaseTest {
         val auditDao = db.auditLogDao()
         val now = Instant.now()
         
-        auditDao.insert(AuditLog(screenName = "S1", operation = "O1", tableName = "T1", actionType = "INSERT", affectedId = "1", timestamp = now.minusSeconds(10)))
-        auditDao.insert(AuditLog(screenName = "S2", operation = "O2", tableName = "T2", actionType = "UPDATE", affectedId = "2", timestamp = now))
+        auditDao.insert(AuditLog(featureName = "S1", operation = "O1", tableName = "T1", actionType = "INSERT", affectedId = "1", timestamp = now.minusSeconds(10)))
+        auditDao.insert(AuditLog(featureName = "S2", operation = "O2", tableName = "T2", actionType = "UPDATE", affectedId = "2", timestamp = now))
 
         val logs = auditDao.getAllLogs().first()
         assertEquals(2, logs.size)
         // 新しい順（S2が先）であることを確認
-        assertEquals("S2", logs[0].screenName)
-        assertEquals("S1", logs[1].screenName)
+        assertEquals("S2", logs[0].featureName)
+        assertEquals("S1", logs[1].featureName)
     }
 }

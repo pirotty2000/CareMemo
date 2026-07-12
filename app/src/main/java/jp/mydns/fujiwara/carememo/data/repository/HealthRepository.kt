@@ -19,10 +19,10 @@ class HealthRepository(
     suspend fun findHeightAndWeightAtTime(personId: Int, time: java.time.Instant): HeightAndWeight? =
         heightAndWeightDao.findAtTime(personId, time)
     
-    suspend fun insertHeightAndWeight(item: HeightAndWeight, screenName: String = "", operation: String = ""): Long {
+    suspend fun insertHeightAndWeight(item: HeightAndWeight, featureName: String = "", operation: String = ""): Long {
         val id = heightAndWeightDao.insert(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "height_and_weight_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
@@ -32,10 +32,10 @@ class HealthRepository(
         return id
     }
     
-    suspend fun deleteHeightAndWeight(item: HeightAndWeight, screenName: String = "", operation: String = "") {
+    suspend fun deleteHeightAndWeight(item: HeightAndWeight, featureName: String = "", operation: String = "") {
         heightAndWeightDao.delete(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "height_and_weight_db",
             actionType = "DELETE",
@@ -51,10 +51,10 @@ class HealthRepository(
     suspend fun findBpAndPulseAtTime(personId: Int, time: java.time.Instant): BpAndPulse? =
         bpAndPulseDao.findAtTime(personId, time)
     
-    suspend fun insertBpAndPulse(item: BpAndPulse, screenName: String = "", operation: String = ""): Long {
+    suspend fun insertBpAndPulse(item: BpAndPulse, featureName: String = "", operation: String = ""): Long {
         val id = bpAndPulseDao.insert(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "bp_and_pulse_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
@@ -64,10 +64,10 @@ class HealthRepository(
         return id
     }
     
-    suspend fun deleteBpAndPulse(item: BpAndPulse, screenName: String = "", operation: String = "") {
+    suspend fun deleteBpAndPulse(item: BpAndPulse, featureName: String = "", operation: String = "") {
         bpAndPulseDao.delete(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "bp_and_pulse_db",
             actionType = "DELETE",
@@ -83,10 +83,10 @@ class HealthRepository(
     suspend fun findGlucoseAndHbA1cAtTime(personId: Int, time: java.time.Instant): GlucoseAndHbA1c? =
         glucoseAndHbA1cDao.findAtTime(personId, time)
     
-    suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c, screenName: String = "", operation: String = ""): Long {
+    suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c, featureName: String = "", operation: String = ""): Long {
         val id = glucoseAndHbA1cDao.insert(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "glucose_and_hba1c_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
@@ -96,10 +96,10 @@ class HealthRepository(
         return id
     }
     
-    suspend fun deleteGlucoseAndHbA1c(item: GlucoseAndHbA1c, screenName: String = "", operation: String = "") {
+    suspend fun deleteGlucoseAndHbA1c(item: GlucoseAndHbA1c, featureName: String = "", operation: String = "") {
         glucoseAndHbA1cDao.delete(item)
         auditLogRepository?.log(
-            screenName = screenName,
+            featureName = featureName,
             operation = operation,
             tableName = "glucose_and_hba1c_db",
             actionType = "DELETE",
