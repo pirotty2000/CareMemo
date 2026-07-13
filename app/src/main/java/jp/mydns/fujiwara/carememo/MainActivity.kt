@@ -59,6 +59,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -469,9 +470,11 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
                 // ---------- 設定：操作ログ参照 ----------
                 composable("audit_log") {
-                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
+                    val auditLogViewModel: AuditLogViewModel = viewModel(
+                        factory = AuditLogViewModel.Factory(auditLogRepository, userSettingsRepository)
+                    )
                     AuditLogScreen(
-                        viewModel = settingsViewModel,
+                        viewModel = auditLogViewModel,
                         onBack = { navController.popBackStack() }
                     )
                 }

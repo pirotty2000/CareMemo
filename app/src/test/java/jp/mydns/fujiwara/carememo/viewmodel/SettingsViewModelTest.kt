@@ -168,36 +168,7 @@ class SettingsViewModelTest {
         }
     }
 
-    // --- ロジック・安全性テスト (LG-07 〜 LG-09: Flow系) ---
-
-    @Test
-    fun `LG-07_操作ログ一覧のFlow取得失敗時に監査ログが記録されること`() = runTest {
-        every { auditLogRepository.allLogs } returns flow {
-            throw RuntimeException("AuditLogs Flow Error")
-        }
-
-        val errorViewModel = SettingsViewModel(
-            maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository
-        )
-
-        errorViewModel.auditLogs.test {
-            awaitItem() // 初期値を受け取る
-            advanceUntilIdle() // Flow内のcatch処理を走らせる
-            
-            coVerify {
-                auditLogRepository.log(
-                    featureName = "Settings",
-                    operation = "auditLogsFlow",
-                    tableName = any(),
-                    actionType = "ERROR",
-                    affectedId = any(),
-                    details = match { it.contains("AuditLogs Flow Error") },
-                    resultType = "OTHER_ERROR"
-                )
-            }
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
+    // --- ロジック・安全性テスト (LG-08 〜 LG-09: Flow系) ---
 
     @Test
     fun `LG-08_利用終了者一覧のFlow取得失敗時に監査ログが記録されること`() = runTest {

@@ -4,6 +4,7 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
 
 class SettingsLogicTest {
 
@@ -32,5 +33,15 @@ class SettingsLogicTest {
     @Test
     fun `VR_03_新しいバックアップは互換性なし`() {
         assertFalse(SettingsLogic.isVersionCompatible(110, 100))
+    }
+
+    @Test
+    fun `SP_01_空き容量判定が動作すること`() {
+        // 実際のファイルシステムに依存するが、1バイト以上はあるはず
+        val dir = File(".")
+        assertTrue(SettingsLogic.hasAvailableSpace(dir, 1L))
+        
+        // 非常に大きな値を指定すれば false になる（はずだが、StatFsは実機依存のため
+        // ローカルJUnit環境での挙動は環境に依存する。ここでは存在確認程度に留める）
     }
 }

@@ -35,11 +35,11 @@ import jp.mydns.fujiwara.carememo.ui.mapping.toFeatureLabel
 import jp.mydns.fujiwara.carememo.ui.mapping.toResultLabel
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
-import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 
 @Composable
 fun AuditLogScreen(
-    viewModel: SettingsViewModel,
+    viewModel: AuditLogViewModel,
     onBack: () -> Unit,
 ) {
     val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()

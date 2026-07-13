@@ -78,8 +78,8 @@ jp.mydns.fujiwara.carememo
 | (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationLogic`                                             | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
 | 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
 | 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | -                                                             | `DeleteOrRestorePersonRepository`                                                                                |
-| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
-| 操作ログ     | `AuditLogScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AuditLogRepository`                                                                                             |
+| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                      |
+| 操作ログ     | `AuditLogScreen`                   | `AuditLogViewModel`                                    | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                             |
 | 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`               |
 
 ---
@@ -116,7 +116,8 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | `PersonHealthLogic.kt`    | 健康記録画面における新規・更新判定、および重複チェックロジック。                         |
 | `PersonConditionLogic.kt` | 所見メモ画面における変更検知、バリデーション、Entity生成。                         |
 | `BatchInputLogic.kt`      | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                    |
-| `SettingsLogic.kt`        | 監査ログのフィルタ・ソート、ZIP検証、バージョン互換性、空き容量チェック。                   |
+| `SettingsLogic.kt`        | ZIP検証、バージョン互換性、空き容量チェックなどのシステムメンテナンス。                   |
+| `AuditLogLogic.kt`        | 監査ログのフィルタリング、並び替え、選択肢の抽出。                   |
 
 ### **表示用マッピングロジック (ui/mapping)**
 判定結果（Enum）を日本語のラベルやテーマに合わせた色へ変換するロジックです。

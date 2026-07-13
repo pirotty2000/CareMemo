@@ -2,6 +2,7 @@
 
 - **対象テストコード:**
     - `app/src/androidTest/java/jp/mydns/fujiwara/carememo/ui/screens/settings/AuditLogScreenTest.kt`
+    - `app/src/test/java/jp/mydns/fujiwara/carememo/viewmodel/AuditLogViewModelTest.kt`
     - `app/src/test/java/jp/mydns/fujiwara/carememo/data/repository/AuditLogRepositoryTest.kt`
 
 ## 1. コンポーネント単体テスト (AuditLogScreen)
@@ -27,14 +28,16 @@
 | BH-05 | ラベルの日本語化 | マッパーにより、機能名（`PersonHealth` → `健康記録`）や結果種別（`SUCCESS` → `成功`）が日本語で表示されていること。 |
 | BH-06 | 並び替え操作   | 並び替えトグルをタップした際、ViewModel の `toggleSortOrder` が呼ばれ、リストの昇順/降順が切り替わること。       |
 
-## 3. ロジック・安全性テスト (AuditLogRepository)
-**目的:** ログ記録の失敗がアプリ全体の動作に影響を及ぼさないことを検証する。
+## 3. ロジック・安全性テスト (AuditLogRepository / AuditLogViewModel)
+**目的:** ログの取得・記録の失敗がアプリ全体の動作に影響を及ぼさないこと、および ViewModel でのデータ加工が正確であることを検証する。
 
 | ID    | テスト項目   | 検証内容                                                                 |
 |:------|:--------|:---------------------------------------------------------------------|
 | LG-01 | 例外保護    | ログ記録時に例外（DBエラー等）が発生しても、呼び出し元に例外を投げず正常終了すること。                         |
 | LG-02 | 非同期安全性  | `NonCancellable` により、コルーチンがキャンセルされてもログの書き込みが試行されること。                 |
 | LG-03 | 結果種別の記録 | 記録時に `resultType` (SUCCESS / DB_ERROR / OTHER_ERROR) が正しく指定・保存されること。 |
+| LG-04 | ログ一覧の Flow 取得失敗 | 操作ログ一覧 (`auditLogs`) の取得中に例外が発生した際、監査ログに "ERROR" が記録され、画面がフリーズしないこと。 |
+| LG-05 | フィルタリングの連動 | `setFeatureFilter` 等を呼び出した際、`auditLogs` が即座に更新され、フィルタ後のデータが放出されること。 |
 
 ## 4. テスト用タグ (testTag) 定義
 - `AuditLog_BackButton`: 戻るボタン

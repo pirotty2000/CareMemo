@@ -126,67 +126,6 @@ class SettingsViewModel(
         coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogCountFlow"))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // 絞り込み・並び替え状態
-    private val _selectedFeature = MutableStateFlow<String?>(null)
-    val selectedFeature = _selectedFeature.asStateFlow()
-
-    private val _selectedResult = MutableStateFlow<String?>(null)
-    val selectedResult = _selectedResult.asStateFlow()
-
-    private val _isAscending = MutableStateFlow(false)
-    val isAscending = _isAscending.asStateFlow()
-
-    // 絞り込み・並び替え済みのログリスト
-    val auditLogs: StateFlow<List<AuditLog>> = combine(
-        auditLogRepository.allLogs,
-        _selectedFeature,
-        _selectedResult,
-        _isAscending,
-    ) { logs, feature, result, ascending ->
-        SettingsLogic.filterAuditLogs(logs, feature, result, ascending)
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogsFlow", "audit_log"))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    // 存在する項目の一覧（フィルター選択用）
-    val availableFeatures: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs ->
-            SettingsLogic.extractAvailableFeatures(logs)
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableFeaturesFlow"))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val availableResults: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs ->
-            SettingsLogic.extractAvailableResults(logs)
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableResultsFlow"))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun setFeatureFilter(feature: String?) {
-        _selectedFeature.value = feature
-    }
-
-    fun setResultFilter(result: String?) {
-        _selectedResult.value = result
-    }
-
-    fun toggleSortOrder() {
-        _isAscending.value = !_isAscending.value
-    }
-
-    fun clearFilters() {
-        _selectedFeature.value = null
-        _selectedResult.value = null
-    }
-
     // 復元処理用の一時保持
     private var pendingImportFile: File? = null
     private var pendingImportUri: Uri? = null
@@ -264,12 +203,6 @@ class SettingsViewModel(
     fun setThemeSetting(theme: ThemeSetting) {
         viewModelScope.launch {
             userSettingsRepository.setThemeSetting(theme)
-        }
-    }
-
-    fun setAuditLogRetentionDays(days: Int) {
-        viewModelScope.launch {
-            userSettingsRepository.setAuditLogRetentionDays(days)
         }
     }
 
@@ -599,6 +532,12 @@ class SettingsViewModel(
         safeLaunch(operation = OP_TEST_INCONSISTENCY) {
             maintenanceRepository.insertTestInconsistency()
             showSnackbar(R.string.settings_msg_test_inconsistency_added)
+        }
+    }
+
+    fun setAuditLogRetentionDays(days: Int) {
+        viewModelScope.launch {
+            userSettingsRepository.setAuditLogRetentionDays(days)
         }
     }
 

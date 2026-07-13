@@ -10,7 +10,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
@@ -27,7 +27,7 @@ class AuditLogScreenTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var viewModel: SettingsViewModel
+    private lateinit var viewModel: AuditLogViewModel
 
     private val mockLogs = listOf(
         AuditLog(id = 1, timestamp = Instant.now(), featureName = "PersonList", operation = "addPerson", tableName = "person_db", actionType = "INSERT", affectedId = "1", resultType = "SUCCESS"),
@@ -36,7 +36,7 @@ class AuditLogScreenTest {
 
     @Before
     fun setup() {
-        viewModel = mockk<SettingsViewModel>(relaxed = true)
+        viewModel = mockk<AuditLogViewModel>(relaxed = true)
         
         // デフォルトのモック設定
         every { viewModel.auditLogs } returns MutableStateFlow(mockLogs)
