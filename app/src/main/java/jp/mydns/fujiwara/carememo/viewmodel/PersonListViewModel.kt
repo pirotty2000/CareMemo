@@ -43,10 +43,10 @@ data class PersonUiState(
 class PersonListViewModel(
     private val repository: PersonRepository,
     private val archivedRepository: DeleteOrRestorePersonRepository,
-    private val summaryRepository: PersonSummaryRepository,
+    summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
-    private val auditLogRepository: AuditLogRepository,
+    auditLogRepository: AuditLogRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
     companion object {

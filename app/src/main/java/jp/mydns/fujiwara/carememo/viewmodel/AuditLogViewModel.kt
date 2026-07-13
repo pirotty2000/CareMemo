@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.stateIn
  * 操作ログ（監査ログ）閲覧画面用の ViewModel
  */
 class AuditLogViewModel(
-    private val auditLogRepository: AuditLogRepository,
+    auditLogRepository: AuditLogRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
