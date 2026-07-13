@@ -43,7 +43,7 @@ data class PersonUiState(
 class PersonListViewModel(
     private val repository: PersonRepository,
     private val archivedRepository: DeleteOrRestorePersonRepository,
-    summaryRepository: PersonSummaryRepository,
+    private val summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
     private val auditLogRepository: AuditLogRepository,
@@ -132,7 +132,7 @@ class PersonListViewModel(
             // 1. 保存前に論理的な重複をチェック
             val existing = repository.findExistingPerson(person)
             if (existing != null) {
-                handleDuplicateError(existing, person, isUpdate = false)
+                handleDuplicateError(existing, person)
                 return@safeLaunch
             }
 
@@ -146,9 +146,9 @@ class PersonListViewModel(
     /**
      * 重複エラーが発生した際のメッセージ表示を共通化
      */
-    private fun handleDuplicateError(existing: Person, input: Person, isUpdate: Boolean) {
+    private fun handleDuplicateError(existing: Person, input: Person) {
         val personName = input.getMaskedName(isNameMaskingEnabled.value)
-        val titleRes = if (isUpdate) R.string.main_err_title_duplicate_archived_update else R.string.main_err_title_duplicate_archived_add
+        val titleRes = R.string.main_err_title_duplicate_archived_add
 
         if (existing.deletedAt == null) {
             // アクティブな利用者に重複

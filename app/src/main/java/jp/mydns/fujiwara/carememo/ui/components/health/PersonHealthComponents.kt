@@ -80,7 +80,6 @@ fun HealthHistoryItemBody(category: Category, record: HistoryRecord) {
  */
 @Composable
 private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
-    val context = LocalContext.current
     val bmi = record.calculateBMI()
     val textStyle = MaterialTheme.typography.labelMedium
     val bmiLabelStyle = MaterialTheme.typography.labelMedium

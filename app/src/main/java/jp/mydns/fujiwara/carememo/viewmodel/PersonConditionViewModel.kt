@@ -215,7 +215,7 @@ class PersonConditionViewModel(
                         uri.path?.let { File(it).delete() }
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ここは補助的な処理なのでハンドリングのみ
             }
         }
