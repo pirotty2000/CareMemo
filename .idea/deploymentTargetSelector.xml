@@ -50,7 +50,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="AuditLogScreenTest">
+      <SelectionState runConfigName="SettingsScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -61,12 +61,12 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="SettingsScreenTest">
+      <SelectionState runConfigName="PersonMedicationScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
+        <DropdownSelection timestamp="2026-07-13T22:35:26.642340Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\pirotty.galaxy\.android\avd\TORQUE_G06_KYG03_2.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\pirotty.galaxy\.android\avd\Pixel_7.avd" />
             </handle>
           </Target>
         </DropdownSelection>

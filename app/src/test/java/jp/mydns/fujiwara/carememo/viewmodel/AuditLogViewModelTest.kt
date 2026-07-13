@@ -36,9 +36,10 @@ class AuditLogViewModelTest {
     private lateinit var viewModel: AuditLogViewModel
     private val testDispatcher = StandardTestDispatcher()
 
+    // 降順（新しい順）で定義する
     private val mockLogs = listOf(
-        AuditLog(id = 1, timestamp = Instant.ofEpochMilli(1000), featureName = "Settings", operation = "op1", tableName = "t1", actionType = "A", affectedId = "1", resultType = "SUCCESS"),
-        AuditLog(id = 2, timestamp = Instant.ofEpochMilli(2000), featureName = "PersonList", operation = "op2", tableName = "t2", actionType = "B", affectedId = "2", resultType = "DB_ERROR")
+        AuditLog(id = 2, timestamp = Instant.ofEpochMilli(2000), featureName = "PersonList", operation = "op2", tableName = "t2", actionType = "B", affectedId = "2", resultType = "DB_ERROR"),
+        AuditLog(id = 1, timestamp = Instant.ofEpochMilli(1000), featureName = "Settings", operation = "op1", tableName = "t1", actionType = "A", affectedId = "1", resultType = "SUCCESS")
     )
 
     @Before
@@ -91,8 +92,11 @@ class AuditLogViewModelTest {
     @Test
     fun `LG-05_フィルタリング操作が正しく連動すること`() = runTest {
         viewModel.auditLogs.test {
-            val initial = awaitItem()
-            assertEquals(2, initial.size) // 最初は全件 (降順なので 2, 1)
+            // StateFlowの初期値(emptyList)をスキップまたは消費
+            var initial = awaitItem()
+            if (initial.isEmpty()) initial = awaitItem()
+            
+            assertEquals(2, initial.size)
 
             // 機能で絞り込み
             viewModel.setFeatureFilter("Settings")
@@ -111,7 +115,9 @@ class AuditLogViewModelTest {
     @Test
     fun `並べ替えトグルが正しく連動すること`() = runTest {
         viewModel.auditLogs.test {
-            val descLogs = awaitItem()
+            var descLogs = awaitItem()
+            if (descLogs.isEmpty()) descLogs = awaitItem()
+
             assertEquals(2L, descLogs[0].id) // 降順（デフォルト）
 
             viewModel.toggleSortOrder()
