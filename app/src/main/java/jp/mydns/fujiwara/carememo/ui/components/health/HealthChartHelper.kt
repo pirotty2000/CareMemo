@@ -24,7 +24,11 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
+import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
+import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 
 /**
  * グラフ描画に必要な設定情報を保持するクラス
@@ -103,10 +107,10 @@ object HealthChartHelper {
     private fun mapRanges(ranges: List<AppThresholds.VisualRange>, isDark: Boolean): List<ChartRangeHighlight> {
         return ranges.map {
             val color = when (it.level) {
-                AppThresholds.AlertLevel.ALERT -> getAlertHighlight(isDark)
-                AppThresholds.AlertLevel.WARNING -> getWarningHighlight(isDark)
-                AppThresholds.AlertLevel.INFO -> getInfoHighlight(isDark)
-                AppThresholds.AlertLevel.NORMAL -> if (isDark) Color.Transparent else Color.White
+                HealthAlertLevel.ALERT -> getAlertHighlight(isDark)
+                HealthAlertLevel.WARNING -> getWarningHighlight(isDark)
+                HealthAlertLevel.INFO -> getInfoHighlight(isDark)
+                HealthAlertLevel.NORMAL -> if (isDark) Color.Transparent else Color.White
             }
             ChartRangeHighlight(it.start, it.end, color)
         }
@@ -124,29 +128,29 @@ object HealthChartHelper {
         return when (index) {
             0 -> { // 血圧
                 val sysPoints = sortedData.filter { it.bpSystolic != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(it.bpSystolic, null, null, null, null)
-                        .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
+                    val status = HealthLogic.evaluateVitalItems(it.bpSystolic, null, null, null, null)
+                        .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.bpSystolic!!.toDouble(),
-                        noteId?.let { id -> context.getString(id) }
+                        status?.let { s -> context.getString(HealthDisplayMapper.getVitalLabel(s)) }
                     )
                 }
                 val diaPoints = sortedData.filter { it.bpDiastolic != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, it.bpDiastolic, null, null, null)
-                        .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
+                    val status = HealthLogic.evaluateVitalItems(null, it.bpDiastolic, null, null, null)
+                        .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.bpDiastolic!!.toDouble(),
-                        noteId?.let { id -> context.getString(id) }
+                        status?.let { s -> context.getString(HealthDisplayMapper.getVitalLabel(s)) }
                     )
                 }
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_BP),
-                    helpContent = AppThresholds.getBpExplanation(context),
+                    title = context.getString(R.string.health_label_bp),
+                    helpContent = HealthDisplayMapper.getBpExplanation(context),
                     dataList = listOf(
-                        ChartLineData("${context.getString(AppThresholds.HEALTH_LABEL_BP)}(${context.getString(AppThresholds.HEALTH_LABEL_SYSTOLIC_SHORT)})", sysPoints, Color.Red, "mmHg"),
-                        ChartLineData("${context.getString(AppThresholds.HEALTH_LABEL_BP)}(${context.getString(AppThresholds.HEALTH_LABEL_DIASTOLIC_SHORT)})", diaPoints, Color.Blue, "mmHg")
+                        ChartLineData("${context.getString(R.string.health_label_bp)}(${context.getString(R.string.health_label_systolic_short)})", sysPoints, Color.Red, "mmHg"),
+                        ChartLineData("${context.getString(R.string.health_label_bp)}(${context.getString(R.string.health_label_diastolic_short)})", diaPoints, Color.Blue, "mmHg")
                     ),
                     ranges = mapRanges(AppThresholds.getBpRanges(), isDark),
                     stepY = 10.0,
@@ -156,18 +160,18 @@ object HealthChartHelper {
             }
             1 -> { // 酸素飽和度(SAT)
                 val satPoints = sortedData.filter { it.sat != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, null, it.sat, null, null)
-                        .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
+                    val status = HealthLogic.evaluateVitalItems(null, null, it.sat, null, null)
+                        .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.sat!!.toDouble(),
-                        noteId?.let { id -> context.getString(id) }
+                        status?.let { s -> context.getString(HealthDisplayMapper.getVitalLabel(s)) }
                     )
                 }
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_SAT),
-                    helpContent = AppThresholds.getSatExplanation(context),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_SAT), satPoints, Color(0xFF00BCD4), "%")),
+                    title = context.getString(R.string.health_label_sat),
+                    helpContent = HealthDisplayMapper.getSatExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_sat), satPoints, Color(0xFF00BCD4), "%")),
                     ranges = mapRanges(AppThresholds.getSatRanges(), isDark),
                     stepY = 2.0,
                     minYConstraint = 85.0,
@@ -176,18 +180,18 @@ object HealthChartHelper {
             }
             2 -> { // 脈拍
                 val pulsePoints = sortedData.filter { it.pulse != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, null, null, it.pulse, null)
-                        .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
+                    val status = HealthLogic.evaluateVitalItems(null, null, null, it.pulse, null)
+                        .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.pulse!!.toDouble(),
-                        noteId?.let { id -> context.getString(id) }
+                        status?.let { s -> context.getString(HealthDisplayMapper.getVitalLabel(s)) }
                     )
                 }
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_PULSE),
-                    helpContent = AppThresholds.getPulseExplanation(context),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_PULSE), pulsePoints, Color(0xFF4CAF50), "bpm")),
+                    title = context.getString(R.string.health_label_pulse),
+                    helpContent = HealthDisplayMapper.getPulseExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_pulse), pulsePoints, Color(0xFF4CAF50), "bpm")),
                     ranges = mapRanges(AppThresholds.getPulseRanges(), isDark),
                     stepY = 10.0,
                     minYConstraint = 40.0,
@@ -196,18 +200,18 @@ object HealthChartHelper {
             }
             3 -> { // 体温
                 val tempPoints = sortedData.filter { it.bodyTemperature != null }.map { 
-                    val noteId = AppThresholds.evaluateVital(null, null, null, null, it.bodyTemperature)
-                        .firstOrNull { r -> r.second != AppThresholds.AlertLevel.NORMAL }?.first
+                    val status = HealthLogic.evaluateVitalItems(null, null, null, null, it.bodyTemperature)
+                        .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.bodyTemperature!!,
-                        noteId?.let { id -> context.getString(id) }
+                        status?.let { s -> context.getString(HealthDisplayMapper.getVitalLabel(s)) }
                     )
                 }
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP),
-                    helpContent = AppThresholds.getTempExplanation(context),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP), tempPoints, Color(0xFFFF9800), "℃")),
+                    title = context.getString(R.string.health_label_body_temp),
+                    helpContent = HealthDisplayMapper.getTempExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_body_temp), tempPoints, Color(0xFFFF9800), "℃")),
                     ranges = mapRanges(AppThresholds.getTempRanges(), isDark),
                     stepY = 0.5,
                     minYConstraint = 35.0,
@@ -226,19 +230,19 @@ object HealthChartHelper {
             0 -> { // 血糖値
                 val glucoses = sortedData.mapNotNull { it.glucose?.toDouble() }
                 val glucosePoints = sortedData.filter { it.glucose != null }.map { 
-                    val (noteId, level) = AppThresholds.evaluateGlucose(it.glucose)
+                    val (status, level) = HealthLogic.evaluateGlucose(it.glucose)
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.glucose!!.toDouble(),
-                        if (level != AppThresholds.AlertLevel.NORMAL) noteId?.let { id -> context.getString(id) } else null
+                        if (level != HealthAlertLevel.NORMAL) status?.let { s -> context.getString(HealthDisplayMapper.getGlucoseLabel(s)!!) } else null
                     )
                 }
                 val minG = glucoses.minOrNull() ?: 70.0
                 val maxG = glucoses.maxOrNull() ?: 110.0
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_GLUCOSE),
-                    helpContent = AppThresholds.getGlucoseExplanation(context),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_GLUCOSE), glucosePoints, Color.Magenta, "mg/dL")),
+                    title = context.getString(R.string.health_label_glucose),
+                    helpContent = HealthDisplayMapper.getGlucoseExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_glucose), glucosePoints, Color.Magenta, "mg/dL")),
                     ranges = mapRanges(AppThresholds.getGlucoseRanges(), isDark),
                     limits = mapLimits(AppThresholds.getGlucoseLimits()),
                     stepY = 50.0,
@@ -249,19 +253,19 @@ object HealthChartHelper {
             1 -> { // HbA1c
                 val hba1cs = sortedData.mapNotNull { it.hba1c }
                 val hba1cPoints = sortedData.filter { it.hba1c != null }.map { 
-                    val (noteId, level) = AppThresholds.evaluateHbA1c(it.hba1c)
+                    val (status, level) = HealthLogic.evaluateHbA1c(it.hba1c)
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         it.hba1c!!,
-                        if (level != AppThresholds.AlertLevel.NORMAL) noteId?.let { id -> context.getString(id) } else null
+                        if (level != HealthAlertLevel.NORMAL) status?.let { s -> context.getString(HealthDisplayMapper.getHbA1cLabel(s)!!) } else null
                     )
                 }
                 val minH = hba1cs.minOrNull() ?: 5.0
                 val maxH = hba1cs.maxOrNull() ?: 6.0
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_HBA1C),
-                    helpContent = AppThresholds.getHbA1cExplanation(context),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_HBA1C), hba1cPoints, Color.Red, "%")),
+                    title = context.getString(R.string.health_label_hba1c),
+                    helpContent = HealthDisplayMapper.getHbA1cExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_hba1c), hba1cPoints, Color.Red, "%")),
                     ranges = mapRanges(AppThresholds.getHbA1cRanges(), isDark),
                     limits = mapLimits(AppThresholds.getHbA1cLimits()),
                     stepY = 0.5,
@@ -290,8 +294,8 @@ object HealthChartHelper {
                 val minW = weights.minOrNull() ?: 50.0
                 val maxW = weights.maxOrNull() ?: 60.0
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_WEIGHT),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_WEIGHT), weightPoints, Color.Blue, "kg")),
+                    title = context.getString(R.string.health_label_weight),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_weight), weightPoints, Color.Blue, "kg")),
                     stepY = 5.0,
                     minYConstraint = minW - 2.0,
                     maxYConstraint = maxW + 2.0,
@@ -302,11 +306,11 @@ object HealthChartHelper {
                 val bmis = sortedData.map { it.calculateBMI() }.filter { it > 0.0 }
                 val bmiPoints = sortedData.map { 
                     val bmi = it.calculateBMI()
-                    val (noteId, level) = AppThresholds.evaluateBMI(bmi)
+                    val (status, level) = HealthLogic.evaluateBMI(bmi)
                     ChartPoint(
                         it.recordTime.toEpochMilli().toDouble(),
                         bmi,
-                        if (level != AppThresholds.AlertLevel.NORMAL) noteId?.let { id -> context.getString(id) } else null
+                        if (level != HealthAlertLevel.NORMAL) status?.let { s -> context.getString(HealthDisplayMapper.getBmiLabel(s)!!) } else null
                     )
                 }.filter { it.y > 0.0 }
                 val minB = bmis.minOrNull() ?: 20.0
@@ -320,9 +324,9 @@ object HealthChartHelper {
                         AppThresholds.BMI_OBESITY_2 -> getObesityColor2(isDark)
                         AppThresholds.BMI_OBESITY_3 -> getObesityColor3(isDark)
                         else -> when (it.level) {
-                            AppThresholds.AlertLevel.ALERT -> getAlertHighlight(isDark)
-                            AppThresholds.AlertLevel.WARNING -> getWarningHighlight(isDark)
-                            AppThresholds.AlertLevel.INFO -> getInfoHighlight(isDark)
+                            HealthAlertLevel.ALERT -> getAlertHighlight(isDark)
+                            HealthAlertLevel.WARNING -> getWarningHighlight(isDark)
+                            HealthAlertLevel.INFO -> getInfoHighlight(isDark)
                             else -> Color.Transparent
                         }
                     }
@@ -330,9 +334,9 @@ object HealthChartHelper {
                 }
 
                 HealthChartConfig(
-                    title = context.getString(AppThresholds.HEALTH_LABEL_BMI),
-                    helpContent = AppThresholds.getBmiExplanation(context),
-                    dataList = listOf(ChartLineData(context.getString(AppThresholds.HEALTH_LABEL_BMI), bmiPoints, Color.Red, "")),
+                    title = context.getString(R.string.health_label_bmi),
+                    helpContent = HealthDisplayMapper.getBmiExplanation(context),
+                    dataList = listOf(ChartLineData(context.getString(R.string.health_label_bmi), bmiPoints, Color.Red, "")),
                     ranges = mappedRanges,
                     limits = mapLimits(AppThresholds.getBmiLimits()),
                     stepY = 2.0,

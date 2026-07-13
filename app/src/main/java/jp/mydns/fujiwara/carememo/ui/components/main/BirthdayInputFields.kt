@@ -22,22 +22,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
-
-/**
- * 生年月日の元号定義
- */
-enum class BirthEra(val displayNameRes: Int) {
-    AD(R.string.common_era_ad),
-    SHOWA(R.string.common_era_showa),
-    HEISEI(R.string.common_era_heisei),
-    REIWA(R.string.common_era_reiwa)
-}
 
 /**
  * 生年月日入力のステート管理クラス

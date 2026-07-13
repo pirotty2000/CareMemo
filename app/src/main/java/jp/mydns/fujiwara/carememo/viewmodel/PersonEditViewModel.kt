@@ -9,7 +9,10 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,24 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneOffset
-
-/**
- * 利用者の新規登録・編集画面用の UI 状態
- */
-data class PersonEditUiState(
-    val lastName: String = "",
-    val firstName: String = "",
-    val lastNameFurigana: String = "",
-    val firstNameFurigana: String = "",
-    val note: String = "",
-    val era: BirthEra = BirthEra.SHOWA,
-    val year: String = "",
-    val month: String = "",
-    val day: String = ""
-)
 
 /**
  * 利用者の新規登録・編集画面用の ViewModel
@@ -94,7 +80,7 @@ class PersonEditViewModel(
                 initialPerson = person
                 // 誕生日は常に UTC 基準で読み込む
                 val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
-                val (initialEra, initialYearText) = calculateEraAndYear(date)
+                val (initialEra, initialYear) = JapaneseDateLogic.toJapaneseDate(date)
 
                 _uiState.value = PersonEditUiState(
                     lastName = person.lastName,
@@ -103,35 +89,10 @@ class PersonEditViewModel(
                     firstNameFurigana = person.firstNameFurigana,
                     note = person.note,
                     era = initialEra,
-                    year = initialYearText,
+                    year = initialYear.toString(),
                     month = date.monthValue.toString(),
                     day = date.dayOfMonth.toString()
                 )
-            }
-        }
-    }
-
-    private fun calculateEraAndYear(date: LocalDate): Pair<BirthEra, String> {
-        return when {
-            date.year in 1926..1989 -> {
-                val e = BirthEra.SHOWA
-                val y = (date.year - 1925).toString()
-                e to y
-            }
-            date.year in 1990..2019 -> {
-                val e = BirthEra.HEISEI
-                val y = (date.year - 1988).toString()
-                e to y
-            }
-            date.year >= 2020 -> {
-                val e = BirthEra.REIWA
-                val y = (date.year - 2018).toString()
-                e to y
-            }
-            else -> {
-                val e = BirthEra.AD
-                val y = date.year.toString()
-                e to y
             }
         }
     }
@@ -151,77 +112,18 @@ class PersonEditViewModel(
      * 現在の入力内容が初期状態から変更されているかどうか
      */
     val isChanged: StateFlow<Boolean> = uiState.map { current ->
-        if (initialPerson == null) {
-            // 新規登録時は、何かしら入力があれば変更ありとみなす
-            current.lastName.isNotBlank() || current.firstName.isNotBlank() || 
-            current.lastNameFurigana.isNotBlank() || current.firstNameFurigana.isNotBlank() ||
-            current.note.isNotBlank() || current.year.isNotBlank() || 
-            current.month.isNotBlank() || current.day.isNotBlank()
-        } else {
-            val p = initialPerson!!
-            val date = p.birthday.atZone(ZoneOffset.UTC).toLocalDate()
-            val (initEra, initYear) = calculateEraAndYear(date)
-
-            current.lastName != p.lastName ||
-            current.firstName != p.firstName ||
-            current.lastNameFurigana != p.lastNameFurigana ||
-            current.firstNameFurigana != p.firstNameFurigana ||
-            current.note != p.note ||
-            current.era != initEra ||
-            current.year != initYear ||
-            current.month != date.monthValue.toString() ||
-            current.day != date.dayOfMonth.toString()
-        }
+        PersonEditLogic.isChanged(current, initialPerson)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /**
      * 保存可能かどうか（バリデーション）
      */
     val isValid: StateFlow<Boolean> = uiState.map { current ->
-        current.lastName.isNotBlank() && current.firstName.isNotBlank() &&
-        current.year.isNotBlank() && current.month.isNotBlank() && current.day.isNotBlank() &&
-        validateDate(current.era, current.year, current.month, current.day)
+        PersonEditLogic.isValid(current)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    private fun validateDate(e: BirthEra, yStr: String, mStr: String, dStr: String): Boolean {
-        val y = yStr.toIntOrNull() ?: return false
-        val m = mStr.toIntOrNull() ?: return false
-        val d = dStr.toIntOrNull() ?: return false
-
-        if (m !in 1..12) return false
-
-        val westernYear = when (e) {
-            BirthEra.SHOWA -> y + 1925
-            BirthEra.HEISEI -> y + 1988
-            BirthEra.REIWA -> y + 2018
-            BirthEra.AD -> y
-        }
-
-        return try {
-            d in 1..java.time.YearMonth.of(westernYear, m).lengthOfMonth()
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     fun save() {
-        val birthday = calculateInstant() ?: return
-        val current = _uiState.value
-        val person = (initialPerson?.copy(
-            lastName = current.lastName.trim(),
-            firstName = current.firstName.trim(),
-            lastNameFurigana = current.lastNameFurigana.trim(),
-            firstNameFurigana = current.firstNameFurigana.trim(),
-            note = current.note.trim(),
-            birthday = birthday
-        ) ?: Person(
-            lastName = current.lastName.trim(),
-            firstName = current.firstName.trim(),
-            lastNameFurigana = current.lastNameFurigana.trim(),
-            firstNameFurigana = current.firstNameFurigana.trim(),
-            note = current.note.trim(),
-            birthday = birthday
-        ))
+        val person = PersonEditLogic.createPerson(_uiState.value, initialPerson) ?: return
 
         safeLaunch(
             operation = OP_SAVE,
@@ -252,28 +154,6 @@ class PersonEditViewModel(
                 showError(R.string.common_error_save, R.string.common_error_save)
                 throw e // 再スローしてハンドラに記録させる
             }
-        }
-    }
-
-    private fun calculateInstant(): Instant? {
-        val current = _uiState.value
-        val y = current.year.toIntOrNull() ?: return null
-        val m = current.month.toIntOrNull() ?: return null
-        val d = current.day.toIntOrNull() ?: return null
-
-        val westernYear = when (current.era) {
-            BirthEra.SHOWA -> y + 1925
-            BirthEra.HEISEI -> y + 1988
-            BirthEra.REIWA -> y + 2018
-            BirthEra.AD -> y
-        }
-
-        return try {
-            LocalDate.of(westernYear, m, d)
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-        } catch (_: Exception) {
-            null
         }
     }
 

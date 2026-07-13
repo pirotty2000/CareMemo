@@ -57,6 +57,8 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
+import jp.mydns.fujiwara.carememo.logic.common.*
+import jp.mydns.fujiwara.carememo.ui.mapping.MedicationDisplayMapper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatMedicationDialogTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
@@ -148,16 +150,15 @@ fun MedicationHistoryTable(
                             fontWeight = FontWeight.Medium
                         )
 
-                        val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
+                        val timeSlots = MedicationTimeSlot.entries
                         timeSlots.forEach { slot ->
-                            val weight = if (slot == AppThresholds.TIME_SLOT_BEDTIME) 1.2f else 1f
-                            val record = records.find { it.timeSlot == slot }
-                            val symbol = getMedicationStatusSymbol(record?.status)
-                            val symbolColor = when (record?.status) {
-                                0 -> getMedicationStatusColor(0)
-                                1, 2 -> getMedicationStatusColor(2)
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            }
+                            val weight = if (slot == MedicationTimeSlot.BEDTIME) 1.2f else 1f
+                            val record = records.find { it.timeSlot == slot.index }
+                            val status = MedicationStatus.fromCode(record?.status)
+                            
+                            val symbol = MedicationDisplayMapper.getStatusSymbol(status)
+                            val symbolColor = MedicationDisplayMapper.getStatusColor(status)
+
                             Text(
                                 text = symbol,
                                 modifier = Modifier.weight(weight),
@@ -186,14 +187,7 @@ fun CalendarGrid(
     recordsByDate: Map<String, List<MedicationRecord>>,
     onDayClick: (LocalDate) -> Unit
 ) {
-    val daysInMonth = yearMonth.lengthOfMonth()
-    val firstDayOfMonth = yearMonth.atDay(1).dayOfWeek.value % 7 
-    
-    val calendarDays = mutableListOf<LocalDate?>()
-    repeat(firstDayOfMonth) { calendarDays.add(null) }
-    for (day in 1..daysInMonth) {
-        calendarDays.add(yearMonth.atDay(day))
-    }
+    val calendarDays = remember(yearMonth) { MedicationLogic.getCalendarDays(yearMonth) }
 
     Column {
         Row(
@@ -293,12 +287,12 @@ private fun DayCell(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_MORNING, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_MORNING }?.status)
-                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_LUNCH, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_LUNCH }?.status)
+                    MedicationStatusIcon(slot = MedicationTimeSlot.MORNING, status = MedicationStatus.fromCode(records.find { it.timeSlot == MedicationTimeSlot.MORNING.index }?.status))
+                    MedicationStatusIcon(slot = MedicationTimeSlot.LUNCH, status = MedicationStatus.fromCode(records.find { it.timeSlot == MedicationTimeSlot.LUNCH.index }?.status))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_DINNER, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_DINNER }?.status)
-                    MedicationStatusIcon(label = getTimeSlotLabel(AppThresholds.TIME_SLOT_BEDTIME, true), status = records.find { it.timeSlot == AppThresholds.TIME_SLOT_BEDTIME }?.status)
+                    MedicationStatusIcon(slot = MedicationTimeSlot.DINNER, status = MedicationStatus.fromCode(records.find { it.timeSlot == MedicationTimeSlot.DINNER.index }?.status))
+                    MedicationStatusIcon(slot = MedicationTimeSlot.BEDTIME, status = MedicationStatus.fromCode(records.find { it.timeSlot == MedicationTimeSlot.BEDTIME.index }?.status))
                 }
             }
         }
@@ -309,21 +303,18 @@ private fun DayCell(
  * 服薬状況（服用・未・介助）を示す小さな円形アイコン。
  */
 @Composable
-private fun MedicationStatusIcon(label: String, status: Int?) {
-    val bgColor = when (status) {
-        2 -> getMedicationStatusColor(2)
-        1 -> getMedicationStatusColor(1)
-        0 -> getMedicationStatusColor(0)
-        else -> Color.Transparent
-    }
+private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationStatus?) {
+    val bgColor = MedicationDisplayMapper.getStatusColor(status)
     val contentColor = when (status) {
-        2 -> MaterialTheme.colorScheme.onPrimary
-        1 -> Color.White
-        0 -> MaterialTheme.colorScheme.onError
-        else -> Color.LightGray.copy(alpha = 0.5f)
+        MedicationStatus.TAKEN -> MaterialTheme.colorScheme.onPrimary
+        MedicationStatus.ASSIST -> Color.White
+        MedicationStatus.NONE -> MaterialTheme.colorScheme.onError
+        null -> Color.LightGray.copy(alpha = 0.5f)
     }
-    val displayText = if (status == 0) getMedicationStatusSymbol(0) else label
-    val displayLabel = if (status == null) "－" else displayText
+    
+    val displayLabel = if (status == null) "－" 
+                       else if (status == MedicationStatus.NONE) MedicationDisplayMapper.getStatusSymbol(status)
+                       else stringResource(MedicationDisplayMapper.getTimeSlotLabelRes(slot, true))
 
     Box(
         modifier = Modifier
@@ -338,11 +329,11 @@ private fun MedicationStatusIcon(label: String, status: Int?) {
         Text(
             text = displayLabel,
             color = contentColor,
-            fontSize = if (status == 0) 12.sp else 9.sp,
+            fontSize = if (status == MedicationStatus.NONE) 12.sp else 9.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             style = LocalTextStyle.current.copy(
-                lineHeight = if (status == 0) 12.sp else 9.sp,
+                lineHeight = if (status == MedicationStatus.NONE) 12.sp else 9.sp,
                 lineHeightStyle = LineHeightStyle(
                     alignment = LineHeightStyle.Alignment.Center,
                     trim = LineHeightStyle.Trim.Both
@@ -369,8 +360,8 @@ fun MedicationInputDialog(
     // スロットごとの一時的な状態を保持（初期値はDBから取得した既存データ）
     var tempRecords by remember(records) { 
         mutableStateOf(
-            (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).map { slot ->
-                records.find { it.timeSlot == slot }
+            MedicationTimeSlot.entries.map { slot ->
+                records.find { it.timeSlot == slot.index }
             }
         )
     }
@@ -420,38 +411,38 @@ fun MedicationInputDialog(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    val timeSlots = (0 until AppThresholds.MEDICATION_TIME_SLOT_COUNT).toList()
-                    timeSlots.forEach { slot ->
+                    MedicationTimeSlot.entries.forEach { slot ->
                         MedicationRow(
-                            label = getTimeSlotLabel(slot),
-                            currentRecord = tempRecords[slot],
-                            isSelectedForTime = editingSlot == slot,
-                            onStatusToggle = { status ->
-                                val current = tempRecords[slot]
-                                if (current?.status == status) {
+                            label = stringResource(MedicationDisplayMapper.getTimeSlotLabelRes(slot)),
+                            currentRecord = tempRecords[slot.index],
+                            isSelectedForTime = editingSlot == slot.index,
+                            onStatusToggle = { code ->
+                                val status = MedicationStatus.fromCode(code)!!
+                                val current = tempRecords[slot.index]
+                                if (current?.status == status.code) {
                                     // 同じステータスなら解除（削除）
                                     syncCurrentTimeFieldsToTemp()
-                                    tempRecords = tempRecords.toMutableList().apply { set(slot, null) }
-                                    if (editingSlot == slot) editingSlot = null
+                                    tempRecords = tempRecords.toMutableList().apply { set(slot.index, null) }
+                                    if (editingSlot == slot.index) editingSlot = null
                                 } else {
                                     // 新規またはステータス変更
                                     syncCurrentTimeFieldsToTemp()
                                     val instant = current?.recordTime ?: Instant.now()
                                     tempRecords = tempRecords.toMutableList().apply {
-                                        set(slot, MedicationRecord(
+                                        set(slot.index, MedicationRecord(
                                             id = current?.id ?: 0,
                                             personId = personId,
                                             dosageDate = date.toString(),
-                                            timeSlot = slot,
-                                            status = status,
+                                            timeSlot = slot.index,
+                                            status = status.code,
                                             recordTime = instant
                                         ))
                                     }
-                                    startEditingSlot(slot)
+                                    startEditingSlot(slot.index)
                                 }
                             },
                             onTimeClick = {
-                                startEditingSlot(slot)
+                                startEditingSlot(slot.index)
                             }
                         )
                     }
@@ -509,21 +500,21 @@ private fun MedicationRow(
             ) {
                 StatusChip(
                     text = stringResource(R.string.p_med_status_none),
-                    isSelected = currentRecord?.status == 0,
-                    color = getMedicationStatusColor(0),
-                    onClick = { onStatusToggle(0) }
+                    isSelected = currentRecord?.status == MedicationStatus.NONE.code,
+                    color = MedicationDisplayMapper.getStatusColor(MedicationStatus.NONE),
+                    onClick = { onStatusToggle(MedicationStatus.NONE.code) }
                 )
                 StatusChip(
                     text = stringResource(R.string.p_med_status_assist),
-                    isSelected = currentRecord?.status == 1,
-                    color = getMedicationStatusColor(1),
-                    onClick = { onStatusToggle(1) }
+                    isSelected = currentRecord?.status == MedicationStatus.ASSIST.code,
+                    color = MedicationDisplayMapper.getStatusColor(MedicationStatus.ASSIST),
+                    onClick = { onStatusToggle(MedicationStatus.ASSIST.code) }
                 )
                 StatusChip(
                     text = stringResource(R.string.p_med_status_taken),
-                    isSelected = currentRecord?.status == 2,
-                    color = getMedicationStatusColor(2),
-                    onClick = { onStatusToggle(2) }
+                    isSelected = currentRecord?.status == MedicationStatus.TAKEN.code,
+                    color = MedicationDisplayMapper.getStatusColor(MedicationStatus.TAKEN),
+                    onClick = { onStatusToggle(MedicationStatus.TAKEN.code) }
                 )
             }
         }
@@ -584,38 +575,5 @@ fun getDayOfWeekColor(dayOfWeek: DayOfWeek): Color {
         DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.error
         DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurface
-    }
-}
-
-fun getMedicationStatusSymbol(status: Int?): String {
-    return when (status) {
-        0 -> "×"
-        1 -> "△"
-        2 -> "○"
-        else -> "ー"
-    }
-}
-
-@Composable
-fun getTimeSlotLabel(slot: Int, isShort: Boolean = false): String {
-    return when (slot) {
-        0 -> stringResource(R.string.slot_morning)
-        1 -> stringResource(R.string.slot_lunch)
-        2 -> stringResource(R.string.slot_dinner)
-        3 -> if (isShort) stringResource(R.string.slot_bedtime_short) else stringResource(R.string.slot_bedtime)
-        else -> ""
-    }
-}
-
-@Composable
-fun getMedicationStatusColor(status: Int): Color {
-    // 注意（Warning）用のオレンジ色（健康記録画面と共通のロジック）
-    val warningColor = if (isSystemInDarkTheme()) Color(0xFFFFB74D) else Color(0xFFE65100)
-    
-    return when (status) {
-        0 -> MaterialTheme.colorScheme.error
-        1 -> warningColor
-        2 -> MaterialTheme.colorScheme.primary
-        else -> Color.Transparent
     }
 }

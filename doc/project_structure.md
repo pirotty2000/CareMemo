@@ -43,7 +43,10 @@ jp.mydns.fujiwara.carememo
 │   │   └── medication/ #  │   └─ 【固有】(C)服薬管理専用
 │   ├── mapping/        #  ├─ 表示用マッピング（監査ログ等の識別子を日本語に変換）
 │   └── theme/          #  └─ アプリのテーマ設定（Color, Type, Shapeなど）
-├── viewmodel/          # ビジネスロジックと状態管理（BaseViewModelによる共通例外処理・状態管理）
+├── viewmodel/          # UI状態の管理とイベントの橋渡し（BaseViewModelを継承）
+├── logic/              # ドメインロジック（計算・判定・Entity変換等の純粋なロジック）
+│   ├── common/         #  ├─ アプリ全体で再利用可能な計算・変換ロジック
+│   └── feature/        #  └─ 特定の画面・ViewModelに密結合した判定・加工ロジック
 ├── data/               # データレイヤー（Room Database / Repository / AppThresholds）
 │   └── repository/     #  └─ リポジトリ（データ操作とドメインロジックの隔離）
 ├── utils/              # ユーティリティ（日時操作、PDF生成、画像処理、ZIP圧縮）
@@ -58,19 +61,44 @@ jp.mydns.fujiwara.carememo
 各機能層におけるロジックの垂直方向の依存関係です。
 
 ## ※ **全ての ViewModel は `BaseViewModel` を継承し、共通の例外ハンドリング (`safeLaunch`) と UI 通知を利用します。**
+## ※ **複雑な判定や計算は `logic` レイヤーへ抽出し、ViewModel の軽量化とテスト容易性を維持します。**
 
 
-| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Repository                                                                                                     |
-|:---------|:-----------------------------------|:-------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------|
-| 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel`         | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository` |
-| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
-| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                         |
-| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
-| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
-| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | `DeleteOrRestorePersonRepository`                                                                                |
-| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
-| 操作ログ     | `AuditLogScreen`                   | `SettingsViewModel`                                    | `AuditLogRepository`                                                                                             |
+| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Logic | 主要Repository                                                                                                     |
+|:---------|:-----------------------------------|:-------------------------------------------------------|:---|:-----------------------------------------------------------------------------------------------------------------|
+| 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel`         | `PersonListLogic`<br>`PersonEditLogic`<br>`JapaneseDateLogic` | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository` |
+| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `PersonHealthLogic`<br>`HealthLogic` | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `PersonConditionLogic`<br>`ConditionLogic` | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                         |
+| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationLogic` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
+| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `BatchInputLogic`<br>`HealthLogic` | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | - | `DeleteOrRestorePersonRepository`                                                                                |
+| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic` | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
+| 操作ログ     | `AuditLogScreen`                   | `SettingsViewModel`                                    | `SettingsLogic` | `AuditLogRepository`                                                                                             |
 | 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                                                  |
+
+# Logic - ドメインロジックと計算ルール
+
+ViewModel から「Android フレームワークやライフサイクルに依存しない純粋な計算・判定・変換」を分離したレイヤーです。
+
+## **Logic レイヤーの実装原則**
+- 原則として **Pure Kotlin** で実装し、`Context` や `LiveData/Flow` などの Android 依存、および Repository 依存を持たない。
+- 副作用を持たず、入出力が明確な関数（またはその集合）として定義する。
+- ViewModel が「状態(State)の管理」を担当し、Logic が「ルールの判定(Calculation/Validation/Conversion)」を担当する。
+
+## **主要 Logic 一覧**
+
+| 分類 | ファイル名 | 役割・主な内容 |
+| :--- | :--- | :--- |
+| **ドメイン共通** | `JapaneseDateLogic.kt` | 西暦 ↔ 和暦の相互変換、和暦の妥当性チェック、日付文字列の正規化。 |
+| **ドメイン共通** | `HealthLogic.kt` | BMI計算、バイタル・血糖値・HbA1cの異常判定、入力妥当性チェック。 |
+| **ドメイン共通** | `MedicationLogic.kt` | カレンダー生成（空セル挿入）、時間枠・ステータスのEnum管理、同期アクション判定。 |
+| **ドメイン共通** | `ConditionLogic.kt` | 所見メモの検索フィルタリング、重複判定ロジック。 |
+| **機能固有** | `PersonListLogic.kt` | 利用者一覧の五十音判定、フィルタリング、UI状態（伏せ字・年齢計算）への変換。 |
+| **機能固有** | `PersonEditLogic.kt` | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。 |
+| **機能固有** | `PersonHealthLogic.kt` | 健康記録画面における新規・更新判定、および重複チェックロジック。 |
+| **機能固有** | `PersonConditionLogic.kt` | 所見メモ画面における変更検知、バリデーション、Entity生成。 |
+| **機能固有** | `BatchInputLogic.kt` | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。 |
+| **機能固有** | `SettingsLogic.kt` | 監査ログのフィルタ・ソート、ZIP検証、バージョン互換性、空き容量チェック。 |
 
 # Screen - Components 依存関係
 

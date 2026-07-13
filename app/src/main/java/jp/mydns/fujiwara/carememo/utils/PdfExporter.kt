@@ -12,7 +12,9 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportOrder
+import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportRange
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthChartConfig
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthChartHelper
@@ -356,8 +358,8 @@ object PdfExporter {
             TableColumn<HeightAndWeight>("日付", 110f) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_HEIGHT)}(cm)", 75f) { rec, _ -> rec.height?.toString() ?: "---" },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_WEIGHT)}(kg)", 100f) { rec, idx ->
+            TableColumn("${ctx.context.getString(R.string.health_label_height)}(cm)", 75f) { rec, _ -> rec.height?.toString() ?: "---" },
+            TableColumn("${ctx.context.getString(R.string.health_label_weight)}(kg)", 100f) { rec, idx ->
                 val prev = if (idx < records.size - 1) records[idx + 1] else null
                 rec.weight?.let { cur ->
                     prev?.weight?.let { p ->
@@ -366,14 +368,14 @@ object PdfExporter {
                     } ?: cur.toString()
                 } ?: "---"
             },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BMI), 65f) { rec, _ ->
+            TableColumn(ctx.context.getString(R.string.health_label_bmi), 65f) { rec, _ ->
                 val bmi = rec.calculateBMI()
                 if (bmi > 0) "%.1f".format(bmi) else "---"
             },
             TableColumn(
-                header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
+                header = ctx.context.getString(R.string.health_label_status),
                 width = 145f,
-                getBackgroundColor = { rec -> rec.getBmiResult(ctx.context).second.pdfBgColor }
+                getBackgroundColor = { rec -> HealthDisplayMapper.getPdfBgColor(rec.getBmiResult(ctx.context).second) }
             ) { rec, _ -> rec.getBmiResult(ctx.context).first }
         )
         drawGenericTable(ctx, records, columns)
@@ -384,19 +386,19 @@ object PdfExporter {
             TableColumn<BpAndPulse>("日付", 110f) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_SYSTOLIC_SHORT), 45f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_DIASTOLIC_SHORT), 45f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_systolic_short), 45f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_diastolic_short), 45f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
             TableColumn("SAT", 40f) { rec, _ -> rec.sat?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_PULSE_SHORT), 40f) { rec, _ -> rec.pulse?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(AppThresholds.HEALTH_LABEL_BODY_TEMP).ifEmpty { "体温" }, 45f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_pulse_short), 40f) { rec, _ -> rec.pulse?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_body_temp), 45f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
             TableColumn(
-                header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
+                header = ctx.context.getString(R.string.health_label_status),
                 width = 170f,
-                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
+                getBackgroundColor = { rec -> HealthDisplayMapper.getPdfBgColor(rec.getWorstAlertLevel()) }
             ) { rec, _ ->
                 val results = rec.getVitalResults(ctx.context)
-                if (results.all { it.second == AppThresholds.AlertLevel.NORMAL }) ctx.context.getString(AppThresholds.VITAL_LABEL_NORMAL)
-                else results.filter { it.second != AppThresholds.AlertLevel.NORMAL }.joinToString("・") { it.first }
+                if (results.all { it.second == jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.NORMAL }) ctx.context.getString(R.string.vital_label_normal)
+                else results.filter { it.second != jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.NORMAL }.joinToString("・") { it.first }
             }
         )
         drawGenericTable(ctx, records, columns)
@@ -407,18 +409,18 @@ object PdfExporter {
             TableColumn<GlucoseAndHbA1c>("日付", 110f) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_GLUCOSE)}(mg/dL)", 115f) { rec, idx ->
+            TableColumn("${ctx.context.getString(R.string.health_label_glucose)}(mg/dL)", 115f) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 rec.glucose?.let { cur -> pr?.glucose?.let { p -> "$cur(${if (cur-p >= 0) "+${cur-p}" else cur-p})" } ?: cur.toString() } ?: "---"
             },
-            TableColumn("${ctx.context.getString(AppThresholds.HEALTH_LABEL_HBA1C)}(%)", 115f) { rec, idx ->
+            TableColumn("${ctx.context.getString(R.string.health_label_hba1c)}(%)", 115f) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 rec.hba1c?.let { cur -> pr?.hba1c?.let { p -> val df = cur-p; "%.1f(%s)".format(cur, if (df >= 0) "+%.1f".format(df) else "%.1f".format(df)) } ?: "%.1f".format(cur) } ?: "---"
             },
             TableColumn(
-                header = ctx.context.getString(AppThresholds.HEALTH_LABEL_STATUS),
+                header = ctx.context.getString(R.string.health_label_status),
                 width = 155f,
-                getBackgroundColor = { rec -> rec.getWorstAlertLevel().pdfBgColor }
+                getBackgroundColor = { rec -> HealthDisplayMapper.getPdfBgColor(rec.getWorstAlertLevel()) }
             ) { rec, _ -> rec.getCombinedResultText(ctx.context) }
         )
         drawGenericTable(ctx, records, columns)

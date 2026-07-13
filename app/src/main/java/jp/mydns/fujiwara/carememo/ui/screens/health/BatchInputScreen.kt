@@ -78,15 +78,7 @@ fun BatchInputScreen(
     val recordTime by viewModel.recordTime.collectAsStateWithLifecycle()
     val dateTimeState = rememberDateTimeInputState(initialInstant = recordTime)
 
-    val height by viewModel.height.collectAsStateWithLifecycle()
-    val weight by viewModel.weight.collectAsStateWithLifecycle()
-    val bpSystolic by viewModel.bpSystolic.collectAsStateWithLifecycle()
-    val bpDiastolic by viewModel.bpDiastolic.collectAsStateWithLifecycle()
-    val sat by viewModel.sat.collectAsStateWithLifecycle()
-    val pulse by viewModel.pulse.collectAsStateWithLifecycle()
-    val bodyTemperature by viewModel.bodyTemperature.collectAsStateWithLifecycle()
-    val glucose by viewModel.glucose.collectAsStateWithLifecycle()
-    val hba1c by viewModel.hba1c.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -164,24 +156,24 @@ fun BatchInputScreen(
         isLoading = isLoading,
         isNameMaskingEnabled = isNameMaskingEnabled,
         isProcessing = isSaving,
-        height = height,
-        onHeightChange = { viewModel.height.value = it },
-        weight = weight,
-        onWeightChange = { viewModel.weight.value = it },
-        bpSystolic = bpSystolic,
-        onBpSystolicChange = { viewModel.bpSystolic.value = it },
-        bpDiastolic = bpDiastolic,
-        onBpDiastolicChange = { viewModel.bpDiastolic.value = it },
-        sat = sat,
-        onSatChange = { viewModel.sat.value = it },
-        pulse = pulse,
-        onPulseChange = { viewModel.pulse.value = it },
-        bodyTemperature = bodyTemperature,
-        onBodyTemperatureChange = { viewModel.bodyTemperature.value = it },
-        glucose = glucose,
-        onGlucoseChange = { viewModel.glucose.value = it },
-        hba1c = hba1c,
-        onHba1cChange = { viewModel.hba1c.value = it },
+        height = uiState.height,
+        onHeightChange = { viewModel.updateHeight(it) },
+        weight = uiState.weight,
+        onWeightChange = { viewModel.updateWeight(it) },
+        bpSystolic = uiState.bpSystolic,
+        onBpSystolicChange = { viewModel.updateBpSystolic(it) },
+        bpDiastolic = uiState.bpDiastolic,
+        onBpDiastolicChange = { viewModel.updateBpDiastolic(it) },
+        sat = uiState.sat,
+        onSatChange = { viewModel.updateSat(it) },
+        pulse = uiState.pulse,
+        onPulseChange = { viewModel.updatePulse(it) },
+        bodyTemperature = uiState.bodyTemperature,
+        onBodyTemperatureChange = { viewModel.updateBodyTemp(it) },
+        glucose = uiState.glucose,
+        onGlucoseChange = { viewModel.updateGlucose(it) },
+        hba1c = uiState.hba1c,
+        onHba1cChange = { viewModel.updateHbA1c(it) },
         dateTimeState = dateTimeState,
         isInputValid = isInputValid,
         flashColor = flashColor,
@@ -295,7 +287,7 @@ fun BatchInputScreenContent(
                                 value = height,
                                 onValueChange = onHeightChange,
                                 type = AppTextFieldType.DECIMAL,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HEIGHT)) },
+                                label = { Text(stringResource(R.string.health_label_height)) },
                                 suffix = { Text(AppThresholds.UNIT_HEIGHT) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_HeightField")
                             )
@@ -303,7 +295,7 @@ fun BatchInputScreenContent(
                                 value = weight,
                                 onValueChange = onWeightChange,
                                 type = AppTextFieldType.DECIMAL,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_WEIGHT)) },
+                                label = { Text(stringResource(R.string.health_label_weight)) },
                                 suffix = { Text(AppThresholds.UNIT_WEIGHT) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_WeightField")
                             )
@@ -317,14 +309,14 @@ fun BatchInputScreenContent(
                                 value = bpSystolic,
                                 onValueChange = onBpSystolicChange,
                                 type = AppTextFieldType.INTEGER,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_SYSTOLIC)) },
+                                label = { Text(stringResource(R.string.health_label_bp_systolic)) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_BpSystolicField")
                             )
                             AppCompactTextField(
                                 value = bpDiastolic,
                                 onValueChange = onBpDiastolicChange,
                                 type = AppTextFieldType.INTEGER,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BP_DIASTOLIC)) },
+                                label = { Text(stringResource(R.string.health_label_bp_diastolic)) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_BpDiastolicField")
                             )
                         }
@@ -333,7 +325,7 @@ fun BatchInputScreenContent(
                                 value = sat,
                                 onValueChange = onSatChange,
                                 type = AppTextFieldType.INTEGER,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_SAT)) },
+                                label = { Text(stringResource(R.string.health_label_sat)) },
                                 suffix = { Text(AppThresholds.UNIT_SAT) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_SatField")
                             )
@@ -341,7 +333,7 @@ fun BatchInputScreenContent(
                                 value = pulse,
                                 onValueChange = onPulseChange,
                                 type = AppTextFieldType.INTEGER,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_PULSE)) },
+                                label = { Text(stringResource(R.string.health_label_pulse)) },
                                 suffix = { Text(AppThresholds.UNIT_PULSE) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_PulseField")
                             )
@@ -350,7 +342,7 @@ fun BatchInputScreenContent(
                             value = bodyTemperature,
                             onValueChange = onBodyTemperatureChange,
                             type = AppTextFieldType.DECIMAL,
-                            label = { Text(stringResource(AppThresholds.HEALTH_LABEL_BODY_TEMP)) },
+                            label = { Text(stringResource(R.string.health_label_body_temp)) },
                             suffix = { Text(AppThresholds.UNIT_BODY_TEMP) },
                             modifier = Modifier.fillMaxWidth().testTag("BatchInputScreen_TempField")
                         )
@@ -363,7 +355,7 @@ fun BatchInputScreenContent(
                                 value = glucose,
                                 onValueChange = onGlucoseChange,
                                 type = AppTextFieldType.INTEGER,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_GLUCOSE)) },
+                                label = { Text(stringResource(R.string.health_label_glucose)) },
                                 suffix = { Text(AppThresholds.UNIT_GLUCOSE) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_GlucoseField")
                             )
@@ -371,7 +363,7 @@ fun BatchInputScreenContent(
                                 value = hba1c,
                                 onValueChange = onHba1cChange,
                                 type = AppTextFieldType.DECIMAL,
-                                label = { Text(stringResource(AppThresholds.HEALTH_LABEL_HBA1C)) },
+                                label = { Text(stringResource(R.string.health_label_hba1c)) },
                                 suffix = { Text(AppThresholds.UNIT_HBA1C) },
                                 modifier = Modifier.weight(1f).testTag("BatchInputScreen_Hba1cField"),
                                 imeAction = ImeAction.Done

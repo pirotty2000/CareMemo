@@ -2,7 +2,6 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import android.os.StatFs
 import android.util.Base64
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -22,6 +21,7 @@ import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import kotlinx.coroutines.CancellationException
@@ -143,11 +143,7 @@ class SettingsViewModel(
         _selectedResult,
         _isAscending,
     ) { logs, feature, result, ascending ->
-        val filtered = logs.filter { log ->
-            ((feature == null) || (log.featureName == feature)) &&
-                    ((result == null) || (log.resultType == result))
-        }
-        if (ascending) filtered.reversed() else filtered
+        SettingsLogic.filterAuditLogs(logs, feature, result, ascending)
     }.catch { e ->
         if (e is CancellationException) throw e
         coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogsFlow", "audit_log"))
@@ -156,7 +152,7 @@ class SettingsViewModel(
     // 存在する項目の一覧（フィルター選択用）
     val availableFeatures: StateFlow<List<String>> = auditLogRepository.allLogs
         .map { logs ->
-            logs.asSequence().map { it.featureName }.distinct().sorted().toList()
+            SettingsLogic.extractAvailableFeatures(logs)
         }
         .catch { e ->
             if (e is CancellationException) throw e
@@ -166,7 +162,7 @@ class SettingsViewModel(
 
     val availableResults: StateFlow<List<String>> = auditLogRepository.allLogs
         .map { logs ->
-            logs.asSequence().map { it.resultType }.distinct().sorted().toList()
+            SettingsLogic.extractAvailableResults(logs)
         }
         .catch { e ->
             if (e is CancellationException) throw e
@@ -319,7 +315,7 @@ class SettingsViewModel(
         ) {
             try {
                 // 容量チェック
-                if (!hasAvailableSpace(context.cacheDir, 50 * 1024 * 1024)) { // 最低 50MB 
+                if (!SettingsLogic.hasAvailableSpace(context.cacheDir, 50 * 1024 * 1024)) { // 最低 50MB 
                     showError(R.string.common_error_title_error, R.string.common_error_no_space, "50MB")
                     return@safeLaunch
                 }
@@ -386,7 +382,7 @@ class SettingsViewModel(
                 val fileSize = pfd?.statSize ?: 0L
                 pfd?.close()
                 
-                if (!hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
+                if (!SettingsLogic.hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
                     showError(R.string.common_error_title_error, R.string.common_error_no_space, (fileSize * 2.5).toLong())
                     return@safeLaunch
                 }
@@ -403,11 +399,7 @@ class SettingsViewModel(
                 val isZip = tempZipFile.inputStream().use { input ->
                     val header = ByteArray(4)
                     val read = input.read(header)
-                    (read == 4) &&
-                            (header[0] == 0x50.toByte()) &&
-                            (header[1] == 0x4B.toByte()) &&
-                            (header[2] == 0x03.toByte()) &&
-                            (header[3] == 0x04.toByte())
+                    (read == 4) && SettingsLogic.isValidZipHeader(header)
                 }
 
                 if (isZip) {
@@ -439,12 +431,12 @@ class SettingsViewModel(
                     val jsonString = tempZipFile.readText()
                     val backup = json.decodeFromString<CareMemoBackup>(jsonString)
                     
-                    // バージョンチェック
-                    if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
-                        showError(R.string.common_error_title_update, R.string.settings_err_import_version_mismatch)
-                        tempDir.deleteRecursively()
-                        return@safeLaunch
-                    }
+                // バージョンチェック
+                if (!SettingsLogic.isVersionCompatible(backup.appVersionCode, BuildConfig.VERSION_CODE)) {
+                    showError(R.string.common_error_title_update, R.string.settings_err_import_version_mismatch)
+                    tempDir.deleteRecursively()
+                    return@safeLaunch
+                }
 
                     maintenanceRepository.replaceAllData(backup)
                     tempDir.deleteRecursively()
@@ -488,7 +480,7 @@ class SettingsViewModel(
             val backup = json.decodeFromString<CareMemoBackup>(jsonString)
 
             // バージョンチェック
-            if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
+            if (!SettingsLogic.isVersionCompatible(backup.appVersionCode, BuildConfig.VERSION_CODE)) {
                 throw Exception("このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。")
             }
 
@@ -528,17 +520,6 @@ class SettingsViewModel(
             tempDir.deleteRecursively()
         }
     }
-
-    private fun hasAvailableSpace(dir: File, requiredBytes: Long): Boolean {
-        return try {
-            val stats = StatFs(dir.absolutePath)
-            val available = stats.availableBlocksLong * stats.blockSizeLong
-            available > requiredBytes
-        } catch (_: Exception) {
-            true // 取得に失敗した場合は念のため通すが、通常は失敗しない
-        }
-    }
-
 
     private fun clearPendingImport() {
         pendingImportFile?.parentFile?.deleteRecursively()

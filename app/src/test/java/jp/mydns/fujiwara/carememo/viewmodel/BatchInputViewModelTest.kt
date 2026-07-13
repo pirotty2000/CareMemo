@@ -89,14 +89,14 @@ class BatchInputViewModelTest {
         }
 
         // 体重を入力
-        viewModel.weight.value = "60.5"
+        viewModel.updateWeight("60.5")
         assertTrue("体重のみで有効", viewModel.isInputValid.value)
         
-        viewModel.weight.value = ""
+        viewModel.updateWeight("")
         assertFalse("空にすると無効", viewModel.isInputValid.value)
         
         // 体温を入力
-        viewModel.bodyTemperature.value = "36.5"
+        viewModel.updateBodyTemp("36.5")
         assertTrue("体温のみで有効", viewModel.isInputValid.value)
     }
 
@@ -114,8 +114,8 @@ class BatchInputViewModelTest {
         viewModel.setRecordTime(now)
         
         // 身長・体重を入力
-        viewModel.height.value = "170"
-        viewModel.weight.value = "65"
+        viewModel.updateHeight("170")
+        viewModel.updateWeight("65")
 
         // 重複データが存在すると設定
         coEvery { healthRepository.findHeightAndWeightAtTime(1, now) } returns mockk<HeightAndWeight>()
@@ -145,11 +145,11 @@ class BatchInputViewModelTest {
         viewModel.setRecordTime(now)
         
         // 全カテゴリに入力
-        viewModel.height.value = "170"
-        viewModel.weight.value = "65"
-        viewModel.bpSystolic.value = "120"
-        viewModel.bpDiastolic.value = "80"
-        viewModel.glucose.value = "100"
+        viewModel.updateHeight("170")
+        viewModel.updateWeight("65")
+        viewModel.updateBpSystolic("120")
+        viewModel.updateBpDiastolic("80")
+        viewModel.updateGlucose("100")
 
         // 重複なし
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
@@ -167,8 +167,8 @@ class BatchInputViewModelTest {
         coVerify(exactly = 1) { healthRepository.insertGlucoseAndHbA1c(any(), any(), any()) }
         
         // 保存後に入力がリセットされていること
-        assertEquals("", viewModel.height.value)
-        assertEquals("", viewModel.weight.value)
+        assertEquals("", viewModel.uiState.value.height)
+        assertEquals("", viewModel.uiState.value.weight)
     }
 
     @Test
@@ -178,7 +178,7 @@ class BatchInputViewModelTest {
         // 最初の利用者
         viewModel.loadPerson(1)
         
-        viewModel.weight.value = "70"
+        viewModel.updateWeight("70")
         val oldTime = Instant.now().minusSeconds(3600)
         viewModel.setRecordTime(oldTime)
         
@@ -186,7 +186,7 @@ class BatchInputViewModelTest {
         coEvery { personRepository.getPersonById(2) } returns flowOf(testPerson.copy(id = 2))
         viewModel.loadPerson(2)
         
-        assertEquals("入力がリセットされている", "", viewModel.weight.value)
+        assertEquals("入力がリセットされている", "", viewModel.uiState.value.weight)
         assertTrue("時刻が更新されている", viewModel.recordTime.value.isAfter(oldTime))
     }
 
@@ -196,7 +196,7 @@ class BatchInputViewModelTest {
         viewModel.loadPerson(1)
 
         // 体重を入力
-        viewModel.weight.value = "60"
+        viewModel.updateWeight("60")
         
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
         coEvery { healthRepository.insertHeightAndWeight(any(), any(), any()) } throws RuntimeException("Batch Save Error")

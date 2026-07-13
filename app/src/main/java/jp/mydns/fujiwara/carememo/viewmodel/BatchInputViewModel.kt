@@ -13,14 +13,19 @@ import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import java.time.Instant
 
 /**
@@ -55,36 +60,27 @@ class BatchInputViewModel(
     private val _recordTime = MutableStateFlow(Instant.now())
     val recordTime = _recordTime.asStateFlow()
 
-    // 入力中の値を保持する状態 (Screen側での by viewModel.height.collectAsState() 等に対応)
-    val height = MutableStateFlow("")
-    val weight = MutableStateFlow("")
-    val bpSystolic = MutableStateFlow("")
-    val bpDiastolic = MutableStateFlow("")
-    val sat = MutableStateFlow("")
-    val pulse = MutableStateFlow("")
-    val bodyTemperature = MutableStateFlow("")
-    val glucose = MutableStateFlow("")
-    val hba1c = MutableStateFlow("")
+    // UI状態の一括管理
+    private val _uiState = MutableStateFlow(BatchInputUiState())
+    val uiState: StateFlow<BatchInputUiState> = _uiState.asStateFlow()
+
+    // UI側からの直接アクセス用 (プロパティ委譲のような形式)
+    fun updateHeight(v: String) { _uiState.update { it.copy(height = v) } }
+    fun updateWeight(v: String) { _uiState.update { it.copy(weight = v) } }
+    fun updateBpSystolic(v: String) { _uiState.update { it.copy(bpSystolic = v) } }
+    fun updateBpDiastolic(v: String) { _uiState.update { it.copy(bpDiastolic = v) } }
+    fun updateSat(v: String) { _uiState.update { it.copy(sat = v) } }
+    fun updatePulse(v: String) { _uiState.update { it.copy(pulse = v) } }
+    fun updateBodyTemp(v: String) { _uiState.update { it.copy(bodyTemperature = v) } }
+    fun updateGlucose(v: String) { _uiState.update { it.copy(glucose = v) } }
+    fun updateHbA1c(v: String) { _uiState.update { it.copy(hba1c = v) } }
 
     /**
      * 現在の入力内容が保存可能かどうかを判定する（A系統のルールに基づく）。
      * いずれかのカテゴリが有効な入力を持っていれば true を返す。
      */
-    val isInputValid: StateFlow<Boolean> = combine(
-        height, weight, bpSystolic, bpDiastolic, sat, pulse, bodyTemperature, glucose, hba1c
-    ) { args: Array<String> ->
-        val h = args[0]
-        val w = args[1]
-        val sys = args[2]
-        val dia = args[3]
-        val s = args[4]
-        val p = args[5]
-        val temp = args[6]
-        val glu = args[7]
-        val hb = args[8]
-        AppThresholds.isValidHeightAndWeight(h, w) ||
-        AppThresholds.isValidBpAndPulse(sys, dia, s, p, temp) ||
-        AppThresholds.isValidGlucoseAndHbA1c(glu, hb)
+    val isInputValid: StateFlow<Boolean> = uiState.map { state ->
+        BatchInputLogic.isValid(state)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _isSaving = MutableStateFlow(false)
@@ -110,6 +106,7 @@ class BatchInputViewModel(
     fun saveBatch() {
         val person = currentPerson.value ?: return
         val time = _recordTime.value
+        val currentState = _uiState.value
 
         safeLaunch(
             operation = OP_SAVE_BATCH,
@@ -122,17 +119,17 @@ class BatchInputViewModel(
             // --- 重複チェック (新規登録のみを許可するため) ---
             val duplicateCategories = mutableListOf<Int>()
             
-            if (AppThresholds.isValidHeightAndWeight(height.value, weight.value)) {
+            if (HealthLogic.isValidHeightAndWeight(currentState.height, currentState.weight)) {
                 if (healthRepository.findHeightAndWeightAtTime(person.id, time) != null) {
                     duplicateCategories.add(R.string.common_category_height_weight)
                 }
             }
-            if (AppThresholds.isValidBpAndPulse(bpSystolic.value, bpDiastolic.value, sat.value, pulse.value, bodyTemperature.value)) {
+            if (HealthLogic.isValidBpAndPulse(currentState.bpSystolic, currentState.bpDiastolic, currentState.sat, currentState.pulse, currentState.bodyTemperature)) {
                 if (healthRepository.findBpAndPulseAtTime(person.id, time) != null) {
                     duplicateCategories.add(R.string.common_category_vital)
                 }
             }
-            if (AppThresholds.isValidGlucoseAndHbA1c(glucose.value, hba1c.value)) {
+            if (HealthLogic.isValidGlucoseAndHbA1c(currentState.glucose, currentState.hba1c)) {
                 if (healthRepository.findGlucoseAndHbA1cAtTime(person.id, time) != null) {
                     duplicateCategories.add(R.string.common_category_glucose)
                 }
@@ -150,52 +147,19 @@ class BatchInputViewModel(
             }
             
             // --- 保存実行 ---
-            // 身長・体重（体重必須）
-            if (AppThresholds.isValidHeightAndWeight(height.value, weight.value)) {
-                healthRepository.insertHeightAndWeight(
-                    HeightAndWeight(
-                        personId = person.id,
-                        height = height.value.toDoubleOrNull(),
-                        weight = weight.value.toDoubleOrNull(),
-                    recordTime = time
-                ),
-                featureName, OP_SAVE_BATCH
-            )
-        }
-
-        // バイタル（いずれか一つ）
-        if (AppThresholds.isValidBpAndPulse(bpSystolic.value, bpDiastolic.value, sat.value, pulse.value, bodyTemperature.value)) {
-            healthRepository.insertBpAndPulse(
-                BpAndPulse(
-                    personId = person.id,
-                    bpSystolic = bpSystolic.value.toIntOrNull(),
-                    bpDiastolic = bpDiastolic.value.toIntOrNull(),
-                    sat = sat.value.toIntOrNull(),
-                    pulse = pulse.value.toIntOrNull(),
-                    bodyTemperature = bodyTemperature.value.toDoubleOrNull(),
-                    recordTime = time
-                ),
-                featureName, OP_SAVE_BATCH
-            )
-        }
-
-        // 血糖値（いずれか一つ）
-        if (AppThresholds.isValidGlucoseAndHbA1c(glucose.value, hba1c.value)) {
-            healthRepository.insertGlucoseAndHbA1c(
-                GlucoseAndHbA1c(
-                    personId = person.id,
-                    glucose = glucose.value.toIntOrNull(),
-                    hba1c = hba1c.value.toDoubleOrNull(),
-                    recordTime = time
-                ),
-                featureName, OP_SAVE_BATCH
-            )
-        }
+            val entities = BatchInputLogic.createEntities(person.id, time, currentState)
+            entities.forEach { entity ->
+                when (entity) {
+                    is HeightAndWeight -> healthRepository.insertHeightAndWeight(entity, featureName, OP_SAVE_BATCH)
+                    is BpAndPulse -> healthRepository.insertBpAndPulse(entity, featureName, OP_SAVE_BATCH)
+                    is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(entity, featureName, OP_SAVE_BATCH)
+                }
+            }
 
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(R.string.batch_msg_save_success)
             
-            // 保存成功後に一部をクリア（連続入力のため、身長などは残す運用もあるが、基本はリセット）
+            // 保存成功後にクリア
             resetInputs()
         }
     }
@@ -204,15 +168,7 @@ class BatchInputViewModel(
      * 入力値をリセットします（次の利用者の入力に備えるため）。
      */
     fun resetInputs() {
-        height.value = ""
-        weight.value = ""
-        bpSystolic.value = ""
-        bpDiastolic.value = ""
-        sat.value = ""
-        pulse.value = ""
-        bodyTemperature.value = ""
-        glucose.value = ""
-        hba1c.value = ""
+        _uiState.value = BatchInputUiState()
     }
 
     class Factory(

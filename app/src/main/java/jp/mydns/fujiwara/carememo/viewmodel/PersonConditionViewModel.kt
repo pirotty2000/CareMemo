@@ -13,6 +13,7 @@ import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -85,14 +86,7 @@ class PersonConditionViewModel(
      * 検索クエリでフィルタリングされた所見メモ一覧
      */
     val filteredRecords: StateFlow<List<ConditionAtVisit>> = combine(records, _searchQuery) { recs, query ->
-        if (query.isBlank()) recs
-        else {
-            recs.filter { record ->
-                val titleMatch = record.title?.contains(query, ignoreCase = true) == true
-                val conditionMatch = record.condition?.contains(query, ignoreCase = true) == true
-                titleMatch || conditionMatch
-            }
-        }
+        ConditionLogic.filterRecords(recs, query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
@@ -169,7 +163,7 @@ class PersonConditionViewModel(
 
             // --- 重複チェック (新規登録、または日時変更時) ---
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
-            if (existing != null && (record.id == 0 || existing.id != record.id)) {
+            if (ConditionLogic.isDuplicate(record, existing)) {
                 showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
                 return@safeLaunch
             }

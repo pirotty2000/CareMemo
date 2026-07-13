@@ -10,6 +10,8 @@ import jp.mydns.fujiwara.carememo.data.repository.MedicationRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
+import jp.mydns.fujiwara.carememo.logic.common.SyncAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,19 +121,13 @@ class PersonMedicationViewModel(
                 affectedId = _currentPerson.value?.id?.toString()
             }
         ) {
-            // 現在のその日のデータを取得（差分判定用）
             val currentDayRecords = recordsByDate.value[date] ?: emptyList()
-            
-            slotRecords.forEachIndexed { index, newRecord ->
-                val existingRecord = currentDayRecords.find { it.timeSlot == index }
-                
-                if (newRecord != null) {
-                    // IDが0でも @Upsert なので、既存があれば更新、なければ追加される
-                    medicationRepository.insertMedicationRecord(newRecord, featureName, OP_SYNC)
-                } else {
-                    existingRecord?.let {
-                        medicationRepository.deleteMedicationRecord(it, featureName, "$OP_SYNC(delete)")
-                    }
+            val actions = MedicationLogic.determineSyncActions(currentDayRecords, slotRecords)
+
+            actions.forEach { action ->
+                when (action) {
+                    is SyncAction.Insert -> medicationRepository.insertMedicationRecord(action.record, featureName, OP_SYNC)
+                    is SyncAction.Delete -> medicationRepository.deleteMedicationRecord(action.record, featureName, "$OP_SYNC(delete)")
                 }
             }
             showSnackbar(R.string.p_med_msg_update_success)

@@ -14,6 +14,7 @@ import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -118,7 +119,7 @@ class PersonHealthViewModel(
                 affectedId = (record as? HistoryRecord)?.id?.toString()
             }
         ) {
-            val isUpdate = if (record is HistoryRecord) record.id != 0 else false
+            val isUpdate = if (record is HistoryRecord) !PersonHealthLogic.isNew(record) else false
 
             // --- 重複チェック (新規登録、または日時変更時) ---
             if (record is HistoryRecord) {
@@ -129,8 +130,7 @@ class PersonHealthViewModel(
                     else -> null
                 }
 
-                // 自分自身以外（IDが異なる）の既存データがある場合は保存をブロック
-                if (existing != null && (record.id == 0 || existing.id != record.id)) {
+                if (PersonHealthLogic.isDuplicate(record, existing)) {
                     showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
                     return@safeLaunch
                 }

@@ -62,6 +62,10 @@ import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
+import jp.mydns.fujiwara.carememo.ui.mapping.ConditionDisplayMapper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -181,18 +185,10 @@ fun ConditionDetailPane(
         mutableStateOf(memo?.author ?: defaultRecorderName) 
     }
 
-    // 変更検知用の初期状態
-    val initialDateTime = remember(conditionId) { memo?.recordTime }
-    val initialTitle = remember(conditionId) { memo?.title ?: "" }
-    val initialCondition = remember(conditionId) { memo?.condition ?: "" }
-    val initialAuthor = remember(conditionId, defaultRecorderName) { memo?.author ?: defaultRecorderName }
-
     val isChanged by remember(title, condition, author, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
         derivedStateOf {
-            title != initialTitle ||
-            condition != initialCondition ||
-            author != initialAuthor ||
-            dateTimeState.toInstant() != initialDateTime
+            val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
+            PersonConditionLogic.isChanged(currentState, memo, defaultRecorderName)
         }
     }
 
@@ -231,10 +227,6 @@ fun ConditionDetailPane(
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
 
-    val isDateTimeValid by remember(dateTimeState) {
-        derivedStateOf { dateTimeState.toInstant() != null }
-    }
-
     if (conditionId == -1) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -264,17 +256,9 @@ fun ConditionDetailPane(
             onConditionChange = { condition = it },
             photos = photos,
             isProcessing = isProcessing,
-            isDateTimeValid = isDateTimeValid,
             onSave = {
-                dateTimeState.toInstant()?.let { recordTime ->
-                    val newMemo = ConditionAtVisit(
-                        id = conditionId,
-                        personId = personId,
-                        title = title,
-                        condition = condition,
-                        author = author,
-                        recordTime = recordTime
-                    )
+                val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
+                PersonConditionLogic.createRecord(personId, conditionId, currentState)?.let { newMemo ->
                     onSaveRecord(newMemo) { newId ->
                         onSelectedIdChange(newId)
                         isEditing = false
@@ -377,7 +361,7 @@ private fun ConditionRecordDisplayCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "写真 (${photos.size}/${AppThresholds.CONDITION_PHOTO_MAX_COUNT})",
+                Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size),
                     style = MaterialTheme.typography.titleMedium)
                 if (photos.size < AppThresholds.CONDITION_PHOTO_MAX_COUNT) {
                     IconButton(
@@ -420,7 +404,6 @@ private fun ConditionRecordEditForm(
     onConditionChange: (String) -> Unit,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
-    isDateTimeValid: Boolean,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -500,7 +483,7 @@ private fun ConditionRecordEditForm(
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
-                            enabled = author.isNotBlank() && condition.isNotBlank() && isDateTimeValid
+                            enabled = PersonConditionLogic.isValid(PersonConditionUiState(title, condition, author, dateTimeState.toInstant()))
                         ) { Text(stringResource(R.string.common_save)) }
                     }
                 }
@@ -511,7 +494,7 @@ private fun ConditionRecordEditForm(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "写真 (${photos.size}/${AppThresholds.CONDITION_PHOTO_MAX_COUNT})", style = MaterialTheme.typography.titleMedium)
+                Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size), style = MaterialTheme.typography.titleMedium)
                 if (photos.size < AppThresholds.CONDITION_PHOTO_MAX_COUNT && conditionId != 0) {
                     IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
                         Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)

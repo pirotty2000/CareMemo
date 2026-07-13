@@ -6,6 +6,9 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
+import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
+import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -400,45 +403,47 @@ data class DatabaseInconsistency(
     val description: String
 )
 
-// --- 計算・判定用拡張関数（基軸となる AppThresholds を使用） ---
+// --- 計算・判定用拡張関数（HealthLogic を使用） ---
 
 fun HeightAndWeight.calculateBMI(): Double {
-    val h = height ?: 0.0
-    val w = weight ?: 0.0
-    val heightM = h / 100.0
-    if (heightM <= 0.0) return 0.0
-    return w / (heightM * heightM)
+    return HealthLogic.calculateBMI(height, weight)
 }
 
-fun HeightAndWeight.getBmiResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
+fun HeightAndWeight.getBmiResult(context: Context): Pair<String, HealthAlertLevel> {
     val bmi = calculateBMI()
-    val (resId, alert) = AppThresholds.evaluateBMI(bmi)
-    return (resId?.let { context.getString(it) } ?: "---") to alert
+    val (status, alert) = HealthLogic.evaluateBMI(bmi)
+    val label = status?.let { context.getString(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
+    return label to alert
 }
 
-fun BpAndPulse.getVitalResults(context: Context): List<Pair<String, AppThresholds.AlertLevel>> =
-    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, sat, pulse, bodyTemperature).map {
-        context.getString(it.first) to it.second
+fun BpAndPulse.getVitalResults(context: Context): List<Pair<String, HealthAlertLevel>> =
+    HealthLogic.evaluateVitalItems(bpSystolic, bpDiastolic, sat, pulse, bodyTemperature).map {
+        context.getString(HealthDisplayMapper.getVitalLabel(it.first)) to it.second
     }
 
-fun BpAndPulse.getWorstAlertLevel(): AppThresholds.AlertLevel =
-    AppThresholds.evaluateVital(bpSystolic, bpDiastolic, sat, pulse, bodyTemperature)
-        .maxByOrNull { it.second.severity }?.second ?: AppThresholds.AlertLevel.NORMAL
+fun BpAndPulse.getWorstAlertLevel(): HealthAlertLevel =
+    HealthAlertLevel.worst(
+        HealthLogic.evaluateVitalItems(bpSystolic, bpDiastolic, sat, pulse, bodyTemperature).map { it.second }
+    )
 
-fun GlucoseAndHbA1c.getGlucoseResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
-    val (resId, alert) = AppThresholds.evaluateGlucose(glucose)
-    return (resId?.let { context.getString(it) } ?: "---") to alert
+fun GlucoseAndHbA1c.getGlucoseResult(context: Context): Pair<String, HealthAlertLevel> {
+    val (status, alert) = HealthLogic.evaluateGlucose(glucose)
+    val label = status?.let { context.getString(HealthDisplayMapper.getGlucoseLabel(it)!!) } ?: "---"
+    return label to alert
 }
 
-fun GlucoseAndHbA1c.getHbA1cResult(context: Context): Pair<String, AppThresholds.AlertLevel> {
-    val (resId, alert) = AppThresholds.evaluateHbA1c(hba1c)
-    return (resId?.let { context.getString(it) } ?: "---") to alert
+fun GlucoseAndHbA1c.getHbA1cResult(context: Context): Pair<String, HealthAlertLevel> {
+    val (status, alert) = HealthLogic.evaluateHbA1c(hba1c)
+    val label = status?.let { context.getString(HealthDisplayMapper.getHbA1cLabel(it)!!) } ?: "---"
+    return label to alert
 }
 
-fun GlucoseAndHbA1c.getWorstAlertLevel(): AppThresholds.AlertLevel =
-    maxOfBySeverity(
-        AppThresholds.evaluateGlucose(glucose).second,
-        AppThresholds.evaluateHbA1c(hba1c).second
+fun GlucoseAndHbA1c.getWorstAlertLevel(): HealthAlertLevel =
+    HealthAlertLevel.worst(
+        listOf(
+            HealthLogic.evaluateGlucose(glucose).second,
+            HealthLogic.evaluateHbA1c(hba1c).second
+        )
     )
 
 fun GlucoseAndHbA1c.getCombinedResultText(context: Context): String {
@@ -446,6 +451,3 @@ fun GlucoseAndHbA1c.getCombinedResultText(context: Context): String {
     val h = getHbA1cResult(context).first
     return if (g != "---" && h != "---") "$g・$h" else if (g != "---") g else if (h != "---") h else "---"
 }
-
-private fun maxOfBySeverity(a: AppThresholds.AlertLevel, b: AppThresholds.AlertLevel): AppThresholds.AlertLevel =
-    if (a.severity >= b.severity) a else b

@@ -12,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepositor
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListLogic
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -108,50 +109,18 @@ class PersonListViewModel(
         isNameMaskingEnabled,
         categorySummaries
     ) { allPersons, section, matchedIds, isMasking, summaries ->
-        var filtered = allPersons
-        if (section != "全") {
-            filtered = filtered.filter { person ->
-                getSectionForName(person.lastNameFurigana) == section
-            }
-        }
-        if (matchedIds != null) {
-            filtered = filtered.filter { person ->
-                matchedIds.contains(person.id)
-            }
-        }
+        // 1. フィルタリングロジックを抽出した Logic へ委譲
+        val filtered = PersonListLogic.filterPersons(allPersons, section, matchedIds)
         
+        // 2. 表示用データの構築を Logic へ委譲
         filtered.map { person ->
-            PersonUiState(
-                person = person,
-                maskedName = person.getMaskedName(isMasking),
-                maskedFurigana = person.getMaskedFurigana(isMasking),
-                age = DateTimeUtils.calculateAge(person.birthday),
-                formattedBirthday = DateTimeUtils.formatDateJapaneseEra(person.birthday),
-                summary = summaries[person.id] ?: PersonCategorySummary()
-            )
+            PersonListLogic.createPersonUiState(person, isMasking, summaries[person.id])
         }
     }.catch { e ->
         if (e is CancellationException) throw e
         coroutineErrorHandler.handleException(e, ErrorContext(featureName, "userListFlow", TABLE_PERSON))
         _isLoading.value = false
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private fun getSectionForName(furigana: String): String {
-        val firstChar = furigana.firstOrNull() ?: return "他"
-        return when (firstChar) {
-            in 'あ'..'お' -> "あ"
-            in 'か'..'こ', in 'が'..'ご' -> "か"
-            in 'さ'..'そ', in 'ざ'..'ぞ' -> "さ"
-            in 'た'..'と', in 'だ'..'ど', in 'っ'..'っ' -> "た"
-            in 'な'..'の' -> "な"
-            in 'は'..'ほ', in 'ば'..'ぼ', in 'ぱ'..'ぽ' -> "は"
-            in 'ま'..'も' -> "ま"
-            in 'や'..'よ' -> "や"
-            in 'ら'..'ろ' -> "ら"
-            in 'わ'..'ん' -> "わ"
-            else -> "他"
-        }
-    }
 
     fun addPerson(person: Person) {
         safeLaunch(

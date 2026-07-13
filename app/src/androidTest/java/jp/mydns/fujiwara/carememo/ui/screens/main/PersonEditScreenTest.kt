@@ -8,7 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.ui.components.main.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditUiState
