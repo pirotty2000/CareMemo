@@ -94,7 +94,7 @@ fun PersonMedicationScreenContent(
                 ) {
                     IconButton(
                         onClick = onPreviousMonth,
-                        modifier = Modifier.testTag("Medication_MonthPrev")
+                        modifier = Modifier.testTag("Medication_MonthPrev_Tablet")
                     ) {
                         Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
                     }
@@ -102,11 +102,11 @@ fun PersonMedicationScreenContent(
                         text = formatYearMonthHeader(selectedMonth),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.testTag("Medication_MonthText")
+                        modifier = Modifier.testTag("Medication_MonthText_Tablet")
                     )
                     IconButton(
                         onClick = onNextMonth,
-                        modifier = Modifier.testTag("Medication_MonthNext")
+                        modifier = Modifier.testTag("Medication_MonthNext_Tablet")
                     ) {
                         Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
                     }
@@ -137,7 +137,7 @@ fun PersonMedicationScreenContent(
             ) {
                 IconButton(
                     onClick = onPreviousMonth,
-                    modifier = Modifier.testTag("Medication_MonthPrev")
+                    modifier = Modifier.testTag("Medication_MonthPrev_Phone")
                 ) {
                     Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
                 }
@@ -145,11 +145,11 @@ fun PersonMedicationScreenContent(
                     text = formatYearMonthHeader(selectedMonth),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.testTag("Medication_MonthText")
+                    modifier = Modifier.testTag("Medication_MonthText_Phone")
                 )
                 IconButton(
                     onClick = onNextMonth,
-                    modifier = Modifier.testTag("Medication_MonthNext")
+                    modifier = Modifier.testTag("Medication_MonthNext_Phone")
                 ) {
                     Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
                 }

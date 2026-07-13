@@ -121,7 +121,7 @@ class PersonMedicationScreenTest {
             }
         }
         composeTestRule.onNodeWithTag("Medication_Calendar").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("Medication_MonthText").assertTextContains("2026(令和8)年07月")
+        composeTestRule.onNodeWithTag("Medication_MonthText_Phone").assertTextContains("2026(令和8)年07月")
     }
 
     @Test
@@ -192,9 +192,9 @@ class PersonMedicationScreenTest {
                 )
             }
         }
-        composeTestRule.onNodeWithTag("Medication_MonthPrev").performClick()
+        composeTestRule.onNodeWithTag("Medication_MonthPrev_Phone").performClick()
         assert(prevCalled)
-        composeTestRule.onNodeWithTag("Medication_MonthNext").performClick()
+        composeTestRule.onNodeWithTag("Medication_MonthNext_Phone").performClick()
         assert(nextCalled)
     }
 

@@ -189,6 +189,7 @@ private fun AuditLogFilterBar(
                                 onResultSelect(result)
                                 showResultMenu = false
                             },
+                            modifier = Modifier.testTag("ResultFilterItem_$result")
                         )
                     }
                 }
@@ -223,6 +224,7 @@ private fun AuditLogFilterBar(
                                 onFeatureSelect(feature)
                                 showFeatureMenu = false
                             },
+                            modifier = Modifier.testTag("FeatureFilterItem_$feature")
                         )
                     }
                 }

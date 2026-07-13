@@ -10,6 +10,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
@@ -57,16 +58,8 @@ class BatchInputScreenTest {
         every { viewModel.isInputValid } returns MutableStateFlow(true)
         every { viewModel.recordTime } returns MutableStateFlow(Instant.now())
         
-        // 各入力項目の初期値
-        every { viewModel.height } returns MutableStateFlow("")
-        every { viewModel.weight } returns MutableStateFlow("")
-        every { viewModel.bpSystolic } returns MutableStateFlow("")
-        every { viewModel.bpDiastolic } returns MutableStateFlow("")
-        every { viewModel.sat } returns MutableStateFlow("")
-        every { viewModel.pulse } returns MutableStateFlow("")
-        every { viewModel.bodyTemperature } returns MutableStateFlow("")
-        every { viewModel.glucose } returns MutableStateFlow("")
-        every { viewModel.hba1c } returns MutableStateFlow("")
+        // UI状態の一括管理
+        every { viewModel.uiState } returns MutableStateFlow(BatchInputUiState())
     }
 
     private fun setContent() {

@@ -2,6 +2,8 @@
 
 このドキュメントでは、CareMemo プロジェクトのソースコード構造とその役割について説明します。仕様変更や不具合修正の際に対象ファイルを探すガイドとして利用してください。
 
+---
+
 # ドキュメントの構成
 
 ドキュメントは3つのファイルで構成されています。
@@ -13,11 +15,15 @@
 設計変更や機能追加など、プロジェクトに影響を与える作業を行う際は、この3つのファイルを全て読み込んだ上で実装してください。
 また、ドキュメントの加筆・修正の際は、3つのファイルの役割を十分理解し、同じ情報を複数のドキュメントが持つことのないよう細心の注意を払ってください。
 
+---
+
 # ドキュメント運用方針
 
 - このドキュメントは CareMemo の設計上の唯一の基準（Single Source of Truth）とします。
 - 設計変更や共通部品の追加・削除を行った場合は、実装と合わせて本ドキュメントも更新してください。
 - 実装とドキュメントに差異が生じた場合は、ドキュメントを優先して見直し、必要に応じて実装またはドキュメントを修正してください。
+
+---
 
 # パッケージ構造の概要
 
@@ -54,7 +60,7 @@ jp.mydns.fujiwara.carememo
 └── CareMemoApplication.kt # Application クラス、リポジトリのDI（依存注入）管理
 ```
 
-
+---
 
 # Repository - ViewModel - Screen 依存関係
 
@@ -64,17 +70,19 @@ jp.mydns.fujiwara.carememo
 ## ※ **複雑な判定や計算は `logic` レイヤーへ抽出し、ViewModel の軽量化とテスト容易性を維持します。**
 
 
-| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Logic | 主要Repository                                                                                                     |
-|:---------|:-----------------------------------|:-------------------------------------------------------|:---|:-----------------------------------------------------------------------------------------------------------------|
+| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Logic                                                       | 主要Repository                                                                                                     |
+|:---------|:-----------------------------------|:-------------------------------------------------------|:--------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------|
 | 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel`         | `PersonListLogic`<br>`PersonEditLogic`<br>`JapaneseDateLogic` | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository` |
-| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `PersonHealthLogic`<br>`HealthLogic` | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
-| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `PersonConditionLogic`<br>`ConditionLogic` | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                         |
-| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationLogic` | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
-| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `BatchInputLogic`<br>`HealthLogic` | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
-| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | - | `DeleteOrRestorePersonRepository`                                                                                |
-| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic` | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
-| 操作ログ     | `AuditLogScreen`                   | `SettingsViewModel`                                    | `SettingsLogic` | `AuditLogRepository`                                                                                             |
-| 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`                                                                  |
+| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `PersonHealthLogic`<br>`HealthLogic`                          | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `PersonConditionLogic`<br>`ConditionLogic`                    | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                         |
+| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationLogic`                                             | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
+| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | -                                                             | `DeleteOrRestorePersonRepository`                                                                                |
+| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`                      |
+| 操作ログ     | `AuditLogScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AuditLogRepository`                                                                                             |
+| 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`               |
+
+---
 
 # Logic - ドメインロジックと計算ルール
 
@@ -85,20 +93,45 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 - 副作用を持たず、入出力が明確な関数（またはその集合）として定義する。
 - ViewModel が「状態(State)の管理」を担当し、Logic が「ルールの判定(Calculation/Validation/Conversion)」を担当する。
 
-## **主要 Logic 一覧**
+## **Logic 一覧**
 
-| 分類 | ファイル名 | 役割・主な内容 |
-| :--- | :--- | :--- |
-| **ドメイン共通** | `JapaneseDateLogic.kt` | 西暦 ↔ 和暦の相互変換、和暦の妥当性チェック、日付文字列の正規化。 |
-| **ドメイン共通** | `HealthLogic.kt` | BMI計算、バイタル・血糖値・HbA1cの異常判定、入力妥当性チェック。 |
-| **ドメイン共通** | `MedicationLogic.kt` | カレンダー生成（空セル挿入）、時間枠・ステータスのEnum管理、同期アクション判定。 |
-| **ドメイン共通** | `ConditionLogic.kt` | 所見メモの検索フィルタリング、重複判定ロジック。 |
-| **機能固有** | `PersonListLogic.kt` | 利用者一覧の五十音判定、フィルタリング、UI状態（伏せ字・年齢計算）への変換。 |
-| **機能固有** | `PersonEditLogic.kt` | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。 |
-| **機能固有** | `PersonHealthLogic.kt` | 健康記録画面における新規・更新判定、および重複チェックロジック。 |
-| **機能固有** | `PersonConditionLogic.kt` | 所見メモ画面における変更検知、バリデーション、Entity生成。 |
-| **機能固有** | `BatchInputLogic.kt` | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。 |
-| **機能固有** | `SettingsLogic.kt` | 監査ログのフィルタ・ソート、ZIP検証、バージョン互換性、空き容量チェック。 |
+### **ドメイン共通ロジック (logic/common)**
+アプリ全体、または複数の画面で再利用される計算・判定・Enum 定義です。
+
+| ファイル名                  | 役割・主な内容                                   |
+|:-----------------------|:------------------------------------------|
+| `BirthEra.kt`          | 元号（昭和・平成・令和・西暦）の Enum 定義とリソース紐付け。         |
+| `JapaneseDateLogic.kt` | 西暦 ↔ 和暦の相互変換、和暦の妥当性チェック、日付文字列の正規化。        |
+| `HealthLogic.kt`       | BMI 計算、バイタル・血糖値・HbA1c の異常判定ルール、入力妥当性チェック。 |
+| `MedicationLogic.kt`   | カレンダーの日付リスト生成（空セル挿入）、同期アクション（保存・削除）の判定。   |
+| `ConditionLogic.kt`    | 所見メモの検索フィルタリング、重複判定ロジック。                  |
+
+### **機能固有ロジック (logic/feature)**
+特定の画面や ViewModel の状態管理（UiState）に密結合したロジックです。
+
+| ファイル名                     | 役割・主な内容                                                  |
+|:--------------------------|:---------------------------------------------------------|
+| `PersonListLogic.kt`      | 利用者一覧の五十音判定、フィルタリング、UI状態（伏せ字・年齢計算）への変換。                  |
+| `PersonEditLogic.kt`      | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。 |
+| `PersonHealthLogic.kt`    | 健康記録画面における新規・更新判定、および重複チェックロジック。                         |
+| `PersonConditionLogic.kt` | 所見メモ画面における変更検知、バリデーション、Entity生成。                         |
+| `BatchInputLogic.kt`      | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                    |
+| `SettingsLogic.kt`        | 監査ログのフィルタ・ソート、ZIP検証、バージョン互換性、空き容量チェック。                   |
+
+### **表示用マッピングロジック (ui/mapping)**
+判定結果（Enum）を日本語のラベルやテーマに合わせた色へ変換するロジックです。
+※ これらは Android リソース（R.string）や UI 資源（Color）に依存します。
+
+| ファイル名                        | 役割・主な内容                                   |
+|:-----------------------------|:------------------------------------------|
+| `HealthDisplayMapper.kt`     | 健康状態の Enum（AlertLevel 等）を日本語ラベル、色、説明文へ変換。 |
+| `MedicationDisplayMapper.kt` | 服薬状況の Enum を記号（○/△/×）、時間枠ラベル、色へ変換。        |
+| `ConditionDisplayMapper.kt`  | 所見メモの写真枚数ラベルなどの表示文字列を生成。                  |
+| `FeatureNameMapper.kt`       | 監査ログ用の機能識別子を日本語名称へ変換。                     |
+| `ActionTypeMapper.kt`        | 監査ログ用の操作種別（INSERT等）を日本語名称へ変換。             |
+| `ResultTypeMapper.kt`        | 監査ログ用の実行結果（SUCCESS等）を日本語名称へ変換。            |
+
+---
 
 # Screen - Components 依存関係
 
@@ -120,6 +153,8 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                           |
 | 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/AppDeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                             |
 | 10. 操作ログ             | `AuditLogScreen`                                                         | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                     |
+
+---
 
 # Components - Screen 逆引きリファレンス
 
@@ -152,10 +187,6 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | 　　🔴**`common/PdfExportActionHandler.kt`**：PDF出力のアクション管理                |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
 | 　　🔴**`common/PdfSettingsDialog.kt`**：PDF出力設定ダイアログ                      |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
 | 　　🔴**`common/PersonHeaderTitle.kt`**：利用者情報ヘッダー                         |    |   ✓   |   ✓   |   ✓   |   ✓   |    |    |    |
-| **【表示マッピング (Mappers)】**                                                 |    |       |       |       |       |    |    |    |
-| 　　`ui/mapping/FeatureNameMapper.kt`：機能識別子の日本語変換                         |    |       |       |       |       |    |    | ✓  |
-| 　　`ui/mapping/ActionTypeMapper.kt`：操作種別の日本語変換                           |    |       |       |       |       |    |    | ✓  |
-| 　　`ui/mapping/ResultTypeMapper.kt`：操作結果の日本語変換                           |    |       |       |       |       |    |    | ✓  |
 | **【個別部品 (特定ドメイン/画面)】**                                                  |    |       |       |       |       |    |    |    |
 | **＜利用者一覧：MainScreen＞**                                                  |    |       |       |       |       |    |    |    |
 | 　　`main/BirthdayInputFields.kt`：生年月日入力部品                                | ✓  |       |       |       |       |    |    |    |
@@ -172,7 +203,6 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | **＜(C)服薬管理：PersonMedicationScreen＞**                                    |    |       |       |       |       |    |    |    |
 | 　　`medication/PersonMedicationComponents.kt`：(C)専用カレンダー・履歴テーブル・入力ダイアログ  |    |       |       |   ✓   |       |    |    |    |
 
-
-
+---
 
 最終更新日: 2026/07/13

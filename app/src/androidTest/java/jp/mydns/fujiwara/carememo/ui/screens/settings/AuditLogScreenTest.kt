@@ -131,8 +131,8 @@ class AuditLogScreenTest {
         // チップをタップしてドロップダウンを開く
         composeTestRule.onNodeWithTag("AuditLog_ResultFilter").performClick()
         
-        // メニュー項目を選択（マッピングされた表示名で探す）
-        composeTestRule.onNodeWithText("成功").performClick()
+        // メニュー項目を選択（テストタグで確実にメニューアイテムを特定）
+        composeTestRule.onNodeWithTag("ResultFilterItem_SUCCESS").performClick()
         
         // ViewModelが呼ばれたこと
         verify { viewModel.setResultFilter("SUCCESS") }
@@ -145,8 +145,8 @@ class AuditLogScreenTest {
         // チップをタップ
         composeTestRule.onNodeWithTag("AuditLog_FeatureFilter").performClick()
         
-        // メニュー項目を選択（マッピングされた表示名で探す）
-        composeTestRule.onNodeWithText("健康記録").performClick()
+        // メニュー項目を選択
+        composeTestRule.onNodeWithTag("FeatureFilterItem_PersonHealth").performClick()
         
         // ViewModelが呼ばれたこと
         verify { viewModel.setFeatureFilter("PersonHealth") }

@@ -14,10 +14,13 @@
 
 ## 🚀 改善ステップ
 
-### フェーズ 1: ドメインロジックの抽出 (重要度: 高)
-ViewModel 内の純粋なロジックを UseCase や Logic クラスに抽出します。
-*   **対象**: `PersonEditViewModel` (和暦計算/日付判定), `BatchInputViewModel` (重複判定)
-*   **効果**: ViewModel の行数削減、ロジックの再利用性向上。UnitTestがしやすい。かなり保守性があがる。
+### フェーズ 1: ドメインロジックの抽出 (重要度: 高) ✅ 完了 (2026/07/13)
+ViewModel 内の純粋なロジックを Logic クラスに抽出しました。
+*   **対象**: 全ての主要 ViewModel (`PersonEdit`, `PersonHealth`, `PersonList`, `PersonMedication`, `BatchInput`, `Settings`)
+*   **成果**: 
+    *   `jp.mydns.fujiwara.carememo.logic` パッケージの新設。
+    *   和暦計算、健康判定、カレンダー生成、検索フィルタリング等の純粋な Kotlin 化。
+    *   ユニットテストの拡充（全144件パス）。
 
 ### フェーズ 2: UI 状態（UiState）の集約と原子性の確保 (重要度: 高)
 散在する `MutableStateFlow` を一つの `UiState` データクラスに集約します。

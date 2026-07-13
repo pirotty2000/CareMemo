@@ -9,9 +9,9 @@ import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonEditUiState
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
