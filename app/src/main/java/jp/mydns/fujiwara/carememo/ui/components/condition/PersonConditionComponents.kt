@@ -62,7 +62,6 @@ import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.mapping.ConditionDisplayMapper

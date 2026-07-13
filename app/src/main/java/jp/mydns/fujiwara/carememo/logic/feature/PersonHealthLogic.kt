@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 
 /**
  * 健康記録画面固有のドメインロジック

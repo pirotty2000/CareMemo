@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
-import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputState

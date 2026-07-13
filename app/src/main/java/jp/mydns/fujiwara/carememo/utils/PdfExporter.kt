@@ -12,7 +12,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
+import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.*
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportRange
@@ -397,8 +397,8 @@ object PdfExporter {
                 getBackgroundColor = { rec -> HealthDisplayMapper.getPdfBgColor(rec.getWorstAlertLevel()) }
             ) { rec, _ ->
                 val results = rec.getVitalResults(ctx.context)
-                if (results.all { it.second == jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.NORMAL }) ctx.context.getString(R.string.vital_label_normal)
-                else results.filter { it.second != jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.NORMAL }.joinToString("・") { it.first }
+                if (results.all { it.second == NORMAL }) ctx.context.getString(R.string.vital_label_normal)
+                else results.filter { it.second != NORMAL }.joinToString("・") { it.first }
             }
         )
         drawGenericTable(ctx, records, columns)

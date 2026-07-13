@@ -31,7 +31,6 @@ package jp.mydns.fujiwara.carememo.ui.components.medication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -55,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.logic.common.*
 import jp.mydns.fujiwara.carememo.ui.mapping.MedicationDisplayMapper

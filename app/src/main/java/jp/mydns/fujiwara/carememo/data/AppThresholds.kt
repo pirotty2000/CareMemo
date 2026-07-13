@@ -1,7 +1,5 @@
 package jp.mydns.fujiwara.carememo.data
 
-import android.content.Context
-import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
 
 /**
@@ -46,12 +44,12 @@ object AppThresholds {
     const val IMAGE_THUMBNAIL_SIZE = 256
     const val PHOTOS_DIR_NAME = "photos"
 
-    // --- 服薬管理 (C) 関連の制限値・定義 ---
-    const val MEDICATION_TIME_SLOT_COUNT = 4
-    const val TIME_SLOT_MORNING = 0
-    const val TIME_SLOT_LUNCH = 1
-    const val TIME_SLOT_DINNER = 2
-    const val TIME_SLOT_BEDTIME = 3
+//    // --- 服薬管理 (C) 関連の制限値・定義 ---
+//    const val MEDICATION_TIME_SLOT_COUNT = 4
+//    const val TIME_SLOT_MORNING = 0
+//    const val TIME_SLOT_LUNCH = 1
+//    const val TIME_SLOT_DINNER = 2
+//    const val TIME_SLOT_BEDTIME = 3
 
     /**
      * グラフ描画用の範囲定義
