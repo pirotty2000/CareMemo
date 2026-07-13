@@ -160,7 +160,8 @@ class PersonHealthViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Load Error") == true }
+                details = match { it?.contains("Load Error") == true },
+                resultType = "OTHER_ERROR"
             ) 
         }
     }
@@ -183,7 +184,8 @@ class PersonHealthViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = "0",
-                details = match { it?.contains("Save Error") == true }
+                details = match { it?.contains("Save Error") == true },
+                resultType = "OTHER_ERROR"
             ) 
         }
     }

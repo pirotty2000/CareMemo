@@ -228,7 +228,8 @@ class PersonEditViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = personId.toString(),
-                details = match { it?.contains("Load Error") == true }
+                details = match { it?.contains("Load Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -259,7 +260,8 @@ class PersonEditViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Save Error") == true }
+                details = match { it?.contains("Save Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }

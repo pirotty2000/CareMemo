@@ -27,7 +27,8 @@ class AuditLogRepository(
         tableName: String,
         actionType: String,
         affectedId: String,
-        details: String? = null
+        details: String? = null,
+        resultType: String = "UNKNOWN"
     ) {
         // NonCancellable を指定し、呼び出し元のキャンセル（画面遷移等）に影響されず
         // ログの書き込みを試行するようにする
@@ -39,7 +40,8 @@ class AuditLogRepository(
                     tableName = tableName,
                     actionType = actionType,
                     affectedId = affectedId,
-                    details = details
+                    details = details,
+                    resultType = resultType
                 )
                 auditLogDao.insert(entry)
             } catch (e: Exception) {

@@ -98,7 +98,8 @@ class SettingsViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it.contains("Delete Error") }
+                details = match { it.contains("Delete Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -118,7 +119,8 @@ class SettingsViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it.contains("Rotate Error") }
+                details = match { it.contains("Rotate Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -139,7 +141,8 @@ class SettingsViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it.contains("Clear All Error") }
+                details = match { it.contains("Clear All Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -159,7 +162,8 @@ class SettingsViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it.contains("Integrity Error") }
+                details = match { it.contains("Integrity Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -187,7 +191,8 @@ class SettingsViewModelTest {
                     tableName = any(),
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it.contains("AuditLogs Flow Error") }
+                    details = match { it.contains("AuditLogs Flow Error") },
+                    resultType = "OTHER_ERROR"
                 )
             }
             cancelAndIgnoreRemainingEvents()
@@ -215,7 +220,8 @@ class SettingsViewModelTest {
                     tableName = any(),
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it.contains("DeletedUserList Flow Error") }
+                    details = match { it.contains("DeletedUserList Flow Error") },
+                    resultType = "OTHER_ERROR"
                 )
             }
             cancelAndIgnoreRemainingEvents()

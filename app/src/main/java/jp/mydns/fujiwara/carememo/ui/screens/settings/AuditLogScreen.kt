@@ -7,10 +7,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,28 +25,63 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.ui.mapping.toActionLabel
+import jp.mydns.fujiwara.carememo.ui.mapping.toFeatureLabel
+import jp.mydns.fujiwara.carememo.ui.mapping.toResultLabel
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditLogScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
 ) {
     val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
-    val selectedTable by viewModel.selectedTable.collectAsStateWithLifecycle()
     val selectedFeature by viewModel.selectedFeature.collectAsStateWithLifecycle()
-    val availableTables by viewModel.availableTables.collectAsStateWithLifecycle()
+    val selectedResult by viewModel.selectedResult.collectAsStateWithLifecycle()
+    val isAscending by viewModel.isAscending.collectAsStateWithLifecycle()
     val availableFeatures by viewModel.availableFeatures.collectAsStateWithLifecycle()
+    val availableResults by viewModel.availableResults.collectAsStateWithLifecycle()
 
+    AuditLogScreenContent(
+        auditLogs = auditLogs,
+        selectedFeature = selectedFeature,
+        selectedResult = selectedResult,
+        isAscending = isAscending,
+        availableFeatures = availableFeatures,
+        availableResults = availableResults,
+        onFeatureSelect = { viewModel.setFeatureFilter(it) },
+        onResultSelect = { viewModel.setResultFilter(it) },
+        onToggleSort = { viewModel.toggleSortOrder() },
+        onClearFilters = { viewModel.clearFilters() },
+        onBack = onBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AuditLogScreenContent(
+    auditLogs: List<AuditLog>,
+    selectedFeature: String?,
+    selectedResult: String?,
+    isAscending: Boolean,
+    availableFeatures: List<String>,
+    availableResults: List<String>,
+    onFeatureSelect: (String?) -> Unit,
+    onResultSelect: (String?) -> Unit,
+    onToggleSort: () -> Unit,
+    onClearFilters: () -> Unit,
+    onBack: () -> Unit,
+) {
     val lazyListState = rememberLazyListState()
-    val isFiltered = (selectedTable != null) || (selectedFeature != null)
+    val isFiltered = (selectedFeature != null) || (selectedResult != null)
 
     Scaffold(
         topBar = {
@@ -60,18 +97,19 @@ fun AuditLogScreen(
         },
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            // フィルターバー
-            if (availableTables.isNotEmpty() || availableFeatures.isNotEmpty() || isFiltered) {
+            // フィルター・ソートバー
+            if (availableFeatures.isNotEmpty() || availableResults.isNotEmpty() || isFiltered) {
                 AuditLogFilterBar(
-                    selectedTable = selectedTable,
                     selectedFeature = selectedFeature,
-                    availableTables = availableTables,
+                    selectedResult = selectedResult,
+                    isAscending = isAscending,
                     availableFeatures = availableFeatures,
-                    onTableSelect = { viewModel.setTableFilter(it) },
-                    onFeatureSelect = { viewModel.setFeatureFilter(it) },
-                ) {
-                    viewModel.clearFilters()
-                }
+                    availableResults = availableResults,
+                    onFeatureSelect = onFeatureSelect,
+                    onResultSelect = onResultSelect,
+                    onToggleSort = onToggleSort,
+                    onClear = onClearFilters
+                )
             }
 
             if (auditLogs.isEmpty()) {
@@ -104,51 +142,52 @@ fun AuditLogScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AuditLogFilterBar(
-    selectedTable: String?,
     selectedFeature: String?,
-    availableTables: List<String>,
+    selectedResult: String?,
+    isAscending: Boolean,
     availableFeatures: List<String>,
-    onTableSelect: (String?) -> Unit,
+    availableResults: List<String>,
     onFeatureSelect: (String?) -> Unit,
+    onResultSelect: (String?) -> Unit,
+    onToggleSort: () -> Unit,
     onClear: () -> Unit,
 ) {
-    var showTableMenu by remember { mutableStateOf(value = false) }
     var showFeatureMenu by remember { mutableStateOf(value = false) }
+    var showResultMenu by remember { mutableStateOf(value = false) }
 
     LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // テーブル絞り込み
+        // 結果絞り込み
         item {
             Box {
                 FilterChip(
-                    selected = selectedTable != null,
-                    onClick = { showTableMenu = true },
-                    label = { Text(selectedTable ?: "テーブル: 全て") },
+                    selected = selectedResult != null,
+                    onClick = { showResultMenu = true },
+                    label = { Text(selectedResult?.toResultLabel ?: "結果: 全て") },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
-                    leadingIcon = if (selectedTable != null) {
+                    leadingIcon = if (selectedResult != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     } else null,
-                    modifier = Modifier.testTag("AuditLog_TableFilter")
+                    modifier = Modifier.testTag("AuditLog_ResultFilter")
                 )
-                DropdownMenu(expanded = showTableMenu, onDismissRequest = { showTableMenu = false }) {
+                DropdownMenu(expanded = showResultMenu, onDismissRequest = { showResultMenu = false }) {
                     DropdownMenuItem(
                         text = { Text("全て") },
                         onClick = {
-                            onTableSelect(null)
-                            showTableMenu = false
+                            onResultSelect(null)
+                            showResultMenu = false
                         },
                     )
-                    availableTables.forEach { table ->
+                    availableResults.forEach { result ->
                         DropdownMenuItem(
-                            text = { Text(table) },
+                            text = { Text(result.toResultLabel) },
                             onClick = {
-                                onTableSelect(table)
-                                showTableMenu = false
+                                onResultSelect(result)
+                                showResultMenu = false
                             },
                         )
                     }
@@ -162,7 +201,7 @@ private fun AuditLogFilterBar(
                 FilterChip(
                     selected = selectedFeature != null,
                     onClick = { showFeatureMenu = true },
-                    label = { Text(selectedFeature ?: "機能: 全て") },
+                    label = { Text(selectedFeature?.toFeatureLabel ?: "機能: 全て") },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedFeature != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
@@ -179,7 +218,7 @@ private fun AuditLogFilterBar(
                     )
                     availableFeatures.forEach { feature ->
                         DropdownMenuItem(
-                            text = { Text(feature) },
+                            text = { Text(feature.toFeatureLabel) },
                             onClick = {
                                 onFeatureSelect(feature)
                                 showFeatureMenu = false
@@ -190,8 +229,22 @@ private fun AuditLogFilterBar(
             }
         }
 
+        // 並び替えトグル
+        item {
+            IconButton(
+                onClick = onToggleSort,
+                modifier = Modifier.testTag("AuditLog_SortToggle")
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.SwapVert,
+                    contentDescription = if (isAscending) "古い順" else "新しい順",
+                    tint = if (isAscending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         // クリアボタン
-        if ((selectedTable != null) || (selectedFeature != null)) {
+        if ((selectedFeature != null) || (selectedResult != null)) {
             item {
                 IconButton(onClick = onClear, modifier = Modifier.testTag("AuditLog_FilterClear")) {
                     Icon(
@@ -202,6 +255,59 @@ private fun AuditLogFilterBar(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AuditLogScreenPreview() {
+    CareMemoTheme {
+        AuditLogScreenContent(
+            auditLogs = listOf(
+                AuditLog(
+                    id = 1,
+                    timestamp = java.time.Instant.now(),
+                    featureName = "PersonList",
+                    operation = "addPerson",
+                    tableName = "person_db",
+                    actionType = "INSERT",
+                    affectedId = "1",
+                    resultType = "SUCCESS"
+                ),
+                AuditLog(
+                    id = 2,
+                    timestamp = java.time.Instant.now().minusSeconds(3600),
+                    featureName = "PersonHealth",
+                    operation = "saveRecord",
+                    tableName = "health_db",
+                    actionType = "UPDATE",
+                    affectedId = "10",
+                    resultType = "DB_ERROR",
+                    details = "android.database.sqlite.SQLiteConstraintException: UNIQUE constraint failed..."
+                ),
+                AuditLog(
+                    id = 3,
+                    timestamp = java.time.Instant.now().minusSeconds(7200),
+                    featureName = "Settings",
+                    operation = "exportData",
+                    tableName = "all_db",
+                    actionType = "UPDATE",
+                    affectedId = "0",
+                    resultType = "OTHER_ERROR",
+                    details = "java.io.IOException: Permission denied"
+                )
+            ),
+            selectedFeature = null,
+            selectedResult = null,
+            isAscending = false,
+            availableFeatures = listOf("PersonList", "PersonHealth", "Settings"),
+            availableResults = listOf("SUCCESS", "DB_ERROR", "OTHER_ERROR"),
+            onFeatureSelect = {},
+            onResultSelect = {},
+            onToggleSort = {},
+            onClearFilters = {},
+            onBack = {}
+        )
     }
 }
 
@@ -224,7 +330,7 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = log.actionType,
+                    text = log.actionType.toActionLabel,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = when (log.actionType) {
@@ -241,11 +347,47 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
             
             Spacer(modifier = Modifier.height(4.dp))
             
-            Text(
-                text = "${log.featureName} > ${log.operation}",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${log.featureName.toFeatureLabel} > ${log.operation}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = when (log.resultType) {
+                        "SUCCESS" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                        "UNKNOWN" -> MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                        else -> MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                    },
+                    border = androidx.compose.foundation.BorderStroke(
+                        0.5.dp,
+                        when (log.resultType) {
+                            "SUCCESS" -> Color(0xFF4CAF50)
+                            "UNKNOWN" -> MaterialTheme.colorScheme.outline
+                            else -> MaterialTheme.colorScheme.error
+                        }
+                    )
+                ) {
+                    Text(
+                        text = log.resultType.toResultLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        color = when (log.resultType) {
+                            "SUCCESS" -> Color(0xFF388E3C)
+                            "UNKNOWN" -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.error
+                        }
+                    )
+                }
+            }
             
             Text(
                 text = "Table: ${log.tableName} | ID: ${log.affectedId}",

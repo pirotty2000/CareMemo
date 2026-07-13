@@ -44,7 +44,8 @@ class DeleteOrRestorePersonRepository(
                 tableName = "person_db",
                 actionType = "LOGICAL_DELETE",
                 affectedId = personId.toString(),
-                details = "Cascade logical delete for person and all related records"
+                details = "Cascade logical delete for person and all related records",
+                resultType = "SUCCESS"
             )
         }
     }
@@ -68,7 +69,8 @@ class DeleteOrRestorePersonRepository(
                 tableName = "person_db",
                 actionType = "RESTORE",
                 affectedId = personId.toString(),
-                details = "Restore person and all related records"
+                details = "Restore person and all related records",
+                resultType = "SUCCESS"
             )
         }
     }
@@ -83,7 +85,8 @@ class DeleteOrRestorePersonRepository(
             operation = operation,
             tableName = "person_db",
             actionType = "PERMANENT_DELETE",
-            affectedId = personId.toString()
+            affectedId = personId.toString(),
+            resultType = "SUCCESS"
         )
     }
 
@@ -98,7 +101,8 @@ class DeleteOrRestorePersonRepository(
             tableName = "person_db",
             actionType = "CLEAR_ALL_ARCHIVED",
             affectedId = "all",
-            details = "Permanently deleted all logical-deleted persons"
+            details = "Permanently deleted all logical-deleted persons",
+            resultType = "SUCCESS"
         )
     }
 }

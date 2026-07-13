@@ -211,7 +211,8 @@ class BatchInputViewModelTest {
                 tableName = "health_db",
                 actionType = "ERROR",
                 affectedId = "1",
-                details = match { it?.contains("Batch Save Error") == true }
+                details = match { it?.contains("Batch Save Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }

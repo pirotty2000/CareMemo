@@ -126,39 +126,34 @@ class SettingsViewModel(
         coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogCountFlow"))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // 絞り込み状態
-    private val _selectedTable = MutableStateFlow<String?>(null)
-    val selectedTable = _selectedTable.asStateFlow()
-
+    // 絞り込み・並び替え状態
     private val _selectedFeature = MutableStateFlow<String?>(null)
     val selectedFeature = _selectedFeature.asStateFlow()
 
-    // 絞り込み済みのログリスト
+    private val _selectedResult = MutableStateFlow<String?>(null)
+    val selectedResult = _selectedResult.asStateFlow()
+
+    private val _isAscending = MutableStateFlow(false)
+    val isAscending = _isAscending.asStateFlow()
+
+    // 絞り込み・並び替え済みのログリスト
     val auditLogs: StateFlow<List<AuditLog>> = combine(
         auditLogRepository.allLogs,
-        _selectedTable,
         _selectedFeature,
-    ) { logs, table, feature ->
-        logs.filter { log ->
-            ((table == null) || (log.tableName == table)) &&
-                    ((feature == null) || (log.featureName == feature))
+        _selectedResult,
+        _isAscending,
+    ) { logs, feature, result, ascending ->
+        val filtered = logs.filter { log ->
+            ((feature == null) || (log.featureName == feature)) &&
+                    ((result == null) || (log.resultType == result))
         }
+        if (ascending) filtered.reversed() else filtered
     }.catch { e ->
         if (e is CancellationException) throw e
         coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogsFlow", "audit_log"))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 存在する項目の一覧（フィルター選択用）
-    val availableTables: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs ->
-            logs.asSequence().map { it.tableName }.distinct().sorted().toList()
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableTablesFlow"))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val availableFeatures: StateFlow<List<String>> = auditLogRepository.allLogs
         .map { logs ->
             logs.asSequence().map { it.featureName }.distinct().sorted().toList()
@@ -169,17 +164,31 @@ class SettingsViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun setTableFilter(table: String?) {
-        _selectedTable.value = table
-    }
+    val availableResults: StateFlow<List<String>> = auditLogRepository.allLogs
+        .map { logs ->
+            logs.asSequence().map { it.resultType }.distinct().sorted().toList()
+        }
+        .catch { e ->
+            if (e is CancellationException) throw e
+            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableResultsFlow"))
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setFeatureFilter(feature: String?) {
         _selectedFeature.value = feature
     }
 
+    fun setResultFilter(result: String?) {
+        _selectedResult.value = result
+    }
+
+    fun toggleSortOrder() {
+        _isAscending.value = !_isAscending.value
+    }
+
     fun clearFilters() {
-        _selectedTable.value = null
         _selectedFeature.value = null
+        _selectedResult.value = null
     }
 
     // 復元処理用の一時保持

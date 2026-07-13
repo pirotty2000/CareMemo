@@ -353,6 +353,12 @@ data class AuditLog(
     val affectedId: String,
 
     /**
+     * 操作結果 ("SUCCESS", "DB_ERROR", "OTHER_ERROR", "UNKNOWN")
+     */
+    @ColumnInfo(name = "result_type", defaultValue = "UNKNOWN")
+    val resultType: String = "UNKNOWN",
+
+    /**
      * 補足情報 (エラーメッセージや非個人情報のメタデータ)
      */
     @ColumnInfo(name = "details")

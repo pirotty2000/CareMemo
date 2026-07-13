@@ -183,7 +183,8 @@ class PersonMedicationViewModelTest {
                     tableName = "medication_db",
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it?.contains("Flow Error") == true }
+                    details = match { it?.contains("Flow Error") == true },
+                    resultType = "OTHER_ERROR"
                 )
             }
         }
@@ -207,7 +208,8 @@ class PersonMedicationViewModelTest {
                 tableName = "medication_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Sync Error") == true }
+                details = match { it?.contains("Sync Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }

@@ -23,11 +23,20 @@
 | SC-02 | 継続監視モード (MONITORING) | データ受信によって `loadingState` が変化しない（初期値維持）こと。 |
 | SC-03 | Flow例外発生時の保護 | Flow 内で例外が発生した際、ハンドラへ委譲され、`loadingState` が `false` になること。 |
 
-## 3. 実装状況
+## 3. エラー判定ロジックテスト (ViewModelCoroutineErrorHandler)
+**目的:** 発生した例外の型に基づき、適切な `resultType` が判定されることを検証する。
+
+| ID | テスト項目 | 検証内容 |
+| :--- | :--- | :--- |
+| EH-01 | DBエラーの判定 | `SQLiteException` 発生時、`resultType` が `"DB_ERROR"` として記録されること。 |
+| EH-02 | その他エラーの判定 | それ以外の一般的な例外発生時、`resultType` が `"OTHER_ERROR"` として記録されること。 |
+
+## 4. 実装状況
 | セクション | 項目 ID | ステータス | 備考 |
 | :--- | :--- | :---: | :--- |
 | 1. safeLaunch | SL-01 〜 SL-05 | ✅ 実装済み | `BaseViewModelTest.kt` にて検証済。 |
 | 2. safeCollect | SC-01 〜 SC-03 | ✅ 実装済み | `BaseViewModelTest.kt` にて検証済。 |
+| 3. エラー判定 | EH-01 〜 EH-02 | ✅ 実装済み | `ViewModelCoroutineErrorHandler` のロジック。 |
 
 ---
-作成日時: 2026/07/13
+最終更新日: 2026/07/13 (resultType 対応)

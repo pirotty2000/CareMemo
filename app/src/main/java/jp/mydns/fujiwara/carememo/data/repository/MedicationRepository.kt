@@ -24,7 +24,8 @@ class MedicationRepository(
             tableName = "medication_record_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}, Date: ${item.dosageDate}, Slot: ${item.timeSlot}, Status: ${item.status}"
+            details = "PersonId: ${item.personId}, Date: ${item.dosageDate}, Slot: ${item.timeSlot}, Status: ${item.status}",
+            resultType = "SUCCESS"
         )
     }
 
@@ -36,7 +37,8 @@ class MedicationRepository(
             tableName = "medication_record_db",
             actionType = "DELETE",
             affectedId = item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
     }
 }

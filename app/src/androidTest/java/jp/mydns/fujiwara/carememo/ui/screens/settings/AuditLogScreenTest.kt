@@ -30,8 +30,8 @@ class AuditLogScreenTest {
     private lateinit var viewModel: SettingsViewModel
 
     private val mockLogs = listOf(
-        AuditLog(id = 1, timestamp = Instant.now(), featureName = "利用者一覧", operation = "新規登録", tableName = "person_db", actionType = "INSERT", affectedId = "1"),
-        AuditLog(id = 2, timestamp = Instant.now(), featureName = "健康記録", operation = "保存", tableName = "health_db", actionType = "UPDATE", affectedId = "10")
+        AuditLog(id = 1, timestamp = Instant.now(), featureName = "PersonList", operation = "addPerson", tableName = "person_db", actionType = "INSERT", affectedId = "1", resultType = "SUCCESS"),
+        AuditLog(id = 2, timestamp = Instant.now(), featureName = "PersonHealth", operation = "saveRecord", tableName = "health_db", actionType = "UPDATE", affectedId = "10", resultType = "DB_ERROR")
     )
 
     @Before
@@ -40,10 +40,11 @@ class AuditLogScreenTest {
         
         // デフォルトのモック設定
         every { viewModel.auditLogs } returns MutableStateFlow(mockLogs)
-        every { viewModel.selectedTable } returns MutableStateFlow(null)
         every { viewModel.selectedFeature } returns MutableStateFlow(null)
-        every { viewModel.availableTables } returns MutableStateFlow(listOf("person_db", "health_db"))
-        every { viewModel.availableFeatures } returns MutableStateFlow(listOf("利用者一覧", "健康記録"))
+        every { viewModel.selectedResult } returns MutableStateFlow(null)
+        every { viewModel.isAscending } returns MutableStateFlow(false)
+        every { viewModel.availableFeatures } returns MutableStateFlow(listOf("PersonList", "PersonHealth"))
+        every { viewModel.availableResults } returns MutableStateFlow(listOf("SUCCESS", "DB_ERROR"))
     }
 
     private fun setContent() {
@@ -75,8 +76,8 @@ class AuditLogScreenTest {
     @Test
     fun cp02_empty_state_is_displayed() {
         every { viewModel.auditLogs } returns MutableStateFlow(emptyList())
-        every { viewModel.availableTables } returns MutableStateFlow(emptyList())
         every { viewModel.availableFeatures } returns MutableStateFlow(emptyList())
+        every { viewModel.availableResults } returns MutableStateFlow(emptyList())
         
         setContent()
         
@@ -92,24 +93,26 @@ class AuditLogScreenTest {
         composeTestRule.onNodeWithTag("AuditLogItem_1").assertIsDisplayed()
         composeTestRule.onNodeWithTag("AuditLogItem_2").assertIsDisplayed()
         
-        // 内容の一部が表示されていること
+        // 内容の一部がマッピングされて表示されていること
         composeTestRule.onNodeWithText("INSERT", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("利用者一覧", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("利用者：一覧", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("成功", substring = true).assertIsDisplayed()
     }
 
     @Test
     fun cp04_filter_chips_are_displayed() {
         setContent()
         
-        composeTestRule.onNodeWithTag("AuditLog_TableFilter").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("AuditLog_ResultFilter").assertIsDisplayed()
         composeTestRule.onNodeWithTag("AuditLog_FeatureFilter").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("AuditLog_SortToggle").assertIsDisplayed()
     }
 
     @Test
     fun cp05_search_no_result_is_displayed() {
         // フィルター適用中でログが空の状態
         every { viewModel.auditLogs } returns MutableStateFlow(emptyList())
-        every { viewModel.selectedTable } returns MutableStateFlow("unknown_db")
+        every { viewModel.selectedResult } returns MutableStateFlow("DB_ERROR")
         
         setContent()
         
@@ -122,37 +125,37 @@ class AuditLogScreenTest {
     // ======================================================================================
 
     @Test
-    fun bh01_table_filter_operation_calls_viewmodel() {
+    fun bh01_result_filter_operation_calls_viewmodel() {
         setContent()
         
         // チップをタップしてドロップダウンを開く
-        composeTestRule.onNodeWithTag("AuditLog_TableFilter").performClick()
+        composeTestRule.onNodeWithTag("AuditLog_ResultFilter").performClick()
         
-        // メニュー項目を選択
-        composeTestRule.onNodeWithText("person_db").performClick()
+        // メニュー項目を選択（マッピングされた表示名で探す）
+        composeTestRule.onNodeWithText("成功").performClick()
         
         // ViewModelが呼ばれたこと
-        verify { viewModel.setTableFilter("person_db") }
+        verify { viewModel.setResultFilter("SUCCESS") }
     }
 
     @Test
-    fun bh02_screen_filter_operation_calls_viewmodel() {
+    fun bh02_feature_filter_operation_calls_viewmodel() {
         setContent()
         
         // チップをタップ
         composeTestRule.onNodeWithTag("AuditLog_FeatureFilter").performClick()
         
-        // メニュー項目を選択
+        // メニュー項目を選択（マッピングされた表示名で探す）
         composeTestRule.onNodeWithText("健康記録").performClick()
         
         // ViewModelが呼ばれたこと
-        verify { viewModel.setFeatureFilter("健康記録") }
+        verify { viewModel.setFeatureFilter("PersonHealth") }
     }
 
     @Test
     fun bh03_clear_filter_operation_calls_viewmodel() {
         // フィルター適用中の状態
-        every { viewModel.selectedTable } returns MutableStateFlow("person_db")
+        every { viewModel.selectedResult } returns MutableStateFlow("SUCCESS")
         
         setContent()
         
@@ -181,11 +184,21 @@ class AuditLogScreenTest {
 
     @Test
     fun bh05_action_type_colors_are_applied() {
-        // 色を直接検証するのは難しいため、特定の actionType を持つアイテムが存在し、
-        // 適切なセマンティクス（この場合は単なる表示確認）を持っていることを確認
+        // 適切な actionType が表示されていることを確認
         setContent()
         
         composeTestRule.onNodeWithText("INSERT").assertIsDisplayed()
         composeTestRule.onNodeWithText("UPDATE").assertIsDisplayed()
+    }
+
+    @Test
+    fun bh06_sort_toggle_calls_viewmodel() {
+        setContent()
+
+        // 並び替えトグルをタップ
+        composeTestRule.onNodeWithTag("AuditLog_SortToggle").performClick()
+
+        // ViewModelが呼ばれたこと
+        verify { viewModel.toggleSortOrder() }
     }
 }

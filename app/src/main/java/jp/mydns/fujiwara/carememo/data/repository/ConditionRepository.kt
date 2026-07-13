@@ -25,7 +25,8 @@ class ConditionRepository(
             tableName = "condition_at_visit_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}, Title: ${item.title}"
+            details = "PersonId: ${item.personId}, Title: ${item.title}",
+            resultType = "SUCCESS"
         )
         return id
     }
@@ -38,7 +39,8 @@ class ConditionRepository(
             tableName = "condition_at_visit_db",
             actionType = "DELETE",
             affectedId = item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
     }
 
@@ -54,7 +56,8 @@ class ConditionRepository(
             tableName = "condition_photo_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}, ConditionId: ${item.conditionId}"
+            details = "PersonId: ${item.personId}, ConditionId: ${item.conditionId}",
+            resultType = "SUCCESS"
         )
         return id
     }
@@ -67,7 +70,8 @@ class ConditionRepository(
             tableName = "condition_photo_db",
             actionType = "UPDATE",
             affectedId = "person:$personId",
-            details = "Linked temporary photos to conditionId: $newConditionId"
+            details = "Linked temporary photos to conditionId: $newConditionId",
+            resultType = "SUCCESS"
         )
     }
 
@@ -79,7 +83,8 @@ class ConditionRepository(
             tableName = "condition_photo_db",
             actionType = "DELETE",
             affectedId = id.toString(),
-            details = "PersonId: $personId"
+            details = "PersonId: $personId",
+            resultType = "SUCCESS"
         )
     }
     

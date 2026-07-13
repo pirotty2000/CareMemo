@@ -40,7 +40,7 @@
 
 ---
 
-## 🏗️ 次回実施予定のリファクタリング（実施中）
+## ✅ 完了したリファクタリング
 
 ### BaseViewModel への共通処理（safeLaunch）の導入
 - **背景**: 現状、各 ViewModel に `try-catch` と `isLoading` の制御コードが散在しており、今回の `CancellationException` のように共通の修正が必要になった際の影響範囲が大きい。
@@ -68,6 +68,33 @@
         - [✅] 各 ViewModel 内の重複するプライベート・エラーハンドリング関数の削除。
     - **フェーズ 4: 最終検証**
         - [✅] 実機での例外発生時の挙動（監査ログ記録・UI通知）の最終確認。
+
+---
+
+## 🏗️ 監査ログ拡張：操作結果（resultType）の導入
+操作の「意図(actionType)」と「結果(resultType)」を分離し、DBエラー等の絞り込みを容易にします。
+
+### 【対応状況】resultType 導入プロジェクト
+
+| フェーズ | 作業内容 | 対象ファイル | ステータス |
+|:---|:---|:---|:---|
+| **1. 基盤定義** | `AuditLog` エンティティへの `resultType` カラム追加 | `data.AuditLog` | [✅] 完了 |
+| | データベース・マイグレーションの実装と適用 | `data.AppDatabase` | [✅] 完了 |
+| **2. 共通改修** | `AuditLogRepository.log` の引数拡張（初期値 `UNKNOWN`） | `AuditLogRepository` | [✅] 完了 |
+| | `ErrorHandler` での例外自動判定ロジック実装 | `ViewModelCoroutineErrorHandler` | [✅] 完了 |
+| **3. 既存適用** | 全リポジトリの成功ログ記録箇所への `SUCCESS` 明示 | 各 `data.repository.*` | [✅] 完了 |
+| | 既存テストコードの期待値修正（ERROR → DB_ERROR等） | 各 `*Test.kt` | [✅] 完了 |
+| **4. 表示対応** | 監査ログ画面への `resultType` 表示およびフィルター追加 | `AuditLogScreen` | [✅] 完了 |
+
+#### 詳細作業ステップ
+- [✅] **[Entity]** `AuditLog` に `resultType: String` を追加。
+- [✅] **[Migration]** 既存データに対し `UNKNOWN` を設定するマイグレーションを作成。
+- [✅] **[Repository]** `log()` メソッドの引数を `(..., resultType: String = "UNKNOWN")` に変更。
+- [✅] **[ErrorHandler]** `e is SQLException` 等を判定し、`DB_ERROR` か `OTHER_ERROR` を設定するよう修正。
+- [✅] **[Refactor]** 成功時に `log()` を呼んでいる全箇所で `resultType = "SUCCESS"` を明示的に指定。
+- [✅] **[Test]** `actionType = "ERROR"` をチェックしている既存テストを、新しい `resultType` の検証に移行。
+- [✅] **[Mapper]** 識別子を日本語に変換する Mappers を `ui/mapping` に新規作成。
+- [✅] **[UI]** 監査ログ画面に `resultType` の表示とフィルターを追加。
 
 ---
 

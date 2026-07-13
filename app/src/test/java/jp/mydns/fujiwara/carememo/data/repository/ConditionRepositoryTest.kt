@@ -54,7 +54,8 @@ class ConditionRepositoryTest {
                 tableName = "condition_at_visit_db",
                 actionType = "INSERT",
                 affectedId = "100",
-                details = match { it.contains("PersonId: 1") && it.contains("Title: テスト") }
+                details = match { it.contains("PersonId: 1") && it.contains("Title: テスト") },
+                resultType = "SUCCESS"
             )
         }
     }
@@ -80,7 +81,8 @@ class ConditionRepositoryTest {
                 tableName = "condition_at_visit_db",
                 actionType = "DELETE",
                 affectedId = "10",
-                details = match { it.contains("PersonId: 1") }
+                details = match { it.contains("PersonId: 1") },
+                resultType = "SUCCESS"
             )
         }
     }
@@ -108,7 +110,8 @@ class ConditionRepositoryTest {
                 tableName = "condition_photo_db",
                 actionType = "INSERT",
                 affectedId = "200",
-                details = match { it.contains("PersonId: 1") && it.contains("ConditionId: 5") }
+                details = match { it.contains("PersonId: 1") && it.contains("ConditionId: 5") },
+                resultType = "SUCCESS"
             )
         }
     }

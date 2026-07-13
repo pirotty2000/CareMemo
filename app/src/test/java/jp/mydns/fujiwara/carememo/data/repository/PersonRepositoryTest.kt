@@ -39,7 +39,8 @@ class PersonRepositoryTest {
                 tableName = "person_db",
                 actionType = "INSERT",
                 affectedId = "1",
-                details = match { it.contains("山田 太郎") }
+                details = match { it.contains("山田 太郎") },
+                resultType = "SUCCESS"
             )
         }
     }
@@ -58,7 +59,8 @@ class PersonRepositoryTest {
                 tableName = "person_db",
                 actionType = "UPDATE",
                 affectedId = "1",
-                details = match { it.contains("山田 太郎") }
+                details = match { it.contains("山田 太郎") },
+                resultType = "SUCCESS"
             )
         }
     }

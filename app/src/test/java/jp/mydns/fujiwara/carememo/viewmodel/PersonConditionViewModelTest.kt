@@ -211,7 +211,8 @@ class PersonConditionViewModelTest {
                     tableName = "condition_db",
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it?.contains("Flow Error") == true }
+                    details = match { it?.contains("Flow Error") == true },
+                    resultType = "OTHER_ERROR"
                 )
             }
         }
@@ -232,7 +233,8 @@ class PersonConditionViewModelTest {
                 tableName = "condition_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Save Error") == true }
+                details = match { it?.contains("Save Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -252,7 +254,8 @@ class PersonConditionViewModelTest {
                 tableName = "condition_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Delete Error") == true }
+                details = match { it?.contains("Delete Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -277,7 +280,8 @@ class PersonConditionViewModelTest {
                 tableName = "condition_db",
                 actionType = "ERROR",
                 affectedId = "1",
-                details = match { it?.contains("Image Process Error") == true }
+                details = match { it?.contains("Image Process Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -297,7 +301,8 @@ class PersonConditionViewModelTest {
                 tableName = "condition_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Photo Delete Error") == true }
+                details = match { it?.contains("Photo Delete Error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }

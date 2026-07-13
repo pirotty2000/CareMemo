@@ -23,7 +23,8 @@ class PersonRepository(
             tableName = "person_db",
             actionType = "INSERT",
             affectedId = id.toString(),
-            details = "Name: ${person.lastName} ${person.firstName}"
+            details = "Name: ${person.lastName} ${person.firstName}",
+            resultType = "SUCCESS"
         )
     }
     
@@ -35,7 +36,8 @@ class PersonRepository(
             tableName = "person_db",
             actionType = "UPDATE",
             affectedId = person.id.toString(),
-            details = "Name: ${person.lastName} ${person.firstName}"
+            details = "Name: ${person.lastName} ${person.firstName}",
+            resultType = "SUCCESS"
         )
     }
 

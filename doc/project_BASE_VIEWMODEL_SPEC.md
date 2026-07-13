@@ -168,12 +168,15 @@ protected fun <T> safeCollect(
     -   論理的な機能の集合である場合は、`Detail/Health` のように階層化して定義することを推奨する。
 3.  **operation (操作名)**:
     -   各 ViewModel 内で `private const val OP_...` として定義する。
+4.  **resultType (操作結果)**:
+    -   操作が成功したか、どのような種類のエラーが発生したかを分類する。
+    -   後述の `resultType` 一覧に従い、自動判定または明示的に指定する。
 
 ### 6.2. 永続性と表示名の分離 (マッピング方針)
 監査ログの可読性と保守性を両立するため、以下の設計指針を適用する。
 
 1.  **DB保存値 (識別子)**:
-    -   `featureName` や `operation` には、不変な英語の識別子（例: `"PersonEdit"`, `"save"`）を使用する。
+    -   `featureName`, `operation`, `actionType`, `resultType` には、不変な英語の識別子を使用する。
     -   理由: DB 検索の容易性と、ソースコードとの紐付けの確実性を担保するため。
 2.  **表示用名称 (ラベル)**:
     -   ログ画面等で人間が読みやすい名前が必要な場合は、表示層（UI）でマッピングを行う。
@@ -197,23 +200,53 @@ protected fun <T> safeCollect(
 
 日本語マッピング検討のための、現状の全識別子リストです。
 
-| 分類 | featureName (識別子) | 想定される日本語名 (検討案) | 備考 |
-| :--- | :--- | :--- | :--- |
-| **利用者管理** | `PersonList` | 利用者一覧 | |
-| | `PersonEdit` | 利用者登録・編集 | |
-| | `DeleteOrRestorePerson` | 利用者のアーカイブ・抹消 | |
-| | `PersonBase` | 利用者情報基底 | |
-| **健康管理 (A)** | `PersonHealth` | 健康記録 | 単発の保存・削除 |
-| | `BatchInput` | 一括入力 | |
-| | `PersonDetail/HEIGHT_AND_WEIGHT` | 詳細/身長体重 | 共通サマリー部分 |
-| | `PersonDetail/BP_AND_PULSE` | 詳細/バイタル | 共通サマリー部分 |
-| | `PersonDetail/GLUCOSE_AND_HBA1C` | 詳細/血糖値 | 共通サマリー部分 |
-| **所見メモ (B)** | `PersonCondition` | 所見メモ | 写真処理含む |
-| | `PersonDetail/CONDITION` | 詳細/所見メモ | 共通サマリー部分 |
-| **服薬管理 (C)** | `PersonMedication` | 服薬管理 | |
-| | `PersonDetail/MEDICATION` | 詳細/服薬管理 | 共通サマリー部分 |
-| **システム** | `Settings` | 設定・メンテナンス | |
-| | `PersonDetail/Base` | 利用者詳細(基本) | カテゴリ未指定時 |
+| 分類           | featureName (識別子)                | 想定される日本語名 (検討案) | 備考       |
+|:-------------|:---------------------------------|:----------------|:---------|
+| **利用者管理**    | `PersonList`                     | 利用者：一覧          |          |
+|              | `PersonEdit`                     | 利用者：新規登録・編集     |          |
+|              | `DeleteOrRestorePerson`          | 利用者：利用終了        |          |
+|              | `PersonBase`                     | 利用者：基底          |          |
+| **健康管理 (A)** | `PersonHealth`                   | 健康記録            | 単発の保存・削除 |
+|              | `BatchInput`                     | 一括入力            |          |
+|              | `PersonDetail/HEIGHT_AND_WEIGHT` | 詳細/身長体重         | 共通サマリー部分 |
+|              | `PersonDetail/BP_AND_PULSE`      | 詳細/バイタル         | 共通サマリー部分 |
+|              | `PersonDetail/GLUCOSE_AND_HBA1C` | 詳細/血糖値          | 共通サマリー部分 |
+| **所見メモ (B)** | `PersonCondition`                | 所見メモ            | 写真処理含む   |
+|              | `PersonDetail/CONDITION`         | 詳細/所見メモ         | 共通サマリー部分 |
+| **服薬管理 (C)** | `PersonMedication`               | 服薬管理            |          |
+|              | `PersonDetail/MEDICATION`        | 詳細/服薬管理         | 共通サマリー部分 |
+| **システム**     | `Settings`                       | 設定・管理           |          |
+|              | `PersonDetail/Base`              | 詳細/基底           | カテゴリ未指定時 |
+
+---
+## 9. Appendix: actionType 一覧 (2026/07/13時点)
+
+監査ログの `actionType` カラムに記録される識別子と、日本語表示名のマッピング案です。
+
+| 識別子 (actionType)         | 日本語名称 (案)  | 主な発生箇所・意味                     |
+|:-------------------------|:-----------|:------------------------------|
+| **`INSERT`**             | **INSERT** | 利用者、バイタル、血糖値、所見メモなどの新規作成      |
+| **`UPDATE`**             | **UPDATE** | 既存データの修正、写真の紐付け更新など           |
+| **`DELETE`**             | **DELETE** | 記録単位（バイタル1件など）の削除             |
+| **`LOGICAL_DELETE`**     | **利用終了**   | 利用者のアーカイブ化（論理削除）および関連データの非表示化 |
+| **`RESTORE`**            | **利用復帰**   | 利用終了状態からの復元（論理削除の解除）          |
+| **`PERMANENT_DELETE`**   | **利用抹消**   | アーカイブされた利用者の物理的な完全削除          |
+| **`CLEAR_ALL_ARCHIVED`** | **一括抹消**   | 利用終了者全員のデータを物理的に一括削除          |
+
+---
+## 10. Appendix: resultType 一覧 (2026/07/13時点)
+
+監査ログの `resultType` カラムに記録される識別子です。
+「どのような操作をしたか(actionType)」に対し、「どのような結果になったか」を記録します。
+
+| 識別子 (resultType) | 日本語名称 (案) | 意味 |
+|:---|:---|:---|
+| **`SUCCESS`** | **成功** | 操作が正常に完了した場合。Repository 等で明示的に記録する。 |
+| **`DB_ERROR`** | **DBエラー** | データベース操作に関連する例外（SQLException 等）が発生した場合。 |
+| **`OTHER_ERROR`** | **その他エラー** | DB 以外（ロジック、ファイル IO、システム等）の例外が発生した場合。 |
+| **`UNKNOWN`** | **不明** | **デフォルト値。** 結果が判定されていない、または古いバージョンのデータ。 |
+
+※ 将来的に `NETWORK_ERROR` や `VALIDATION_ERROR` など、必要に応じて分類を追加することを想定しています。
 
 ---
 最終更新日: 2026/07/13

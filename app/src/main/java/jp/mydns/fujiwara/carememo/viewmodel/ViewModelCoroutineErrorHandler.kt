@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import android.database.sqlite.SQLiteException
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 
@@ -16,6 +17,12 @@ class ViewModelCoroutineErrorHandler(
         // 1. Logcat への出力
         Log.e(context.featureName, "Error in ${context.operation}", e)
 
+        // 例外の種類に基づいて resultType を決定
+        val resultType = when (e) {
+            is SQLiteException -> "DB_ERROR"
+            else -> "OTHER_ERROR"
+        }
+
         // 2. 監査ログへの記録（AuditLogRepository 内部で NonCancellable 保護されている）
         auditLogRepository.log(
             featureName = context.featureName,
@@ -23,7 +30,8 @@ class ViewModelCoroutineErrorHandler(
             tableName = context.tableName ?: "unknown",
             actionType = "ERROR",
             affectedId = context.affectedId ?: "0",
-            details = e.toString()
+            details = e.toString(),
+            resultType = resultType
         )
 
         // 3. UI 通知（Error 系の場合はベストエフォート）

@@ -126,7 +126,8 @@ class PersonBaseViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = "2",
-                details = match { it.contains("Base Load Error") }
+                details = match { it.contains("Base Load Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }

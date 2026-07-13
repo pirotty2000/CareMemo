@@ -46,7 +46,8 @@ class MedicationRepositoryTest {
                 tableName = "medication_record_db",
                 actionType = "INSERT",
                 affectedId = "500",
-                details = match { it.contains("PersonId: 1") && it.contains("Date: 2023-10-27") }
+                details = match { it.contains("PersonId: 1") && it.contains("Date: 2023-10-27") },
+                resultType = "SUCCESS"
             )
         }
     }
@@ -72,7 +73,8 @@ class MedicationRepositoryTest {
                 tableName = "medication_record_db",
                 actionType = "DELETE",
                 affectedId = "500",
-                details = match { it.contains("PersonId: 1") }
+                details = match { it.contains("PersonId: 1") },
+                resultType = "SUCCESS"
             )
         }
     }

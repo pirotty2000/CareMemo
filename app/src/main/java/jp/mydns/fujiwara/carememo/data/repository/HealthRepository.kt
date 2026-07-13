@@ -27,7 +27,8 @@ class HealthRepository(
             tableName = "height_and_weight_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
         return id
     }
@@ -40,7 +41,8 @@ class HealthRepository(
             tableName = "height_and_weight_db",
             actionType = "DELETE",
             affectedId = item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
     }
 
@@ -59,7 +61,8 @@ class HealthRepository(
             tableName = "bp_and_pulse_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
         return id
     }
@@ -72,7 +75,8 @@ class HealthRepository(
             tableName = "bp_and_pulse_db",
             actionType = "DELETE",
             affectedId = item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
     }
 
@@ -91,7 +95,8 @@ class HealthRepository(
             tableName = "glucose_and_hba1c_db",
             actionType = if (item.id == 0) "INSERT" else "UPDATE",
             affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
         return id
     }
@@ -104,7 +109,8 @@ class HealthRepository(
             tableName = "glucose_and_hba1c_db",
             actionType = "DELETE",
             affectedId = item.id.toString(),
-            details = "PersonId: ${item.personId}"
+            details = "PersonId: ${item.personId}",
+            resultType = "SUCCESS"
         )
     }
 }

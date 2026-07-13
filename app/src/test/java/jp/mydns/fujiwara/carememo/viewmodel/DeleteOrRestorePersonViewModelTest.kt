@@ -135,7 +135,8 @@ class DeleteOrRestorePersonViewModelTest {
                     tableName = "person_db",
                     actionType = "ERROR",
                     affectedId = "0",
-                    details = match { it.contains("Flow Error") }
+                    details = match { it.contains("Flow Error") },
+                    resultType = "OTHER_ERROR"
                 )
             }
         }
@@ -157,7 +158,8 @@ class DeleteOrRestorePersonViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = "0",
-                details = match { it.contains("Restore Error") }
+                details = match { it.contains("Restore Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }
@@ -178,7 +180,8 @@ class DeleteOrRestorePersonViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = "0",
-                details = match { it.contains("Delete Error") }
+                details = match { it.contains("Delete Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }

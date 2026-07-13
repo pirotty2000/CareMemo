@@ -50,7 +50,8 @@ class HealthRepositoryTest {
                 tableName = "height_and_weight_db",
                 actionType = "INSERT",
                 affectedId = "1",
-                details = match { it.contains("PersonId: 1") }
+                details = match { it.contains("PersonId: 1") },
+                resultType = "SUCCESS"
             )
         }
     }
@@ -70,7 +71,8 @@ class HealthRepositoryTest {
                 tableName = "bp_and_pulse_db",
                 actionType = "INSERT",
                 affectedId = "2",
-                details = match { it.contains("PersonId: 1") }
+                details = match { it.contains("PersonId: 1") },
+                resultType = "SUCCESS"
             )
         }
     }
@@ -90,7 +92,8 @@ class HealthRepositoryTest {
                 tableName = "glucose_and_hba1c_db",
                 actionType = "INSERT",
                 affectedId = "3",
-                details = match { it.contains("PersonId: 1") }
+                details = match { it.contains("PersonId: 1") },
+                resultType = "SUCCESS"
             )
         }
     }

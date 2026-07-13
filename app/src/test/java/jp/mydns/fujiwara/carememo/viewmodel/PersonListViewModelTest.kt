@@ -162,7 +162,8 @@ class PersonListViewModelTest {
                     tableName = "person_db",
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it.contains("Load Error") }
+                    details = match { it.contains("Load Error") },
+                    resultType = "OTHER_ERROR"
                 )
             }
             cancelAndIgnoreRemainingEvents()
@@ -187,7 +188,8 @@ class PersonListViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it.contains("Add Error") }
+                details = match { it.contains("Add Error") },
+                resultType = "OTHER_ERROR"
             )
         }
     }

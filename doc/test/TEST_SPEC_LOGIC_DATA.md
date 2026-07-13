@@ -5,7 +5,6 @@
     - `app/src/androidTest/java/jp/mydns/fujiwara/carememo/`
 
 このドキュメントは、CareMemo における「目に見えない部分（ロジック、データ整合性、非同期安全性）」を担保するために実装された自動テストの仕様をまとめたものです。
-現在、合計 81 件のテストケース（Unit: 55件, Instrumented: 26件）が実装され、全て合格しています。
 
 ## 1. ビジネスロジック・ユーティリティ (Unit Test)
 **目的:** アプリ全体の計算ルールやデータ変換の正確性を検証する。
@@ -34,7 +33,7 @@
 | BP-01 | `PersonLifecycleTest.kt`       | 利用者切り替え時の**状態即時クリア**。前利用者のデータ混在を防止。       |
 | BP-02 | `PersonEditViewModelTest.kt`   | **重複チェックと自己更新判定**。自分自身を編集できなくなるバグの防止。     |
 | BP-03 | `BatchInputViewModelTest.kt`   | **記録日時の重複チェック**。一括入力による既存データ上書きの防止。       |
-| BP-04 | `*RepositoryTest.kt`           | 各種保存時の操作ログ (**AuditLog**) 自動記録。監査証跡の欠落防止。 |
+| BP-04 | `*RepositoryTest.kt`           | 各種操作ログ (**AuditLog**) 記録。成功時は `"SUCCESS"`、失敗時は例外型に応じ `"DB_ERROR/OTHER_ERROR"` が記録されること。 |
 | BP-05 | `PersonDetailViewModelTest.kt` | データ取得失敗時の**ローディング解除**、および全情報取得までの維持。      |
 
 ## 4. 実行方法

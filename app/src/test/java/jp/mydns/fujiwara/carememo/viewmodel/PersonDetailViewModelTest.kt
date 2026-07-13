@@ -110,7 +110,8 @@ class PersonDetailViewModelTest {
                     tableName = any(),
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it?.contains("Summary error") == true }
+                    details = match { it?.contains("Summary error") == true },
+                    resultType = "OTHER_ERROR"
                 )
             }
         }
@@ -132,7 +133,8 @@ class PersonDetailViewModelTest {
                 tableName = any(),
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Load error") == true }
+                details = match { it?.contains("Load error") == true },
+                resultType = "OTHER_ERROR"
             )
         }
     }
