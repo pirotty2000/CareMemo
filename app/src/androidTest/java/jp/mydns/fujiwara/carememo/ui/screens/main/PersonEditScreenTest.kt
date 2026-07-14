@@ -5,7 +5,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.R
