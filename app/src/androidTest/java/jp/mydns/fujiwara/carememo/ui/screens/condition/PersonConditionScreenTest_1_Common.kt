@@ -10,7 +10,6 @@ import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
