@@ -61,6 +61,35 @@ jp.mydns.fujiwara.carememo
 ```
 
 ---
+# CareMemo 画面一覧
+
+|画面ID|画面名|分類|実装ID|実装ファイル|備考|# CareMemo 画面一覧
+
+|画面ID|分類|画面名|実装ID| 実装ファイル                                        |備考|
+|---|---|---|---|-----------------------------------------------|---|
+|SCR-M-001|Main|MainScreen|-| `main/MainScreen.kt`                          |トップ画面|
+|SCR-M-002|Main|PersonEditScreen|-| `main/PersonEditScreen.kt`                    |利用者登録・編集|
+|SCR-PH-001|Health|PersonHealthScreen|-| `health/PersonHealthScreen.kt`                |健康記録|
+||| |SCR-PH-001-PH| `health/PersonHealthScreenPhone.kt`           |Phone実装|
+||| |SCR-PH-001-TB| `health/PersonHealthScreenTablet.kt`          |Tablet実装|
+||| |SCR-PH-001-CT| `health/PersonHealthScreenContent.kt`         |共通Content実装|
+|SCR-PH-002|Health|BatchInputScreen|-| `health/BatchInputScreen.kt`                  |健康記録一括入力|
+|SCR-PH-003|Health|GraphExpansionScreen|-| `health/GraphExpansionScreen.kt`              |グラフ拡大表示|
+|SCR-PC-001|Condition|PersonConditionScreen|-| `condition/PersonConditionScreen.kt`          |所見メモ|
+||| |SCR-PC-001-PH| `condition/PersonConditionScreenPhone.kt`     |Phone実装|
+||| |SCR-PC-001-TB| `condition/PersonConditionScreenTablet.kt`    |Tablet実装|
+||| |SCR-PC-001-CT| `condition/PersonConditionScreenContent.kt`   |共通Content実装|
+|SCR-PC-002|Condition|ConditionPhotoPreviewScreen|-| `condition/ConditionPhotoPreviewScreen.kt`    |写真プレビュー|
+|SCR-PC-003|Condition|ConditionPhotoFullScreen|-| `condition/ConditionPhotoFullScreen.kt`       |写真全画面表示|
+|SCR-PM-001|Medication|PersonMedicationScreen|-| `medication/PersonMedicationScreen.kt`        |服薬管理|
+||| |SCR-PM-001-PH| `medication/PersonMedicationScreenPhone.kt`   |Phone実装|
+||| |SCR-PM-001-TB| `medication/PersonMedicationScreenTablet.kt`  |Tablet実装|
+||| |SCR-PM-001-CT| `medication/PersonMedicationScreenContent.kt` |共通Content実装|
+|SCR-S-001|Settings|SettingsScreen|-| `settings/SettingsScreen.kt`                  |設定|
+|SCR-S-002|Settings|AuditLogScreen|-| `settings/AuditLogScreen.kt`                           |監査ログ|
+|SCR-S-003|Settings|DeleteOrRestorePerson|-| `settings/DeleteOrRestorePerson.kt`                    |利用者管理|
+
+---
 
 # Repository - ViewModel - Screen 依存関係
 
@@ -68,6 +97,7 @@ jp.mydns.fujiwara.carememo
 
 ## ※ **全ての ViewModel は `BaseViewModel` を継承し、共通の例外ハンドリング (`safeLaunch`) と UI 通知を利用します。**
 ## ※ **複雑な判定や計算は `logic` レイヤーへ抽出し、ViewModel の軽量化とテスト容易性を維持します。**
+## ※ **`PersonDetailViewModel` は、詳細画面群 (A)(B)(C) で共有される利用者情報の保持と共通ヘッダーの制御を担当し、各機能の ViewModel と併用します。**
 
 
 | 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Logic                                                       | 主要Repository                                                                                                     |

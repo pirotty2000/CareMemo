@@ -151,7 +151,7 @@ class PersonEditViewModel(
                 sendUiEvent(UiEvent.SaveSuccess)
             } catch (e: SQLiteConstraintException) {
                 // 重複の可能性が高いが、一応ログとエラー表示
-                showError(R.string.common_error_save, R.string.common_error_save)
+                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "Unknown error")
                 throw e // 再スローしてハンドラに記録させる
             }
         }

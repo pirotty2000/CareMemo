@@ -136,6 +136,29 @@ class PersonHealthScreenTest {
         assert(navigatedCategory == Category.HEIGHT_AND_WEIGHT)
     }
 
+    @Test
+    fun com05_longName_isHandled() {
+        val longNamePerson = Person(
+            id = 1, lastName = "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末", firstName = "太郎", 
+            lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now()
+        )
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonHealthScreenPhone(
+                    personId = 1, currentCategory = Category.BP_AND_PULSE, records = emptyList(), isLoading = false,
+                    currentPerson = longNamePerson, personCategorySummary = null, isNameMaskingEnabled = false,
+                    preferredShowHistory = true, onPreferredShowHistoryChange = {}, selectedRecordId = -1,
+                    onSelectedRecordIdChange = {}, onBack = {}, onNavigateToGraphExpansion = { _, _, _ -> },
+                    onNavigateToCategory = {}, onShowPdfSettings = {}, onDeleteRecord = {}, onSaveRecord = {},
+                    snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        // クラッシュせず表示されていること
+        composeTestRule.onNodeWithTag("PersonHeader_NameAndAge").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("HealthScreen_PdfButton").assertIsDisplayed()
+    }
+
     // ======================================================================================
     // 2. 個別コンポーネント単体テスト (PersonHealthScreenContent)
     // ======================================================================================
@@ -359,5 +382,27 @@ class PersonHealthScreenTest {
         // 閉じるボタンをタップしてダイアログが消えることを確認
         composeTestRule.onNodeWithText("閉じる").performClick()
         composeTestRule.onNodeWithText("閉じる").assertDoesNotExist()
+    }
+
+    @Test
+    fun bh06_pdfSettings_showsRelevantItemsOnly() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.common.PdfSettingsDialog(
+                    category = Category.BP_AND_PULSE,
+                    onDismiss = {},
+                    onExport = { _, _, _, _, _, _ -> }
+                )
+            }
+        }
+        
+        // 健康記録用ダイアログが表示されていること
+        composeTestRule.onNodeWithTag("PdfSettingsDialog").assertIsDisplayed()
+        
+        // 所見特有の項目が表示されていないことを確認
+        // 「最新の1件のみ」
+        composeTestRule.onNodeWithText("最新の1件のみ").assertDoesNotExist()
+        // 「写真を含める」
+        composeTestRule.onNodeWithText("写真を含める").assertDoesNotExist()
     }
 }

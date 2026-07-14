@@ -67,6 +67,25 @@ class PersonMedicationScreenTest {
     }
 
     @Test
+    fun com05_longName_isHandled() {
+        val longNamePerson = mockPerson.copy(lastName = "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末")
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonMedicationScreenPhone(
+                    currentPerson = longNamePerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
+                    recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
+                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
+                    onShowPdfSettings = {}, onDayClick = {},
+                    snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        // クラッシュせず表示されていること
+        composeTestRule.onNodeWithTag("PersonHeader_NameAndAge").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("Medication_PdfButton").assertIsDisplayed()
+    }
+
+    @Test
     fun com04_categoryBar_navigationWorks() {
         var navigatedCategory: Category? = null
         composeTestRule.setContent {
@@ -243,12 +262,34 @@ class PersonMedicationScreenTest {
             }
         }
         // 「服用」テキスト（朝の枠）をクリック
-        composeTestRule.onAllNodesWithText("服用").onFirst().performClick()
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true).onFirst().performClick()
         // 保存ボタンをクリック
         composeTestRule.onNodeWithTag("Medication_Dialog_Save").performClick()
         composeTestRule.waitForIdle()
         
         assert(savedRecords != null)
         assert(savedRecords!![0]?.status == 2)
+    }
+
+    @Test
+    fun bh04_pdfSettings_showsRelevantItemsOnly() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.common.PdfSettingsDialog(
+                    category = Category.MEDICATION,
+                    onDismiss = {},
+                    onExport = { _, _, _, _, _, _ -> }
+                )
+            }
+        }
+        
+        // 服薬管理用ダイアログが表示されていること
+        composeTestRule.onNodeWithTag("PdfSettingsDialog").assertIsDisplayed()
+        
+        // 所見特有の項目が表示されていないことを確認
+        // 「最新の1件のみ」
+        composeTestRule.onNodeWithText("最新の1件のみ").assertDoesNotExist()
+        // 「写真を含める」
+        composeTestRule.onNodeWithText("写真を含める").assertDoesNotExist()
     }
 }

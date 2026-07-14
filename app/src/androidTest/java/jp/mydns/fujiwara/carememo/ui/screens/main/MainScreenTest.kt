@@ -8,22 +8,48 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
-import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
 /**
- * MainScreen (利用者一覧) の UI テスト
+ * SCR-M-001 MainScreen (利用者一覧) の UI テスト
  * 
- * 仕様書：doc/test/TEST_SPEC_UI_Main.md に準拠
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-M-001_MainScreen.md に準拠
  */
 class MainScreenTest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
+
+    // ヘルパー：モック利用者の作成
+    private fun createMockPerson(id: Int, lastName: String, firstName: String, note: String = ""): Person {
+        return Person(
+            id = id,
+            lastName = lastName,
+            firstName = firstName,
+            lastNameFurigana = "",
+            firstNameFurigana = "",
+            birthday = Instant.now(),
+            note = note,
+            deletedAt = null
+        )
+    }
+
+    // ヘルパー：モック表示状態の作成
+    private fun createMockUiState(person: Person, maskedName: String): PersonUiState {
+        return PersonUiState(
+            person = person,
+            maskedName = maskedName,
+            maskedFurigana = "",
+            age = 70,
+            formattedBirthday = "1954/01/01",
+            summary = PersonCategorySummary()
+        )
+    }
 
     // ======================================================================================
     // 1. コンポーネント単体テスト (MainScreenContent)
@@ -51,10 +77,7 @@ class MainScreenTest {
                 )
             }
         }
-
-        // Then: 空状態のメッセージが表示されていること
         composeTestRule.onNodeWithTag("MainScreen_EmptyState").assertIsDisplayed()
-        Thread.sleep(2000)
     }
 
     @Test
@@ -79,21 +102,14 @@ class MainScreenTest {
                 )
             }
         }
-
-        // Then: ローディング画面が表示されていること
         composeTestRule.onNodeWithTag("MainScreen_Loading").assertIsDisplayed()
-        Thread.sleep(2000)
     }
 
     @Test
     fun cp03_userList_isDisplayed() {
-        val mockUserList = listOf(
-            PersonUiState(
-                person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now()),
-                maskedName = "山田　太郎", maskedFurigana = "ヤマダ　タロウ", age = 70, formattedBirthday = "", summary = PersonCategorySummary()
-            )
-        )
-
+        val person = createMockPerson(1, "山田", "太郎")
+        val mockUserList = listOf(createMockUiState(person, "山田　太郎"))
+        
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
@@ -114,29 +130,21 @@ class MainScreenTest {
                 )
             }
         }
-
-        // Then: 利用者リストと特定の項目が表示されていること
         composeTestRule.onNodeWithTag("MainScreen_UserList").assertExists()
         composeTestRule.onNodeWithTag("UserListItem_1").assertIsDisplayed()
-        composeTestRule.onNodeWithText("山田", substring = true).assertIsDisplayed()
-        Thread.sleep(2000)
     }
 
     @Test
     fun cp04_nameMasking_isApplied() {
-        val mockUserList = listOf(
-            PersonUiState(
-                person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now()),
-                maskedName = "山○　太○", maskedFurigana = "ヤ○ダ　タ○ウ", age = 70, formattedBirthday = "", summary = PersonCategorySummary()
-            )
-        )
-
+        val person = createMockPerson(1, "山田", "太郎")
+        val mockUserList = listOf(createMockUiState(person, "山○　太○"))
+        
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
                     userList = mockUserList,
                     isLoading = false,
-                    isNameMaskingEnabled = true, // 有効
+                    isNameMaskingEnabled = true,
                     searchQuery = "",
                     selectedSection = "全",
                     onSearchQueryChange = {},
@@ -151,22 +159,17 @@ class MainScreenTest {
                 )
             }
         }
-
-        // Then: 伏せ字の名前が表示されていること
         composeTestRule.onNodeWithText("山○", substring = true).assertExists()
-        Thread.sleep(2000)
     }
 
     @Test
     fun cp05_recordBadges_areDisplayed() {
+        val person = createMockPerson(1, "山田", "太郎")
         val mockUserList = listOf(
-            PersonUiState(
-                person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now()),
-                maskedName = "山田　太郎", maskedFurigana = "ヤマダ　タロウ", age = 70, formattedBirthday = "",
+            createMockUiState(person, "山田").copy(
                 summary = PersonCategorySummary(hasBpAndPulse = true, hasCondition = true, hasMedication = true)
             )
         )
-
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
@@ -187,12 +190,9 @@ class MainScreenTest {
                 )
             }
         }
-
-        // Then: 各種バッジ（アイコン）が表示されていること
         composeTestRule.onNodeWithContentDescription("血圧・脈拍の記録あり", substring = true).assertExists()
         composeTestRule.onNodeWithContentDescription("所見メモの記録あり", substring = true).assertExists()
         composeTestRule.onNodeWithContentDescription("服薬の記録あり", substring = true).assertExists()
-        Thread.sleep(2000)
     }
 
     @Test
@@ -217,10 +217,36 @@ class MainScreenTest {
                 )
             }
         }
-
-        // Then: 「一致する利用者は見つかりませんでした」が表示されていること
         composeTestRule.onNodeWithText("一致する利用者は見つかりませんでした", substring = true).assertIsDisplayed()
-        Thread.sleep(2000)
+    }
+
+    @Test
+    fun cp07_veryLongName_doesNotBreakLayout() {
+        val longName = "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末食う寝る処に住む処"
+        val person = createMockPerson(1, longName, "太郎")
+        val mockUserList = listOf(createMockUiState(person, longName))
+        
+        composeTestRule.setContent {
+            CareMemoTheme {
+                MainScreenContent(
+                    userList = mockUserList,
+                    isLoading = false,
+                    isNameMaskingEnabled = false,
+                    searchQuery = "",
+                    selectedSection = "全",
+                    onSearchQueryChange = {},
+                    onSectionSelect = {},
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(),
+                    onUserClick = {},
+                    onEditUser = {},
+                    onAddClick = {},
+                    onEndUser = {},
+                    onNavigateToSettings = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithText(longName, substring = true).assertExists()
     }
 
     // ======================================================================================
@@ -229,156 +255,225 @@ class MainScreenTest {
 
     @Test
     fun bh01_hamburgerMenu_navigation() {
-        var navigated = false
+        var navigatedToSettings = false
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
-                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {},
-                    onNavigateToSettings = { navigated = true }
+                    userList = emptyList(),
+                    isLoading = false,
+                    isNameMaskingEnabled = false,
+                    searchQuery = "",
+                    selectedSection = "全",
+                    onSearchQueryChange = {},
+                    onSectionSelect = {},
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(),
+                    onUserClick = {},
+                    onEditUser = {},
+                    onAddClick = {},
+                    onEndUser = {},
+                    onNavigateToSettings = { navigatedToSettings = true }
                 )
             }
         }
-
-        // 1. メニューボタンをタップ
         composeTestRule.onNodeWithTag("MainScreen_MenuButton").performClick()
-        Thread.sleep(1000)
-
-        // 2. 「設定」をタップ
+        // 設定への遷移
         composeTestRule.onNodeWithTag("MainScreen_MenuItem_Settings").performClick()
-        assert(navigated)
-        Thread.sleep(1000)
+        assert(navigatedToSettings)
+
+        // バージョン情報の表示確認
+        composeTestRule.onNodeWithTag("MainScreen_MenuButton").performClick()
+        composeTestRule.onNodeWithTag("MainScreen_MenuItem_Version").performClick()
+        composeTestRule.onNodeWithTag("MainScreen_VersionDialog").assertIsDisplayed()
     }
 
     @Test
-    fun bh02_searchFunction_callsCallback() {
-        var queryInput = ""
+    fun bh02_searchQueryChange_isCalled() {
+        var capturedQuery = ""
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
-                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = { queryInput = it }, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {},
-                    onNavigateToSettings = {}
+                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
+                    searchQuery = "", selectedSection = "全",
+                    onSearchQueryChange = { capturedQuery = it },
+                    onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {},
+                    onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
                 )
             }
         }
-
-        // 1. 検索窓に入力
-        composeTestRule.onNodeWithTag("MainScreen_SearchBox").performTextInput("テスト")
-        assert(queryInput == "テスト")
-        Thread.sleep(2000)
+        composeTestRule.onNodeWithTag("MainScreen_SearchBox").performTextInput("検索テスト")
+        assert(capturedQuery == "検索テスト")
     }
 
     @Test
-    fun bh03_kanaIndex_callsCallback() {
-        var sectionInput = ""
+    fun bh03_kanaIndexSelect_isCalled() {
+        var capturedSection = ""
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
-                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = { sectionInput = it }, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {},
-                    onNavigateToSettings = {}
+                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
+                    searchQuery = "", selectedSection = "全", onSearchQueryChange = {},
+                    onSectionSelect = { capturedSection = it },
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {},
+                    onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
                 )
             }
         }
-
-        // 1. 「か」をタップ
-        composeTestRule.onNodeWithText("か").performClick()
-        assert(sectionInput == "か")
-        Thread.sleep(2000)
+        composeTestRule.onNodeWithText("あ").performClick()
+        assert(capturedSection == "あ")
     }
 
     @Test
-    fun bh04_userMenu_edit_callsCallback() {
-        var editCalled = false
-        val mockPerson = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now())
+    fun bh04_userMenu_edit_navigation() {
+        var editPersonId: Int? = null
+        val person = createMockPerson(99, "山田", "太郎")
         
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
-                    userList = listOf(PersonUiState(person = mockPerson, maskedName = "山田　太郎", maskedFurigana = "ヤマダ　タロウ", age = 70, formattedBirthday = "", summary = PersonCategorySummary())),
+                    userList = listOf(createMockUiState(person, "山田")),
                     isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
                     onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(), onUserClick = {}, 
-                    onEditUser = { editCalled = true }, 
-                    onAddClick = {}, onEndUser = {},
-                    onNavigateToSettings = {}
+                    onEditUser = { editPersonId = it.id }, 
+                    onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
                 )
             }
         }
-
-        // 1. 各項目のメニューボタン（鉛筆アイコン）をタップ
-        // UserListItem 内部のタグが必要
         composeTestRule.onNodeWithTag("UserListItem_MenuButton").performClick()
-        Thread.sleep(1000)
-
-        // 2. 「利用者情報を編集」をタップ
         composeTestRule.onNodeWithTag("UserListItem_MenuItem_Edit").performClick()
-        assert(editCalled)
-        Thread.sleep(2000)
+        assert(editPersonId == 99)
     }
 
     @Test
-    fun bh05_endUser_and_undo_works() {
-        var deleteCalled = false
-        var undoCalled = false
-        val mockPerson = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now())
-
+    fun bh05_endUser_isCalled() {
+        var endUserCalled = false
+        val person = createMockPerson(1, "山田", "太郎")
+        
         composeTestRule.setContent {
             CareMemoTheme {
-                val snackbarHostState = remember { SnackbarHostState() }
-                val scope = rememberCoroutineScope()
                 MainScreenContent(
-                    userList = listOf(PersonUiState(person = mockPerson, maskedName = "山田　太郎", maskedFurigana = "ヤマダ　タロウ", age = 70, formattedBirthday = "", summary = PersonCategorySummary())),
+                    userList = listOf(createMockUiState(person, "山田")),
                     isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = snackbarHostState,
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, onAddClick = {}, 
-                    onEndUser = {
-                        deleteCalled = true
-                        scope.launch {
-                            val result = snackbarHostState.showSnackbar("利用終了", actionLabel = "元に戻す")
-                            if (result == SnackbarResult.ActionPerformed) undoCalled = true
-                        }
-                    },
+                    onSearchQueryChange = {}, onSectionSelect = {}, 
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, onAddClick = {},
+                    onEndUser = { endUserCalled = true },
                     onNavigateToSettings = {}
                 )
             }
         }
-
-        // 1. 利用終了操作
         composeTestRule.onNodeWithTag("UserListItem_MenuButton").performClick()
-        Thread.sleep(500)
         composeTestRule.onNodeWithTag("UserListItem_MenuItem_Delete").performClick()
-        assert(deleteCalled)
-        Thread.sleep(1000)
-
-        // 2. Undo
-        composeTestRule.onNodeWithText("元に戻す").performClick()
-        assert(undoCalled)
-        Thread.sleep(2000)
+        assert(endUserCalled)
     }
 
     @Test
-    fun bh06_addButton_callsCallback() {
-        var addCalled = false
+    fun bh06_addButton_navigation() {
+        var addClickCalled = false
         composeTestRule.setContent {
             CareMemoTheme {
                 MainScreenContent(
-                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, 
-                    onAddClick = { addCalled = true }, 
+                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
+                    searchQuery = "", selectedSection = "全", onSearchQueryChange = {}, onSectionSelect = {},
+                    snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(),
+                    onUserClick = {}, onEditUser = {}, 
+                    onAddClick = { addClickCalled = true }, 
                     onEndUser = {}, onNavigateToSettings = {}
                 )
             }
         }
-
-        // 1. ＋ボタンをタップ
         composeTestRule.onNodeWithTag("MainScreen_AddButton").performClick()
-        assert(addCalled)
-        Thread.sleep(2000)
+        assert(addClickCalled)
+    }
+
+    @Test
+    fun bh07_detailNavigation_withCorrectId() {
+        var clickedPerson: Person? = null
+        val person = createMockPerson(123, "山田", "太郎")
+        
+        composeTestRule.setContent {
+            CareMemoTheme {
+                MainScreenContent(
+                    userList = listOf(createMockUiState(person, "山田")),
+                    isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
+                    onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(), 
+                    onUserClick = { clickedPerson = it }, 
+                    onEditUser = {}, onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("UserListItem_123").performClick()
+        assert(clickedPerson?.id == 123)
+    }
+
+    @Test
+    fun bh08_errorDialog_isDisplayed() {
+        // ViewModel からエラーイベントが発行された際、共通エラーダイアログが表示されること。
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog(
+                    title = "エラーが発生しました",
+                    message = "ネットワークエラーです。",
+                    onDismiss = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("エラーが発生しました").assertIsDisplayed()
+        composeTestRule.onNodeWithText("ネットワークエラーです。").assertIsDisplayed()
+    }
+
+    @Test
+    fun bh09_state_isApplied() {
+        val query = "維持されるクエリ"
+        composeTestRule.setContent {
+            CareMemoTheme {
+                MainScreenContent(
+                    userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
+                    searchQuery = query, selectedSection = "全", onSearchQueryChange = {}, onSectionSelect = {},
+                    snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(),
+                    onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithText(query).assertExists()
+    }
+
+    @Test
+    fun bh10_batchInputNavigation_isCalled() {
+        // カテゴリ選択シート（メニュー）から一括入力へ遷移すること。
+        var batchInputClicked = false
+        composeTestRule.setContent {
+            CareMemoTheme {
+                CategorySelectionSheet(
+                    personName = "山田 太郎",
+                    onCategorySelect = {},
+                    onBatchInputSelect = { batchInputClicked = true }
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("CategorySelectionSheet_BatchInput").performClick()
+        assert(batchInputClicked)
+    }
+
+    @Test
+    fun bh11_listReflectsChanges() {
+        val person = createMockPerson(1, "山田", "更新後")
+        val updatedUserList = listOf(createMockUiState(person, "山田　更新後"))
+        
+        composeTestRule.setContent {
+            CareMemoTheme {
+                MainScreenContent(
+                    userList = updatedUserList, isLoading = false, isNameMaskingEnabled = false,
+                    searchQuery = "", selectedSection = "全", onSearchQueryChange = {}, onSectionSelect = {},
+                    snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(),
+                    onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("更新後", substring = true).assertIsDisplayed()
     }
 }

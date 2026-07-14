@@ -376,7 +376,7 @@ private fun ConditionRecordDisplayCard(
                 }
             }
             if (photos.isEmpty()) {
-                Text("写真はありません", color = MaterialTheme.colorScheme.outline)
+                Text("写真がありません", color = MaterialTheme.colorScheme.outline)
             } else {
                 PhotoGrid(
                     photos = photos,
@@ -508,7 +508,7 @@ private fun ConditionRecordEditForm(
                 )
             }
             if (photos.isEmpty()) {
-                Text("写真はありません", color = MaterialTheme.colorScheme.outline)
+                Text("写真がありません", color = MaterialTheme.colorScheme.outline)
             } else {
                 PhotoGrid(photos = photos, isEditable = true, onPhotoClick = {}, onDeletePhoto = onDeletePhoto)
             }

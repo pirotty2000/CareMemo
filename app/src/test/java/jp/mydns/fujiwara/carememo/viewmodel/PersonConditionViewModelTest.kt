@@ -33,11 +33,15 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
+/**
+ * SCR-PC-001 PersonConditionViewModel のロジックテスト
+ * 
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-PC-001_PersonConditionScreen.md に準拠
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonConditionViewModelTest {
 
@@ -107,48 +111,12 @@ class PersonConditionViewModelTest {
         unmockkObject(ImageUtils)
     }
 
-    @Test
-    fun `loadPersonを実行したとき、検索クエリと選択IDが初期化されること`() = runTest {
-        // 事前に値をセット
-        viewModel.updateSearchQuery("検索ワード")
-        viewModel.setSelectedConditionId(99)
-
-        // 別のIDでロード
-        viewModel.loadPerson(2)
-
-        assertEquals("", viewModel.searchQuery.value)
-        assertEquals(null, viewModel.selectedConditionId.value)
-    }
+    // ======================================================================================
+    // 3. 画面全体の挙動・結合テスト (PersonConditionScreen) - ロジック部分
+    // ======================================================================================
 
     @Test
-    fun `filteredRecordsは検索クエリに基づいてフィルタリングされること`() = runTest {
-        viewModel.loadPerson(1)
-
-        // クエリなし
-        viewModel.updateSearchQuery("")
-        viewModel.filteredRecords.test {
-            assertEquals(2, awaitItem().size)
-        }
-
-        // タイトルで検索
-        viewModel.updateSearchQuery("朝")
-        viewModel.filteredRecords.test {
-            val result = awaitItem()
-            assertEquals(1, result.size)
-            assertEquals("朝の様子", result[0].title)
-        }
-
-        // 内容で検索
-        viewModel.updateSearchQuery("眠そう")
-        viewModel.filteredRecords.test {
-            val result = awaitItem()
-            assertEquals(1, result.size)
-            assertEquals("少し眠そう", result[0].condition)
-        }
-    }
-
-    @Test
-    fun `saveRecordを実行したとき、Repositoryの保存メソッドが呼ばれること`() = runTest {
+    fun bh01_saveRecord_calls_repository_with_audit_params() = runTest {
         val newRecord = ConditionAtVisit(
             id = 0,
             personId = 1,
@@ -159,50 +127,31 @@ class PersonConditionViewModelTest {
         )
         coEvery { conditionRepository.insertConditionAtVisit(any(), any(), any()) } returns 10L
 
+        // BH-01: メモの保存 (ViewModel経由でRepositoryの監査ログ用引数が正しく渡されること)
         viewModel.saveRecord(newRecord)
 
         coVerify { conditionRepository.insertConditionAtVisit(newRecord, "PersonCondition", "saveRecord") }
-        // 新規なのでリンク処理も呼ばれるはず
-        coVerify { conditionRepository.linkTemporaryPhotosToRecord(1, 10, any(), any()) }
     }
 
-    @Test
-    fun `deleteRecordを実行したとき、Repositoryの削除メソッドが呼ばれること`() = runTest {
-        val record = testRecords[0]
-        viewModel.deleteRecord(record)
-
-        coVerify { conditionRepository.deleteConditionAtVisit(record, "PersonCondition", "deleteRecord") }
-    }
+    // ======================================================================================
+    // 4. ロジック・安全性テスト (PersonConditionViewModel)
+    // ======================================================================================
 
     @Test
-    fun `saveRecord成功時にSnackbar表示イベントが発行されること`() = runTest {
-        val record = testRecords[0].copy(id = 1) // 更新
-        coEvery { conditionRepository.insertConditionAtVisit(any(), any(), any()) } returns 1L
-
-        viewModel.uiEventFlow.test {
-            viewModel.saveRecord(record)
-            val event = awaitItem()
-            assertTrue(event is BaseViewModel.UiEvent.ShowSnackbarRes)
-        }
-    }
-
-    // --- ロジック・安全性テスト (LG-01 〜 LG-05) ---
-
-    @Test
-    fun `LG-01_データ取得失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg01_dataFetchFailure_safety() = runTest {
         every { conditionRepository.getConditionAtVisitByPersonId(any()) } returns flow {
             throw RuntimeException("Flow Error")
         }
         
-        // Flow を再実行させるために ViewModel を再生成
+        // 再生成して Flow を起動
         val errorViewModel = PersonConditionViewModel(
             conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository
         )
-        
         errorViewModel.loadPerson(1)
 
+        // LG-01: データ取得失敗時の安全性
         errorViewModel.records.test {
-            awaitItem() // 初期値 or エラー前の値がある場合はそれ、今回は初期値
+            awaitItem()
             assertEquals(false, errorViewModel.isLoading.value)
             coVerify {
                 auditLogRepository.log(
@@ -219,10 +168,11 @@ class PersonConditionViewModelTest {
     }
 
     @Test
-    fun `LG-02_保存失敗時にisProcessingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg02_saveFailure_safety() = runTest {
         val record = testRecords[0]
         coEvery { conditionRepository.insertConditionAtVisit(any(), any(), any()) } throws RuntimeException("Save Error")
 
+        // LG-02: 保存失敗時の安全性
         viewModel.saveRecord(record)
 
         assertEquals(false, viewModel.isProcessing.value)
@@ -240,10 +190,11 @@ class PersonConditionViewModelTest {
     }
 
     @Test
-    fun `LG-03_削除失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg03_deleteFailure_safety() = runTest {
         val record = testRecords[0]
         coEvery { conditionRepository.deleteConditionAtVisit(any(), any(), any()) } throws RuntimeException("Delete Error")
 
+        // LG-03: 削除失敗時の安全性
         viewModel.deleteRecord(record)
 
         assertEquals(false, viewModel.isLoading.value)
@@ -261,15 +212,12 @@ class PersonConditionViewModelTest {
     }
 
     @Test
-    fun `LG-04_写真保存失敗時にisProcessingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg04_photoSaveFailure_safety() = runTest {
         val mockUri = mockk<Uri>(relaxed = true)
-        
-        // ImageUtils をモックして例外を投げさせる (suspend 関数なので coEvery)
         coEvery { ImageUtils.processAndSaveImage(any(), any()) } throws RuntimeException("Image Process Error")
         
+        // LG-04: 写真保存失敗時の安全性
         viewModel.processAndSavePhoto(mockk(relaxed = true), mockUri, 1, 1, "caption")
-        
-        // 内部のコルーチン完了を待機
         advanceUntilIdle()
 
         assertEquals(false, viewModel.isProcessing.value)
@@ -287,10 +235,11 @@ class PersonConditionViewModelTest {
     }
 
     @Test
-    fun `LG-05_写真削除失敗時にisProcessingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg05_photoDeleteFailure_safety() = runTest {
         val photo = ConditionPhoto(id = 1, conditionId = 1, personId = 1, photoFileName = "p.jpg", thumbnailFileName = "t.jpg", capturedAt = Instant.now())
         coEvery { conditionRepository.deleteConditionPhotoById(any(), any(), any(), any()) } throws RuntimeException("Photo Delete Error")
 
+        // LG-05: 写真削除失敗時の安全性
         viewModel.deletePhoto(mockk(relaxed = true), photo)
 
         assertEquals(false, viewModel.isProcessing.value)

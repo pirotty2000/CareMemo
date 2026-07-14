@@ -31,6 +31,8 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
 
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import androidx.compose.ui.platform.testTag
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
@@ -80,6 +83,17 @@ fun ConditionPhotoPreviewScreen(
                         isNameMaskingEnabled = isNameMaskingEnabled,
                         defaultTitle = "写真の確認"
                     )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("PhotoPreview_BackButton")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "戻る"
+                        )
+                    }
                 }
             )
         }
@@ -97,7 +111,7 @@ fun ConditionPhotoPreviewScreen(
                     .diskCachePolicy(CachePolicy.DISABLED)
                     .build(),
                 contentDescription = "プレビュー",
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().testTag("PhotoPreview_Image"),
                 contentScale = ContentScale.Fit
             )
             
@@ -106,13 +120,16 @@ fun ConditionPhotoPreviewScreen(
                 onValueChange = { caption = it },
                 type = AppTextFieldType.TEXT,
                 label = { Text("キャプション") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("PhotoPreview_CaptionInput"),
                 singleLine = true,
                 enabled = !isProcessing
             )
 
             if (isProcessing) {
-                LoadingScreen(message = "画像を保存用に最適化しています...")
+                LoadingScreen(
+                    message = "画像を保存用に最適化しています...",
+                    modifier = Modifier.testTag("PhotoPreview_Loading")
+                )
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -123,7 +140,7 @@ fun ConditionPhotoPreviewScreen(
                             conditionViewModel.deleteTempFile(context, uri)
                             onBack()
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton")
                     ) {
                         Text("キャンセル")
                     }
@@ -132,7 +149,7 @@ fun ConditionPhotoPreviewScreen(
                             conditionViewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
                             onSaved()
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
                     ) {
                         Text("保存する")
                     }

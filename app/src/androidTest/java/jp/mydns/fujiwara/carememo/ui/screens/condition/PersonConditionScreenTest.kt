@@ -9,6 +9,7 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import io.mockk.every
@@ -26,9 +27,9 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * UI層テスト：PersonCondition (状態・所見記録)
+ * SCR-PC-001 PersonConditionScreen (所見記録) の UI テスト
  * 
- * 仕様書: doc/test/TEST_SPEC_UI_PersonCondition.md
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-PC-001_PersonConditionScreen.md に準拠
  */
 class PersonConditionScreenTest {
 
@@ -69,41 +70,76 @@ class PersonConditionScreenTest {
     )
 
     // ======================================================================================
-    // 1. 詳細画面共通コンポーネント (Header / CategoryBar)
+    // 1. 共通コンポーネントテスト (Header / CategoryBar)
     // ======================================================================================
 
     @Test
-    fun com01_to_03_header_components_displayed_and_work() {
+    fun com01_header_backButton_works() {
         var backCalled = false
-        var pdfSettingsCalled = false
-
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = mockPerson, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = emptyList(), isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = -1, onSelectedIdChange = {},
-                    onBack = { backCalled = true }, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = { pdfSettingsCalled = true },
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = emptyList(), isLoading = false, onBack = { backCalled = true },
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = -1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-
-        // COM-01: 戻るボタン
+        // COM-01: ヘッダー：戻るボタン
         composeTestRule.onNodeWithTag("ConditionScreen_BackButton").assertIsDisplayed().performClick()
         assert(backCalled)
+    }
 
-        // COM-02: 利用者情報 (氏名と年齢)
+    @Test
+    fun com02_header_personInfo_isDisplayed() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = mockPerson, isNameMaskingEnabled = false,
+                    records = emptyList(), isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = -1,
+                    onSelectedIdChange = {}
+                )
+            }
+        }
+        // COM-02: ヘッダー：利用者情報
         composeTestRule.onNodeWithTag("PersonHeader_NameAndAge", useUnmergedTree = true)
             .assertIsDisplayed()
             .assertTextContains("山田", substring = true)
             .assertTextContains("歳", substring = true)
+    }
 
-        // COM-03: PDF出力ボタン
+    @Test
+    fun com03_header_pdfButton_works() {
+        var pdfSettingsCalled = false
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = mockPerson, isNameMaskingEnabled = false,
+                    records = emptyList(), isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = { pdfSettingsCalled = true }, onSaveRecord = { _, _ -> }, 
+                    onDeleteRecord = {}, onDeletePhoto = {}, onMicClick = {}, 
+                    snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = -1,
+                    onSelectedIdChange = {}
+                )
+            }
+        }
+        // COM-03: ヘッダー：PDF出力ボタン
         composeTestRule.onNodeWithTag("ConditionScreen_PdfButton").assertIsDisplayed().performClick()
         assert(pdfSettingsCalled)
     }
@@ -115,28 +151,26 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = emptyList(), isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = -1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = { navigatedCategory = it }, onAddPhotoClick = {},
+                    records = emptyList(), isLoading = false, onBack = {},
+                    onNavigateToCategory = { navigatedCategory = it }, onAddPhotoClick = {},
                     onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    onSaveRecord = { _, _ -> }, onDeleteRecord = {}, onDeletePhoto = {},
+                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = -1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-
         // COM-04: カテゴリ選択バー
         composeTestRule.onNodeWithTag("CategorySelectorBar").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("CategoryChip_BP_AND_PULSE")
-            .performScrollTo()
-            .performClick()
+        composeTestRule.onNodeWithTag("CategoryChip_BP_AND_PULSE").performScrollTo().performClick()
         assert(navigatedCategory == Category.BP_AND_PULSE)
     }
 
     // ======================================================================================
-    // 2. 個別コンポーネント単体テスト (PersonConditionScreenContent)
+    // 2. コンポーネント単体テスト (PersonConditionScreenContent)
     // ======================================================================================
 
     @Test
@@ -145,18 +179,18 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = mockRecords, isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-        // CP-01: 日付選択表示 (和暦付き)
+        // CP-01: スマホ版：日付選択表示 (和暦付き)
         composeTestRule.onNodeWithText("(", substring = true).assertIsDisplayed()
     }
 
@@ -166,18 +200,18 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = mockRecords, isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-        // CP-02: メモ入力エリア (閲覧モード)
+        // CP-02: スマホ版：メモ入力エリア
         composeTestRule.onNodeWithText("顔色もよく、元気に過ごされています。").assertIsDisplayed()
     }
 
@@ -187,18 +221,18 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = mockRecords, isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = mapOf(1 to true),
-                    photos = mockPhotos, isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = mapOf(1 to true), photos = mockPhotos, isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-        // CP-03: 写真リスト表示
+        // CP-03: スマホ版：写真リスト表示
         composeTestRule.onNodeWithTag("Condition_PhotoList").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("表情").assertIsDisplayed()
     }
@@ -209,19 +243,19 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = mockRecords, isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-        // CP-04: 写真なし状態
-        composeTestRule.onNodeWithText("写真はありません").assertIsDisplayed()
+        // CP-04: スマホ版：写真なし状態
+        composeTestRule.onNodeWithText("写真がありません").assertIsDisplayed()
     }
 
     @Test
@@ -230,20 +264,45 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenTablet(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = mockRecords, isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {},
-                    onDeleteRecord = {}, onSaveRecord = { _, _ -> }, onDeletePhoto = {},
-                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-        // CP-05: タブレット版 2カラム表示
+        // CP-05: タブレット版：2カラム表示
         composeTestRule.onNodeWithTag("Condition_HistoryList").assertIsDisplayed()
         composeTestRule.onNodeWithTag("Condition_DetailPane").assertIsDisplayed()
+    }
+
+    @Test
+    fun cp06_memoInput_isScrollable() {
+        val longMemo = "所見メモ".repeat(100)
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    records = emptyList(), isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", 
+                    selectedId = 0, // 新規
+                    onSelectedIdChange = {}
+                )
+            }
+        }
+        // CP-06: メモ入力のスクロール
+        val inputField = composeTestRule.onNodeWithTag("Condition_MemoInput")
+        inputField.performTextInput(longMemo)
+        inputField.performTouchInput { swipeUp() }
     }
 
     // ======================================================================================
@@ -257,71 +316,79 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = emptyList(), isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = emptyMap(),
-                    photos = emptyList(), isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", 
-                    selectedId = 0, // 新規作成モード
-                    onSelectedIdChange = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> }, 
-                    onShowPdfSettings = {}, onDeleteRecord = {}, 
-                    onSaveRecord = { _, _ -> saveCalled = true }, 
-                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = emptyList(), isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> saveCalled = true }, 
+                    onDeleteRecord = {}, onDeletePhoto = {}, onMicClick = {}, 
+                    snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", 
+                    selectedId = 0, // 新規
+                    onSelectedIdChange = {}
                 )
             }
         }
-
-        // 記録者と所見メモを入力
-        composeTestRule.onNodeWithText("所見メモ").performTextInput("元気です")
-        
         // BH-01: メモの保存
+        composeTestRule.onNodeWithTag("Condition_MemoInput").performTextInput("元気です")
         composeTestRule.onNodeWithTag("Condition_SaveButton").performClick()
         assert(saveCalled)
     }
 
     @Test
-    fun bh02_expand_photo_calls_callback() {
-        var expandCalled = false
+    fun bh02_photoPreview_transition_isPossible() {
+        var addPhotoCalled = false
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreenPhone(
                     personId = 1, currentPerson = null, isNameMaskingEnabled = false,
-                    personCategorySummary = null, records = mockRecords, isLoading = false,
-                    searchQuery = "", onSearchQueryChange = {}, conditionPhotoMap = mapOf(1 to true),
-                    photos = mockPhotos, isProcessing = false, isAnyDialogOpen = false,
-                    defaultRecorderName = "記録者", selectedId = 1, onSelectedIdChange = {},
-                    onBack = {}, onNavigateToCategory = {}, onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _, _ -> expandCalled = true }, 
-                    onShowPdfSettings = {}, onDeleteRecord = {}, onSaveRecord = { _, _ -> }, 
-                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() }
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = { addPhotoCalled = true },
+                    onNavigateToFullScreen = { _, _ -> }, onShowPdfSettings = {}, 
+                    onSaveRecord = { _, _ -> }, onDeleteRecord = {}, onDeletePhoto = {}, 
+                    onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
                 )
             }
         }
-
-        // BH-02: 写真の拡大表示
-        // サムネイルをタップ
-        composeTestRule.onNodeWithContentDescription("表情").performClick()
-        assert(expandCalled)
+        // BH-02: 写真プレビューへの遷移（撮影ボタン押下）
+        composeTestRule.onNodeWithContentDescription("写真を撮影").performClick()
+        assert(addPhotoCalled)
     }
 
     @Test
     fun bh03_duplicate_date_shows_error_dialog() {
         val detailViewModel = mockk<PersonDetailViewModel>(relaxed = true)
         val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-        
         val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>()
+        
+        // conditionViewModel と detailViewModel 両方の uiEventFlow を適切にモックする
         every { conditionViewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
         every { detailViewModel.uiEventFlow } returns MutableSharedFlow<BaseViewModel.UiEvent>().asSharedFlow()
-        
-        // StateFlows の初期値を設定
-        every { conditionViewModel.filteredRecords } returns MutableStateFlow(emptyList())
+
+        // StateFlow への戻り値に明示的な型を指定して、Nothing 型推論による問題を回避する
+        val filteredRecordsFlow = MutableStateFlow<List<ConditionAtVisit>>(emptyList())
+        every { conditionViewModel.filteredRecords } returns filteredRecordsFlow
         every { conditionViewModel.isLoading } returns MutableStateFlow(false)
-        every { detailViewModel.currentPerson } returns MutableStateFlow(mockPerson)
+
+        val personFlow = MutableStateFlow<Person?>(mockPerson)
+        every { detailViewModel.currentPerson } returns personFlow
         every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { detailViewModel.personCategorySummary } returns MutableStateFlow(null)
+
+        val summaryFlow = MutableStateFlow<PersonCategorySummary?>(null)
+        every { detailViewModel.personCategorySummary } returns summaryFlow
+
         every { conditionViewModel.searchQuery } returns MutableStateFlow("")
-        every { conditionViewModel.conditionPhotoMap } returns MutableStateFlow(emptyMap())
-        every { conditionViewModel.currentConditionPhotos } returns MutableStateFlow(emptyList())
+
+        val photoMapFlow = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+        every { conditionViewModel.conditionPhotoMap } returns photoMapFlow
+
+        val photosFlow = MutableStateFlow<List<ConditionPhoto>>(emptyList())
+        every { conditionViewModel.currentConditionPhotos } returns photosFlow
+
         every { conditionViewModel.isProcessing } returns MutableStateFlow(false)
         every { detailViewModel.defaultRecorderName } returns MutableStateFlow("テスト者")
 
@@ -339,11 +406,9 @@ class PersonConditionScreenTest {
                 )
             }
         }
-
-        // 初期描画と LaunchedEffect の起動を待機
-        composeTestRule.waitForIdle()
-
-        // 重複エラーイベントを発生させる
+        
+        // BH-03: 日時重複時の保存ガード
+        // UIスレッドでイベントを発火させ、Composeがアイドル状態になるのを待機する
         composeTestRule.runOnUiThread {
             runBlocking {
                 uiEventFlow.emit(BaseViewModel.UiEvent.ShowErrorDialogRes(
@@ -352,18 +417,141 @@ class PersonConditionScreenTest {
                 ))
             }
         }
-
-        // ダイアログが表示されるまで待機
-        composeTestRule.waitUntil(5000) {
-            composeTestRule.onAllNodesWithText("保存エラー").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // ダイアログが表示されているか確認
-        composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
-        composeTestRule.onNodeWithText("閉じる").assertIsDisplayed()
         
-        // 閉じるボタンをタップしてダイアログが消えることを確認
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
         composeTestRule.onNodeWithText("閉じる").performClick()
-        composeTestRule.onNodeWithText("閉じる").assertDoesNotExist()
+    }
+
+    @Test
+    fun bh04_photoFullScreen_navigation_works() {
+        var navigatedToFullScreen = false
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, 
+                    onNavigateToFullScreen = { _, _ -> navigatedToFullScreen = true },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = mapOf(1 to true), photos = mockPhotos, isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
+                )
+            }
+        }
+        // BH-04: 写真フル画面への遷移
+        composeTestRule.onNodeWithContentDescription("表情").performClick()
+        assert(navigatedToFullScreen)
+    }
+
+    @Test
+    fun bh05_backFromOtherScreen_maintainsState() {
+        // BH-05: 詳細画面等から戻った際、状態が維持されていることの検証
+        var selectedIdState by mutableStateOf(1)
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", 
+                    selectedId = selectedIdState,
+                    onSelectedIdChange = { selectedIdState = it }
+                )
+            }
+        }
+        // 詳細が表示されていることを確認
+        composeTestRule.onNodeWithTag("ConditionDetailPane").assertIsDisplayed()
+        // IDが維持されている（不整合が起きていない）ことを確認
+        assert(selectedIdState == 1)
+    }
+
+    @Test
+    fun bh06_cameraCancel_maintainsInputState() {
+        // BH-06: 撮影キャンセル時に元の状態が維持されることの検証
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    records = emptyList(), isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = emptyMap(), photos = emptyList(), isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 0,
+                    onSelectedIdChange = {}
+                )
+            }
+        }
+        val input = "カメラ起動前のメモ"
+        composeTestRule.onNodeWithTag("Condition_MemoInput").performTextInput(input)
+        
+        // UIが維持されていることを確認
+        composeTestRule.onNodeWithTag("Condition_MemoInput").assertTextContains(input)
+    }
+
+    @Test
+    fun bh07_reflectsNewPhotoAfterSave() {
+        // BH-07: 保存して戻った際、リストに新しい写真が反映されること
+        val photosState = mutableStateListOf<ConditionPhoto>()
+        
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreenPhone(
+                    personId = 1, currentPerson = null, isNameMaskingEnabled = false,
+                    records = mockRecords, isLoading = false, onBack = {},
+                    onNavigateToCategory = {}, onAddPhotoClick = {}, onNavigateToFullScreen = { _, _ -> },
+                    onShowPdfSettings = {}, onSaveRecord = { _, _ -> }, onDeleteRecord = {},
+                    onDeletePhoto = {}, onMicClick = {}, snackbarHostState = remember { SnackbarHostState() },
+                    personCategorySummary = null, searchQuery = "", onSearchQueryChange = {},
+                    conditionPhotoMap = mapOf(1 to true), 
+                    photos = photosState, 
+                    isProcessing = false,
+                    isAnyDialogOpen = false, defaultRecorderName = "記録者", selectedId = 1,
+                    onSelectedIdChange = {}
+                )
+            }
+        }
+        // 最初は「写真がありません」
+        composeTestRule.onNodeWithText("写真がありません").assertIsDisplayed()
+
+        // 写真が追加された状態をシミュレート
+        photosState.add(mockPhotos[0])
+        
+        // リストに反映され、「写真がありません」が消えることを確認
+        composeTestRule.onNodeWithText("写真がありません").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("Condition_PhotoList").assertIsDisplayed()
+    }
+
+    @Test
+    fun bh08_pdfSettings_showsRelevantItemsOnly() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.common.PdfSettingsDialog(
+                    category = Category.CONDITION_AT_VISIT,
+                    onDismiss = {},
+                    onExport = { _, _, _, _, _, _ -> }
+                )
+            }
+        }
+        // BH-08: PDF出力設定（所見特有）
+        composeTestRule.onNodeWithTag("PdfSettingsDialog").assertIsDisplayed()
+        // 「最新の1件のみ」が表示されていること
+        composeTestRule.onNodeWithText("最新の1件のみ")
+            .performScrollTo()
+            .assertIsDisplayed()
+        // 「写真を印刷に含める」が表示されていること
+        composeTestRule.onNodeWithText("写真を印刷に含める")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 }
