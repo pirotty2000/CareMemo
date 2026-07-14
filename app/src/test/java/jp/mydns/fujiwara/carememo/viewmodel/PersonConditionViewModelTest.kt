@@ -133,6 +133,26 @@ class PersonConditionViewModelTest {
         coVerify { conditionRepository.insertConditionAtVisit(newRecord, "PersonCondition", "saveRecord") }
     }
 
+    @Test
+    fun bh03_saveRecord_fails_when_duplicate_datetime() = runTest {
+        val recordTime = Instant.now()
+        val record = ConditionAtVisit(id = 0, personId = 1, title = "重複", condition = "内容", author = "A", recordTime = recordTime)
+        
+        // 同一日時の既存データを模倣
+        coEvery { conditionRepository.findConditionAtTime(1, recordTime) } returns testRecords[0]
+
+        // BH-03: 日時重複時の保存ガード
+        viewModel.uiEventFlow.test {
+            viewModel.saveRecord(record)
+            val event = awaitItem()
+            // saveRecord は ShowErrorDialogRes を発行する
+            assert(event is BaseViewModel.UiEvent.ShowErrorDialogRes)
+        }
+
+        // Repositoryの保存メソッドが呼ばれないこと
+        coVerify(exactly = 0) { conditionRepository.insertConditionAtVisit(any(), any(), any()) }
+    }
+
     // ======================================================================================
     // 4. ロジック・安全性テスト (PersonConditionViewModel)
     // ======================================================================================
@@ -253,6 +273,67 @@ class PersonConditionViewModelTest {
                 details = match { it?.contains("Photo Delete Error") == true },
                 resultType = "OTHER_ERROR"
             )
+        }
+    }
+
+    @Test
+    fun lg06_notifyPhotoError_sets_errorMessage_and_logs() = runTest {
+        // LG-06: 撮影準備失敗時の安全性
+        viewModel.notifyPhotoError("Test Preparation Error")
+        
+        advanceUntilIdle() // notifyPhotoError 内の launch を完了させる
+
+        viewModel.errorMessage.test {
+            assertEquals("Test Preparation Error", awaitItem())
+        }
+        
+        coVerify {
+            auditLogRepository.log(
+                featureName = "PersonCondition",
+                operation = any(),
+                tableName = "condition_db",
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it?.contains("Test Preparation Error") == true },
+                resultType = "OTHER_ERROR"
+            )
+        }
+    }
+
+    // ======================================================================================
+    // 5. ViewModel 内部ロジックテスト (PersonConditionViewModel)
+    // ======================================================================================
+
+    @Test
+    fun vml01_search_filtering() = runTest {
+        viewModel.loadPerson(1)
+        advanceUntilIdle()
+
+        viewModel.filteredRecords.test {
+            // 初期状態
+            assertEquals(2, awaitItem().size)
+
+            // 「朝」でフィルタ
+            viewModel.updateSearchQuery("朝")
+            val filtered = awaitItem()
+            assertEquals(1, filtered.size)
+            assertEquals("朝の様子", filtered[0].title)
+
+            // ヒットしないクエリ
+            viewModel.updateSearchQuery("夜")
+            assertEquals(0, awaitItem().size)
+        }
+    }
+
+    @Test
+    fun vml02_automatic_photo_loading() = runTest {
+        val photos = listOf(mockk<ConditionPhoto>())
+        every { conditionRepository.getConditionPhotosByConditionId(100) } returns flowOf(photos)
+
+        viewModel.setSelectedConditionId(100)
+        
+        viewModel.currentConditionPhotos.test {
+            assertEquals(photos, awaitItem())
         }
     }
 }

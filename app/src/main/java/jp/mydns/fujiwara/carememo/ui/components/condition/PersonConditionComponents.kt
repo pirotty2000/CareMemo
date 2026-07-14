@@ -335,7 +335,7 @@ private fun ConditionRecordDisplayCard(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     memo?.let { m ->
-                        Text(text = DateTimeUtils.formatTime(m.recordTime),
+                        Text(text = DateTimeUtils.formatRecordTime(m.recordTime),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))

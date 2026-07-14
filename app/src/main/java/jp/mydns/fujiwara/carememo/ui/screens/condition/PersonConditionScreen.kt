@@ -35,6 +35,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  */
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
@@ -158,7 +159,14 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         if (success && tempPhotoUri != null) {
+            Log.d("PersonConditionScreen", "Camera capture success. URI: $tempPhotoUri")
             onNavigateToPhotoPreview(tempPhotoUri!!, personId, selectedId)
+        } else {
+            Log.w("PersonConditionScreen", "Camera capture failed or cancelled. success=$success, uri=$tempPhotoUri")
+            if (!success && tempPhotoUri != null) {
+                // 撮影失敗時のみ通知（キャンセル時は success=false だが通常は何もしない）
+                // ただし、ユーザーが「撮ったつもり」なのに失敗しているケースを想定し、ログは残す
+            }
         }
     }
 
@@ -211,11 +219,17 @@ fun PersonConditionScreen(
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onAddPhotoClick = {
-                val uri = ImageUtils.getTempPhotoUri(context)
-                tempPhotoUri = uri
-                // カメラ起動前に、戻ってきた際のロックを一時的にスキップする設定を行う
-                viewModel.setLockBypassEnabled(true)
-                cameraLauncher.launch(uri)
+                try {
+                    val uri = ImageUtils.getTempPhotoUri(context)
+                    tempPhotoUri = uri
+                    Log.d("PersonConditionScreen", "Temp URI generated: $uri")
+                    // カメラ起動前に、戻ってきた際のロックを一時的にスキップする設定を行う
+                    viewModel.setLockBypassEnabled(true)
+                    cameraLauncher.launch(uri)
+                } catch (e: Exception) {
+                    Log.e("PersonConditionScreen", "Failed to generate temp URI", e)
+                    conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
+                }
             },
             onNavigateToFullScreen = onNavigateToFullScreen,
             onShowPdfSettings = {
@@ -254,11 +268,17 @@ fun PersonConditionScreen(
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onAddPhotoClick = {
-                val uri = ImageUtils.getTempPhotoUri(context)
-                tempPhotoUri = uri
-                // カメラ起動前に、戻ってきた際のロックを一時的にスキップする設定を行う
-                viewModel.setLockBypassEnabled(true)
-                cameraLauncher.launch(uri)
+                try {
+                    val uri = ImageUtils.getTempPhotoUri(context)
+                    tempPhotoUri = uri
+                    Log.d("PersonConditionScreen", "Temp URI generated: $uri")
+                    // カメラ起動前に、戻ってきた際のロックを一時的にスキップする設定を行う
+                    viewModel.setLockBypassEnabled(true)
+                    cameraLauncher.launch(uri)
+                } catch (e: Exception) {
+                    Log.e("PersonConditionScreen", "Failed to generate temp URI", e)
+                    conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
+                }
             },
             onNavigateToFullScreen = onNavigateToFullScreen,
             onShowPdfSettings = {

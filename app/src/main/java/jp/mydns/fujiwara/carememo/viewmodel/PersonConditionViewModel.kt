@@ -126,8 +126,34 @@ class PersonConditionViewModel(
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
     fun setSelectedConditionId(id: Int?) {
         _selectedConditionId.value = id
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    /**
+     * UI層で発生した撮影・選択などのエラーを通知します。
+     */
+    fun notifyPhotoError(message: String) {
+        _errorMessage.value = message
+        showError("写真の取得に失敗", message)
+        viewModelScope.launch {
+            auditLogRepository.log(
+                featureName = featureName,
+                operation = "photoOperation",
+                tableName = TABLE_CONDITION,
+                actionType = "ERROR",
+                affectedId = _selectedConditionId.value?.toString() ?: "",
+                details = message,
+                resultType = "OTHER_ERROR"
+            )
+        }
     }
 
     fun updateSearchQuery(query: String) {
@@ -257,7 +283,9 @@ class PersonConditionViewModel(
 
                 showSnackbar(R.string.p_cond_msg_photo_save_success)
             } else {
-                showError(R.string.common_error_title_save, R.string.p_cond_err_photo_process_failure)
+                val msg = context.getString(R.string.p_cond_err_photo_process_failure)
+                _errorMessage.value = msg
+                showError(context.getString(R.string.common_error_title_save), msg)
             }
         }
     }

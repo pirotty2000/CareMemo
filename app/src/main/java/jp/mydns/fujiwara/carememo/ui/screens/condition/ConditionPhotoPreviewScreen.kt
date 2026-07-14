@@ -1,35 +1,7 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
-/**
- * Screen : ConditionPhotoPreviewScreen
- *
- * 【画面名】：写真撮影・選択プレビュー画面
- *
- * 【役割】：
- * カメラ撮影またはギャラリー選択直後の写真をプレビューし、保存の確定または再試行を選択するための画面。
- *
- * 【主な機能】：
- * ・取り込まれた画像のプレビュー表示。
- * ・キャプション（説明文）の入力。
- * ・画像の保存処理（ViewModel への委譲）および一時ファイルの削除。
- *
- * 【遷移】：
- * ← PersonConditionScreen（写真取得後に遷移）
- * → PersonConditionScreen（保存完了またはキャンセル時に戻る）
- *
- * 【使用するViewModel】：
- * ・PersonDetailViewModel（利用者情報表示用）
- * ・PersonConditionViewModel（画像処理・保存用）
- *
- * 【使用するComponents】：
- * ・base/LoadingScreen.kt
- * ・common/PersonHeaderTitle.kt
- *
- * 【備考】：
- * 誤った写真を保存することを防ぐための確認ステップとして機能する。
- */
-
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -66,13 +38,26 @@ fun ConditionPhotoPreviewScreen(
 ) {
     val context = LocalContext.current
     val isProcessing by conditionViewModel.isProcessing.collectAsStateWithLifecycle()
+    val errorMessage by conditionViewModel.errorMessage.collectAsStateWithLifecycle()
     val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
-    // キャプションの初期値を現在の日時に設定
-    var caption by remember { 
-        mutableStateOf(DateTimeUtils.getCurrentPhotoCaption())
+    val initialCaption = remember { DateTimeUtils.getCurrentPhotoCaption() }
+    var caption by remember { mutableStateOf(initialCaption) }
+    val isModified = caption != initialCaption
+
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDiscardConfirmDialog by remember { mutableStateOf(false) }
+
+    val handleBack = {
+        if (isModified) {
+            showDiscardConfirmDialog = true
+        } else {
+            onBack()
+        }
     }
+
+    BackHandler(onBack = handleBack)
 
     Scaffold(
         topBar = {
@@ -86,7 +71,7 @@ fun ConditionPhotoPreviewScreen(
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = onBack,
+                        onClick = handleBack,
                         modifier = Modifier.testTag("PhotoPreview_BackButton")
                     ) {
                         Icon(
@@ -103,6 +88,16 @@ fun ConditionPhotoPreviewScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // エラー表示
+            errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(uri)
@@ -112,7 +107,10 @@ fun ConditionPhotoPreviewScreen(
                     .build(),
                 contentDescription = "プレビュー",
                 modifier = Modifier.weight(1f).fillMaxWidth().testTag("PhotoPreview_Image"),
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.Fit,
+                onError = {
+                    // 読み込みエラー時の処理（本来はViewModelで管理すべきだが、ここでは簡易的にメッセージを表示する仕組みに合わせる）
+                }
             )
             
             AppTextField(
@@ -136,25 +134,73 @@ fun ConditionPhotoPreviewScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     OutlinedButton(
-                        onClick = {
-                            conditionViewModel.deleteTempFile(context, uri)
-                            onBack()
-                        },
-                        modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton")
+                        onClick = { showDeleteConfirmDialog = true },
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton"),
+                        enabled = !isProcessing
                     ) {
-                        Text("キャンセル")
+                        Text("削除")
                     }
                     Button(
                         onClick = {
                             conditionViewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
                             onSaved()
                         },
-                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton"),
+                        enabled = !isProcessing
                     ) {
                         Text("保存する")
                     }
                 }
             }
         }
+    }
+
+    // 削除確認ダイアログ
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("確認") },
+            text = { Text("写真を削除しますか？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        conditionViewModel.deleteTempFile(context, uri)
+                        onBack()
+                    }
+                ) {
+                    Text("削除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("キャンセル")
+                }
+            }
+        )
+    }
+
+    // 変更破棄確認ダイアログ
+    if (showDiscardConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirmDialog = false },
+            title = { Text("確認") },
+            text = { Text("変更を破棄しますか？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardConfirmDialog = false
+                        onBack()
+                    }
+                ) {
+                    Text("破棄")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirmDialog = false }) {
+                    Text("キャンセル")
+                }
+            }
+        )
     }
 }
