@@ -32,6 +32,11 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
+/**
+ * PersonMedicationViewModel (服薬管理) のユニットテスト
+ * 
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-PM-001_PersonMedicationScreen.md に準拠
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonMedicationViewModelTest {
 
@@ -52,7 +57,7 @@ class PersonMedicationViewModelTest {
         firstName = "太郎",
         lastNameFurigana = "ふくやく",
         firstNameFurigana = "たろう",
-        birthday = fixedInstant
+        birthday = fixedInstant,
     )
 
     @Before
@@ -61,7 +66,7 @@ class PersonMedicationViewModelTest {
         every { Log.e(any(), any(), any()) } returns 0
 
         Dispatchers.setMain(testDispatcher)
-        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(value = false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
         
         viewModel = PersonMedicationViewModel(
@@ -69,7 +74,7 @@ class PersonMedicationViewModelTest {
             personRepository,
             summaryRepository,
             userSettingsRepository,
-            auditLogRepository
+            auditLogRepository,
         )
     }
 
@@ -80,7 +85,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun `nextMonthを実行したとき、月が進みisLoadingがtrueになること`() = runTest {
+    fun nextMonth_updatesMonthAndSetsLoading() = runTest {
         val initialMonth = viewModel.selectedMonth.value
         viewModel.nextMonth()
         
@@ -89,7 +94,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun `recordsByDateは日付ごとにグルーピングされること`() = runTest {
+    fun recordsByDate_groupsByDate() = runTest {
         val date = "2023-10-27"
         val records = listOf(
             MedicationRecord(id = 1, personId = 1, dosageDate = date, timeSlot = 0, status = 1, recordTime = fixedInstant),
@@ -107,7 +112,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun `syncMedicationDayで新規レコードがあるとき、insertが呼ばれること`() = runTest {
+    fun syncMedicationDay_insertsNewRecord() = runTest {
         val date = "2023-10-27"
         val newRecord = MedicationRecord(id = 0, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
         
@@ -120,7 +125,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun `syncMedicationDayで既存レコードがスロットから消えたとき、deleteが呼ばれること`() = runTest {
+    fun syncMedicationDay_deletesRemovedRecord() = runTest {
         val date = "2023-10-27"
         val existingRecord = MedicationRecord(id = 1, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
         
@@ -161,7 +166,7 @@ class PersonMedicationViewModelTest {
     // --- ロジック・安全性テスト (LG-01 〜 LG-02) ---
 
     @Test
-    fun `LG-01_データ取得失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+    fun LG_01_loadRecords_failure_handlesException() = runTest {
         every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flow {
             throw RuntimeException("Flow Error")
         }
@@ -183,7 +188,7 @@ class PersonMedicationViewModelTest {
                     tableName = "medication_db",
                     actionType = "ERROR",
                     affectedId = any(),
-                    details = match { it?.contains("Flow Error") == true },
+                    details = match { it.contains("Flow Error") },
                     resultType = "OTHER_ERROR"
                 )
             }
@@ -191,7 +196,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun `LG-02_同期失敗時にisLoadingがfalseになり監査ログが記録されること`() = runTest {
+    fun LG_02_syncMedicationDay_failure_handlesException() = runTest {
         coEvery { medicationRepository.insertMedicationRecord(any(), any(), any()) } throws RuntimeException("Sync Error")
         
         val date = "2023-10-27"
@@ -208,7 +213,7 @@ class PersonMedicationViewModelTest {
                 tableName = "medication_db",
                 actionType = "ERROR",
                 affectedId = any(),
-                details = match { it?.contains("Sync Error") == true },
+                details = match { it.contains("Sync Error") },
                 resultType = "OTHER_ERROR"
             )
         }

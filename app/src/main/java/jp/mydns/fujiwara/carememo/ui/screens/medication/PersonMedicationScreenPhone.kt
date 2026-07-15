@@ -88,7 +88,7 @@ fun PersonMedicationScreenPhone(
                     navigationIcon = {
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.testTag("Medication_BackButton")
+                            modifier = Modifier.testTag("MedicationScreen_BackButton")
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                         }
@@ -97,7 +97,7 @@ fun PersonMedicationScreenPhone(
                     actions = {
                         IconButton(
                             onClick = onShowPdfSettings,
-                            modifier = Modifier.testTag("Medication_PdfButton")
+                            modifier = Modifier.testTag("MedicationScreen_PdfButton")
                         ) {
                             Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                         }

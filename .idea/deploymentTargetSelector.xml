@@ -39,7 +39,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonHealthScreenTest_3_Behavior">
+      <SelectionState runConfigName="Tests in 'jp.mydns.fujiwara.carememo.ui.screens.health'">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -50,7 +50,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="BatchInputScreenTest">
+      <SelectionState runConfigName="Tests in 'jp.mydns.fujiwara.carememo.ui.screens.main'">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -61,7 +61,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="GraphExpansionScreenTest">
+      <SelectionState runConfigName="Tests in 'jp.mydns.fujiwara.carememo.ui.screens.condition'">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -72,7 +72,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="cp02_chart_drawing_content()">
+      <SelectionState runConfigName="PersonMedicationScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">

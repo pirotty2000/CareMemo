@@ -4,6 +4,8 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.every
@@ -52,6 +54,7 @@ class GraphExpansionScreenTest {
     )
 
     private val recordsFlow = MutableStateFlow<List<HistoryRecord>>(emptyList())
+    private val isLoadingFlow = MutableStateFlow(false)
 
     @Before
     fun setup() {
@@ -60,37 +63,47 @@ class GraphExpansionScreenTest {
 
         every { viewModel.currentPerson } returns MutableStateFlow(mockPerson)
         every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { healthViewModel.isLoading } returns MutableStateFlow(false)
+        every { healthViewModel.isLoading } returns isLoadingFlow
         every { healthViewModel.getHealthRecords(any()) } returns recordsFlow
-        
-        // 縦向きデバイスでのテスト実行時、回転による再生成でテストが壊れるのを防ぐため、
-        // Activityの起動・回転が落ち着くまで少し待機する
-        composeTestRule.waitForIdle()
     }
 
     private fun setContent(category: Category = Category.BP_AND_PULSE, initialIndex: Int = 0, onBack: () -> Unit = {}) {
         composeTestRule.setContent {
-            CareMemoTheme {
-                GraphExpansionScreen(
-                    viewModel = viewModel,
-                    healthViewModel = healthViewModel,
-                    personId = 1,
-                    category = category,
-                    initialGraphIndex = initialIndex,
-                    onBack = onBack
-                )
+            val context = LocalContext.current
+            // applicationContext を提供することで、本番コード内での Activity へのキャストを失敗させ、
+            // テスト中の画面回転（およびそれに伴う Activity 再生成）を抑制する。
+            CompositionLocalProvider(LocalContext provides context.applicationContext) {
+                CareMemoTheme {
+                    GraphExpansionScreen(
+                        viewModel = viewModel,
+                        healthViewModel = healthViewModel,
+                        personId = 1,
+                        category = category,
+                        initialGraphIndex = initialIndex,
+                        onBack = onBack
+                    )
+                }
             }
         }
+        composeTestRule.waitForIdle()
     }
 
+    /**
+     * 指定したグラフが画面に表示され、特定の数値が含まれていることを検証する
+     */
     private fun assertChartContainsValue(index: Int, value: String) {
         val tag = "GraphExpansion_ChartView_$index"
-        composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithTag(tag)
-                .fetchSemanticsNodes().isNotEmpty() &&
-            composeTestRule.onNodeWithTag(tag)
-                .fetchSemanticsNode().config.any { it.key.name == "ContentDescription" && it.value.toString().contains(value) }
+        
+        // グラフが表示されるまで待機（最長10秒）
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
         }
+
+        // 階層をマージせずに、子ノードも含めて contentDescription を検索する
+        composeTestRule.onNodeWithTag(tag)
+            .assertExists()
+            .onChildren()
+            .assertAny(hasContentDescription(value, substring = true))
     }
 
     // ======================================================================================
@@ -101,7 +114,9 @@ class GraphExpansionScreenTest {
     fun cp01_basic_layout_display() {
         recordsFlow.value = mockRecords
         setContent()
+        
         composeTestRule.onNodeWithTag("GraphExpansion_BackButton").assertIsDisplayed()
+        // 1番目のグラフ(血圧)が表示されていること
         composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").assertIsDisplayed()
     }
 
@@ -109,6 +124,8 @@ class GraphExpansionScreenTest {
     fun cp02_chart_drawing_content() {
         recordsFlow.value = mockRecords
         setContent()
+        
+        // 血圧の最高値(120, 130)が描画されていることを確認
         assertChartContainsValue(0, "120")
         assertChartContainsValue(0, "130")
     }
@@ -117,20 +134,29 @@ class GraphExpansionScreenTest {
     fun cp03_axis_labels_display() {
         recordsFlow.value = mockRecords
         setContent()
+        
+        // 軸ラベルや目盛りの一部として、期待される値が表示されていること
         assertChartContainsValue(0, "120")
     }
 
     @Test
     fun cp04_received_data_reflection() {
         recordsFlow.value = mockRecords
+        // 血糖値カテゴリで開始
         setContent(category = Category.GLUCOSE_AND_HBA1C)
-        composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle").assertTextContains("血糖値", substring = true)
+        
+        // ヘッダーに「血糖値」が含まれていること
+        composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle")
+            .assertTextContains("血糖値", substring = true)
     }
 
     @Test
     fun cp05_boundary_data_points() {
+        // データが1点のみの場合
         recordsFlow.value = listOf(mockRecords[0])
         setContent()
+        
+        // エラーにならずに描画されていること
         assertChartContainsValue(0, "120")
     }
 
@@ -142,8 +168,15 @@ class GraphExpansionScreenTest {
     fun bh01_pinch_zoom_operation() {
         recordsFlow.value = mockRecords
         setContent()
+        
+        // ピンチ操作のシミュレーション
         composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput {
-            pinch(center + Offset(-10f, 0f), center + Offset(-100f, 0f), center + Offset(10f, 0f), center + Offset(100f, 0f))
+            pinch(
+                start0 = center + Offset(-20f, 0f),
+                end0 = center + Offset(-100f, 0f),
+                start1 = center + Offset(20f, 0f),
+                end1 = center + Offset(100f, 0f)
+            )
         }
         composeTestRule.waitForIdle()
     }
@@ -152,7 +185,11 @@ class GraphExpansionScreenTest {
     fun bh02_scroll_operation() {
         recordsFlow.value = mockRecords
         setContent()
-        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput { swipeLeft() }
+        
+        // スワイプ操作のシミュレーション（グラフ内スクロール）
+        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput {
+            swipeLeft()
+        }
         composeTestRule.waitForIdle()
     }
 
@@ -161,8 +198,12 @@ class GraphExpansionScreenTest {
         var backCalled = false
         recordsFlow.value = mockRecords
         setContent(onBack = { backCalled = true })
+        
         composeTestRule.onNodeWithTag("GraphExpansion_BackButton").performClick()
-        assert(backCalled)
+        
+        composeTestRule.runOnIdle {
+            assert(backCalled)
+        }
     }
 
     @Test
@@ -170,7 +211,12 @@ class GraphExpansionScreenTest {
         var backCalled = false
         recordsFlow.value = mockRecords
         setContent(onBack = { backCalled = true })
+        
+        // 戻るボタンタップによりコールバックが呼ばれることを確認（bh03と同様の検証）
         composeTestRule.onNodeWithTag("GraphExpansion_BackButton").performClick()
-        assert(backCalled)
+        
+        composeTestRule.runOnIdle {
+            assert(backCalled)
+        }
     }
 }

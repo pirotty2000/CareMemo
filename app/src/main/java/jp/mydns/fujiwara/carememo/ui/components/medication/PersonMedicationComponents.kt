@@ -460,14 +460,14 @@ fun MedicationInputDialog(
                     onConfirm(tempRecords)
                     onDismiss()
                 },
-                modifier = Modifier.testTag("Medication_Dialog_Save")
+                modifier = Modifier.testTag("Medication_SaveButton")
             )
         },
         dismissButton = {
             AppDialogDismissButton(
                 text = stringResource(R.string.common_cancel),
                 onClick = onDismiss,
-                modifier = Modifier.testTag("Medication_Dialog_Cancel")
+                modifier = Modifier.testTag("Medication_CancelButton")
             )
         }
     )

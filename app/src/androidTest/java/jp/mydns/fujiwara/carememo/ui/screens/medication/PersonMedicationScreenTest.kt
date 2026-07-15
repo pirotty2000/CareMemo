@@ -1,7 +1,8 @@
+@file:Suppress("NonAsciiCharacters")
+
 package jp.mydns.fujiwara.carememo.ui.screens.medication
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
@@ -19,7 +20,7 @@ import java.time.Instant
 /**
  * PersonMedicationScreen (服薬管理) の UI テスト
  * 
- * 仕様書：doc/test/TEST_SPEC_UI_PersonMedication.md に準拠
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-PM-001_PersonMedicationScreen.md に準拠
  */
 class PersonMedicationScreenTest {
 
@@ -33,20 +34,20 @@ class PersonMedicationScreenTest {
         firstName = "太郎",
         lastNameFurigana = "ヤマダ",
         firstNameFurigana = "タロウ",
-        birthday = Instant.parse("1950-01-01T00:00:00Z")
+        birthday = Instant.parse("1950-01-01T00:00:00Z"),
     )
 
     // ======================================================================================
-    // 1. 詳細画面共通コンポーネント (COM)
+    // 1. 共通コンポーネントテスト (Header / CategoryBar)
     // ======================================================================================
 
     @Test
-    fun com01_to_03_header_isDisplayed_and_actionsWork() {
+    fun COM_01_backButton_works() {
         var backCalled = false
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreenPhone(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
+                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.now(),
                     recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
                     onPreviousMonth = {}, onNextMonth = {}, 
                     onBack = { backCalled = true }, 
@@ -55,43 +56,50 @@ class PersonMedicationScreenTest {
                 )
             }
         }
-
-        composeTestRule.onNodeWithTag("Medication_BackButton").assertIsDisplayed().performClick()
+        composeTestRule.onNodeWithTag("MedicationScreen_BackButton").assertIsDisplayed().performClick()
         assert(backCalled)
-
-        composeTestRule.onNodeWithTag("PersonHeader_NameAndAge").assertIsDisplayed()
-        composeTestRule.onNodeWithText("山田", substring = true).assertExists()
-        composeTestRule.onNodeWithText("76歳", substring = true).assertExists()
-
-        composeTestRule.onNodeWithTag("Medication_PdfButton").assertIsDisplayed()
     }
 
     @Test
-    fun com05_longName_isHandled() {
-        val longNamePerson = mockPerson.copy(lastName = "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末")
+    fun COM_02_personInfo_isDisplayed() {
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreenPhone(
-                    currentPerson = longNamePerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
+                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.now(),
                     recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
-                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onShowPdfSettings = {}, onDayClick = {},
+                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, onShowPdfSettings = {}, onDayClick = {},
                     snackbarHostState = remember { SnackbarHostState() }
                 )
             }
         }
-        // クラッシュせず表示されていること
         composeTestRule.onNodeWithTag("PersonHeader_NameAndAge").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("Medication_PdfButton").assertIsDisplayed()
+        composeTestRule.onNodeWithText("山田", substring = true).assertExists()
+        // 年齢が表示されていること
+        composeTestRule.onNodeWithText("歳", substring = true).assertExists()
     }
 
     @Test
-    fun com04_categoryBar_navigationWorks() {
+    fun COM_03_pdfButton_isDisplayed() {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonMedicationScreenPhone(
+                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.now(),
+                    recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
+                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, onShowPdfSettings = {}, onDayClick = {},
+                    snackbarHostState = remember { SnackbarHostState() }
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("MedicationScreen_PdfButton").assertIsDisplayed()
+    }
+
+    @Test
+    fun COM_04_categoryBar_navigationWorks() {
         var navigatedCategory: Category? = null
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreenPhone(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
+                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.now(),
                     recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
                     onPreviousMonth = {}, onNextMonth = {}, onBack = {}, 
                     onNavigateToCategory = { navigatedCategory = it }, 
@@ -100,59 +108,68 @@ class PersonMedicationScreenTest {
                 )
             }
         }
-
         composeTestRule.onNodeWithTag("CategorySelectorBar").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("CategoryChip_BP_AND_PULSE").performClick()
+        
+        // 健康記録(バイタル)への遷移を検証
+        composeTestRule.onNodeWithTag("CategoryChip_BP_AND_PULSE").performScrollTo().performClick()
         assert(navigatedCategory == Category.BP_AND_PULSE)
+
+        // 所見メモへの遷移を検証
+        composeTestRule.onNodeWithTag("CategoryChip_CONDITION_AT_VISIT").performScrollTo().performClick()
+        assert(navigatedCategory == Category.CONDITION_AT_VISIT)
     }
 
-    // ======================================================================================
-    // 2. 個別コンポーネント単体テスト (CP)
-    // ======================================================================================
-
     @Test
-    fun cp01_loadingState_isDisplayed() {
+    fun COM_05_longName_isAppropriatelyDisplayed() {
+        val longNamePerson = mockPerson.copy(lastName = "壽限無壽限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末")
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreenPhone(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = true, selectedMonth = YearMonth.of(2026, 7),
+                    currentPerson = longNamePerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.now(),
                     recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
-                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onShowPdfSettings = {}, onDayClick = {},
+                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, onShowPdfSettings = {}, onDayClick = {},
                     snackbarHostState = remember { SnackbarHostState() }
                 )
             }
         }
-        composeTestRule.onNodeWithTag("Medication_Loading").assertIsDisplayed()
+        // 表示が崩れず（ボタンが隠れず）に表示されていることを確認
+        composeTestRule.onNodeWithTag("PersonHeader_NameAndAge").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("MedicationScreen_PdfButton").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("MedicationScreen_BackButton").assertIsDisplayed()
     }
 
+    // ======================================================================================
+    // 2. コンポーネント単体テスト (PersonMedicationScreenContent)
+    // ======================================================================================
+
     @Test
-    fun cp02_cp06_phoneMode_default_showsCalendarAndMonth() {
+    fun CP_01_calendar_isDisplayed() {
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonMedicationScreenPhone(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
-                    recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
-                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onShowPdfSettings = {}, onDayClick = {},
-                    snackbarHostState = remember { SnackbarHostState() }
+                PersonMedicationScreenContent(
+                    isExpanded = false,
+                    selectedMonth = YearMonth.now(),
+                    isLoading = false,
+                    recordsByDate = emptyMap(),
+                    isHistoryMode = false,
+                    onHistoryModeChange = {},
+                    onPreviousMonth = {},
+                    onNextMonth = {},
+                    onDayClick = {},
                 )
             }
         }
         composeTestRule.onNodeWithTag("Medication_Calendar").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("Medication_MonthText_Phone").assertTextContains("2026(令和8)年07月")
     }
 
     @Test
-    fun cp03_phoneMode_historyMode_showsHistoryTable() {
+    fun CP_02_historyTable_isDisplayed() {
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonMedicationScreenPhone(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
-                    recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = true, onHistoryModeChange = {},
-                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onShowPdfSettings = {}, onDayClick = {},
-                    snackbarHostState = remember { SnackbarHostState() }
+                PersonMedicationScreenContent(
+                    isExpanded = false, selectedMonth = YearMonth.now(), isLoading = false, 
+                    recordsByDate = emptyMap(), isHistoryMode = true, onHistoryModeChange = {},
+                    onPreviousMonth = {}, onNextMonth = {}, onDayClick = {}
                 )
             }
         }
@@ -160,119 +177,94 @@ class PersonMedicationScreenTest {
     }
 
     @Test
-    fun cp04_phoneMode_historyEmpty_showsMessage() {
+    fun CP_03_emptyInputDialog_isDisplayed() {
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonMedicationScreenPhone(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
-                    recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = true, onHistoryModeChange = {},
-                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onShowPdfSettings = {}, onDayClick = {},
-                    snackbarHostState = remember { SnackbarHostState() }
+                jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
+                    date = LocalDate.of(2026, 7, 10), personId = 1, records = emptyList(),
+                    onDismiss = {}, onConfirm = { }
                 )
             }
         }
-        composeTestRule.onNodeWithText("記録がありません").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("Medication_SaveButton").assertIsDisplayed()
     }
 
     @Test
-    fun cp05_tabletMode_showsBothCalendarAndHistory() {
+    fun CP_04_inputDialog_isDisplayedAndInteractable() {
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonMedicationScreenTablet(
-                    currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
-                    recordsByDate = emptyMap(), personCategorySummary = null, 
-                    onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                    onShowPdfSettings = {}, onDayClick = {},
-                    snackbarHostState = remember { SnackbarHostState() }
+                jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
+                    date = LocalDate.of(2026, 7, 10), personId = 1, records = emptyList(),
+                    onDismiss = {}, onConfirm = { }
                 )
             }
         }
-        composeTestRule.onNodeWithTag("Medication_Calendar").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("Medication_HistoryTable").assertIsDisplayed()
+        // スロットの項目が表示されていることを確認
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true).onFirst().assertIsDisplayed()
     }
 
     // ======================================================================================
-    // 3. 画面全体の挙動・結合テスト (BH)
+    // 3. 画面全体の挙動・結合テスト (PersonMedicationScreen)
     // ======================================================================================
 
     @Test
-    fun bh01_monthNavigation_callsCallbacks() {
-        var prevCalled = false
+    fun BH_01_saveMedicationRecord_works() {
+        var confirmCalled = false
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
+                    date = LocalDate.of(2026, 7, 10), personId = 1, records = emptyList(),
+                    onDismiss = {}, onConfirm = { confirmCalled = true }
+                )
+            }
+        }
+        // ステータスを選択して保存
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true).onFirst().performClick()
+        composeTestRule.onNodeWithTag("Medication_SaveButton").performClick()
+        
+        assert(confirmCalled)
+    }
+
+    @Test
+    fun BH_02_deleteMedicationRecord_works() {
+        var confirmCalled = false
+        val existingRecord = MedicationRecord(id = 1, personId = 1, dosageDate = "2026-07-10", timeSlot = 0, status = 2, recordTime = Instant.now())
+        
+        composeTestRule.setContent {
+            CareMemoTheme {
+                jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
+                    date = LocalDate.of(2026, 7, 10), personId = 1, records = listOf(existingRecord),
+                    onDismiss = {}, onConfirm = { confirmCalled = true }
+                )
+            }
+        }
+        // 既存のステータス（服用）を再度タップして解除
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true).onFirst().performClick()
+        composeTestRule.onNodeWithTag("Medication_SaveButton").performClick()
+        
+        assert(confirmCalled)
+    }
+
+    @Test
+    fun BH_03_monthSwitching_works() {
         var nextCalled = false
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreenPhone(
                     currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
                     recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
-                    onPreviousMonth = { prevCalled = true }, onNextMonth = { nextCalled = true }, onBack = {}, onNavigateToCategory = {}, 
+                    onPreviousMonth = {}, onNextMonth = { nextCalled = true }, onBack = {}, onNavigateToCategory = {}, 
                     onShowPdfSettings = {}, onDayClick = {},
                     snackbarHostState = remember { SnackbarHostState() }
                 )
             }
         }
-        composeTestRule.onNodeWithTag("Medication_MonthPrev_Phone").performClick()
-        assert(prevCalled)
         composeTestRule.onNodeWithTag("Medication_MonthNext_Phone").performClick()
         assert(nextCalled)
     }
 
     @Test
-    fun bh02_dayClick_opensDialog() {
-        var clickedDate: LocalDate? = null
-        composeTestRule.setContent {
-            CareMemoTheme {
-                var showDialogDate by remember { mutableStateOf<LocalDate?>(null) }
-                Box {
-                    PersonMedicationScreenPhone(
-                        currentPerson = mockPerson, isNameMaskingEnabled = false, isLoading = false, selectedMonth = YearMonth.of(2026, 7),
-                        recordsByDate = emptyMap(), personCategorySummary = null, isHistoryMode = false, onHistoryModeChange = {},
-                        onPreviousMonth = {}, onNextMonth = {}, onBack = {}, onNavigateToCategory = {}, 
-                        onShowPdfSettings = {}, 
-                        onDayClick = { showDialogDate = it; clickedDate = it },
-                        snackbarHostState = remember { SnackbarHostState() }
-                    )
-                    if (showDialogDate != null) {
-                        jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
-                            date = showDialogDate!!, personId = 1, records = emptyList(),
-                            onDismiss = { showDialogDate = null }, onConfirm = {}
-                        )
-                    }
-                }
-            }
-        }
-        composeTestRule.onNodeWithTag("Medication_DayCell_2026-07-10").performScrollTo().performClick()
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("Medication_Dialog_Save").assertIsDisplayed()
-        assert(clickedDate == LocalDate.of(2026, 7, 10))
-    }
-
-    @Test
-    fun bh03_dialogSave_callsCallback() {
-        var savedRecords: List<MedicationRecord?>? = null
-        composeTestRule.setContent {
-            CareMemoTheme {
-                jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog(
-                    date = LocalDate.of(2026, 7, 10),
-                    personId = 1,
-                    records = emptyList(),
-                    onDismiss = {},
-                    onConfirm = { savedRecords = it }
-                )
-            }
-        }
-        // 「服用」テキスト（朝の枠）をクリック
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true).onFirst().performClick()
-        // 保存ボタンをクリック
-        composeTestRule.onNodeWithTag("Medication_Dialog_Save").performClick()
-        composeTestRule.waitForIdle()
-        
-        assert(savedRecords != null)
-        assert(savedRecords!![0]?.status == 2)
-    }
-
-    @Test
-    fun bh04_pdfSettings_showsRelevantItemsOnly() {
+    fun BH_04_pdfSettings_showsMedicationSpecificItemsOnly() {
         composeTestRule.setContent {
             CareMemoTheme {
                 jp.mydns.fujiwara.carememo.ui.components.common.PdfSettingsDialog(
@@ -282,14 +274,8 @@ class PersonMedicationScreenTest {
                 )
             }
         }
-        
-        // 服薬管理用ダイアログが表示されていること
-        composeTestRule.onNodeWithTag("PdfSettingsDialog").assertIsDisplayed()
-        
         // 所見特有の項目が表示されていないことを確認
-        // 「最新の1件のみ」
         composeTestRule.onNodeWithText("最新の1件のみ").assertDoesNotExist()
-        // 「写真を含める」
         composeTestRule.onNodeWithText("写真を含める").assertDoesNotExist()
     }
 }

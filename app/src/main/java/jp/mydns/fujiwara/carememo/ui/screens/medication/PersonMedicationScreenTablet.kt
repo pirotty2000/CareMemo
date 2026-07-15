@@ -78,13 +78,13 @@ fun PersonMedicationScreenTablet(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
                             defaultTitle = "服薬管理",
-                            modifier = Modifier.testTag("PersonHeader_NameAndAge")
+                            modifier = Modifier.testTag("PersonHeader")
                         )
                     },
                     navigationIcon = {
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.testTag("Medication_BackButton")
+                            modifier = Modifier.testTag("MedicationScreen_BackButton")
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                         }
@@ -98,7 +98,7 @@ fun PersonMedicationScreenTablet(
                     actions = {
                         IconButton(
                             onClick = onShowPdfSettings,
-                            modifier = Modifier.testTag("Medication_PdfButton")
+                            modifier = Modifier.testTag("MedicationScreen_PdfButton")
                         ) {
                             Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
                         }

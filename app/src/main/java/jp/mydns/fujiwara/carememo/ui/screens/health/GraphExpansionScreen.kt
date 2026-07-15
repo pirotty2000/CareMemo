@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -173,7 +174,12 @@ fun GraphExpansionScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
                             Box(modifier = Modifier.padding(4.dp).height(210.dp)) { // 360dp高に最適化
-                                SingleGraphInLandscape(records, category, index)
+                                SingleGraphInLandscape(
+                                    records = records,
+                                    category = category,
+                                    index = index,
+                                    modifier = Modifier.testTag("GraphExpansion_ChartView_$index")
+                                )
                             }
                         }
                     }
@@ -187,7 +193,12 @@ fun GraphExpansionScreen(
  * 横画面用に特定のインデックスのグラフのみを描画する
  */
 @Composable
-fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
+fun SingleGraphInLandscape(
+    records: List<Any>,
+    category: Category,
+    index: Int,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     // 背景色の輝度で判定
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -201,11 +212,18 @@ fun SingleGraphInLandscape(records: List<Any>, category: Category, index: Int) {
     }
 
     if (config != null) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // semantics { mergeDescendants = true } を追加することで、
+        // 内部の LineChart が持つ contentDescription をテストから読み取れるようにする
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .semantics(mergeDescendants = true) {}
+        ) {
             Text(config.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             if (config.dataList.any { it.points.isNotEmpty() }) {
                 LineChart(
                     dataList = config.dataList,
+                    modifier = Modifier.weight(1f),
                     stepY = config.stepY,
                     ranges = config.ranges,
                     limits = config.limits,
