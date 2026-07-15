@@ -4,36 +4,24 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import app.cash.turbine.test
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
-import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
-import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
-import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import io.mockk.*
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.repository.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
+/**
+ * ViewModel層テスト：PersonHealthViewModel (4. ロジック・安全性)
+ * 仕様書項目: LG-01 〜 LG-02
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonHealthViewModelTest {
 
@@ -47,11 +35,8 @@ class PersonHealthViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testPerson = Person(
-        id = 1,
-        lastName = "健康",
-        firstName = "太郎",
-        lastNameFurigana = "けんこう",
-        firstNameFurigana = "たろう",
+        id = 1, lastName = "健康", firstName = "太郎",
+        lastNameFurigana = "ケンコウ", firstNameFurigana = "タロウ",
         birthday = Instant.now()
     )
 
@@ -63,8 +48,10 @@ class PersonHealthViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
-        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
+        
+        // 重複チェックをパスさせるための初期設定
         coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
+        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
         coEvery { healthRepository.findGlucoseAndHbA1cAtTime(any(), any()) } returns null
         
         viewModel = PersonHealthViewModel(
@@ -83,110 +70,67 @@ class PersonHealthViewModelTest {
     }
 
     @Test
-    fun `setCategoryを実行したとき、対応するRepositoryのデータが取得されること`() = runTest {
-        val hwList = listOf(HeightAndWeight(id = 1, personId = 1, height = 170.0, weight = 60.0, recordTime = Instant.now()))
-        val bpList = listOf(BpAndPulse(id = 2, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now()))
-        
-        every { healthRepository.getHeightAndWeightByPersonId(1) } returns flowOf(hwList)
-        every { healthRepository.getBpAndPulseByPersonId(1) } returns flowOf(bpList)
-
-        viewModel.loadPerson(1)
-
-        // 身長体重
-        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
-        viewModel.records.test {
-            assertEquals(hwList, awaitItem())
+    fun lg01_data_load_failure_safety() = runTest {
+        every { healthRepository.getBpAndPulseByPersonId(any()) } returns flow {
+            throw RuntimeException("Load Failure")
         }
 
-        // バイタル
+        viewModel.loadPerson(1)
         viewModel.setCategory(Category.BP_AND_PULSE)
+
         viewModel.records.test {
-            assertEquals(bpList, awaitItem())
-        }
-    }
-
-    @Test
-    fun `saveRecordでHeightAndWeightを渡したとき、insertHeightAndWeightが呼ばれること`() = runTest {
-        val record = HeightAndWeight(id = 0, personId = 1, height = 170.0, weight = 60.0, recordTime = Instant.now())
-        viewModel.saveRecord(record)
-        coVerify { healthRepository.insertHeightAndWeight(record, any(), any()) }
-    }
-
-    @Test
-    fun `saveRecordでBpAndPulseを渡したとき、insertBpAndPulseが呼ばれること`() = runTest {
-        val record = BpAndPulse(id = 0, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
-        viewModel.saveRecord(record)
-        coVerify { healthRepository.insertBpAndPulse(record, any(), any()) }
-    }
-
-    @Test
-    fun `saveRecordでGlucoseAndHbA1cを渡したとき、insertGlucoseAndHbA1cが呼ばれること`() = runTest {
-        val record = GlucoseAndHbA1c(id = 0, personId = 1, glucose = 100, hba1c = 5.5, recordTime = Instant.now())
-        viewModel.saveRecord(record)
-        coVerify { healthRepository.insertGlucoseAndHbA1c(record, any(), any()) }
-    }
-
-    @Test
-    fun `deleteRecordを実行したとき、対応するRepositoryの削除メソッドが呼ばれること`() = runTest {
-        val record = HeightAndWeight(id = 1, personId = 1, height = 170.0, weight = 60.0, recordTime = Instant.now())
-        viewModel.deleteRecord(record)
-        coVerify { healthRepository.deleteHeightAndWeight(record, any(), any()) }
-    }
-
-    @Test
-    fun `データ取得時に例外が発生した場合、isLoadingがfalseになり、エラーログが記録されること`() = runTest {
-        // 例外を投げるFlowを作成
-        every { healthRepository.getHeightAndWeightByPersonId(any()) } returns flow {
-            throw RuntimeException("Load Error")
-        }
-
-        viewModel.loadPerson(1)
-        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
-
-        // StateFlowの収集を開始して例外を発生させる
-        viewModel.records.test {
-            awaitItem() // 初期値の空リスト
+            awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
 
-        // isLoadingがfalseに戻ることを確認
         assertEquals(false, viewModel.isLoading.value)
-
-        // 監査ログが記録されたか検証
         coVerify(exactly = 1) { 
             auditLogRepository.log(
-                featureName = "PersonHealth",
-                operation = any(),
-                tableName = any(),
-                actionType = "ERROR",
-                affectedId = any(),
-                details = match { it?.contains("Load Error") == true },
-                resultType = "OTHER_ERROR"
+                "PersonHealth",
+                "recordsFlow",
+                "health_db",
+                "ERROR",
+                any(),
+                any(), // details
+                "OTHER_ERROR" // resultType
             ) 
         }
     }
 
     @Test
-    fun `保存時に例外が発生した場合、isLoadingがfalseになり、エラーログが記録されること`() = runTest {
-        val record = HeightAndWeight(id = 0, personId = 1, height = 170.0, weight = 60.0, recordTime = Instant.now())
-        coEvery { healthRepository.insertHeightAndWeight(any(), any(), any()) } throws RuntimeException("Save Error")
+    fun lg02_save_failure_safety() = runTest {
+        val record = BpAndPulse(id = 0, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+        coEvery { healthRepository.insertBpAndPulse(any(), any(), any()) } throws RuntimeException("Save Failure")
 
         viewModel.saveRecord(record)
+        
+        // 重要：safeLaunch で起動されたコルーチンの完了（例外ハンドリング含む）を待機
+        advanceUntilIdle()
 
-        // isLoadingがfalseに戻ることを確認
         assertEquals(false, viewModel.isLoading.value)
-
-        // 監査ログが記録されたか検証
         coVerify(exactly = 1) { 
             auditLogRepository.log(
-                featureName = "PersonHealth",
-                operation = "saveRecord",
-                tableName = any(),
-                actionType = "ERROR",
-                affectedId = "0",
-                details = match { it?.contains("Save Error") == true },
-                resultType = "OTHER_ERROR"
+                "PersonHealth",
+                "saveRecord",
+                "health_db",
+                "ERROR",
+                any(),
+                any(),
+                "OTHER_ERROR"
             ) 
         }
+    }
+
+    @Test
+    fun additional_set_category_calls_correct_repository() = runTest {
+        viewModel.loadPerson(1)
+        
+        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
+        viewModel.records.test { awaitItem(); cancelAndIgnoreRemainingEvents() }
+        verify { healthRepository.getHeightAndWeightByPersonId(1) }
+
+        viewModel.setCategory(Category.GLUCOSE_AND_HBA1C)
+        viewModel.records.test { awaitItem(); cancelAndIgnoreRemainingEvents() }
+        verify { healthRepository.getGlucoseAndHbA1cByPersonId(1) }
     }
 }

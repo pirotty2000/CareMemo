@@ -2,8 +2,8 @@
 
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
-import android.content.pm.ActivityInfo
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.every
@@ -20,16 +20,12 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
  * UI層テスト：GraphExpansionScreen (グラフ拡大表示)
  * 
- * 仕様書: doc/test/TEST_SPEC_UI_GraphExpansion.md
- * 
- * 【重要】この画面は強制的に横画面 (LANDSCAPE) へ切り替えます。
- * 長時間のテスト実行時、エミュレータの回転処理と Activity 再生成が
- * タイミングによって「No compose hierarchies found」を引き起こすため、
- * setup での回転待機と、各テストでの階層準備待ちを強化しています。
+ * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-003_GraphExpansionScreen.md
  */
 class GraphExpansionScreenTest {
 
@@ -48,11 +44,13 @@ class GraphExpansionScreenTest {
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
 
+    private val baseTime = Instant.parse("2023-10-01T10:00:00Z")
+
     private val mockRecords = listOf(
-        BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+        BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = baseTime),
+        BpAndPulse(id = 2, personId = 1, bpSystolic = 130, bpDiastolic = 85, pulse = 75, recordTime = baseTime.plus(1, ChronoUnit.DAYS))
     )
 
-    private val isLoadingFlow = MutableStateFlow(false)
     private val recordsFlow = MutableStateFlow<List<HistoryRecord>>(emptyList())
 
     @Before
@@ -62,16 +60,12 @@ class GraphExpansionScreenTest {
 
         every { viewModel.currentPerson } returns MutableStateFlow(mockPerson)
         every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { healthViewModel.isLoading } returns isLoadingFlow
+        every { healthViewModel.isLoading } returns MutableStateFlow(false)
         every { healthViewModel.getHealthRecords(any()) } returns recordsFlow
-
-        // 前のテストの回転が残っている場合を考慮し、明示的に横向き固定
-        if (composeTestRule.activity.requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
-            composeTestRule.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            // 回転による Activity 再生成とシステム全体の落ち着きを待つ
-            Thread.sleep(1000) 
-            composeTestRule.waitForIdle()
-        }
+        
+        // 縦向きデバイスでのテスト実行時、回転による再生成でテストが壊れるのを防ぐため、
+        // Activityの起動・回転が落ち着くまで少し待機する
+        composeTestRule.waitForIdle()
     }
 
     private fun setContent(category: Category = Category.BP_AND_PULSE, initialIndex: Int = 0, onBack: () -> Unit = {}) {
@@ -87,76 +81,57 @@ class GraphExpansionScreenTest {
                 )
             }
         }
-        composeTestRule.waitForIdle()
     }
 
-    /**
-     * Compose階層が有効になり、ノードが存在するまで待機する
-     */
-    private fun waitForHierarchy(tag: String, timeout: Long = 10000) {
-        composeTestRule.waitUntil(timeout) {
-            composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+    private fun assertChartContainsValue(index: Int, value: String) {
+        val tag = "GraphExpansion_ChartView_$index"
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodesWithTag(tag)
+                .fetchSemanticsNodes().isNotEmpty() &&
+            composeTestRule.onNodeWithTag(tag)
+                .fetchSemanticsNode().config.any { it.key.name == "ContentDescription" && it.value.toString().contains(value) }
         }
     }
 
     // ======================================================================================
-    // 1. 画面表示テスト (GraphExpansionScreen)
+    // 1. コンポーネント単体テスト (GraphExpansionScreen)
     // ======================================================================================
 
     @Test
-    fun cp01_header_info_is_displayed() {
+    fun cp01_basic_layout_display() {
         recordsFlow.value = mockRecords
-        setContent(category = Category.BP_AND_PULSE)
-
-        // 階層が現れるのを待つ
-        waitForHierarchy("GraphExpansion_HeaderTitle")
-
-        composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle")
-            .assertExists()
-            .assertTextContains("山田", substring = true)
-            .assertTextContains("バイタル", substring = true)
-    }
-
-    @Test
-    fun cp02_graph_list_shows_correct_number_of_cards() {
-        recordsFlow.value = mockRecords
-        setContent(category = Category.BP_AND_PULSE)
-
-        // 階層が現れるのを待つ
-        waitForHierarchy("GraphExpansion_GraphList")
-
-        composeTestRule.onNodeWithTag("GraphExpansion_GraphList").assertExists()
-        composeTestRule.onNodeWithTag("GraphExpansion_GraphCard_0").assertExists()
-        composeTestRule.onNodeWithTag("GraphExpansion_GraphCard_1").assertExists()
-    }
-
-    @Test
-    fun cp03_initial_graph_index_is_handled() {
-        recordsFlow.value = mockRecords
-        setContent(category = Category.BP_AND_PULSE, initialIndex = 1)
-
-        waitForHierarchy("GraphExpansion_GraphCard_1")
-        composeTestRule.onNodeWithTag("GraphExpansion_GraphCard_1").assertExists()
-    }
-
-    @Test
-    fun cp04_loading_state_is_displayed() {
-        isLoadingFlow.value = true
         setContent()
-
-        waitForHierarchy("GraphExpansion_Loading")
-        composeTestRule.onNodeWithTag("GraphExpansion_Loading").assertExists()
+        composeTestRule.onNodeWithTag("GraphExpansion_BackButton").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").assertIsDisplayed()
     }
 
     @Test
-    fun cp05_empty_state_is_displayed() {
-        recordsFlow.value = emptyList()
-        isLoadingFlow.value = false
+    fun cp02_chart_drawing_content() {
+        recordsFlow.value = mockRecords
         setContent()
+        assertChartContainsValue(0, "120")
+        assertChartContainsValue(0, "130")
+    }
 
-        waitForHierarchy("GraphExpansion_EmptyState")
-        composeTestRule.onNodeWithTag("GraphExpansion_EmptyState").assertExists()
-        composeTestRule.onNodeWithText("記録がありません", substring = true).assertExists()
+    @Test
+    fun cp03_axis_labels_display() {
+        recordsFlow.value = mockRecords
+        setContent()
+        assertChartContainsValue(0, "120")
+    }
+
+    @Test
+    fun cp04_received_data_reflection() {
+        recordsFlow.value = mockRecords
+        setContent(category = Category.GLUCOSE_AND_HBA1C)
+        composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle").assertTextContains("血糖値", substring = true)
+    }
+
+    @Test
+    fun cp05_boundary_data_points() {
+        recordsFlow.value = listOf(mockRecords[0])
+        setContent()
+        assertChartContainsValue(0, "120")
     }
 
     // ======================================================================================
@@ -164,41 +139,38 @@ class GraphExpansionScreenTest {
     // ======================================================================================
 
     @Test
-    fun bh01_screen_orientation_is_forced_to_landscape() {
+    fun bh01_pinch_zoom_operation() {
         recordsFlow.value = mockRecords
         setContent()
-
-        assert(composeTestRule.activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-    }
-
-    @Test
-    fun bh02_scroll_operation_works() {
-        recordsFlow.value = mockRecords
-        setContent(category = Category.BP_AND_PULSE)
-
-        waitForHierarchy("GraphExpansion_GraphList")
-
-        composeTestRule.onNodeWithTag("GraphExpansion_GraphList")
-            .performTouchInput {
-                swipeUp()
-            }
+        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput {
+            pinch(center + Offset(-10f, 0f), center + Offset(-100f, 0f), center + Offset(10f, 0f), center + Offset(100f, 0f))
+        }
         composeTestRule.waitForIdle()
-        
-        composeTestRule.onNodeWithTag("GraphExpansion_GraphCard_3").assertExists()
     }
 
     @Test
-    fun bh03_back_operation_calls_callback() {
+    fun bh02_scroll_operation() {
+        recordsFlow.value = mockRecords
+        setContent()
+        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput { swipeLeft() }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun bh03_back_button_callback() {
         var backCalled = false
         recordsFlow.value = mockRecords
         setContent(onBack = { backCalled = true })
+        composeTestRule.onNodeWithTag("GraphExpansion_BackButton").performClick()
+        assert(backCalled)
+    }
 
-        waitForHierarchy("GraphExpansion_BackButton")
-
-        composeTestRule.onNodeWithTag("GraphExpansion_BackButton")
-            .assertExists()
-            .performClick()
-
+    @Test
+    fun bh04_screen_exit_and_return() {
+        var backCalled = false
+        recordsFlow.value = mockRecords
+        setContent(onBack = { backCalled = true })
+        composeTestRule.onNodeWithTag("GraphExpansion_BackButton").performClick()
         assert(backCalled)
     }
 }

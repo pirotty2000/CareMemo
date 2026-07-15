@@ -89,6 +89,26 @@ fun BatchInputScreen(
     // ダイアログ表示用の状態
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    // 初期状態の記録日時を保持（変更検知用）
+    val initialRecordTime = remember(recordTime) { recordTime }
+
+    // 変更があるか判定（数値入力がある、または日時が初期値から変更されている）
+    val isChanged by remember(uiState, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
+        derivedStateOf {
+            jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic.isChanged(
+                current = uiState,
+                currentInstant = dateTimeState.toInstant(),
+                initialInstant = initialRecordTime
+            )
+        }
+    }
+
+    // システム戻るボタンの制御
+    androidx.activity.compose.BackHandler(enabled = isChanged) {
+        showDiscardDialog = true
+    }
 
     // 成功時のフラッシュ演出用
     var showSuccessEffect by remember { mutableStateOf(false) }
@@ -185,8 +205,45 @@ fun BatchInputScreen(
                 viewModel.saveBatch()
             }
         },
-        onBack = onBack
+        onBack = {
+            if (isChanged) {
+                showDiscardDialog = true
+            } else {
+                onBack()
+            }
+        }
     )
+
+    // 破棄確認ダイアログ
+    if (showDiscardDialog) {
+        jp.mydns.fujiwara.carememo.ui.components.base.AppDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
+            text = {
+                jp.mydns.fujiwara.carememo.ui.components.base.AppDialogContent(
+                    text = stringResource(R.string.common_confirm_discard_message)
+                )
+            },
+            confirmButton = {
+                jp.mydns.fujiwara.carememo.ui.components.base.AppDialogConfirmButton(
+                    text = stringResource(R.string.common_discard),
+                    type = jp.mydns.fujiwara.carememo.ui.components.base.AppDialogActionType.DELETE,
+                    onClick = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    modifier = Modifier.testTag("BatchInputScreen_DiscardConfirmButton")
+                )
+            },
+            dismissButton = {
+                jp.mydns.fujiwara.carememo.ui.components.base.AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { showDiscardDialog = false },
+                    modifier = Modifier.testTag("BatchInputScreen_DiscardCancelButton")
+                )
+            }
+        )
+    }
 
     // 通知ダイアログの表示
     if (dialogMessage != null) {

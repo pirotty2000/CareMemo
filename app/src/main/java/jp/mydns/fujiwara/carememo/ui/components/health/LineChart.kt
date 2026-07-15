@@ -44,7 +44,11 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +73,7 @@ data class SelectedPoint(val x: Double, val y: Double, val color: Color, val lab
 @Composable
 fun LineChart(
     dataList: List<ChartLineData>,
+    modifier: Modifier = Modifier,
     stepY: Double = 5.0,
     limits: List<ChartLimitLine> = emptyList(),
     ranges: List<ChartRangeHighlight> = emptyList(),
@@ -83,6 +88,18 @@ fun LineChart(
     val valueLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold)
     val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
     val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+
+    // テストでの検証用に、描画される全テキストをセマンティクスに統合する
+    val allLabelContent = remember(dataList, fixedMinX, fixedMaxX) {
+        val labels = mutableListOf<String>()
+        dataList.forEach { line ->
+            line.points.forEach { p ->
+                labels.add(if (showDecimal || stepY <= 1.0) "%.1f".format(p.y) else p.y.toInt().toString())
+            }
+        }
+        // 本来はX軸ラベル等も入れるべきだが、主要な数値のみで検証
+        labels.joinToString(", ")
+    }
 
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val axisColor = MaterialTheme.colorScheme.outline
@@ -132,7 +149,14 @@ fun LineChart(
     val yRange = if (maxY - minY == 0.0) stepY else maxY - minY
     val yStepsCount = (yRange / stepY).toInt()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .semantics(mergeDescendants = true) { 
+                // テスト用に描画内容（数値文字列）を公開
+                this.contentDescription = allLabelContent
+            }
+    ) {
         if (dataList.size > 1) {
             Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -306,7 +330,7 @@ fun LineChart(
 
                                     val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(point.y) else point.y.toInt().toString()
                                     val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color))
-                                    drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLayout.size.height - 2.dp.toPx()))
+                                    drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLabelStyle.fontSize.toPx() - 2.dp.toPx()))
                                 }
                             }
                             drawPath(path, color = lineData.color, style = Stroke(width = 2.dp.toPx()))

@@ -129,14 +129,12 @@ fun PersonHealthScreenPhone(
                         }
                     }
                 )
-                if (selectedRecordId == -1) {
-                    CategorySelectorBar(
-                        currentCategory = currentCategory,
-                        personCategorySummary = personCategorySummary,
-                        onCategoryClick = onNavigateToCategory,
-                        modifier = Modifier.testTag("CategorySelectorBar")
-                    )
-                }
+                CategorySelectorBar(
+                    currentCategory = currentCategory,
+                    personCategorySummary = personCategorySummary,
+                    onCategoryClick = onNavigateToCategory,
+                    modifier = Modifier.testTag("CategorySelectorBar")
+                )
             }
         },
         // 右下の「＋」

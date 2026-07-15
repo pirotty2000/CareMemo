@@ -172,8 +172,12 @@ fun PersonHealthScreen(
     LaunchedEffect(currentCategory, personId) {
         viewModel.setCategory(currentCategory)
         healthViewModel.setCategory(currentCategory)
-        // カテゴリが切り替わったら選択をリセット（異なるデータ構造のIDは維持しない）
-        selectedRecordId = -1
+        // 異なるレコードID体系を持つカテゴリ間の移動でも、
+        // 「新規登録モード(0)」だけは維持して入力を継続できるようにする。
+        // 既存レコード選択中(-1以外かつ0以外)の場合のみリセットする。
+        if (selectedRecordId > 0) {
+            selectedRecordId = -1
+        }
     }
 
     val currentCategoryName = stringResource(currentCategory.displayNameRes)

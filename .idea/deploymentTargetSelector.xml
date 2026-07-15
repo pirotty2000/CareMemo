@@ -39,7 +39,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonConditionScreenTest_3_Behavior">
+      <SelectionState runConfigName="PersonHealthScreenTest_3_Behavior">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -50,7 +50,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonConditionScreenTest_4_Logic">
+      <SelectionState runConfigName="BatchInputScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -61,7 +61,18 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="ConditionPhotoPreviewScreenTest">
+      <SelectionState runConfigName="GraphExpansionScreenTest">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\pirotty.galaxy\.android\avd\TORQUE_G06_KYG03_2.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="cp02_chart_drawing_content()">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">

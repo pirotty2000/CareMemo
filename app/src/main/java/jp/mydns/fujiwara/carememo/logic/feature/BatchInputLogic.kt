@@ -36,6 +36,27 @@ object BatchInputLogic {
     }
 
     /**
+     * 初期状態から変更されているかどうかを判定します。
+     * 数値入力があるか、あるいは日時が初期値から変更されている場合に true を返します。
+     */
+    fun isChanged(current: BatchInputUiState, currentInstant: Instant?, initialInstant: Instant?): Boolean {
+        val hasInput = current.height.isNotBlank() ||
+                current.weight.isNotBlank() ||
+                current.bpSystolic.isNotBlank() ||
+                current.bpDiastolic.isNotBlank() ||
+                current.sat.isNotBlank() ||
+                current.pulse.isNotBlank() ||
+                current.bodyTemperature.isNotBlank() ||
+                current.glucose.isNotBlank() ||
+                current.hba1c.isNotBlank()
+
+        // 時刻が null の場合は「未完成」として変更ありとみなす（バリデーションで弾かれるが保護対象）
+        val isTimeChanged = currentInstant == null || initialInstant == null || currentInstant != initialInstant
+
+        return hasInput || isTimeChanged
+    }
+
+    /**
      * UI状態から保存対象となる Entity のリストを生成します。
      * 有効な入力があるカテゴリのみがリストに含まれます。
      */
