@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.database.sqlite.SQLiteConstraintException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -10,7 +9,6 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
-import jp.mydns.fujiwara.carememo.logic.common.DateValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState

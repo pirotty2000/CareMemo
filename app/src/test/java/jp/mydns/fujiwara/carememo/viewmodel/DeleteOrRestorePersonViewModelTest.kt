@@ -3,7 +3,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
-import app.cash.turbine.test
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
