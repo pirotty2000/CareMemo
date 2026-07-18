@@ -112,7 +112,7 @@ object MedicationLogic {
         // 未来日付のチェック (dosageDate は yyyy-MM-dd 形式)
         val dosageDate = try {
             LocalDate.parse(record.dosageDate)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return MedicationValidationResult.SUCCESS
         }
         

@@ -55,7 +55,7 @@ object JapaneseDateLogic {
 
         return try {
             LocalDate.of(adYear, month, day)
-        } catch (e: DateTimeException) {
+        } catch (_: DateTimeException) {
             null
         }
     }
@@ -77,7 +77,7 @@ object JapaneseDateLogic {
 
         val date = try {
             LocalDate.of(adYear, month, day)
-        } catch (e: DateTimeException) {
+        } catch (_: DateTimeException) {
             return DateValidationResult.INVALID_DAY
         }
 
