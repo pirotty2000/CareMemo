@@ -135,8 +135,7 @@ fun ConditionPhotoPreviewScreen(
                 ) {
                     OutlinedButton(
                         onClick = { showDeleteConfirmDialog = true },
-                        modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton"),
-                        enabled = !isProcessing
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton")
                     ) {
                         Text("削除")
                     }
@@ -145,8 +144,7 @@ fun ConditionPhotoPreviewScreen(
                             conditionViewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
                             onSaved()
                         },
-                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton"),
-                        enabled = !isProcessing
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
                     ) {
                         Text("保存する")
                     }

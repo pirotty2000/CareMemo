@@ -296,7 +296,6 @@ fun PersonHealthScreen(
         category = currentCategory,
         person = currentPerson,
         records = records,
-        snackbarHostState = snackbarHostState,
         viewModel = viewModel,
         onRequireAuthentication = onRequireAuthentication
     )

@@ -76,15 +76,15 @@
 
 ### 【対応状況】resultType 導入プロジェクト
 
-| フェーズ | 作業内容 | 対象ファイル | ステータス |
-|:---|:---|:---|:---|
-| **1. 基盤定義** | `AuditLog` エンティティへの `resultType` カラム追加 | `data.AuditLog` | [✅] 完了 |
-| | データベース・マイグレーションの実装と適用 | `data.AppDatabase` | [✅] 完了 |
-| **2. 共通改修** | `AuditLogRepository.log` の引数拡張（初期値 `UNKNOWN`） | `AuditLogRepository` | [✅] 完了 |
-| | `ErrorHandler` での例外自動判定ロジック実装 | `ViewModelCoroutineErrorHandler` | [✅] 完了 |
-| **3. 既存適用** | 全リポジトリの成功ログ記録箇所への `SUCCESS` 明示 | 各 `data.repository.*` | [✅] 完了 |
-| | 既存テストコードの期待値修正（ERROR → DB_ERROR等） | 各 `*Test.kt` | [✅] 完了 |
-| **4. 表示対応** | 監査ログ画面への `resultType` 表示およびフィルター追加 | `AuditLogScreen` | [✅] 完了 |
+| フェーズ        | 作業内容                                          | 対象ファイル                           | ステータス  |
+|:------------|:----------------------------------------------|:---------------------------------|:-------|
+| **1. 基盤定義** | `AuditLog` エンティティへの `resultType` カラム追加        | `data.AuditLog`                  | [✅] 完了 |
+|             | データベース・マイグレーションの実装と適用                         | `data.AppDatabase`               | [✅] 完了 |
+| **2. 共通改修** | `AuditLogRepository.log` の引数拡張（初期値 `UNKNOWN`） | `AuditLogRepository`             | [✅] 完了 |
+|             | `ErrorHandler` での例外自動判定ロジック実装                 | `ViewModelCoroutineErrorHandler` | [✅] 完了 |
+| **3. 既存適用** | 全リポジトリの成功ログ記録箇所への `SUCCESS` 明示                | 各 `data.repository.*`            | [✅] 完了 |
+|             | 既存テストコードの期待値修正（ERROR → DB_ERROR等）             | 各 `*Test.kt`                     | [✅] 完了 |
+| **4. 表示対応** | 監査ログ画面への `resultType` 表示およびフィルター追加            | `AuditLogScreen`                 | [✅] 完了 |
 
 #### 詳細作業ステップ
 - [✅] **[Entity]** `AuditLog` に `resultType: String` を追加。
@@ -101,12 +101,12 @@
 ## 🚀 将来的なサーバー移行（PostgreSQL/SpringBoot）への備え
 将来的なサーバー同期を見据え、データの整合性とエラーハンドリングの堅牢性を高めるための基盤準備です。
 
-| 課題内容                                                                          | 対象ファイル            | ルール参照 | ステータス |
-|:------------------------------------------------------------------------------|:------------------|:------|:------|
-| **主キーの UUID 化**: サーバーとの ID 競合を避けるため、`Long` (Auto-increment) から `String` (UUID) へ移行する。 | 全 `data.entity.*` | -     |       |
-| **リモート例外の定義**: `AppException` に通信エラー（Network/Server/Auth）を追加し、`BaseViewModel` でのハンドリングに備える。 | `util.AppException` | 3.6    |       |
-| **更新日時 (updated_at) の導入**: 同期時の競合解決（楽観的ロック）のため、全テーブルに最終更新日時カラムを追加する。<br>※「生年月日」等の日付型で発生した1日のズレを防ぐため、時刻を含む更新日時は一貫して **UTC (Unix Timestamp)** で扱う。 | 全 `data.entity.*` | -     |       |
-| **DTO と Entity の分離徹底**: Logic レイヤーにおいて、APIデータ(DTO)とDBデータ(Entity)の変換を分離できる構造を維持する。  | 各 `logic.*`       | 3.5.1  |       |
+| 課題内容                                                                                                                                             | 対象ファイル              | ルール参照 | ステータス |
+|:-------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------|:------|:------|
+| **主キーの UUID 化**: サーバーとの ID 競合を避けるため、`Long` (Auto-increment) から `String` (UUID) へ移行する。                                                            | 全 `data.entity.*`   | -     |       |
+| **リモート例外の定義**: `AppException` に通信エラー（Network/Server/Auth）を追加し、`BaseViewModel` でのハンドリングに備える。                                                      | `util.AppException` | 3.6   |       |
+| **更新日時 (updated_at) の導入**: 同期時の競合解決（楽観的ロック）のため、全テーブルに最終更新日時カラムを追加する。<br>※「生年月日」等の日付型で発生した1日のズレを防ぐため、時刻を含む更新日時は一貫して **UTC (Unix Timestamp)** で扱う。 | 全 `data.entity.*`   | -     |       |
+| **DTO と Entity の分離徹底**: Logic レイヤーにおいて、APIデータ(DTO)とDBデータ(Entity)の変換を分離できる構造を維持する。                                                                | 各 `logic.*`         | 3.5.1 |       |
 
 ---
 

@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class DeleteOrRestorePersonViewModel(
     private val repository: DeleteOrRestorePersonRepository,
     userSettingsRepository: UserSettingsRepository,
-    private val auditLogRepository: AuditLogRepository
+    auditLogRepository: AuditLogRepository
 ) : BaseViewModel(userSettingsRepository) {
 
     companion object {

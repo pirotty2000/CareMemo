@@ -65,29 +65,29 @@ jp.mydns.fujiwara.carememo
 
 |画面ID|画面名|分類|実装ID|実装ファイル|備考|# CareMemo 画面一覧
 
-|画面ID|分類|画面名|実装ID| 実装ファイル                                        |備考|
-|---|---|---|---|-----------------------------------------------|---|
-|SCR-M-001|Main|MainScreen|-| `main/MainScreen.kt`                          |トップ画面|
-|SCR-M-002|Main|PersonEditScreen|-| `main/PersonEditScreen.kt`                    |利用者登録・編集|
-|SCR-PH-001|Health|PersonHealthScreen|-| `health/PersonHealthScreen.kt`                |健康記録|
-||| |SCR-PH-001-PH| `health/PersonHealthScreenPhone.kt`           |Phone実装|
-||| |SCR-PH-001-TB| `health/PersonHealthScreenTablet.kt`          |Tablet実装|
-||| |SCR-PH-001-CT| `health/PersonHealthScreenContent.kt`         |共通Content実装|
-|SCR-PH-002|Health|BatchInputScreen|-| `health/BatchInputScreen.kt`                  |健康記録一括入力|
-|SCR-PH-003|Health|GraphExpansionScreen|-| `health/GraphExpansionScreen.kt`              |グラフ拡大表示|
-|SCR-PC-001|Condition|PersonConditionScreen|-| `condition/PersonConditionScreen.kt`          |所見メモ|
-||| |SCR-PC-001-PH| `condition/PersonConditionScreenPhone.kt`     |Phone実装|
-||| |SCR-PC-001-TB| `condition/PersonConditionScreenTablet.kt`    |Tablet実装|
-||| |SCR-PC-001-CT| `condition/PersonConditionScreenContent.kt`   |共通Content実装|
-|SCR-PC-002|Condition|ConditionPhotoPreviewScreen|-| `condition/ConditionPhotoPreviewScreen.kt`    |写真プレビュー|
-|SCR-PC-003|Condition|ConditionPhotoFullScreen|-| `condition/ConditionPhotoFullScreen.kt`       |写真全画面表示|
-|SCR-PM-001|Medication|PersonMedicationScreen|-| `medication/PersonMedicationScreen.kt`        |服薬管理|
-||| |SCR-PM-001-PH| `medication/PersonMedicationScreenPhone.kt`   |Phone実装|
-||| |SCR-PM-001-TB| `medication/PersonMedicationScreenTablet.kt`  |Tablet実装|
-||| |SCR-PM-001-CT| `medication/PersonMedicationScreenContent.kt` |共通Content実装|
-|SCR-S-001|Settings|SettingsScreen|-| `settings/SettingsScreen.kt`                  |設定|
-|SCR-S-002|Settings|AuditLogScreen|-| `settings/AuditLogScreen.kt`                           |監査ログ|
-|SCR-S-003|Settings|DeleteOrRestorePerson|-| `settings/DeleteOrRestorePerson.kt`                    |利用者管理|
+| 画面ID       | 分類         | 画面名                         | 実装ID          | 実装ファイル                                        | 備考          |
+|------------|------------|-----------------------------|---------------|-----------------------------------------------|-------------|
+| SCR-M-001  | Main       | MainScreen                  | -             | `main/MainScreen.kt`                          | トップ画面       |
+| SCR-M-002  | Main       | PersonEditScreen            | -             | `main/PersonEditScreen.kt`                    | 利用者登録・編集    |
+| SCR-PH-001 | Health     | PersonHealthScreen          | -             | `health/PersonHealthScreen.kt`                | 健康記録        |
+|            |            |                             | SCR-PH-001-PH | `health/PersonHealthScreenPhone.kt`           | Phone実装     |
+|            |            |                             | SCR-PH-001-TB | `health/PersonHealthScreenTablet.kt`          | Tablet実装    |
+|            |            |                             | SCR-PH-001-CT | `health/PersonHealthScreenContent.kt`         | 共通Content実装 |
+| SCR-PH-002 | Health     | BatchInputScreen            | -             | `health/BatchInputScreen.kt`                  | 健康記録一括入力    |
+| SCR-PH-003 | Health     | GraphExpansionScreen        | -             | `health/GraphExpansionScreen.kt`              | グラフ拡大表示     |
+| SCR-PC-001 | Condition  | PersonConditionScreen       | -             | `condition/PersonConditionScreen.kt`          | 所見メモ        |
+|            |            |                             | SCR-PC-001-PH | `condition/PersonConditionScreenPhone.kt`     | Phone実装     |
+|            |            |                             | SCR-PC-001-TB | `condition/PersonConditionScreenTablet.kt`    | Tablet実装    |
+|            |            |                             | SCR-PC-001-CT | `condition/PersonConditionScreenContent.kt`   | 共通Content実装 |
+| SCR-PC-002 | Condition  | ConditionPhotoPreviewScreen | -             | `condition/ConditionPhotoPreviewScreen.kt`    | 写真プレビュー     |
+| SCR-PC-003 | Condition  | ConditionPhotoFullScreen    | -             | `condition/ConditionPhotoFullScreen.kt`       | 写真全画面表示     |
+| SCR-PM-001 | Medication | PersonMedicationScreen      | -             | `medication/PersonMedicationScreen.kt`        | 服薬管理        |
+|            |            |                             | SCR-PM-001-PH | `medication/PersonMedicationScreenPhone.kt`   | Phone実装     |
+|            |            |                             | SCR-PM-001-TB | `medication/PersonMedicationScreenTablet.kt`  | Tablet実装    |
+|            |            |                             | SCR-PM-001-CT | `medication/PersonMedicationScreenContent.kt` | 共通Content実装 |
+| SCR-S-001  | Settings   | SettingsScreen              | -             | `settings/SettingsScreen.kt`                  | 設定          |
+| SCR-S-002  | Settings   | AuditLogScreen              | -             | `settings/AuditLogScreen.kt`                  | 監査ログ        |
+| SCR-S-003  | Settings   | DeleteOrRestorePerson       | -             | `settings/DeleteOrRestorePerson.kt`           | 利用者管理       |
 
 ---
 
@@ -104,16 +104,16 @@ jp.mydns.fujiwara.carememo
 - **共有コンテキスト**: `PersonDetailViewModel` は、詳細画面群 (A)(B)(C) で共有される利用者情報の保持と共通ヘッダーの制御を担当します。
 
 
-| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Logic                                                       | 主要Repository                                                                                                     |
-|:---------|:-----------------------------------|:-------------------------------------------------------|:--------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------|
-| 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel`         | `PersonListLogic`<br>`PersonEditLogic`<br>`JapaneseDateLogic` | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository` |
-| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `PersonHealthLogic`<br>`HealthLogic`                          | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
-| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `PersonConditionLogic`<br>`ConditionLogic`                    | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                         |
-| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationLogic`                                             | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                        |
-| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
-| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | -                                                             | `DeleteOrRestorePersonRepository`                                                                                |
-| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                      |
-| 操作ログ     | `AuditLogScreen`                   | `AuditLogViewModel`                                    | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                             |
+| 分類       | 画面 (Screen)                        | ViewModel                                              | 主要Logic                                                       | 主要Repository                                                                                                        |
+|:---------|:-----------------------------------|:-------------------------------------------------------|:--------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
+| 利用者一覧    | `MainScreen`<br>`PersonEditScreen` | `PersonListViewModel`<br>`PersonEditViewModel`         | `PersonListLogic`<br>`PersonEditLogic`<br>`JapaneseDateLogic` | `PersonRepository`<br>`DeleteOrRestorePersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`    |
+| (A) 健康記録 | `PersonHealthScreen`               | `PersonHealthViewModel`<br>`PersonDetailViewModel`     | `PersonHealthLogic`<br>`HealthLogic`                          | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                               |
+| (B) 所見メモ | `PersonConditionScreen`            | `PersonConditionViewModel`<br>`PersonDetailViewModel`  | `PersonConditionLogic`<br>`ConditionLogic`                    | `ConditionRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                            |
+| (C) 服薬管理 | `PersonMedicationScreen`           | `PersonMedicationViewModel`<br>`PersonDetailViewModel` | `MedicationLogic`                                             | `MedicationRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                           |
+| 健康一括入力   | `BatchInputScreen`                 | `BatchInputViewModel`                                  | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`                                               |
+| 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                       | -                                                             | `DeleteOrRestorePersonRepository`                                                                                   |
+| アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                    | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository` |
+| 操作ログ     | `AuditLogScreen`                   | `AuditLogViewModel`                                    | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                    |
 | 共通基盤     | (詳細画面全体)                           | `PersonDetailViewModel`                                | `PersonRepository`<br>`PersonSummaryRepository`               |
 
 ---
@@ -132,13 +132,13 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 ### **ドメイン共通ロジック (logic/common)**
 アプリ全体、または複数の画面で再利用される計算・判定・Enum 定義です。
 
-| ファイル名                  | 役割・主な内容                                   |
-|:-----------------------|:------------------------------------------|
-| `BirthEra.kt`          | 元号（昭和・平成・令和・西暦）の Enum 定義とリソース紐付け。         |
-| `JapaneseDateLogic.kt` | 西暦 ↔ 和暦の相互変換、和暦の妥当性チェック、日付文字列の正規化。        |
-| `HealthLogic.kt`       | BMI 計算、バイタル・血糖値・HbA1c の異常判定ルール、入力妥当性チェック。 |
+| ファイル名                  | 役割・主な内容                                               |
+|:-----------------------|:------------------------------------------------------|
+| `BirthEra.kt`          | 元号（昭和・平成・令和・西暦）の Enum 定義とリソース紐付け。                     |
+| `JapaneseDateLogic.kt` | 西暦 ↔ 和暦の相互変換、和暦の妥当性チェック、日付文字列の正規化。                    |
+| `HealthLogic.kt`       | BMI 計算、バイタル・血糖値・HbA1c の異常判定ルール、入力妥当性チェック。             |
 | `MedicationLogic.kt`   | カレンダーの日付リスト生成（空セル挿入）、同期アクション（保存・削除）の判定、およびデータのクレンジング。 |
-| `ConditionLogic.kt`    | 所見メモの検索フィルタリング、重複判定ロジック。                  |
+| `ConditionLogic.kt`    | 所見メモの検索フィルタリング、重複判定ロジック。                              |
 
 ### **機能固有ロジック (logic/feature)**
 特定の画面や ViewModel の状態管理（UiState）に密結合したロジックです。

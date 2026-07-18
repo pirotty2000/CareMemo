@@ -67,7 +67,6 @@ fun SettingsScreen(
     val inconsistencies: List<DatabaseInconsistency> by viewModel.inconsistencies.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 設定変更があったかどうかの内部状態

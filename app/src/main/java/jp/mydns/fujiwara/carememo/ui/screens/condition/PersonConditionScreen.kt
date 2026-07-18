@@ -311,7 +311,6 @@ fun PersonConditionScreen(
             category = Category.CONDITION_AT_VISIT,
             person = currentPerson,
             records = records,
-            snackbarHostState = snackbarHostState,
             viewModel = viewModel,
             onRequireAuthentication = onRequireAuthentication,
             photos = allPhotos.value

@@ -22,7 +22,6 @@ package jp.mydns.fujiwara.carememo.ui.components.common
  * PdfExportActionHandler
  */
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
@@ -43,7 +42,6 @@ fun PdfExportActionHandler(
     category: Category,
     person: Person?,
     records: List<HistoryRecord>,
-    snackbarHostState: SnackbarHostState,
     viewModel: BaseViewModel,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
     photos: List<ConditionPhoto> = emptyList()

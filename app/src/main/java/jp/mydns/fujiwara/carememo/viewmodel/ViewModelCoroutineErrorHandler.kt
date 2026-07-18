@@ -23,10 +23,10 @@ class ViewModelCoroutineErrorHandler(
         val resultType = when (e) {
             is SQLiteException, is AppDataException -> "DB_ERROR"
             is AppIOException, is IOException -> "IO_ERROR"
+            is SerializationException -> "FORMAT_ERROR"
             is AppValidationException, is IllegalArgumentException -> "VALIDATION_ERROR"
             is AppSecurityException -> "SECURITY_ERROR"
             is AppExternalException -> "EXTERNAL_ERROR"
-            is SerializationException -> "FORMAT_ERROR"
             else -> "OTHER_ERROR"
         }
 

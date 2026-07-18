@@ -212,7 +212,6 @@ fun PersonMedicationScreen(
         category = Category.MEDICATION,
         person = currentPerson,
         records = allRecords,
-        snackbarHostState = snackbarHostState,
         viewModel = viewModel,
         onRequireAuthentication = onRequireAuthentication
     )

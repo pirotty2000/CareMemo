@@ -122,12 +122,12 @@ ViewModel 内の純粋なロジックを Logic クラスに抽出しました。
 
 ## 📂 対象ファイルと優先度
 
-| ViewModel 名 | 優先度 | 主な課題 | 適用推奨フェーズ |
-| :--- | :--- | :--- | :--- |
+| ViewModel 名           | 優先度   | 主な課題                   | 適用推奨フェーズ   |
+|:----------------------|:------|:-----------------------|:-----------|
 | `BatchInputViewModel` | 🔴 最高 | 個別 Flow が多すぎ、保存ロジックが複雑 | 1, 2, 3, 5 |
-| `PersonEditViewModel` | 🔴 高 | ロジックの混入、派生状態の算出が複雑 | 1, 2, 5 |
-| `PersonBaseViewModel` | 🟡 中 | 共通処理と独自処理の境界が曖昧 | 3, 4 |
-| `PersonListViewModel` | 🔵 低 | フィルタリングロジックの整理 | 1, 2 |
+| `PersonEditViewModel` | 🔴 高  | ロジックの混入、派生状態の算出が複雑     | 1, 2, 5    |
+| `PersonBaseViewModel` | 🟡 中  | 共通処理と独自処理の境界が曖昧        | 3, 4       |
+| `PersonListViewModel` | 🔵 低  | フィルタリングロジックの整理         | 1, 2       |
 
 > [!NOTE]
 > 上記以外の ViewModel（`PersonHealthViewModel` 等）についても、これらの「パイロットケース」での改善成果を順次横展開し、最終的にはプロジェクト全体の ViewModel 構造を統一します。

@@ -117,6 +117,7 @@ object ImageUtils {
         return scaled
     }
 
+    @Suppress("SameParameterValue")
     private fun calculateInSampleSize(
         options: BitmapFactory.Options,
         reqWidth: Int,

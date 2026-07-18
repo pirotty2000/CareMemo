@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.stateIn
 class PersonListViewModel(
     private val repository: PersonRepository,
     private val archivedRepository: DeleteOrRestorePersonRepository,
-    private val summaryRepository: PersonSummaryRepository,
+    summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,

@@ -143,10 +143,10 @@ class PersonEditViewModel(
                     PersonEditValidationResult.EMPTY_FIRST_NAME -> R.string.main_err_edit_empty_first_name
                     PersonEditValidationResult.INVALID_BIRTHDAY -> {
                         // 生年月日が不正な場合、詳細な理由を Logic から取得 (将来の拡張用)
-                        val y = currentState.year.toIntOrNull() ?: 0
-                        val m = currentState.month.toIntOrNull() ?: 0
-                        val d = currentState.day.toIntOrNull() ?: 0
-                        val dateDetail = JapaneseDateLogic.validate(currentState.era, y, m, d)
+                        // val y = currentState.year.toIntOrNull() ?: 0
+                        // val m = currentState.month.toIntOrNull() ?: 0
+                        // val d = currentState.day.toIntOrNull() ?: 0
+                        // val dateDetail = JapaneseDateLogic.validate(currentState.era, y, m, d)
                         
                         // 現状は一律「不正」としているが、将来的に dateDetail ごとにメッセージを分けられる
                         R.string.main_err_edit_invalid_birthday

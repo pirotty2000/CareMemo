@@ -434,6 +434,7 @@ object PdfExporter {
 
     // --- 共通部品とユーティリティ ---
 
+    @Suppress("SameReturnValue")
     private fun drawHeader(ctx: PdfPageContext): Float {
         val paint = Paint().apply { color = Color.BLACK; textSize = 18f; isFakeBoldText = true }
         

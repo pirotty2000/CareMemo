@@ -310,9 +310,11 @@ private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationSta
         null -> Color.LightGray.copy(alpha = 0.5f)
     }
     
-    val displayLabel = if (status == null) "－" 
-                       else if (status == MedicationStatus.NONE) MedicationDisplayMapper.getStatusSymbol(status)
-                       else stringResource(MedicationDisplayMapper.getTimeSlotLabelRes(slot, true))
+    val displayLabel = when (status) {
+        null -> "－"
+        MedicationStatus.NONE -> MedicationDisplayMapper.getStatusSymbol(status)
+        else -> stringResource(MedicationDisplayMapper.getTimeSlotLabelRes(slot, true))
+    }
 
     Box(
         modifier = Modifier

@@ -46,8 +46,6 @@
     <string name="main_menu_help">ヘルプ</string>
     <string name="main_menu_version">バージョン情報</string>
     <string name="main_dialog_version_title">バージョン情報</string>
-    <string name="main_dialog_help_title">ヘルプ</string>
-    <string name="main_dialog_help_content">・利用者一覧から利用者を選択して記録を行います。\n・利用を終了した方は「設定」内の「利用者管理」から復帰できます。</string>
     <string name="main_edit_user_info">利用者情報を編集</string>
     <string name="main_end_user_service">利用を終了する</string>
     <string name="main_snackbar_user_ended">%1$s さんの利用を終了しました</string>
@@ -85,7 +83,6 @@
     <string name="p_detail_error_no_records_for_pdf">%1$sの記録がないため出力できません</string>
 
     <!-- PersonHealthScreen -->
-    <string name="p_health_title">健康記録</string>
     <string name="p_health_msg_save_success">記録を保存しました</string>
     <string name="p_health_msg_update_success">記録を更新しました</string>
     <string name="p_health_msg_delete_success">記録を削除しました</string>
@@ -175,7 +172,6 @@
     <string name="create_pdf">PDFを作成</string>
     <string name="show_password">表示</string>
     <string name="hide_password">非表示</string>
-    <string name="more_items">さらに下に項目があります</string>
     <string name="decision">決定</string>
     <string name="condition_photo_add_guide">写真は保存後に詳細画面から追加できます</string>
 
@@ -192,7 +188,6 @@
     <string name="common_error_no_space">空き容量が不足しています (%1$s)</string>
 
     <!-- PersonConditionScreen -->
-    <string name="p_cond_title">所見メモ</string>
     <string name="p_cond_msg_save_success">記録を保存しました</string>
     <string name="p_cond_msg_update_success">記録を更新しました</string>
     <string name="p_cond_msg_delete_success">記録を削除しました</string>
@@ -256,7 +251,6 @@
     <!-- Audit Log -->
     <string name="settings_msg_audit_log_cleared">操作ログをすべて消去しました。</string>
     <string name="settings_msg_rotate_success">古い操作ログを削除しました。</string>
-    <string name="audit_log_title">操作ログ</string>
     <string name="audit_log_empty">ログはありません</string>
     <string name="audit_log_label_retention">ログの保持期間</string>
     <string name="audit_log_retention_desc">指定した日数より前のログを自動的に削除します</string>
