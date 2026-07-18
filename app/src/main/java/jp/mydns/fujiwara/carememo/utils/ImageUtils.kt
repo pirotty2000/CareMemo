@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.UUID
 
 /**
@@ -32,9 +33,10 @@ object ImageUtils {
 
     /**
      * 撮影された画像をリサイズ・回転補正して保存する。
-     * @return 保存されたメイン画像とサムネイルのファイル名のペア。失敗時はnull。
+     * @return 保存されたメイン画像とサムネイルのファイル名のペア。
+     * @throws IOException 画像の読み込み、加工、または保存に失敗した場合
      */
-    suspend fun processAndSaveImage(context: Context, inputUri: Uri): Pair<String, String>? = withContext(Dispatchers.IO) {
+    suspend fun processAndSaveImage(context: Context, inputUri: Uri): Pair<String, String> = withContext(Dispatchers.IO) {
         // 処理開始前に古い一時ファイルを掃除
         clearOldTempPhotos(context)
 
@@ -55,7 +57,7 @@ object ImageUtils {
             val rotation = getRotation(context, inputUri)
 
             // 2. 画像を適切なサイズで読み込む
-            sourceBitmap = loadResizedBitmap(context, inputUri) ?: return@withContext null
+            sourceBitmap = loadResizedBitmap(context, inputUri) ?: throw IOException("画像の読み込みに失敗しました。")
             
             // 3. 回転補正を適用
             rotatedBitmap = rotateBitmap(sourceBitmap, rotation)
@@ -68,9 +70,6 @@ object ImageUtils {
             saveBitmapToFile(thumbBitmap, thumbFile, 75)
 
             Pair(originalFileName, thumbFileName)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
         } finally {
             // メモリ解放を確実に行う
             sourceBitmap?.let { if (!it.isRecycled && it != rotatedBitmap) it.recycle() }
@@ -97,29 +96,25 @@ object ImageUtils {
 
     private fun loadResizedBitmap(context: Context, uri: Uri): Bitmap? {
         val maxSize = AppThresholds.IMAGE_MAX_SIZE
-        return try {
-            // サイズ計測
-            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                BitmapFactory.decodeStream(inputStream, null, options)
-            }
-
-            // サンプリングレート計算
-            options.inSampleSize = calculateInSampleSize(options, maxSize, maxSize)
-            options.inJustDecodeBounds = false
-
-            // 実際の読み込み
-            val sampledBitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                BitmapFactory.decodeStream(inputStream, null, options)
-            } ?: return null
-
-            // 指定サイズに正確にリサイズ
-            val scaled = createScaledBitmap(sampledBitmap, maxSize)
-            if (scaled != sampledBitmap) sampledBitmap.recycle()
-            scaled
-        } catch (_: Exception) {
-            null
+        // サイズ計測
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, options)
         }
+
+        // サンプリングレート計算
+        options.inSampleSize = calculateInSampleSize(options, maxSize, maxSize)
+        options.inJustDecodeBounds = false
+
+        // 実際の読み込み
+        val sampledBitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, options)
+        } ?: return null
+
+        // 指定サイズに正確にリサイズ
+        val scaled = createScaledBitmap(sampledBitmap, maxSize)
+        if (scaled != sampledBitmap) sampledBitmap.recycle()
+        return scaled
     }
 
     private fun calculateInSampleSize(
@@ -174,18 +169,14 @@ object ImageUtils {
 
     /**
      * 全ての写真ファイルを物理削除する。
+     * @throws IOException 削除に失敗した場合
      */
-    suspend fun clearPhotosDir(context: Context): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val dir = getPhotosDir(context)
-            if (dir.exists()) {
-                dir.listFiles()?.forEach { 
-                    if (!it.delete()) return@withContext false 
-                }
+    suspend fun clearPhotosDir(context: Context) = withContext(Dispatchers.IO) {
+        val dir = getPhotosDir(context)
+        if (dir.exists()) {
+            dir.listFiles()?.forEach { 
+                if (!it.delete()) throw IOException("ファイル ${it.name} の削除に失敗しました。")
             }
-            true
-        } catch (_: Exception) {
-            false
         }
     }
 
@@ -198,11 +189,18 @@ object ImageUtils {
 
     /**
      * 物理ファイルを削除する。
+     * @throws IOException 削除に失敗した場合
      */
     suspend fun deleteImageFiles(context: Context, photoName: String?, thumbName: String?) = withContext(Dispatchers.IO) {
         val dir = getPhotosDir(context)
-        photoName?.let { File(dir, it).delete() }
-        thumbName?.let { File(dir, it).delete() }
+        photoName?.let { 
+            val file = File(dir, it)
+            if (file.exists() && !file.delete()) throw IOException("ファイル $it の削除に失敗しました。")
+        }
+        thumbName?.let { 
+            val file = File(dir, it)
+            if (file.exists() && !file.delete()) throw IOException("ファイル $it の削除に失敗しました。")
+        }
     }
 
     /**

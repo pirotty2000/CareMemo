@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.PersonOff
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,15 +45,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeleteOrRestorePersonScreen(
     viewModel: DeleteOrRestorePersonViewModel,
+    navController: NavController,
     mode: DeleteOrRestorePersonViewModel.OperationMode,
     onBack: () -> Unit,
 ) {
@@ -60,12 +65,23 @@ fun DeleteOrRestorePersonScreen(
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
+    val scope = rememberCoroutineScope()
+    var isRefreshNeeded by rememberSaveable { mutableStateOf(false) }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    // 戻る際の処理（親画面への通知準備）
+    val handleBack = {
+        if (isRefreshNeeded) {
+            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
+        }
+        onBack()
+    }
 
     // モードを ViewModel に反映
     LaunchedEffect(mode) {
@@ -77,10 +93,16 @@ fun DeleteOrRestorePersonScreen(
         viewModel.uiEventFlow.collect { event ->
             when (event) {
                 is BaseViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    scope.launch { snackbarHostState.showSnackbar(event.message) }
                 }
                 is BaseViewModel.UiEvent.ShowSnackbarRes -> {
-                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                    // 復帰・抹消成功メッセージの場合、親画面の更新フラグを立てる
+                    if (event.resId == R.string.archive_msg_restored || event.resId == R.string.archive_msg_deleted) {
+                        isRefreshNeeded = true
+                    }
+                    scope.launch {
+                        snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                    }
                 }
                 is BaseViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
@@ -140,7 +162,7 @@ fun DeleteOrRestorePersonScreen(
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
+                    IconButton(onClick = handleBack, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -179,7 +201,7 @@ fun DeleteOrRestorePersonScreen(
                             if (isDeleteMode) {
                                 showFinalConfirmDialog = true
                             } else {
-                                viewModel.restoreSelectedPersons(archivedPersons)
+                                showRestoreConfirmDialog = true
                             }
                         },
                         modifier = Modifier
@@ -284,6 +306,32 @@ fun DeleteOrRestorePersonScreen(
                 }
             }
         }
+    }
+
+    // 復帰実行前の確認
+    if (showRestoreConfirmDialog) {
+        AppDialog(
+            onDismissRequest = { showRestoreConfirmDialog = false },
+            title = { Text("利用者の復帰") },
+            text = {
+                AppDialogContent(text = "選択された ${selectedIds.size} 名の利用者を利用者一覧（アクティブ）に戻します。よろしいですか？")
+            },
+            confirmButton = {
+                AppDialogConfirmButton(
+                    text = "復帰を実行する",
+                    onClick = {
+                        showRestoreConfirmDialog = false
+                        viewModel.restoreSelectedPersons(archivedPersons)
+                    }
+                )
+            },
+            dismissButton = {
+                AppDialogDismissButton(
+                    text = "キャンセル",
+                    onClick = { showRestoreConfirmDialog = false }
+                )
+            }
+        )
     }
 
     // 抹消実行前の最終確認

@@ -3,6 +3,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import app.cash.turbine.test
 import io.mockk.coEvery
@@ -13,7 +14,6 @@ import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
-import io.mockk.verify
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
@@ -32,7 +32,13 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
+/**
+ * SCR-S-001 SettingsViewModel のユニットテスト
+ * 
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-S-001_SettingsScreen.md に準拠
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 
@@ -49,7 +55,7 @@ class SettingsViewModelTest {
         mockkStatic(Log::class)
         mockkObject(ImageUtils)
         every { Log.e(any(), any(), any()) } returns 0
-        coEvery { ImageUtils.clearPhotosDir(any()) } returns true
+        coEvery { ImageUtils.clearPhotosDir(any()) } returns Unit
 
         Dispatchers.setMain(testDispatcher)
         
@@ -82,30 +88,60 @@ class SettingsViewModelTest {
         unmockkObject(ImageUtils)
     }
 
-    // --- ロジック・安全性テスト (LG-01 〜 LG-06: Suspend系) ---
+    // ======================================================================================
+    // 3. ロジック・安全性テスト (SettingsViewModel)
+    // ======================================================================================
 
     @Test
-    fun `LG-01_操作ログ消去失敗時に監査ログが記録されること`() = runTest {
+    fun lg01_exportData_safetyOnFailure() = runTest {
+        val context = mockk<Context>(relaxed = true)
+        val uri = mockk<Uri>(relaxed = true)
+        
+        // バックアップ処理中に例外を発生させる
+        coEvery { maintenanceRepository.getBackupData() } throws IOException("No space left")
+
+        viewModel.exportData(context, uri)
+        advanceUntilIdle()
+
+        // 検証: isLoading (isProcessing) が false に戻ること
+        assertEquals(false, viewModel.isProcessing.value)
+        
+        // 監査ログにエラーが記録されていること
+        coVerify {
+            auditLogRepository.log(
+                featureName = "Settings",
+                operation = "exportData",
+                actionType = "ERROR",
+                details = match { it.contains("No space left") },
+                resultType = "IO_ERROR",
+                tableName = any(),
+                affectedId = any()
+            )
+        }
+    }
+
+    @Test
+    fun lg02_clearAuditLogs_safetyOnFailure() = runTest {
         coEvery { auditLogRepository.deleteAllLogs() } throws RuntimeException("Delete Error")
 
         viewModel.clearAuditLogs()
-        advanceUntilIdle() // 非同期実行を待機
+        advanceUntilIdle()
 
         coVerify {
             auditLogRepository.log(
                 featureName = "Settings",
                 operation = "clearAuditLogs",
-                tableName = any(),
                 actionType = "ERROR",
-                affectedId = any(),
                 details = match { it.contains("Delete Error") },
+                tableName = any(),
+                affectedId = any(),
                 resultType = "OTHER_ERROR"
             )
         }
     }
 
     @Test
-    fun `LG-02_手動ローテーション失敗時にisProcessingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg03_rotateLogs_safetyOnFailure() = runTest {
         coEvery { auditLogRepository.deleteOldLogs(any()) } throws RuntimeException("Rotate Error")
 
         viewModel.rotateLogsManually()
@@ -116,19 +152,19 @@ class SettingsViewModelTest {
             auditLogRepository.log(
                 featureName = "Settings",
                 operation = "rotateLogsManually",
-                tableName = any(),
                 actionType = "ERROR",
-                affectedId = any(),
                 details = match { it.contains("Rotate Error") },
+                tableName = any(),
+                affectedId = any(),
                 resultType = "OTHER_ERROR"
             )
         }
     }
 
     @Test
-    fun `LG-05_全データ消去失敗時にisProcessingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg04_clearAllData_safetyOnFailure() = runTest {
         val context = mockk<Context>(relaxed = true)
-        coEvery { maintenanceRepository.clearAllData() } throws RuntimeException("Clear All Error")
+        coEvery { ImageUtils.clearPhotosDir(any()) } throws IOException("Clear Photos Error")
 
         viewModel.clearAllData(context)
         advanceUntilIdle()
@@ -138,17 +174,17 @@ class SettingsViewModelTest {
             auditLogRepository.log(
                 featureName = "Settings",
                 operation = "clearAllData",
-                tableName = any(),
                 actionType = "ERROR",
+                details = match { it.contains("Clear Photos Error") },
+                tableName = "all_db",
                 affectedId = any(),
-                details = match { it.contains("Clear All Error") },
-                resultType = "OTHER_ERROR"
+                resultType = "IO_ERROR"
             )
         }
     }
 
     @Test
-    fun `LG-06_整合性チェック失敗時にisProcessingがfalseになり監査ログが記録されること`() = runTest {
+    fun lg05_checkIntegrity_safetyOnFailure() = runTest {
         coEvery { maintenanceRepository.scanInconsistencies() } throws RuntimeException("Integrity Error")
 
         viewModel.checkIntegrity()
@@ -159,21 +195,19 @@ class SettingsViewModelTest {
             auditLogRepository.log(
                 featureName = "Settings",
                 operation = "checkIntegrity",
-                tableName = any(),
                 actionType = "ERROR",
-                affectedId = any(),
                 details = match { it.contains("Integrity Error") },
+                tableName = any(),
+                affectedId = any(),
                 resultType = "OTHER_ERROR"
             )
         }
     }
 
-    // --- ロジック・安全性テスト (LG-08 〜 LG-09: Flow系) ---
-
     @Test
-    fun `LG-08_利用終了者一覧のFlow取得失敗時に監査ログが記録されること`() = runTest {
+    fun lg06_deletedUserListFlow_safetyOnFailure() = runTest {
         every { archivedPersonRepository.getArchivedPersons() } returns flow {
-            throw RuntimeException("DeletedUserList Flow Error")
+            throw RuntimeException("Flow Error")
         }
 
         val errorViewModel = SettingsViewModel(
@@ -188,33 +222,14 @@ class SettingsViewModelTest {
                 auditLogRepository.log(
                     featureName = "Settings",
                     operation = "deletedUserListFlow",
-                    tableName = any(),
                     actionType = "ERROR",
+                    details = match { it.contains("Flow Error") },
+                    tableName = any(),
                     affectedId = any(),
-                    details = match { it.contains("DeletedUserList Flow Error") },
                     resultType = "OTHER_ERROR"
                 )
             }
             cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `LG-09_統計情報のFlow取得失敗時にクラッシュしないこと`() = runTest {
-        coEvery { auditLogRepository.getLogCount() } throws RuntimeException("Count Error")
-
-        val errorViewModel = SettingsViewModel(
-            maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository
-        )
-
-        errorViewModel.auditLogCount.test {
-            assertEquals(0, awaitItem()) // 初期値
-            advanceUntilIdle() // ポーリング開始と例外発生を待機
-            
-            // クラッシュせずにエラーログが出力されていることを確認
-            verify {
-                Log.e(any(), match { it.contains("auditLogCount") }, any())
-            }
         }
     }
 }

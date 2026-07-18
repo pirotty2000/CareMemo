@@ -1,6 +1,72 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 /**
+ * アプリ固有の例外の基底クラス。
+ * 監査ログ用のメッセージに加え、UIに表示するためのリソース情報を保持します。
+ */
+open class AppException(
+    val titleResId: Int? = null,
+    val messageResId: Int? = null,
+    val args: List<Any> = emptyList(),
+    logMessage: String,
+    cause: Throwable? = null
+) : Exception(logMessage, cause)
+
+/**
+ * バリデーション失敗（入力不備、重複など）を表す例外
+ */
+class AppValidationException(
+    titleResId: Int? = null,
+    messageResId: Int? = null,
+    args: List<Any> = emptyList(),
+    logMessage: String
+) : AppException(titleResId, messageResId, args, logMessage)
+
+/**
+ * 入出力（ファイル操作、バックアップ等）の失敗を表す例外
+ */
+class AppIOException(
+    titleResId: Int? = null,
+    messageResId: Int? = null,
+    args: List<Any> = emptyList(),
+    logMessage: String,
+    cause: Throwable? = null
+) : AppException(titleResId, messageResId, args, logMessage, cause)
+
+/**
+ * データ整合性・DBエラーを表す例外
+ */
+class AppDataException(
+    titleResId: Int? = null,
+    messageResId: Int? = null,
+    args: List<Any> = emptyList(),
+    logMessage: String,
+    cause: Throwable? = null
+) : AppException(titleResId, messageResId, args, logMessage, cause)
+
+/**
+ * 外部アプリ連携・ハードウェア（カメラ等）エラーを表す例外
+ */
+class AppExternalException(
+    titleResId: Int? = null,
+    messageResId: Int? = null,
+    args: List<Any> = emptyList(),
+    logMessage: String,
+    cause: Throwable? = null
+) : AppException(titleResId, messageResId, args, logMessage, cause)
+
+/**
+ * セキュリティ・権限（生体認証失敗等）エラーを表す例外
+ */
+class AppSecurityException(
+    titleResId: Int? = null,
+    messageResId: Int? = null,
+    args: List<Any> = emptyList(),
+    logMessage: String,
+    cause: Throwable? = null
+) : AppException(titleResId, messageResId, args, logMessage, cause)
+
+/**
  * 例外発生時の付随情報を保持するイミュータブルなデータクラス
  */
 data class ErrorContext(

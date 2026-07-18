@@ -120,9 +120,8 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 
 ### 3.4.1. ViewModel でのロード制御
 - **即時クリア**: `loadPerson(id)` の開始時に `_currentPerson.value = null` をセットし、古いデータを明示的に消去する。
-- **Flow監視の自動制御**: データのロード（継続的な監視）は **`flatMapLatest` を第一選択**とし、上流（IDや検索条件等）の変更に伴う古い Flow の自動キャンセルを徹底する。購読時は可能な限り `BaseViewModel.safeCollect` を使用すること。
-- **単発Jobの排他制御**: データの保存、同期、一過性の取得などの「単発処理」に限り、`Job` 変数で手動管理を行い、重複実行の防止や適切なタイミングでのキャンセル（`cancel()`）を担保する。実行時は原則として `BaseViewModel.safeLaunch` を使用すること。
-- **ローディング解除の責任**: `_isLoading.value = false` は、`safeLaunch` / `safeCollect` 基盤が `finally` ブロック等で自動的に行う。手動で制御する場合は、例外発生時も確実に解除することを保証すること。
+- **Flow監視の自動制御**: データのロード（継続的な監視）は **`flatMapLatest` を第一選択**とし、上流（IDや検索条件等）の変更に伴う古い Flow の自動キャンセルを徹底する。
+- **単発Jobの排他制御**: データの保存、同期、一過性の取得などの「単発処理」に限り、`Job` 変数で手動管理を行い、重複実行の防止や適切なタイミングでのキャンセル（`cancel()`）を担保する。基盤機能（`safeLaunch` 等）を用いた実行制御の詳細は第4章を参照。
 
 ### 3.4.2. Screen (Composable) でのロードトリガー
 - **ID変更の監視**: `LaunchedEffect(personId)` を使用し、利用者が物理的に切り替わった場合のみ `loadPerson` を実行する。
@@ -144,33 +143,62 @@ ViewModel の肥大化を防ぎ、テストの信頼性を高めるため、計�
 - **依存性の排除**: `Context`, `Resources`, `Repository`, `Flow` などの Android 依存やデータソース依存を持たせない。
 - **引数と戻り値の明確化**: 入力はプリミティブ型またはデータクラスとし、結果を戻り値として返す「関数型」のスタイルを基本とする。
 
+## 3.6. Logic / Utility レイヤーにおけるエラー設計
+
+Logic レイヤーの純粋性（Pure Kotlin）と、ViewModel による適切な通知を両立させるためのルールです。
+
+- **Logic の純粋性**: Logic は UI リソース（`R.string`）や `AppException`（ViewModel層のクラス）に依存してはならない。
+- **役割の分離（事実と通知）**:
+  - **Logic (事実 of 定義)**: 判定を行い、その「事実（理由）」を返す。失敗理由が複数ある場合は `Boolean` ではなく **`enum class` や `sealed interface`** など、理由を詳細に識別可能な型を戻り値として使用する。
+  - **ViewModel (通知への翻訳)**: Logic から返された事実に基づき、適切なリソースIDを選択して `AppException` をスローする。
+- **例外の伝播（低レイヤー）**: `ImageUtils`, `ZipUtils` 等の低レイヤー部品で発生したシステム的な失敗（`IOException` 等）は、内部で握りつぶさず、そのままスローして ViewModel に判断を委ねる。
+- **標準例外 of 活用**: Logic of 契約（前提条件）違反を検知した場合は、`IllegalArgumentException` や `IllegalStateException` をスローして良い。これらは回復不能なプログラミング上の誤りとして扱い、ViewModel of ハンドラで `VALIDATION_ERROR` 等として自動処理される。これは ViewModel のハンドラで `VALIDATION_ERROR` として自動処理される。
+- **AppException の継承階層**:
+  ViewModel がスローする通知用例外は、以下の構造で定義・使用すること。
+
+  ```
+  AppException
+  ├── AppValidationException (バリデーション失敗・業務ルール違反)
+  ├── AppIOException (ファイル入出力・接続エラー)
+  ├── AppDataException (データ整合性・DBエラー)
+  ├── AppExternalException (外部アプリ連携エラー)
+  └── AppSecurityException (生体認証・権限エラー)
+  ```
+
 ---
 
-# 4. エラーハンドリングの標準化 (safeLaunch / safeCollect)
+# 4. エラーハンドリングと実行制御 (safeLaunch / safeCollect)
 
-予期せぬエラー発生時もユーザーが迷わず、かつシステムの状態が確実に復帰するよう、以下の利用原則を徹底してください。
+予期せぬエラー発生時もユーザーが迷わず、かつシステムの状態が確実に復帰するよう、`BaseViewModel` の基盤機能を活用した実装を徹底してください。
 
-## 4.1. BaseViewModel の利用原則
-- **viewModelScope.launch の直接使用禁止**: ViewModel 内から `viewModelScope.launch { ... }` を直接呼び出さない。
-- **単発処理は safeLaunch**: 保存、削除、同期などの単発処理は、原則として `safeLaunch` を使用する。
-- **Flow 購読は safeCollect**: リポジトリからのデータ取得（Flow 購読）には `safeCollect` を使用する。
-- **手動 try-catch の制限**: ViewModel 内に生の `try-catch` を記述するのは、複雑な合成 Flow や特殊なリトライ処理など、`safeLaunch` / `safeCollect` では表現できない特殊ケースのみとする。
+## 4.1. 基盤機能の利用原則
+- **標準的な起動メソッド**: ViewModel 内からの非同期処理は、原則として `safeLaunch` または `safeCollect` を使用する。`viewModelScope.launch { ... }` の直接使用は禁止。
+- **ローディング状態の自動制御**: `loadingState` 引数に `MutableStateFlow<Boolean>` を渡すことで、開始・終了（成否問わず）のフラグ制御を基盤に任せる。これにより、手動での `isLoading = false` 漏れを防止する。
+- **手動 try-catch の制限**: ViewModel 内に生の `try-catch` を記述するのは、複雑な合成 Flow や特殊なリトライ処理など、基盤機能では表現できない特殊ケースのみとする。
+- **CancellationException**: 基盤側で自動的に再スローされるため、ViewModel 側で個別にキャッチや判定をする必要はない。
 
 ## 4.2. 責務の分割
-- **Repository**: **例外の「再スロー」を基本とする。** 監査ログへの「正常操作（INSERT等）」の記録は行うが、例外をキャッチして `ERROR` ログを記録することは原則行わない。発生した例外は上位（ViewModel）へそのまま伝搬させる。
-- **ViewModel**: `safeLaunch` または `safeCollect` を使用して、実行制御と例外ハンドリングを行う。
-  - **例外の分類と委譲**: 基盤側で `CancellationException`（再スロー）、`Exception`（ハンドラへ委譲）、`Error`（記録後に再スロー）の振り分けが自動で行われる。
-  - **ログ記録の指定**: `contextBuilder` を用いて、監査ログに必要な情報（`operation`, `tableName`, `affectedId`）を指定する。
-- **CoroutineErrorHandler (Handler)**: ViewModel から委譲された例外に基づき、Logcat 出力、監査ログ記録、および UI 通知（`showError`）を実行する。
 
-## 4.3. 実装ルール
-- **手動 try-catch の禁止**: 特別な理由がない限り、ViewModel 内で生の `try-catch` ブロックを書かない。
-- **ローディング解除の自動化**: `loadingState` 引数に `MutableStateFlow<Boolean>` を渡すことで、開始・終了（成否問わず）のフラグ制御を基盤に任せる。
-- **CancellationException**: 基盤側で自動的に再スローされるため、ViewModel 側で個別に判定する必要はない。
+各レイヤーの役割を以下のように定義し、エラーハンドリングの連鎖（事実から通知へ）を構成します。
+
+| レイヤー           | 主要な役割         | エラー発生時の振る舞い                                        |
+|:---------------|:--------------|:---------------------------------------------------|
+| **Repository** | **データ**の出し入れ  | 業務判断を持たず、低レイヤーの例外を「再スロー」する。正常操作のみ記録する。             |
+| **Logic**      | **業務ルール**の判定  | 「事実（理由）」を Enum 等で返す。契約違反（前提条件不備）は標準例外を投げる。         |
+| **ViewModel**  | **UI判断**と状態管理 | 事実を UIリソース（R.string）に翻訳し、`AppException` を生成・スローする。 |
+| **Handler**    | **通知**と記録（基盤） | `AppException` を受け取り、ダイアログ表示と監査ログ記録を自動で完遂する。       |
+
+## 4.3. 通知と例外のスロー (AppException)
+UI通知が必要なエラーについては、以下のルールに従い `AppException` を活用します。
+
+- **ViewModel の責務（翻訳）**: **`AppException` は、Logic が返した業務上の判定結果や、下位レイヤーから伝播した例外を、UI通知へ変換するために ViewModel が生成する。**
+- **手動 showError の禁止**: `safeLaunch` ブロック内において、直接 `showError` を呼び出してはならない。
+- **AppException のスロー**: タイトルやメッセージのリソースIDを保持できる `AppException`（および `AppValidationException`, `AppIOException`）をスローすることで、基盤に通知を委譲する。
+- **自動ハンドリング**: 基底クラス側で例外の型に基づき、`resultType`（`IO_ERROR`, `VALIDATION_ERROR` 等）の判別と、適切なダイアログ表示が自動的に行われる。
 
 ## 4.4. 通知の使い分け
-- **致命的なエラー**: ハンドラを通じて `showError(title, message)` を呼び出し、ダイアログで通知する。
-- **軽微な情報・成功通知**: `showSnackbar(message)` を使用し、数秒で自動消去する。
+- **致命的・要対話エラー (AppException)**: ユーザーへの通知が必要な異常系。適切な情報を保持させた `AppException` をスローし、基盤（Handler）を介してダイアログで通知する。
+- **正常系通知 (showSnackbar)**: **例外ではない正常な完了通知専用**とする。保存完了、削除完了、コピー完了、設定変更の適用など、ユーザーの操作が成功したことを知らせるために使用する。
 
 ---
 
@@ -207,7 +235,7 @@ CareMemo では、ユーザーの操作なしに「デフォルトで最も安�
 
 ## 7.2. ログ記録のフロー
 - **正常操作**: Repository のメソッド内で、ViewModel から渡された `featureName`, `operation` を用いて記録する。
-- **エラー（ERROR）記録**: `safeLaunch` / `safeCollect` の `contextBuilder` で情報を指定し、ハンドラを介して自動的に記録する。
+- **エラー（ERROR）記録**: `safeLaunch` / `safeCollect` の `contextBuilder` で情報を指定し、ハンドラを介して自動的に記録する。**`resultType` は、発生した例外の型に応じて自動的に決定される。**
 
 ## 7.3 実装上の注意点
 - **例外処理**: ログ記録自体が失敗しても、本来の業務処理を妨げないこと（基盤側で考慮済）。

@@ -24,12 +24,22 @@ enum class HealthAlertLevel(val severity: Int) {
 }
 
 /**
- * 各項目の詳細ステータス定義
+ * 各項目の詳細ステータス定義（事実）
  */
 enum class BmiStatus { UNDERWEIGHT, NORMAL, OBESITY_1, OBESITY_2, OBESITY_3, OBESITY_4 }
 enum class VitalStatus { NORMAL, HIGH_BP, LOW_BP, TACHYCARDIA, BRADYCARDIA, LOW_SAT, FEVER, HYPOTHERMIA }
 enum class GlucoseStatus { LOW, NORMAL, WARNING, HIGH }
 enum class HbA1cStatus { NORMAL, WARNING, DIABETES }
+
+/**
+ * 健康入力のバリデーション結果（事実）
+ */
+enum class HealthInputValidationResult {
+    SUCCESS,
+    EMPTY,
+    INVALID_FORMAT,
+    OUT_OF_RANGE
+}
 
 /**
  * 健康記録に関する純粋な計算・判定ロジック。
@@ -123,28 +133,79 @@ object HealthLogic {
 
     // --- バリデーション ---
 
-    fun isValidHeightAndWeight(height: String, weight: String): Boolean {
-        val hValid = AppThresholds.isWithinFormat(height, AppThresholds.DIGITS_HEIGHT_INT, AppThresholds.DIGITS_HEIGHT_DEC)
-        val wValid = AppThresholds.isWithinFormat(weight, AppThresholds.DIGITS_WEIGHT_INT, AppThresholds.DIGITS_WEIGHT_DEC)
-        return weight.isNotBlank() && hValid && wValid
+    private fun validateValue(
+        value: String,
+        intDigits: Int,
+        decDigits: Int,
+        min: Double,
+        max: Double
+    ): HealthInputValidationResult {
+        if (value.isBlank()) return HealthInputValidationResult.EMPTY
+        
+        // 形式チェック (AppThresholds.isWithinFormat は Boolean なので、より詳細に判定)
+        val num = value.toDoubleOrNull() ?: return HealthInputValidationResult.INVALID_FORMAT
+        
+        if (!AppThresholds.isWithinFormat(value, intDigits, decDigits)) {
+            return HealthInputValidationResult.INVALID_FORMAT
+        }
+
+        return if (num in min..max) {
+            HealthInputValidationResult.SUCCESS
+        } else {
+            HealthInputValidationResult.OUT_OF_RANGE
+        }
     }
 
-    fun isValidBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String): Boolean {
-        val sValid = AppThresholds.isWithinFormat(systolic, AppThresholds.DIGITS_BP_INT)
-        val dValid = AppThresholds.isWithinFormat(diastolic, AppThresholds.DIGITS_BP_INT)
-        val satValid = AppThresholds.isWithinFormat(sat, AppThresholds.DIGITS_SAT_INT)
-        val pValid = AppThresholds.isWithinFormat(pulse, AppThresholds.DIGITS_PULSE_INT)
-        val tValid = AppThresholds.isWithinFormat(temp, AppThresholds.DIGITS_TEMP_INT, AppThresholds.DIGITS_TEMP_DEC)
+    fun validateHeightAndWeight(height: String, weight: String): HealthInputValidationResult {
+        if (height.isBlank() && weight.isBlank()) return HealthInputValidationResult.EMPTY
+        
+        val hRes = if (height.isNotBlank()) validateValue(height, AppThresholds.DIGITS_HEIGHT_INT, AppThresholds.DIGITS_HEIGHT_DEC, AppThresholds.MIN_HEIGHT, AppThresholds.MAX_HEIGHT) else HealthInputValidationResult.SUCCESS
+        val wRes = validateValue(weight, AppThresholds.DIGITS_WEIGHT_INT, AppThresholds.DIGITS_WEIGHT_DEC, AppThresholds.MIN_WEIGHT, AppThresholds.MAX_WEIGHT)
 
-        val anyInput = systolic.isNotBlank() || diastolic.isNotBlank() || sat.isNotBlank() || pulse.isNotBlank() || temp.isNotBlank()
-        return anyInput && sValid && dValid && satValid && pValid && tValid
+        return when {
+            hRes == HealthInputValidationResult.INVALID_FORMAT || wRes == HealthInputValidationResult.INVALID_FORMAT -> HealthInputValidationResult.INVALID_FORMAT
+            hRes == HealthInputValidationResult.OUT_OF_RANGE || wRes == HealthInputValidationResult.OUT_OF_RANGE -> HealthInputValidationResult.OUT_OF_RANGE
+            wRes == HealthInputValidationResult.EMPTY -> HealthInputValidationResult.EMPTY // 体重は必須
+            else -> HealthInputValidationResult.SUCCESS
+        }
     }
 
-    fun isValidGlucoseAndHbA1c(glucose: String, hba1c: String): Boolean {
-        val gValid = AppThresholds.isWithinFormat(glucose, AppThresholds.DIGITS_GLUCOSE_INT)
-        val hValid = AppThresholds.isWithinFormat(hba1c, AppThresholds.DIGITS_HBA1C_INT, AppThresholds.DIGITS_HBA1C_DEC)
+    fun validateBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String): HealthInputValidationResult {
+        val inputs = listOf(
+            Triple(systolic, AppThresholds.DIGITS_BP_INT, 0 to (AppThresholds.MIN_BP to AppThresholds.MAX_BP)),
+            Triple(diastolic, AppThresholds.DIGITS_BP_INT, 0 to (AppThresholds.MIN_BP to AppThresholds.MAX_BP)),
+            Triple(sat, AppThresholds.DIGITS_SAT_INT, 0 to (AppThresholds.MIN_SAT to AppThresholds.MAX_SAT)),
+            Triple(pulse, AppThresholds.DIGITS_PULSE_INT, 0 to (AppThresholds.MIN_PULSE to AppThresholds.MAX_PULSE)),
+            Triple(temp, AppThresholds.DIGITS_TEMP_INT, AppThresholds.DIGITS_TEMP_DEC to (AppThresholds.MIN_TEMP to AppThresholds.MAX_TEMP))
+        )
 
-        val anyInput = glucose.isNotBlank() || hba1c.isNotBlank()
-        return anyInput && gValid && hValid
+        val activeInputs = inputs.filter { it.first.isNotBlank() }
+        if (activeInputs.isEmpty()) return HealthInputValidationResult.EMPTY
+
+        val results = activeInputs.map { (v, i, d) -> validateValue(v, i, d.first, d.second.first, d.second.second) }
+
+        return when {
+            results.any { it == HealthInputValidationResult.INVALID_FORMAT } -> HealthInputValidationResult.INVALID_FORMAT
+            results.any { it == HealthInputValidationResult.OUT_OF_RANGE } -> HealthInputValidationResult.OUT_OF_RANGE
+            else -> HealthInputValidationResult.SUCCESS
+        }
     }
+
+    fun validateGlucoseAndHbA1c(glucose: String, hba1c: String): HealthInputValidationResult {
+        if (glucose.isBlank() && hba1c.isBlank()) return HealthInputValidationResult.EMPTY
+
+        val gRes = if (glucose.isNotBlank()) validateValue(glucose, AppThresholds.DIGITS_GLUCOSE_INT, 0, AppThresholds.MIN_GLUCOSE, AppThresholds.MAX_GLUCOSE) else HealthInputValidationResult.SUCCESS
+        val hRes = if (hba1c.isNotBlank()) validateValue(hba1c, AppThresholds.DIGITS_HBA1C_INT, AppThresholds.DIGITS_HBA1C_DEC, AppThresholds.MIN_HBA1C, AppThresholds.MAX_HBA1C) else HealthInputValidationResult.SUCCESS
+
+        return when {
+            gRes == HealthInputValidationResult.INVALID_FORMAT || hRes == HealthInputValidationResult.INVALID_FORMAT -> HealthInputValidationResult.INVALID_FORMAT
+            gRes == HealthInputValidationResult.OUT_OF_RANGE || hRes == HealthInputValidationResult.OUT_OF_RANGE -> HealthInputValidationResult.OUT_OF_RANGE
+            else -> HealthInputValidationResult.SUCCESS
+        }
+    }
+
+    // 互換性維持のための古いメソッド (将来的に削除)
+    fun isValidHeightAndWeight(height: String, weight: String) = validateHeightAndWeight(height, weight) == HealthInputValidationResult.SUCCESS
+    fun isValidBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String) = validateBpAndPulse(systolic, diastolic, sat, pulse, temp) == HealthInputValidationResult.SUCCESS
+    fun isValidGlucoseAndHbA1c(glucose: String, hba1c: String) = validateGlucoseAndHbA1c(glucose, hba1c) == HealthInputValidationResult.SUCCESS
 }

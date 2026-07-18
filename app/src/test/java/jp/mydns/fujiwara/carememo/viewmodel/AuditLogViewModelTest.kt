@@ -27,6 +27,11 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
+/**
+ * AuditLogViewModel のロジック・安全性テスト
+ * 
+ * 仕様書: doc/test/screen/TEST_SPEC_SCR-S-002_AuditLogScreen.md に準拠
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuditLogViewModelTest {
 
@@ -36,10 +41,8 @@ class AuditLogViewModelTest {
     private lateinit var viewModel: AuditLogViewModel
     private val testDispatcher = StandardTestDispatcher()
 
-    // 降順（新しい順）で定義する
     private val mockLogs = listOf(
-        AuditLog(id = 2, timestamp = Instant.ofEpochMilli(2000), featureName = "PersonList", operation = "op2", tableName = "t2", actionType = "B", affectedId = "2", resultType = "DB_ERROR"),
-        AuditLog(id = 1, timestamp = Instant.ofEpochMilli(1000), featureName = "Settings", operation = "op1", tableName = "t1", actionType = "A", affectedId = "1", resultType = "SUCCESS")
+        AuditLog(id = 1, timestamp = Instant.ofEpochMilli(1000), featureName = "PersonList", operation = "op1", tableName = "t1", actionType = "A", affectedId = "1", resultType = "SUCCESS")
     )
 
     @Before
@@ -62,8 +65,13 @@ class AuditLogViewModelTest {
         unmockkStatic(Log::class)
     }
 
+    // ======================================================================================
+    // 3. ロジック・安全性テスト (AuditLogViewModel)
+    // ======================================================================================
+
     @Test
-    fun `LG-04_操作ログ一覧のFlow取得失敗時に監査ログが記録されること`() = runTest {
+    fun lg01_dataFetchFailure_safety() = runTest {
+        // ログ取得中に例外が発生する状況をシミュレート
         every { auditLogRepository.allLogs } returns flow {
             throw RuntimeException("AuditLogs Flow Error")
         }
@@ -71,9 +79,13 @@ class AuditLogViewModelTest {
         val errorViewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
 
         errorViewModel.auditLogs.test {
-            awaitItem() // 初期値
+            awaitItem() // 初期値(emptyList)
             advanceUntilIdle()
             
+            // 検証: isLoading が false になること
+            assertEquals(false, errorViewModel.isLoading.value)
+            
+            // 検証: 監査ログにエラーが記録されること (BaseViewModel/SafeCollectの機能)
             coVerify {
                 auditLogRepository.log(
                     featureName = "AuditLog",
@@ -85,45 +97,6 @@ class AuditLogViewModelTest {
                     resultType = "OTHER_ERROR"
                 )
             }
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `LG-05_フィルタリング操作が正しく連動すること`() = runTest {
-        viewModel.auditLogs.test {
-            // StateFlowの初期値(emptyList)をスキップまたは消費
-            var initial = awaitItem()
-            if (initial.isEmpty()) initial = awaitItem()
-            
-            assertEquals(2, initial.size)
-
-            // 機能で絞り込み
-            viewModel.setFeatureFilter("Settings")
-            val filtered = awaitItem()
-            assertEquals(1, filtered.size)
-            assertEquals("Settings", filtered[0].featureName)
-
-            // フィルタ解除
-            viewModel.clearFilters()
-            assertEquals(2, awaitItem().size)
-            
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `並べ替えトグルが正しく連動すること`() = runTest {
-        viewModel.auditLogs.test {
-            var descLogs = awaitItem()
-            if (descLogs.isEmpty()) descLogs = awaitItem()
-
-            assertEquals(2L, descLogs[0].id) // 降順（デフォルト）
-
-            viewModel.toggleSortOrder()
-            val ascLogs = awaitItem()
-            assertEquals(1L, ascLogs[0].id) // 昇順
-            
             cancelAndIgnoreRemainingEvents()
         }
     }

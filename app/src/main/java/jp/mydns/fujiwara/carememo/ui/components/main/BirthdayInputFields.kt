@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.ui.mapping.BirthEraDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import java.time.Instant
@@ -125,7 +126,7 @@ fun BirthdayInputFields(
                 modifier = Modifier.weight(1f)
             ) {
                 AppCompactTextField(
-                    value = stringResource(state.era.value.displayNameRes),
+                    value = stringResource(BirthEraDisplayMapper.getDisplayNameRes(state.era.value)),
                     onValueChange = {},
                     readOnly = true,
                     suffix = {
@@ -141,7 +142,7 @@ fun BirthdayInputFields(
                 ) {
                     BirthEra.entries.forEach { e ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(e.displayNameRes), style = MaterialTheme.typography.bodyMedium) },
+                            text = { Text(stringResource(BirthEraDisplayMapper.getDisplayNameRes(e)), style = MaterialTheme.typography.bodyMedium) },
                             onClick = {
                                 state.era.value = e
                                 eraExpanded = false

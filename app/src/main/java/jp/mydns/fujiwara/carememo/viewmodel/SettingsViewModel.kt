@@ -20,7 +20,10 @@ import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import android.os.StatFs
+import jp.mydns.fujiwara.carememo.logic.feature.ImportValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic
+import jp.mydns.fujiwara.carememo.logic.feature.StorageValidationResult
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import kotlinx.coroutines.CancellationException
@@ -144,27 +147,35 @@ class SettingsViewModel(
     private val _processingProgress = MutableStateFlow(0)
     val processingProgress = _processingProgress.asStateFlow()
 
+    // 開発者モード（管理者向けツール）の有効状態（セッション限定）
+    private val _isDeveloperModeEnabled = MutableStateFlow(false)
+    val isDeveloperModeEnabled = _isDeveloperModeEnabled.asStateFlow()
+
+    private var versionTapCount = 0
+
     // データベース不整合チェックの結果
     private val _inconsistencies = MutableStateFlow<List<DatabaseInconsistency>>(emptyList())
     val inconsistencies = _inconsistencies.asStateFlow()
 
     fun setNameMaskingEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setNameMaskingEnabled") {
             userSettingsRepository.setNameMaskingEnabled(enabled)
         }
     }
 
     fun setBiometricEnabled(context: Context, enabled: Boolean) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setBiometricEnabled") {
             if (enabled) {
                 val biometricManager = BiometricManager.from(context)
-                val canAuthenticate = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                val canAuthenticate =
+                    biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                 if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
                     userSettingsRepository.setBiometricEnabled(enabled = true)
                 } else {
-                    showError(
-                        R.string.settings_err_title_biometric,
-                        R.string.settings_err_biometric_unsupported,
+                    throw AppSecurityException(
+                        titleResId = R.string.settings_err_title_biometric,
+                        messageResId = R.string.settings_err_biometric_unsupported,
+                        logMessage = "Biometric authentication is not supported or not set up"
                     )
                 }
             } else {
@@ -174,32 +185,45 @@ class SettingsViewModel(
     }
 
     fun setLockTimeoutMinutes(minutes: Int) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setLockTimeoutMinutes") {
             userSettingsRepository.setLockTimeoutMinutes(minutes)
         }
     }
 
     fun setDefaultRecorderName(name: String) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setDefaultRecorderName") {
             userSettingsRepository.setDefaultRecorderName(name)
         }
     }
 
     fun setBackupPasswordEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setBackupPasswordEnabled") {
             userSettingsRepository.setBackupPasswordEnabled(enabled)
         }
     }
 
     fun setBackupPassword(password: String) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setBackupPassword") {
             userSettingsRepository.setBackupPassword(password)
         }
     }
 
     fun setThemeSetting(theme: ThemeSetting) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setThemeSetting") {
             userSettingsRepository.setThemeSetting(theme)
+        }
+    }
+
+    /**
+     * バージョン情報のタップを処理し、必要回数に達したら開発者モードを有効にします。
+     */
+    fun handleVersionClick() {
+        versionTapCount++
+        if (SettingsLogic.shouldEnableDeveloperMode(versionTapCount)) {
+            if (!_isDeveloperModeEnabled.value) {
+                _isDeveloperModeEnabled.value = true
+                showSnackbar(R.string.settings_msg_dev_mode_enabled)
+            }
         }
     }
 
@@ -221,7 +245,7 @@ class SettingsViewModel(
         ) {
             val days = auditLogRetentionDays.value
             auditLogRepository.deleteOldLogs(days)
-            showInfo(R.string.common_error_title_info, R.string.settings_msg_rotate_success)
+            showSnackbar(R.string.settings_msg_rotate_success)
         }
     }
 
@@ -231,7 +255,7 @@ class SettingsViewModel(
             contextBuilder = { tableName = "person_db" }
         ) {
             archivedPersonRepository.deleteAllEndedPersons()
-            showInfo(R.string.common_error_title_info, R.string.settings_msg_delete_ended_success)
+            showSnackbar(R.string.settings_msg_delete_ended_success)
         }
     }
 
@@ -245,9 +269,17 @@ class SettingsViewModel(
         ) {
             try {
                 // 容量チェック
-                if (!SettingsLogic.hasAvailableSpace(context.cacheDir, 50 * 1024 * 1024)) { // 最低 50MB 
-                    showError(R.string.common_error_title_error, R.string.common_error_no_space, "50MB")
-                    return@safeLaunch
+                val requiredBytes = 50 * 1024 * 1024L // 最低 50MB
+                val availableBytes = getAvailableBytes(context.cacheDir)
+                val spaceResult = SettingsLogic.validateStorageSpace(availableBytes, requiredBytes)
+                
+                if (spaceResult != StorageValidationResult.SUCCESS) {
+                    throw AppValidationException(
+                        titleResId = R.string.common_error_title_error,
+                        messageResId = R.string.common_error_no_space,
+                        args = listOf("50MB"),
+                        logMessage = "Insufficient space for export"
+                    )
                 }
 
                 val backup = maintenanceRepository.getBackupData()
@@ -263,7 +295,7 @@ class SettingsViewModel(
                 if (photosDir.exists() && (photosDir.list()?.isNotEmpty() == true)) {
                     filesToZip.add(photosDir)
                 }
-                
+
                 tempZipFile = File(context.cacheDir, "temp_backup_${System.currentTimeMillis()}.zip")
 
                 // 暗号化パスワードの決定
@@ -275,21 +307,21 @@ class SettingsViewModel(
                 }
 
                 _processingProgress.value = 0
-                
+
                 ZipUtils.zip(
                     files = filesToZip,
                     zipFile = tempZipFile,
                     password = password,
                 ) { progress ->
                     _processingProgress.value = progress
-                }.getOrThrow()
+                }
 
                 context.contentResolver.openOutputStream(uri)?.use { output: OutputStream ->
                     tempZipFile.inputStream().use { input: InputStream ->
                         input.copyTo(output)
                     }
                 }
-                showInfo(R.string.common_error_title_info, R.string.settings_msg_export_success)
+                showSnackbar(R.string.settings_msg_export_success)
             } finally {
                 // 一時ファイルの確実な削除
                 tempDir?.deleteRecursively()
@@ -306,33 +338,42 @@ class SettingsViewModel(
             if (passwordOverride == null) {
                 // 初回試行：一時ディレクトリの作成とファイルのコピー
                 clearPendingImport()
-                
+
                 // 容量チェック
                 val pfd = context.contentResolver.openFileDescriptor(uri, "r")
                 val fileSize = pfd?.statSize ?: 0L
                 pfd?.close()
-                
-                if (!SettingsLogic.hasAvailableSpace(context.cacheDir, (fileSize * 2.5).toLong())) {
-                    showError(R.string.common_error_title_error, R.string.common_error_no_space, (fileSize * 2.5).toLong())
-                    return@safeLaunch
+
+                val requiredBytes = (fileSize * 2.5).toLong()
+                val availableBytes = getAvailableBytes(context.cacheDir)
+                val spaceResult = SettingsLogic.validateStorageSpace(availableBytes, requiredBytes)
+
+                if (spaceResult != StorageValidationResult.SUCCESS) {
+                    throw AppValidationException(
+                        titleResId = R.string.common_error_title_error,
+                        messageResId = R.string.common_error_no_space,
+                        args = listOf((fileSize * 2.5).toLong()),
+                        logMessage = "Insufficient space for import"
+                    )
                 }
 
                 val tempDir = File(context.cacheDir, "import_check_${System.currentTimeMillis()}")
                 tempDir.mkdirs()
                 val tempZipFile = File(tempDir, "temp_import.zip")
-                
+
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     tempZipFile.outputStream().use { output -> input.copyTo(output) }
                 }
 
                 // ファイル形式チェック (Zipマジックナンバー)
-                val isZip = tempZipFile.inputStream().use { input ->
+                val formatResult = tempZipFile.inputStream().use { input ->
                     val header = ByteArray(4)
                     val read = input.read(header)
-                    (read == 4) && SettingsLogic.isValidZipHeader(header)
+                    if (read == 4) SettingsLogic.validateImportFormat(header)
+                    else ImportValidationResult.NOT_A_ZIP
                 }
 
-                if (isZip) {
+                if (formatResult == ImportValidationResult.SUCCESS) {
                     if (ZipUtils.isEncrypted(tempZipFile)) {
                         // 1. アプリ設定のパスワードで試行
                         val userPw = backupPassword.value
@@ -360,25 +401,34 @@ class SettingsViewModel(
                     // 直接JSONファイルとして処理
                     val jsonString = tempZipFile.readText()
                     val backup = json.decodeFromString<CareMemoBackup>(jsonString)
-                    
-                // バージョンチェック
-                if (!SettingsLogic.isVersionCompatible(backup.appVersionCode, BuildConfig.VERSION_CODE)) {
-                    showError(R.string.common_error_title_update, R.string.settings_err_import_version_mismatch)
-                    tempDir.deleteRecursively()
-                    return@safeLaunch
-                }
+
+                    // バージョンチェック（事実の判定）
+                    val versionResult = SettingsLogic.validateVersion(
+                        backup.appVersionCode,
+                        BuildConfig.VERSION_CODE
+                    )
+
+                    // 翻訳
+                    if (versionResult == ImportValidationResult.INCOMPATIBLE) {
+                        throw AppValidationException(
+                            titleResId = R.string.common_error_title_update,
+                            messageResId = R.string.settings_err_import_version_mismatch,
+                            logMessage = "Import failed due to version mismatch: ${backup.appVersionCode} vs ${BuildConfig.VERSION_CODE}"
+                        )
+                    }
 
                     maintenanceRepository.replaceAllData(backup)
                     tempDir.deleteRecursively()
-                    showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success_data_only)
+                    showSnackbar(R.string.settings_msg_import_success_data_only)
                 }
             } else {
                 // パスワード入力後の再試行
-                val file = pendingImportFile ?: throw Exception("一時ファイルが見つかりません。")
+                val file = pendingImportFile ?: throw AppException(logMessage = "Temporary file for import not found")
                 if (ZipUtils.isValidPassword(file, passwordOverride)) {
                     proceedImportZip(context, file, passwordOverride)
                     clearPendingImport()
                 } else {
+                    // パスワード入力間違いは、再度 RequestPassword を送るため、ここだけは例外スローせずに手動制御を継続する
                     showError(R.string.common_error_title_error, R.string.settings_err_import_wrong_password)
                     sendUiEvent(UiEvent.RequestPassword)
                 }
@@ -390,28 +440,33 @@ class SettingsViewModel(
         val tempDir = zipFile.parentFile ?: File(context.cacheDir, "import_exec")
         val appPhotosDir = ImageUtils.getPhotosDirPublic(context)
         val backupPhotosDir = File(context.filesDir, "photos_backup_${System.currentTimeMillis()}")
-        
+
         try {
             _isProcessing.value = true
             _processingProgress.value = 0
-            
+
             ZipUtils.unzip(
                 zipFile = zipFile,
                 targetDir = tempDir,
                 password = password,
             ) { progress ->
                 _processingProgress.value = progress
-            }.getOrThrow()
+            }
 
             val jsonFile = File(tempDir, "backup.json")
-            if (!jsonFile.exists()) throw Exception("バックアップファイル(backup.json)が見つかりません。")
-            
+            if (!jsonFile.exists()) throw AppIOException(logMessage = "backup.json not found in zip")
+
             val jsonString = jsonFile.readText()
             val backup = json.decodeFromString<CareMemoBackup>(jsonString)
 
-            // バージョンチェック
-            if (!SettingsLogic.isVersionCompatible(backup.appVersionCode, BuildConfig.VERSION_CODE)) {
-                throw Exception("このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。")
+            // バージョンチェック（事実の判定）
+            val versionResult = SettingsLogic.validateVersion(backup.appVersionCode, BuildConfig.VERSION_CODE)
+            if (versionResult == ImportValidationResult.INCOMPATIBLE) {
+                throw AppValidationException(
+                    titleResId = R.string.common_error_title_update,
+                    messageResId = R.string.settings_err_import_version_mismatch,
+                    logMessage = "Import zip failed due to version mismatch: ${backup.appVersionCode}"
+                )
             }
 
             // --- 写真の退避 (アトミック性の確保) ---
@@ -422,7 +477,7 @@ class SettingsViewModel(
 
             // データベースの置換
             maintenanceRepository.replaceAllData(backup)
-            
+
             // 新しい写真データのコピー
             val extractedPhotosDir = File(tempDir, "photos")
             if (extractedPhotosDir.exists() && extractedPhotosDir.isDirectory) {
@@ -430,20 +485,20 @@ class SettingsViewModel(
                     file.copyTo(File(appPhotosDir, file.name), overwrite = true)
                 }
             }
-            
+
             // 全て成功したらバックアップを削除
             backupPhotosDir.deleteRecursively()
-            
-            showInfo(R.string.common_error_title_info, R.string.settings_msg_import_success)
+
+            showSnackbar(R.string.settings_msg_import_success)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, OP_PROCEED_IMPORT, "all_db"))
             // 失敗時は写真をロールバック
             if (backupPhotosDir.exists()) {
                 appPhotosDir.deleteRecursively()
                 backupPhotosDir.renameTo(appPhotosDir)
             }
-            showError(R.string.common_error_title_error, R.string.common_error_unknown, e.localizedMessage ?: "")
+            // 呼び出し元の safeLaunch に例外を委譲する
+            throw e
         } finally {
             _isProcessing.value = false
             // 解凍に使用した一時ディレクトリのクリーンアップ
@@ -465,19 +520,16 @@ class SettingsViewModel(
         ) {
             _processingProgress.value = 0
 
-            // 1. 写真ファイルの全消去を先に試める
-            val success = ImageUtils.clearPhotosDir(context)
-            if (!success) {
-                throw Exception("写真データの物理削除に失敗しました。")
-            }
+            // 1. 写真ファイルの全消去を先に試みる
+            ImageUtils.clearPhotosDir(context)
             _processingProgress.value = 50
 
             // 2. データベースの全消去（トランザクション）
             maintenanceRepository.clearAllData()
             _processingProgress.value = 100
 
-            showInfo(R.string.common_error_title_info, R.string.settings_msg_clear_all_success)
-            sendUiEvent(UiEvent.SaveSuccess) 
+            showSnackbar(R.string.settings_msg_clear_all_success)
+            sendUiEvent(UiEvent.SaveSuccess)
         }
     }
 
@@ -492,9 +544,9 @@ class SettingsViewModel(
         ) {
             val results = maintenanceRepository.scanInconsistencies()
             _inconsistencies.value = results
-            
+
             if (results.isEmpty()) {
-                showInfo(R.string.common_error_title_info, R.string.settings_msg_integrity_ok)
+                showSnackbar(R.string.settings_msg_integrity_ok)
             }
         }
     }
@@ -511,7 +563,7 @@ class SettingsViewModel(
             maintenanceRepository.cleanInconsistencies(_inconsistencies.value)
             val count = _inconsistencies.value.size
             _inconsistencies.value = emptyList()
-            showInfo(R.string.common_error_title_info, R.string.settings_msg_fix_success, count)
+            showSnackbar(R.string.settings_msg_fix_success, count)
         }
     }
 
@@ -533,11 +585,19 @@ class SettingsViewModel(
     }
 
     fun setAuditLogRetentionDays(days: Int) {
-        viewModelScope.launch {
+        safeLaunch(operation = "setAuditLogRetentionDays") {
             userSettingsRepository.setAuditLogRetentionDays(days)
         }
     }
 
+    private fun getAvailableBytes(dir: File): Long {
+        return try {
+            val stats = StatFs(dir.absolutePath)
+            stats.availableBlocksLong * stats.blockSizeLong
+        } catch (_: Exception) {
+            Long.MAX_VALUE // 取得失敗時は制限しない
+        }
+    }
 
     /**
      * デバイスが認証（生体認証または端末ロック）に対応し、かつ設定済みかを判定します。

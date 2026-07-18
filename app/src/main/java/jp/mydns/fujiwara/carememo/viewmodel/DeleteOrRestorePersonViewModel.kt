@@ -35,13 +35,7 @@ class DeleteOrRestorePersonViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    init {
-        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
-            showError(title, msg, *args)
-        }
-    }
-
-    private val _isLoading = MutableStateFlow(true) // 初期状態を true に変更（ロード開始するため）
+    private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     /**
@@ -54,6 +48,28 @@ class DeleteOrRestorePersonViewModel(
 
     private val _mode = MutableStateFlow(OperationMode.RESTORE)
 
+    private val _archivedPersonList = MutableStateFlow<List<Person>>(emptyList())
+
+    /**
+     * アーカイブ済み（論理削除された）利用者のリスト
+     */
+    val archivedPersonList: StateFlow<List<Person>> = _archivedPersonList.asStateFlow()
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+
+        safeCollect(
+            operation = "archivedPersonListFlow",
+            loadingState = _isLoading,
+            contextBuilder = { tableName = TABLE_PERSON },
+            flowProvider = { repository.getArchivedPersons() }
+        ) {
+            _archivedPersonList.value = it
+        }
+    }
+
     /**
      * モードを設定します。
      */
@@ -62,24 +78,6 @@ class DeleteOrRestorePersonViewModel(
         // モード変更時に選択状態をクリア
         _selectedIds.value = emptySet()
     }
-
-    /**
-     * アーカイブ済み（論理削除された）利用者のリスト
-     */
-    val archivedPersonList: StateFlow<List<Person>> = repository.getArchivedPersons()
-        .onEach {
-            _isLoading.value = false
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "archivedPersonListFlow", TABLE_PERSON))
-            _isLoading.value = false
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
 
     // 選択された利用者のIDセット（完全抹消モード用）
     private val _selectedIds = MutableStateFlow<Set<Int>>(emptySet())

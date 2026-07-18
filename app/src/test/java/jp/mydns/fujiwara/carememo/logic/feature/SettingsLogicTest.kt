@@ -1,47 +1,89 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.File
 
+/**
+ * Logic層テスト：SettingsLogic
+ */
 class SettingsLogicTest {
 
+    // region 1. ファイル形式判定テスト (validateImportFormat)
+
     @Test
-    fun `FL_01_正しいZipヘッダーを判定できること`() {
-        val validHeader = byteArrayOf(0x50, 0x4B, 0x03, 0x04)
-        assertTrue(SettingsLogic.isValidZipHeader(validHeader))
+    fun FMT_01_validateImportFormat_validZip() {
+        val header = byteArrayOf(0x50.toByte(), 0x4B.toByte(), 0x03.toByte(), 0x04.toByte())
+        assertEquals(ImportValidationResult.SUCCESS, SettingsLogic.validateImportFormat(header))
     }
 
     @Test
-    fun `FL_02_不正なZipヘッダーはfalseを返すこと`() {
-        val invalidHeader = byteArrayOf(0x00, 0x00, 0x00, 0x00)
-        assertFalse(SettingsLogic.isValidZipHeader(invalidHeader))
+    fun FMT_02_validateImportFormat_shortHeader() {
+        val header = byteArrayOf(0x50.toByte(), 0x4B.toByte())
+        assertEquals(ImportValidationResult.NOT_A_ZIP, SettingsLogic.validateImportFormat(header))
     }
 
     @Test
-    fun `VR_01_同じバージョンは互換性あり`() {
-        assertTrue(SettingsLogic.isVersionCompatible(100, 100))
+    fun FMT_03_validateImportFormat_invalidHeader() {
+        val header = byteArrayOf(0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte())
+        assertEquals(ImportValidationResult.NOT_A_ZIP, SettingsLogic.validateImportFormat(header))
+    }
+
+    // endregion
+
+    // region 2. バージョン互換性テスト (validateVersion)
+
+    @Test
+    fun VER_01_validateVersion_same() {
+        assertEquals(ImportValidationResult.SUCCESS, SettingsLogic.validateVersion(100, 100))
     }
 
     @Test
-    fun `VR_02_古いバックアップは互換性あり`() {
-        assertTrue(SettingsLogic.isVersionCompatible(90, 100))
+    fun VER_02_validateVersion_olderBackup() {
+        assertEquals(ImportValidationResult.SUCCESS, SettingsLogic.validateVersion(90, 100))
     }
 
     @Test
-    fun `VR_03_新しいバックアップは互換性なし`() {
-        assertFalse(SettingsLogic.isVersionCompatible(110, 100))
+    fun VER_03_validateVersion_newerBackup() {
+        assertEquals(ImportValidationResult.INCOMPATIBLE, SettingsLogic.validateVersion(110, 100))
+    }
+
+    // endregion
+
+    // region 3. 容量・書き込み判定テスト (validateStorageSpace)
+
+    @Test
+    fun SPC_01_validateStorageSpace_enough() {
+        assertEquals(StorageValidationResult.SUCCESS, SettingsLogic.validateStorageSpace(100L, 50L))
     }
 
     @Test
-    fun `SP_01_空き容量判定が動作すること`() {
-        // 実際のファイルシステムに依存するが、1バイト以上はあるはず
-        val dir = File(".")
-        assertTrue(SettingsLogic.hasAvailableSpace(dir, 1L))
-        
-        // 非常に大きな値を指定すれば false になる（はずだが、StatFsは実機依存のため
-        // ローカルJUnit環境での挙動は環境に依存する。ここでは存在確認程度に留める）
+    fun SPC_02_validateStorageSpace_insufficient() {
+        assertEquals(StorageValidationResult.INSUFFICIENT_SPACE, SettingsLogic.validateStorageSpace(40L, 50L))
     }
+
+    @Test
+    fun SPC_03_validateStorageSpace_boundary() {
+        assertEquals(StorageValidationResult.SUCCESS, SettingsLogic.validateStorageSpace(50L, 50L))
+    }
+
+    // endregion
+
+    // region 4. 開発者モード判定テスト (shouldEnableDeveloperMode)
+
+    @Test
+    fun DEV_01_shouldEnableDeveloperMode_below() {
+        assertFalse(SettingsLogic.shouldEnableDeveloperMode(6))
+    }
+
+    @Test
+    fun DEV_02_shouldEnableDeveloperMode_reached() {
+        assertTrue(SettingsLogic.shouldEnableDeveloperMode(7))
+    }
+
+    @Test
+    fun DEV_03_shouldEnableDeveloperMode_above() {
+        assertTrue(SettingsLogic.shouldEnableDeveloperMode(10))
+    }
+
+    // endregion
 }

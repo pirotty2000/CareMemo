@@ -14,12 +14,15 @@ import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -51,37 +54,65 @@ class PersonHealthViewModel(
     override val featureName: String = FEATURE_NAME
 
     private val _currentCategory = MutableStateFlow<Category?>(null)
+    private val _records = MutableStateFlow<List<HistoryRecord>>(emptyList())
+    private var recordsJob: Job? = null
 
     /**
      * 現在の数値系カテゴリの履歴データを取得します。
      */
-    val records: StateFlow<List<HistoryRecord>> = combine(_currentPerson, _currentCategory) { person, category ->
-        person to category
-    }.flatMapLatest { (person, category) ->
-        if (person == null || category == null) flowOf(emptyList())
-        else {
-            when (category) {
-                Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(person.id)
-                Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(person.id)
-                Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
-                else -> flowOf(emptyList())
-            }
-        }
-    }.onEach {
-        _isLoading.value = false
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        coroutineErrorHandler.handleException(e, ErrorContext(featureName, OP_RECORDS_FLOW, TABLE_HEALTH))
-        _isLoading.value = false
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val records: StateFlow<List<HistoryRecord>> = _records.asStateFlow()
 
     /**
      * 表示するカテゴリを設定します。
      */
     fun setCategory(category: Category) {
         if (_currentCategory.value != category) {
-            _isLoading.value = true
             _currentCategory.value = category
+            refreshRecords()
+        }
+    }
+
+    private fun refreshRecords() {
+        val personId = _currentPerson.value?.id ?: return
+        val category = _currentCategory.value ?: return
+
+        recordsJob?.cancel()
+        recordsJob = safeCollect(
+            operation = OP_RECORDS_FLOW,
+            loadingState = _isLoading,
+            contextBuilder = { tableName = TABLE_HEALTH },
+            flowProvider = {
+                when (category) {
+                    Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(personId)
+                    Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(personId)
+                    Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(personId)
+                    else -> flowOf(emptyList())
+                }
+            }
+        ) {
+            _records.value = it
+        }
+    }
+
+    override fun loadPerson(personId: Int) {
+        if (_currentPerson.value?.id == personId) return
+
+        _currentPerson.value = null
+        // カテゴリは維持するが、データロードは再開する必要がある
+
+        loadPersonJob?.cancel()
+        loadPersonJob = safeCollect(
+            operation = "loadPerson",
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = "person_db"
+                affectedId = personId.toString()
+            },
+            flowProvider = { repository.getPersonById(personId) }
+        ) {
+            _currentPerson.value = it
+            // 人物が確定したらレコードのロードを開始（または再開）
+            refreshRecords()
         }
     }
 
@@ -89,57 +120,90 @@ class PersonHealthViewModel(
      * 指定された数値系カテゴリの履歴データを取得します(拡大表示画面などで使用)。
      */
     fun getHealthRecords(category: Category): StateFlow<List<HistoryRecord>> {
-        return _currentPerson.flatMapLatest { person ->
-            if (person == null) flowOf(emptyList())
-            else when (category) {
-                Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(person.id)
-                Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(person.id)
-                Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(person.id)
-                else -> flowOf(emptyList())
+        val result = MutableStateFlow<List<HistoryRecord>>(emptyList())
+        val personId = _currentPerson.value?.id
+
+        if (personId != null) {
+            safeCollect(
+                operation = "getHealthRecords",
+                loadingState = _isLoading,
+                contextBuilder = { tableName = TABLE_HEALTH },
+                flowProvider = {
+                    when (category) {
+                        Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(personId)
+                        Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(personId)
+                        Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(personId)
+                        else -> flowOf(emptyList())
+                    }
+                }
+            ) {
+                result.value = it
             }
-        }.onEach {
-            _isLoading.value = false
-        }.catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "getHealthRecords", TABLE_HEALTH))
-            _isLoading.value = false
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }
+        return result.asStateFlow()
     }
 
     /**
      * 数値系レコードを保存または更新します。
      */
     fun saveRecord(record: Any?) {
-        if (record == null) return
+        if (record !is HistoryRecord) return
+        
         safeLaunch(
             operation = OP_SAVE,
             loadingState = _isLoading,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = (record as? HistoryRecord)?.id?.toString()
+                affectedId = record.id.toString()
             }
         ) {
-            val isUpdate = if (record is HistoryRecord) !PersonHealthLogic.isNew(record) else false
+            // 1. バリデーション（事実の判定）
+            val validationResult = PersonHealthLogic.validate(record)
+            translateValidationResult(validationResult)
 
-            // --- 重複チェック (新規登録、または日時変更時) ---
-            if (record is HistoryRecord) {
-                val existing = when (record) {
-                    is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
-                    is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
-                    is GlucoseAndHbA1c -> healthRepository.findGlucoseAndHbA1cAtTime(record.personId, record.recordTime)
-                    else -> null
-                }
+            val isUpdate = !PersonHealthLogic.isNew(record)
 
-                if (PersonHealthLogic.isDuplicate(record, existing)) {
-                    showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
-                    return@safeLaunch
-                }
+            // 2. 重複チェック (新規登録、または日時変更時)
+            val existing = when (record) {
+                is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
+                is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
+                is GlucoseAndHbA1c -> healthRepository.findGlucoseAndHbA1cAtTime(record.personId, record.recordTime)
+                else -> null
             }
 
+            val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
+            translateValidationResult(duplicateResult)
+
+            // 3. 保存実行
             performSave(record)
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
         }
+    }
+
+    /**
+     * バリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
+     */
+    private fun translateValidationResult(result: HealthValidationResult) {
+        if (result == HealthValidationResult.SUCCESS) return
+
+        val messageRes = when (result) {
+            HealthValidationResult.INVALID_VALUE -> R.string.common_error_save
+            HealthValidationResult.DUPLICATE_TIME -> R.string.common_err_duplicate_blocked_simple
+            else -> R.string.common_error_save
+        }
+
+        val args = when (result) {
+            HealthValidationResult.INVALID_VALUE -> listOf("入力値が範囲外です。正しい数値を入力してください。")
+            else -> emptyList()
+        }
+
+        throw AppValidationException(
+            titleResId = R.string.common_error_title_save,
+            messageResId = messageRes,
+            args = args,
+            logMessage = "Validation failed: $result"
+        )
     }
 
     private suspend fun performSave(record: Any) = when (record) {

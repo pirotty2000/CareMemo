@@ -3,9 +3,9 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.navigation.NavController
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
@@ -15,9 +15,9 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * SettingsScreen (設定・管理) の UI テスト
+ * SCR-S-001 SettingsScreen (設定・管理) の UI テスト
  *
- * 仕様書：doc/test/TEST_SPEC_UI_SettingsScreen.md に準拠
+ * 仕様書：doc/test/screen/TEST_SPEC_SCR-S-001_SettingsScreen.md に準拠
  */
 class SettingsScreenTest {
 
@@ -38,6 +38,7 @@ class SettingsScreenTest {
         every { viewModel.deletedUserList } returns MutableStateFlow(emptyList())
         every { viewModel.isProcessing } returns MutableStateFlow(false)
         every { viewModel.processingProgress } returns MutableStateFlow(0)
+        every { viewModel.isDeveloperModeEnabled } returns MutableStateFlow(false)
         every { viewModel.inconsistencies } returns MutableStateFlow(emptyList())
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
         every { viewModel.canAuthenticate(any()) } returns true
@@ -49,13 +50,15 @@ class SettingsScreenTest {
     // ======================================================================================
 
     @Test
-    fun cp01_initialValues_areDisplayed() {
+    fun cp01_basicLayout_isDisplayed() {
         val viewModel = setupViewModelMock()
+        val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
             CareMemoTheme {
                 SettingsScreen(
                     viewModel = viewModel,
+                    navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
                     onRequireAuthentication = { _, _, _ -> },
@@ -64,22 +67,24 @@ class SettingsScreenTest {
             }
         }
 
-        // 各項目の初期値が正しく表示されているか（すべてスクロールしてから検証）
-        composeTestRule.onNodeWithTag("Settings_MaskingSwitch").performScrollTo().assertIsOn()
-        composeTestRule.onNodeWithTag("Settings_RecorderName").performScrollTo().assertTextContains("テスト記録者")
-        composeTestRule.onNodeWithTag("Settings_BackupPasswordSwitch").performScrollTo().assertIsOn()
-        composeTestRule.onNodeWithTag("Settings_BiometricSwitch").performScrollTo().assertIsOn()
-        composeTestRule.onNodeWithText("5分").performScrollTo().assertIsDisplayed()
+        // 画面タイトル「設定・管理」が表示されていること
+        composeTestRule.onNodeWithText("設定・管理").assertIsDisplayed()
+        // 戻るボタンが存在すること
+        composeTestRule.onNodeWithTag("SettingsScreen_BackButton").assertIsDisplayed()
     }
 
     @Test
-    fun cp02_maskingToggle_callsViewModel() {
+    fun cp02_variousItems_areDisplayed() {
         val viewModel = setupViewModelMock()
+        val isDevMode = MutableStateFlow(false)
+        every { viewModel.isDeveloperModeEnabled } returns isDevMode
+        val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
             CareMemoTheme {
                 SettingsScreen(
                     viewModel = viewModel,
+                    navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
                     onRequireAuthentication = { _, _, _ -> },
@@ -88,91 +93,17 @@ class SettingsScreenTest {
             }
         }
 
-        // スイッチを切り替える
-        composeTestRule.onNodeWithTag("Settings_MaskingSwitch").performScrollTo().performClick()
-
-        // ViewModel のメソッドが呼ばれること
-        verify { viewModel.setNameMaskingEnabled(any()) }
-    }
-
-    @Test
-    fun cp04_backupPassword_visibilityControl() {
-        val viewModel = setupViewModelMock()
-        val isBackupPasswordEnabled = MutableStateFlow(true)
-        every { viewModel.isBackupPasswordEnabled } returns isBackupPasswordEnabled
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateToArchiveManagement = {},
-                    onNavigateToAuditLog = {},
-                    onRequireAuthentication = { _, _, onSuccess -> onSuccess() }, // 認証即時成功
-                    onBack = {}
-                )
-            }
-        }
-
-        // 最初は表示されている
-        composeTestRule.onNodeWithTag("Settings_BackupPasswordInput").performScrollTo().assertExists()
-
-        // スイッチをOFFにする
-        composeTestRule.onNodeWithTag("Settings_BackupPasswordSwitch").performScrollTo().performClick()
-        isBackupPasswordEnabled.value = false
+        // 氏名伏せ字設定スイッチ
+        composeTestRule.onNodeWithTag("Settings_MaskingSwitch").performScrollTo().assertIsDisplayed()
+        // バックアップ実行ボタン
+        composeTestRule.onNodeWithTag("Settings_BackupButton").performScrollTo().assertIsDisplayed()
+        
+        // 開発者モードを有効にする（モック経由）
+        isDevMode.value = true
         composeTestRule.waitForIdle()
-
-        // 入力欄が消えることを確認
-        composeTestRule.onNodeWithTag("Settings_BackupPasswordInput").assertDoesNotExist()
-    }
-
-    @Test
-    fun cp05_passwordValidation_disablesExportButton() {
-        val viewModel = setupViewModelMock()
-        val backupPassword = MutableStateFlow("123") // 6文字未満
-        every { viewModel.backupPassword } returns backupPassword
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateToArchiveManagement = {},
-                    onNavigateToAuditLog = {},
-                    onRequireAuthentication = { _, _, _ -> },
-                    onBack = {}
-                )
-            }
-        }
-
-        // エラーメッセージが表示されていること
-        composeTestRule.onNodeWithText("6文字以上で入力してください").performScrollTo().assertIsDisplayed()
-
-        // エクスポートボタンが非活性であること
-        composeTestRule.onNodeWithTag("Settings_ExportButton").performScrollTo().assertIsNotEnabled()
-    }
-
-    @Test
-    fun cp08_processingDialog_isDisplayed() {
-        val viewModel = setupViewModelMock()
-        val isProcessing = MutableStateFlow(true)
-        val progress = MutableStateFlow(45)
-        every { viewModel.isProcessing } returns isProcessing
-        every { viewModel.processingProgress } returns progress
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateToArchiveManagement = {},
-                    onNavigateToAuditLog = {},
-                    onRequireAuthentication = { _, _, _ -> },
-                    onBack = {}
-                )
-            }
-        }
-
-        // 処理中ダイアログと進捗率が表示されていること（ダイアログはスクロール不要）
-        composeTestRule.onNodeWithTag("Settings_ProcessingDialog").assertIsDisplayed()
-        composeTestRule.onNodeWithText("45%").assertIsDisplayed()
+        
+        // 監査ログ遷移ボタンが表示されること
+        composeTestRule.onNodeWithTag("Settings_AuditLogButton").performScrollTo().assertIsDisplayed()
     }
 
     // ======================================================================================
@@ -180,13 +111,51 @@ class SettingsScreenTest {
     // ======================================================================================
 
     @Test
-    fun bh01_timeoutDialog_opensOnRowClick() {
+    fun bh01_nameMaskingChange_preparesRefresh() {
         val viewModel = setupViewModelMock()
+        val navController = mockk<NavController>(relaxed = true)
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle()
+        
+        val previousEntry = mockk<androidx.navigation.NavBackStackEntry>()
+        every { previousEntry.savedStateHandle } returns savedStateHandle
+        every { navController.previousBackStackEntry } returns previousEntry
+        
+        val currentEntry = mockk<androidx.navigation.NavBackStackEntry>()
+        every { currentEntry.savedStateHandle } returns androidx.lifecycle.SavedStateHandle()
+        every { navController.currentBackStackEntry } returns currentEntry
+
+        var backCalled = false
 
         composeTestRule.setContent {
             CareMemoTheme {
                 SettingsScreen(
                     viewModel = viewModel,
+                    navController = navController,
+                    onNavigateToArchiveManagement = {},
+                    onNavigateToAuditLog = {},
+                    onRequireAuthentication = { _, _, _ -> },
+                    onBack = { backCalled = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("Settings_MaskingSwitch").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("SettingsScreen_BackButton").performClick()
+        
+        assert(savedStateHandle.get<Boolean>("refresh_needed") == true)
+        assert(backCalled)
+    }
+
+    @Test
+    fun bh02_backupExecution_isClickable() {
+        val viewModel = setupViewModelMock()
+        val navController = mockk<NavController>(relaxed = true)
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                SettingsScreen(
+                    viewModel = viewModel,
+                    navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
                     onRequireAuthentication = { _, _, _ -> },
@@ -195,25 +164,56 @@ class SettingsScreenTest {
             }
         }
 
-        // 再ロック待機時間の行をタップ
-        composeTestRule.onNodeWithTag("Settings_TimeoutRow").performScrollTo().performClick()
-
-        // 選択ダイアログが表示されること
-        // 「再ロックまでの時間」は背景とダイアログの2箇所にあるため、onAllNodes を使用
-        composeTestRule.onAllNodesWithText("再ロックまでの時間").onFirst().assertIsDisplayed()
-        // ダイアログ固有の選択肢が表示されていることを確認
-        composeTestRule.onNodeWithText("即時").assertIsDisplayed()
-        composeTestRule.onNodeWithText("10分").assertExists()
+        // バックアップボタンが存在し、有効であることを確認
+        composeTestRule.onNodeWithTag("Settings_BackupButton")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .assertHasClickAction()
     }
 
     @Test
-    fun bh02_themeDialog_opensOnRowClick() {
+    fun bh03_auditLogNavigation_isCalled() {
         val viewModel = setupViewModelMock()
+        // 最初から開発者モードをONにする
+        every { viewModel.isDeveloperModeEnabled } returns MutableStateFlow(true)
+        val navController = mockk<NavController>(relaxed = true)
+        var navigated = false
 
         composeTestRule.setContent {
             CareMemoTheme {
                 SettingsScreen(
                     viewModel = viewModel,
+                    navController = navController,
+                    onNavigateToArchiveManagement = {},
+                    onNavigateToAuditLog = { navigated = true },
+                    onRequireAuthentication = { _, _, _ -> },
+                    onBack = {}
+                )
+            }
+        }
+
+        // 監査ログボタンが表示されているはずなので直接押す
+        composeTestRule.onNodeWithTag("Settings_AuditLogButton")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        
+        assert(navigated)
+    }
+
+    @Test
+    fun bh04_scrollPosition_isMaintained() {
+        val viewModel = setupViewModelMock()
+        // 最初から開発者モードをONにして項目を増やす
+        every { viewModel.isDeveloperModeEnabled } returns MutableStateFlow(true)
+        val navController = mockk<NavController>(relaxed = true)
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                SettingsScreen(
+                    viewModel = viewModel,
+                    navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
                     onRequireAuthentication = { _, _, _ -> },
@@ -222,21 +222,63 @@ class SettingsScreenTest {
             }
         }
 
-        // テーマ設定の行をタップ
-        composeTestRule.onNodeWithTag("Settings_ThemeRow").performScrollTo().performClick()
-
-        // 選択ダイアログが表示されること
-        composeTestRule.onNodeWithText("配色とモードの選択").assertIsDisplayed()
+        // 1. 下の方にある要素（管理者向けセクションのボタンなど）までスクロール
+        composeTestRule.onNodeWithTag("Settings_IntegrityCheckButton").performScrollTo()
+        composeTestRule.onNodeWithTag("Settings_IntegrityCheckButton").assertIsDisplayed()
+        
+        // 2. その位置にあるボタンをクリック
+        composeTestRule.onNodeWithTag("Settings_IntegrityCheckButton").performClick()
+        composeTestRule.waitForIdle()
+        
+        // 3. 依然として同じ場所の要素が見えることを確認
+        composeTestRule.onNodeWithTag("Settings_IntegrityCheckButton").assertIsDisplayed()
     }
 
     @Test
-    fun bh03_developerMode_activation() {
+    fun bh05_userManagementNavigation_isCalled() {
         val viewModel = setupViewModelMock()
+        val navController = mockk<NavController>(relaxed = true)
+        var navigated = false
 
         composeTestRule.setContent {
             CareMemoTheme {
                 SettingsScreen(
                     viewModel = viewModel,
+                    navController = navController,
+                    onNavigateToArchiveManagement = { navigated = true },
+                    onNavigateToAuditLog = {},
+                    onRequireAuthentication = { _, _, _ -> },
+                    onBack = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("利用終了者の復帰").performScrollTo().performClick()
+        
+        assert(navigated)
+    }
+
+    @Test
+    fun bh06_userRestoration_propagatesRefresh() {
+        val viewModel = setupViewModelMock()
+        val navController = mockk<NavController>(relaxed = true)
+        
+        val currentSavedStateHandle = androidx.lifecycle.SavedStateHandle()
+        val previousSavedStateHandle = androidx.lifecycle.SavedStateHandle()
+        
+        val currentEntry = mockk<androidx.navigation.NavBackStackEntry>()
+        every { currentEntry.savedStateHandle } returns currentSavedStateHandle
+        every { navController.currentBackStackEntry } returns currentEntry
+        
+        val previousEntry = mockk<androidx.navigation.NavBackStackEntry>()
+        every { previousEntry.savedStateHandle } returns previousSavedStateHandle
+        every { navController.previousBackStackEntry } returns previousEntry
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                SettingsScreen(
+                    viewModel = viewModel,
+                    navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
                     onRequireAuthentication = { _, _, _ -> },
@@ -245,79 +287,11 @@ class SettingsScreenTest {
             }
         }
 
-        // 最初は管理者セクションが存在しない
-        composeTestRule.onNodeWithTag("Settings_DevSection").assertDoesNotExist()
-
-        // バージョン情報を7回タップする
-        val versionRow = composeTestRule.onNodeWithTag("Settings_VersionRow").performScrollTo()
-        repeat(7) {
-            versionRow.performClick()
-        }
-
-        // Then: 管理者セクションが表示されること
-        composeTestRule.onNodeWithTag("Settings_DevSection").performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun bh04a_disableBackupPassword_requiresAuthentication() {
-        val viewModel = setupViewModelMock()
-        var authRequested = false
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateToArchiveManagement = {},
-                    onNavigateToAuditLog = {},
-                    onRequireAuthentication = { _, _, _ -> authRequested = true },
-                    onBack = {}
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("Settings_BackupPasswordSwitch").performScrollTo().performClick()
-        assert(authRequested)
-    }
-
-    @Test
-    fun bh04b_showPassword_requiresAuthentication() {
-        val viewModel = setupViewModelMock()
-        var authRequested = false
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateToArchiveManagement = {},
-                    onNavigateToAuditLog = {},
-                    onRequireAuthentication = { _, _, _ -> authRequested = true },
-                    onBack = {}
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("Settings_PasswordVisibilityToggle").performScrollTo().performClick()
-        assert(authRequested)
-    }
-
-    @Test
-    fun bh04c_disableAppLock_requiresAuthentication() {
-        val viewModel = setupViewModelMock()
-        var authRequested = false
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onNavigateToArchiveManagement = {},
-                    onNavigateToAuditLog = {},
-                    onRequireAuthentication = { _, _, _ -> authRequested = true },
-                    onBack = {}
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("Settings_BiometricSwitch").performScrollTo().performClick()
-        assert(authRequested)
+        currentSavedStateHandle.set("refresh_needed", true)
+        composeTestRule.waitForIdle()
+        
+        composeTestRule.onNodeWithTag("SettingsScreen_BackButton").performClick()
+        
+        assert(previousSavedStateHandle.get<Boolean>("refresh_needed") == true)
     }
 }

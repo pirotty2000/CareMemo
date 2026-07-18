@@ -2,6 +2,8 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import android.database.sqlite.SQLiteException
+import java.io.IOException
+import kotlinx.serialization.SerializationException
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 
@@ -19,7 +21,12 @@ class ViewModelCoroutineErrorHandler(
 
         // 例外の種類に基づいて resultType を決定
         val resultType = when (e) {
-            is SQLiteException -> "DB_ERROR"
+            is SQLiteException, is AppDataException -> "DB_ERROR"
+            is AppIOException, is IOException -> "IO_ERROR"
+            is AppValidationException, is IllegalArgumentException -> "VALIDATION_ERROR"
+            is AppSecurityException -> "SECURITY_ERROR"
+            is AppExternalException -> "EXTERNAL_ERROR"
+            is SerializationException -> "FORMAT_ERROR"
             else -> "OTHER_ERROR"
         }
 
@@ -36,11 +43,21 @@ class ViewModelCoroutineErrorHandler(
 
         // 3. UI 通知（Error 系の場合はベストエフォート）
         try {
-            val titleRes = context.errorTitleRes ?: R.string.common_error_title_error
-            val messageRes = context.errorMessageRes ?: R.string.common_error_unknown
+            val titleRes: Int
+            val messageRes: Int
+            val errorArgs: Array<out Any>
+
+            if (e is AppException) {
+                titleRes = e.titleResId ?: context.errorTitleRes ?: R.string.common_error_title_error
+                messageRes = e.messageResId ?: context.errorMessageRes ?: R.string.common_error_unknown
+                errorArgs = if (e.args.isNotEmpty()) e.args.toTypedArray() else arrayOf(e.localizedMessage ?: "")
+            } else {
+                titleRes = context.errorTitleRes ?: R.string.common_error_title_error
+                messageRes = context.errorMessageRes ?: R.string.common_error_unknown
+                errorArgs = arrayOf(e.localizedMessage ?: "")
+            }
             
-            // 例外メッセージを引数として渡す（リソース側で %s 等が定義されていることを期待）
-            showError(titleRes, messageRes, arrayOf(e.localizedMessage ?: ""))
+            showError(titleRes, messageRes, errorArgs)
         } catch (t: Throwable) {
             // UI通知自体の失敗（OOM等）はログに残せない可能性があるが、
             // ハンドラ自体で例外を投げないようにガードする

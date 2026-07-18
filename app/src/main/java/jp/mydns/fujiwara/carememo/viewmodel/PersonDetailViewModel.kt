@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
@@ -44,28 +45,12 @@ class PersonDetailViewModel(
     private val _currentCategory = MutableStateFlow<Category?>(null)
     val currentCategory: StateFlow<Category?> = _currentCategory.asStateFlow()
 
+    private val _personCategorySummary = MutableStateFlow<PersonCategorySummary?>(null)
+
     /**
-     * サマリー情報の取得（フレームワーク部分のデータロード完了の基準とする）
+     * サマリー情報の取得
      */
-    override val personCategorySummary: StateFlow<PersonCategorySummary?> = _currentPerson
-        .flatMapLatest { person ->
-            if (person == null) {
-                flowOf(null)
-            } else {
-                summaryRepository.getPersonCategorySummaryById(person.id)
-                    .onEach { _isLoading.value = false }
-            }
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "personCategorySummaryFlow", TABLE_SUMMARY))
-            _isLoading.value = false
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
+    override val personCategorySummary: StateFlow<PersonCategorySummary?> = _personCategorySummary.asStateFlow()
 
     /**
      * 表示するカテゴリを設定します。
@@ -76,35 +61,32 @@ class PersonDetailViewModel(
 
     /**
      * 利用者情報をロードします。
-     * 詳細画面ではサマリー取得まで完了を待ちたいため、基底クラスの実装をオーバーライドします。
      */
     override fun loadPerson(personId: Int) {
         if (_currentPerson.value?.id == personId) return
 
+        // 状態を同期的にリセット（テストでのブランキング抑制およびアサーションのため）
         _isLoading.value = true
         _currentPerson.value = null
+        _personCategorySummary.value = null
 
         loadPersonJob?.cancel()
-        loadPersonJob = safeLaunch(
-            operation = "loadPerson",
+        loadPersonJob = safeCollect(
+            operation = "loadPersonWithSummary",
+            loadingState = _isLoading,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = personId.toString()
+            },
+            flowProvider = {
+                combine(
+                    repository.getPersonById(personId),
+                    summaryRepository.getPersonCategorySummaryById(personId)
+                ) { person, summary -> person to summary }
             }
-        ) {
-            try {
-                repository.getPersonById(personId).collect {
-                    _currentPerson.value = it
-                    // 利用者が見つからない場合のみ、ここでロード完了とする
-                    if (it == null) {
-                        _isLoading.value = false
-                    }
-                }
-            } catch (t: Throwable) {
-                // 例外発生時は確実に解除する
-                _isLoading.value = false
-                throw t // safeLaunch に再スローしてハンドルさせる
-            }
+        ) { (person, summary) ->
+            _currentPerson.value = person
+            _personCategorySummary.value = summary
         }
     }
 

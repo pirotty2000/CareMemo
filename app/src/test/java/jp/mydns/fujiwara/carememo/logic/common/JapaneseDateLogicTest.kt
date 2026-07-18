@@ -1,138 +1,95 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.logic.common
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
 
 /**
- * JapaneseDateLogic の単体テスト。
- * 仕様書 (TEST_SPEC_JapaneseDateLogic.md) に基づき検証を行う。
+ * Logic層テスト：JapaneseDateLogic
  */
 class JapaneseDateLogicTest {
 
-    // --- 西暦 → 和暦変換 (toJapaneseDate) ---
+    // region 2. 西暦 ↔ 和暦 変換テスト (toJapaneseDate / toLocalDate)
 
     @Test
-    fun `JD_01_昭和開始前日はAD`() {
-        val date = LocalDate.of(1926, 12, 24)
-        val (era, year) = JapaneseDateLogic.toJapaneseDate(date)
+    fun CNV_01_toJapaneseDate_reiwa() {
+        val (era, year) = JapaneseDateLogic.toJapaneseDate(LocalDate.of(2019, 5, 1))
+        assertEquals(BirthEra.REIWA, era)
+        assertEquals(1, year)
+    }
+
+    @Test
+    fun CNV_02_toJapaneseDate_heisei() {
+        val (era, year) = JapaneseDateLogic.toJapaneseDate(LocalDate.of(1989, 1, 8))
+        assertEquals(BirthEra.HEISEI, era)
+        assertEquals(1, year)
+    }
+
+    @Test
+    fun CNV_03_toJapaneseDate_showa() {
+        val (era, year) = JapaneseDateLogic.toJapaneseDate(LocalDate.of(1926, 12, 25))
+        assertEquals(BirthEra.SHOWA, era)
+        assertEquals(1, year)
+    }
+
+    @Test
+    fun CNV_04_toJapaneseDate_ad() {
+        val (era, year) = JapaneseDateLogic.toJapaneseDate(LocalDate.of(1926, 12, 24))
         assertEquals(BirthEra.AD, era)
         assertEquals(1926, year)
     }
 
     @Test
-    fun `JD_02_昭和開始日は昭和1年`() {
-        val date = LocalDate.of(1926, 12, 25)
-        val (era, year) = JapaneseDateLogic.toJapaneseDate(date)
-        assertEquals(BirthEra.SHOWA, era)
-        assertEquals(1, year)
+    fun CNV_05_toLocalDate_success() {
+        val date = JapaneseDateLogic.toLocalDate(BirthEra.SHOWA, 60, 1, 1)
+        assertEquals(LocalDate.of(1985, 1, 1), date)
+    }
+
+    // endregion
+
+    // region 3. バリデーションテスト (validate)
+
+    @Test
+    fun VAL_01_validate_success() {
+        assertEquals(DateValidationResult.SUCCESS, JapaneseDateLogic.validate(BirthEra.REIWA, 5, 10, 27))
     }
 
     @Test
-    fun `JD_03_昭和終了日は昭和64年`() {
-        val date = LocalDate.of(1989, 1, 7)
-        val (era, year) = JapaneseDateLogic.toJapaneseDate(date)
-        assertEquals(BirthEra.SHOWA, era)
-        assertEquals(64, year)
+    fun VAL_02_validate_invalidDay() {
+        assertEquals(DateValidationResult.INVALID_DAY, JapaneseDateLogic.validate(BirthEra.SHOWA, 60, 2, 30))
     }
 
     @Test
-    fun `JD_04_平成開始日は平成1年`() {
-        val date = LocalDate.of(1989, 1, 8)
-        val (era, year) = JapaneseDateLogic.toJapaneseDate(date)
-        assertEquals(BirthEra.HEISEI, era)
-        assertEquals(1, year)
+    fun VAL_03_validate_invalidMonth() {
+        assertEquals(DateValidationResult.INVALID_MONTH, JapaneseDateLogic.validate(BirthEra.SHOWA, 60, 13, 1))
     }
 
     @Test
-    fun `JD_05_平成終了日は平成31年`() {
-        val date = LocalDate.of(2019, 4, 30)
-        val (era, year) = JapaneseDateLogic.toJapaneseDate(date)
-        assertEquals(BirthEra.HEISEI, era)
-        assertEquals(31, year)
+    fun VAL_04_validate_invalidEraRange() {
+        // 令和は2019/5/1からなので、2019/4/30（令和1年4月30日）は不正
+        assertEquals(DateValidationResult.INVALID_ERA_RANGE, JapaneseDateLogic.validate(BirthEra.REIWA, 1, 4, 30))
     }
 
     @Test
-    fun `JD_06_令和開始日は令和1年`() {
-        val date = LocalDate.of(2019, 5, 1)
-        val (era, year) = JapaneseDateLogic.toJapaneseDate(date)
-        assertEquals(BirthEra.REIWA, era)
-        assertEquals(1, year)
-    }
-
-    // --- 和暦 → 西暦変換 (toLocalDate) ---
-
-    @Test
-    fun `LD_01_昭和初日の変換`() {
-        val actual = JapaneseDateLogic.toLocalDate(BirthEra.SHOWA, 1, 12, 25)
-        assertEquals(LocalDate.of(1926, 12, 25), actual)
+    fun VAL_05_validate_invalidYear() {
+        assertEquals(DateValidationResult.INVALID_YEAR, JapaneseDateLogic.validate(BirthEra.REIWA, 0, 1, 1))
     }
 
     @Test
-    fun `LD_02_平成初日の変換`() {
-        val actual = JapaneseDateLogic.toLocalDate(BirthEra.HEISEI, 1, 1, 8)
-        assertEquals(LocalDate.of(1989, 1, 8), actual)
+    fun VAL_06_validate_outOfAppRange() {
+        // 1900年未満は制限
+        assertEquals(DateValidationResult.OUT_OF_APP_RANGE, JapaneseDateLogic.validate(BirthEra.AD, 1899, 12, 31))
     }
 
     @Test
-    fun `LD_03_令和初日の変換`() {
-        val actual = JapaneseDateLogic.toLocalDate(BirthEra.REIWA, 1, 5, 1)
-        assertEquals(LocalDate.of(2019, 5, 1), actual)
+    fun VAL_07_validate_leapYear_success() {
+        assertEquals(DateValidationResult.SUCCESS, JapaneseDateLogic.validate(BirthEra.HEISEI, 4, 2, 29))
     }
 
     @Test
-    fun `LD_04_うるう年の変換`() {
-        val actual = JapaneseDateLogic.toLocalDate(BirthEra.AD, 2024, 2, 29)
-        assertEquals(LocalDate.of(2024, 2, 29), actual)
+    fun VAL_08_validate_notLeapYear_fail() {
+        assertEquals(DateValidationResult.INVALID_DAY, JapaneseDateLogic.validate(BirthEra.REIWA, 5, 2, 29))
     }
 
-    @Test
-    fun `LD_05_令和開始前の日付はエラー`() {
-        val actual = JapaneseDateLogic.toLocalDate(BirthEra.REIWA, 1, 4, 30)
-        assertNull(actual)
-    }
-
-    // --- 日付妥当性判定 (isValid) ---
-
-    @Test
-    fun `VL_01_正常な日付判定`() {
-        assertTrue(JapaneseDateLogic.isValid(BirthEra.REIWA, 1, 5, 1))
-    }
-
-    @Test
-    fun `VL_02_存在しない日付判定`() {
-        assertFalse(JapaneseDateLogic.isValid(BirthEra.AD, 2023, 2, 29))
-    }
-
-    @Test
-    fun `VL_03_範囲外の和暦年判定`() {
-        assertFalse(JapaneseDateLogic.isValid(BirthEra.HEISEI, 32, 1, 1))
-    }
-
-    @Test
-    fun `VL_04_元号切り替わり日の厳密判定`() {
-        assertFalse(JapaneseDateLogic.isValid(BirthEra.SHOWA, 64, 1, 8))
-    }
-
-    @Test
-    fun `VL_05_1900年以前は無効`() {
-        assertFalse(JapaneseDateLogic.isValid(BirthEra.AD, 1899, 12, 31))
-    }
-
-    // --- 表示形式変換 (formatYear) ---
-
-    @Test
-    fun `FY_01_1年は元年と表記`() {
-        assertEquals("元年", JapaneseDateLogic.formatYear(1))
-    }
-
-    @Test
-    fun `FY_02_2年以上は数値表記`() {
-        assertEquals("2", JapaneseDateLogic.formatYear(2))
-    }
+    // endregion
 }

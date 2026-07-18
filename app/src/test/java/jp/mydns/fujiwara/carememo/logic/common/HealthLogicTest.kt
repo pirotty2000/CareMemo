@@ -1,101 +1,182 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.logic.common
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * HealthLogic のロジックを検証する単体テスト
+ * Logic層テスト：HealthLogic
  */
 class HealthLogicTest {
 
-    // --- 入力妥当性判定のテスト ---
-    @Test
-    fun isValidHeightAndWeight_体重が必須で形式が正しいこと() {
-        // 正常
-        assertTrue(HealthLogic.isValidHeightAndWeight("170.0", "60.5"))
-        assertTrue(HealthLogic.isValidHeightAndWeight("", "60.5")) // 身長は空でも可
+    // region 1. BMI判定テスト (evaluateBMI)
 
-        // 異常
-        assertFalse(HealthLogic.isValidHeightAndWeight("170.0", "")) // 体重が空はNG
-        assertFalse(HealthLogic.isValidHeightAndWeight("1700.0", "60.5")) // 身長の桁数オーバー
+    @Test
+    fun BMI_01_evaluateBMI_underweight() {
+        val (status, alert) = HealthLogic.evaluateBMI(18.4)
+        assertEquals(BmiStatus.UNDERWEIGHT, status)
+        assertEquals(HealthAlertLevel.INFO, alert)
     }
 
     @Test
-    fun isValidBpAndPulse_いずれか入力が必要で形式が正しいこと() {
-        // 正常
-        assertTrue(HealthLogic.isValidBpAndPulse("120", "", "", "", "")) // 上血圧のみ
-        assertTrue(HealthLogic.isValidBpAndPulse("", "", "", "", "36.5")) // 体温のみ
-
-        // 異常
-        assertFalse(HealthLogic.isValidBpAndPulse("", "", "", "", "")) // 全て空はNG
-        assertFalse(HealthLogic.isValidBpAndPulse("1200", "", "", "", "")) // 桁数オーバー
+    fun BMI_02_evaluateBMI_normal() {
+        val (status, alert) = HealthLogic.evaluateBMI(22.0)
+        assertEquals(BmiStatus.NORMAL, status)
+        assertEquals(HealthAlertLevel.NORMAL, alert)
     }
 
     @Test
-    fun isValidGlucoseAndHbA1c_いずれか入力が必要で形式が正しいこと() {
-        // 正常
-        assertTrue(HealthLogic.isValidGlucoseAndHbA1c("100", ""))
-        assertTrue(HealthLogic.isValidGlucoseAndHbA1c("", "6.0"))
-
-        // 異常
-        assertFalse(HealthLogic.isValidGlucoseAndHbA1c("", ""))
-    }
-
-    // --- 判定ロジックのテスト ---
-    @Test
-    fun evaluateBMI_境界値の判定() {
-        // 低体重 (< 18.5)
-        val (statusUnder, alertUnder) = HealthLogic.evaluateBMI(18.4)
-        assertEquals(BmiStatus.UNDERWEIGHT, statusUnder)
-        assertEquals(HealthAlertLevel.INFO, alertUnder)
-
-        // 普通体重 (18.5 <= BMI < 25.0)
-        val (statusNormal, alertNormal) = HealthLogic.evaluateBMI(24.9)
-        assertEquals(BmiStatus.NORMAL, statusNormal)
-        assertEquals(HealthAlertLevel.NORMAL, alertNormal)
-
-        // 肥満度4 (>= 40.0)
-        val (statusObesity, alertObesity) = HealthLogic.evaluateBMI(40.0)
-        assertEquals(BmiStatus.OBESITY_4, statusObesity)
-        assertEquals(HealthAlertLevel.ALERT, alertObesity)
+    fun BMI_03_evaluateBMI_obesity1() {
+        val (status, alert) = HealthLogic.evaluateBMI(25.0)
+        assertEquals(BmiStatus.OBESITY_1, status)
+        assertEquals(HealthAlertLevel.WARNING, alert)
     }
 
     @Test
-    fun evaluateVitalItems_複数異常の検出() {
-        // 高血圧かつ頻脈
-        val results = HealthLogic.evaluateVitalItems(
-            systolic = 150, // 高血圧(上) >= 140
-            diastolic = 80,
-            sat = 98,
-            pulse = 110,    // 頻脈 >= 100
-            temp = 36.5
-        )
-        
-        val statuses = results.map { it.first }
-        assertTrue(statuses.contains(VitalStatus.HIGH_BP))
-        assertTrue(statuses.contains(VitalStatus.TACHYCARDIA))
-        assertEquals(2, results.size)
+    fun BMI_04_evaluateBMI_obesity4() {
+        val (status, alert) = HealthLogic.evaluateBMI(40.0)
+        assertEquals(BmiStatus.OBESITY_4, status)
+        assertEquals(HealthAlertLevel.ALERT, alert)
     }
 
+    // endregion
+
+    // region 2. バイタル判定テスト (evaluateVital)
+
     @Test
-    fun evaluateVitalItems_正常時は正常ラベルを返す() {
+    fun VTL_01_evaluateVital_allNormal() {
         val results = HealthLogic.evaluateVitalItems(120, 80, 98, 70, 36.5)
-        assertEquals(1, results.size)
-        assertEquals(VitalStatus.NORMAL, results[0].first)
-        assertEquals(HealthAlertLevel.NORMAL, results[0].second)
+        val worst = HealthAlertLevel.worst(results.map { it.second })
+        assertEquals(HealthAlertLevel.NORMAL, worst)
     }
 
     @Test
-    fun calculateBMI_正常に計算されること() {
-        val bmi = HealthLogic.calculateBMI(170.0, 65.0)
-        assertEquals(22.49, bmi, 0.1)
+    fun VTL_02_evaluateVital_highBp() {
+        val results = HealthLogic.evaluateVitalItems(140, 80, 98, 70, 36.5)
+        val worst = HealthAlertLevel.worst(results.map { it.second })
+        assertEquals(HealthAlertLevel.ALERT, worst)
     }
 
     @Test
-    fun calculateBMI_0除算の考慮() {
+    fun VTL_03_evaluateVital_lowSat() {
+        val results = HealthLogic.evaluateVitalItems(120, 80, 90, 70, 36.5)
+        val worst = HealthAlertLevel.worst(results.map { it.second })
+        assertEquals(HealthAlertLevel.ALERT, worst)
+    }
+
+    @Test
+    fun VTL_04_evaluateVital_fever() {
+        val results = HealthLogic.evaluateVitalItems(120, 80, 98, 70, 37.5)
+        val worst = HealthAlertLevel.worst(results.map { it.second })
+        assertEquals(HealthAlertLevel.ALERT, worst)
+    }
+
+    @Test
+    fun VTL_05_evaluateVital_combinedWarning() {
+        val results = HealthLogic.evaluateVitalItems(95, 55, 98, 45, 35.0)
+        val worst = HealthAlertLevel.worst(results.map { it.second })
+        assertEquals(HealthAlertLevel.WARNING, worst)
+    }
+
+    // endregion
+
+    // region 3. 血糖値・HbA1c判定テスト (evaluateGlucose / evaluateHbA1c)
+
+    @Test
+    fun GLC_01_evaluateGlucose_normal() {
+        val (status, alert) = HealthLogic.evaluateGlucose(90)
+        assertEquals(GlucoseStatus.NORMAL, status)
+        assertEquals(HealthAlertLevel.NORMAL, alert)
+    }
+
+    @Test
+    fun GLC_02_evaluateGlucose_warning() {
+        val (status, alert) = HealthLogic.evaluateGlucose(100)
+        assertEquals(GlucoseStatus.WARNING, status)
+        assertEquals(HealthAlertLevel.WARNING, alert)
+    }
+
+    @Test
+    fun GLC_03_evaluateGlucose_high() {
+        val (status, alert) = HealthLogic.evaluateGlucose(126)
+        assertEquals(GlucoseStatus.HIGH, status)
+        assertEquals(HealthAlertLevel.ALERT, alert)
+    }
+
+    @Test
+    fun GLC_04_evaluateGlucose_low() {
+        val (status, alert) = HealthLogic.evaluateGlucose(69)
+        assertEquals(GlucoseStatus.LOW, status)
+        assertEquals(HealthAlertLevel.ALERT, alert)
+    }
+
+    @Test
+    fun HBA_01_evaluateHbA1c_normal() {
+        val (status, alert) = HealthLogic.evaluateHbA1c(5.5)
+        assertEquals(HbA1cStatus.NORMAL, status)
+        assertEquals(HealthAlertLevel.NORMAL, alert)
+    }
+
+    @Test
+    fun HBA_02_evaluateHbA1c_warning() {
+        val (status, alert) = HealthLogic.evaluateHbA1c(6.0)
+        assertEquals(HbA1cStatus.WARNING, status)
+        assertEquals(HealthAlertLevel.WARNING, alert)
+    }
+
+    @Test
+    fun HBA_03_evaluateHbA1c_diabetes() {
+        val (status, alert) = HealthLogic.evaluateHbA1c(6.5)
+        assertEquals(HbA1cStatus.DIABETES, status)
+        assertEquals(HealthAlertLevel.ALERT, alert)
+    }
+
+    // endregion
+
+    // region 4. 計算ロジックテスト (calculateBMI)
+
+    @Test
+    fun CAL_01_calculateBMI_normal() {
+        assertEquals(20.76, HealthLogic.calculateBMI(170.0, 60.0), 0.01)
+    }
+
+    @Test
+    fun CAL_02_calculateBMI_zeroHeight() {
         assertEquals(0.0, HealthLogic.calculateBMI(0.0, 60.0), 0.0)
+    }
+
+    @Test
+    fun CAL_03_calculateBMI_nullHeight() {
         assertEquals(0.0, HealthLogic.calculateBMI(null, 60.0), 0.0)
     }
+
+    // endregion
+
+    // region 5. 入力バリデーションテスト (validateInput)
+
+    @Test
+    fun VLD_01_validateInput_success() {
+        assertEquals(HealthInputValidationResult.SUCCESS, HealthLogic.validateHeightAndWeight("170", "60"))
+    }
+
+    @Test
+    fun VLD_02_validateInput_empty() {
+        assertEquals(HealthInputValidationResult.EMPTY, HealthLogic.validateHeightAndWeight("", ""))
+    }
+
+    @Test
+    fun VLD_03_validateInput_invalidFormat() {
+        assertEquals(HealthInputValidationResult.INVALID_FORMAT, HealthLogic.validateHeightAndWeight("abc", "60"))
+    }
+
+    @Test
+    fun VLD_04_validateInput_outOfRangeMax() {
+        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("300", "60"))
+    }
+
+    @Test
+    fun VLD_05_validateInput_outOfRangeMin() {
+        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("170", "0"))
+    }
+
+    // endregion
 }

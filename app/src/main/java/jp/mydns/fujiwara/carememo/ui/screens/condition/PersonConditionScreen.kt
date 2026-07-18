@@ -164,8 +164,8 @@ fun PersonConditionScreen(
         } else {
             Log.w("PersonConditionScreen", "Camera capture failed or cancelled. success=$success, uri=$tempPhotoUri")
             if (!success && tempPhotoUri != null) {
-                // 撮影失敗時のみ通知（キャンセル時は success=false だが通常は何もしない）
-                // ただし、ユーザーが「撮ったつもり」なのに失敗しているケースを想定し、ログは残す
+                // 撮影失敗時のみ通知（キャンセル時は通常何もしないが、異常系としてログと通知を行う）
+                conditionViewModel.notifyPhotoError("写真の取得に失敗しました。")
             }
         }
     }
@@ -240,8 +240,8 @@ fun PersonConditionScreen(
                 }
             },
             onDeleteRecord = { recordToDelete = it },
-            onSaveRecord = { record, onSuccess -> 
-                conditionViewModel.saveRecord(record, onSuccess) 
+            onSaveRecord = { pId, cId, state, onSuccess -> 
+                conditionViewModel.saveRecord(pId, cId, state, onSuccess) 
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             onMicClick = { viewModel.setLockBypassEnabled(true) },
@@ -289,8 +289,8 @@ fun PersonConditionScreen(
                 }
             },
             onDeleteRecord = { recordToDelete = it },
-            onSaveRecord = { record, onSuccess -> 
-                conditionViewModel.saveRecord(record, onSuccess) 
+            onSaveRecord = { pId, cId, state, onSuccess -> 
+                conditionViewModel.saveRecord(pId, cId, state, onSuccess)
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             onMicClick = { viewModel.setLockBypassEnabled(true) },

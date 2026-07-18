@@ -43,6 +43,7 @@ fun AuditLogScreen(
     onBack: () -> Unit,
 ) {
     val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val selectedFeature by viewModel.selectedFeature.collectAsStateWithLifecycle()
     val selectedResult by viewModel.selectedResult.collectAsStateWithLifecycle()
     val isAscending by viewModel.isAscending.collectAsStateWithLifecycle()
@@ -51,6 +52,7 @@ fun AuditLogScreen(
 
     AuditLogScreenContent(
         auditLogs = auditLogs,
+        isLoading = isLoading,
         selectedFeature = selectedFeature,
         selectedResult = selectedResult,
         isAscending = isAscending,
@@ -68,6 +70,7 @@ fun AuditLogScreen(
 @Composable
 fun AuditLogScreenContent(
     auditLogs: List<AuditLog>,
+    isLoading: Boolean,
     selectedFeature: String?,
     selectedResult: String?,
     isAscending: Boolean,
@@ -87,7 +90,7 @@ fun AuditLogScreenContent(
             TopAppBar(
                 title = { Text("操作ログ", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("AuditLog_BackButton")) {
+                    IconButton(onClick = onBack, modifier = Modifier.testTag("AuditLogScreen_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                 },
@@ -107,11 +110,16 @@ fun AuditLogScreenContent(
                     onFeatureSelect = onFeatureSelect,
                     onResultSelect = onResultSelect,
                     onToggleSort = onToggleSort,
-                    onClear = onClearFilters
+                    onClear = onClearFilters,
+                    modifier = Modifier.testTag("AuditLog_FilterChips")
                 )
             }
 
-            if (auditLogs.isEmpty()) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.testTag("AuditLog_Loading"))
+                }
+            } else if (auditLogs.isEmpty()) {
                 EmptyState(
                     message = if (isFiltered) "条件に合うログはありません" else "ログはありません",
                     icon = Icons.Rounded.History,
@@ -122,7 +130,7 @@ fun AuditLogScreenContent(
                 Box(modifier = Modifier.weight(1f)) {
                     LazyColumn(
                         state = lazyListState,
-                        modifier = Modifier.fillMaxSize().testTag("AuditLog_List"),
+                        modifier = Modifier.fillMaxSize().testTag("AuditLog_LogList"),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -150,12 +158,13 @@ private fun AuditLogFilterBar(
     onResultSelect: (String?) -> Unit,
     onToggleSort: () -> Unit,
     onClear: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showFeatureMenu by remember { mutableStateOf(value = false) }
     var showResultMenu by remember { mutableStateOf(value = false) }
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -298,6 +307,7 @@ fun AuditLogScreenPreview() {
                     details = "java.io.IOException: Permission denied"
                 )
             ),
+            isLoading = false,
             selectedFeature = null,
             selectedResult = null,
             isAscending = false,

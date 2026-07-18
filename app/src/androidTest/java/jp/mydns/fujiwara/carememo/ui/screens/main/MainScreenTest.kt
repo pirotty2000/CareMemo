@@ -10,7 +10,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -277,13 +277,20 @@ class MainScreenTest {
             }
         }
         composeTestRule.onNodeWithTag("MainScreen_MenuButton").performClick()
+        composeTestRule.waitForIdle()
+
         // 設定への遷移
-        composeTestRule.onNodeWithTag("MainScreen_MenuItem_Settings").performClick()
+        composeTestRule.onNodeWithTag("MainScreen_MenuItem_Settings").assertIsDisplayed().performClick()
+        composeTestRule.waitForIdle()
         assert(navigatedToSettings)
 
         // バージョン情報の表示確認
         composeTestRule.onNodeWithTag("MainScreen_MenuButton").performClick()
-        composeTestRule.onNodeWithTag("MainScreen_MenuItem_Version").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("MainScreen_MenuItem_Version").assertIsDisplayed().performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithTag("MainScreen_VersionDialog").assertIsDisplayed()
     }
 

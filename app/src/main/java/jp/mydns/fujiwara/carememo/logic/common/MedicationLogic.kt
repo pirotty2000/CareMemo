@@ -32,11 +32,21 @@ enum class MedicationStatus(val code: Int) {
 }
 
 /**
- * 同期処理のアクション（追加・更新・削除）
+ * 服薬バリデーションの結果（事実）
+ */
+enum class MedicationValidationResult {
+    SUCCESS,
+    FUTURE_DATE_NOT_ALLOWED,
+    INVALID_STATUS
+}
+
+/**
+ * 同期処理のアクション（追加・更新・削除・維持）
  */
 sealed class SyncAction {
     data class Insert(val record: MedicationRecord) : SyncAction()
     data class Delete(val record: MedicationRecord) : SyncAction()
+    data object None : SyncAction()
 }
 
 /**
@@ -46,11 +56,9 @@ object MedicationLogic {
 
     /**
      * カレンダー表示用の日付リストを生成します。
-     * 日曜開始のグリッドに合わせるため、月初より前のマスには null を入れます。
      */
     fun getCalendarDays(yearMonth: YearMonth): List<LocalDate?> {
         val daysInMonth = yearMonth.lengthOfMonth()
-        // 日曜日(7)を0、月曜日(1)を1 ... 土曜日(6)を6とする
         val firstDayOfWeek = yearMonth.atDay(1).dayOfWeek.value % 7
         
         val calendarDays = mutableListOf<LocalDate?>()
@@ -63,8 +71,7 @@ object MedicationLogic {
 
     /**
      * 特定の日の同期アクションを判定します。
-     * @param current データベースにある現在のその日の記録
-     * @param input 画面から渡された最新の状態（4スロット分）
+     * 各スロット（0〜3）に対して、どのような DB 操作が必要か（あるいは不要か）を返します。
      */
     fun determineSyncActions(
         current: List<MedicationRecord>,
@@ -74,15 +81,57 @@ object MedicationLogic {
 
         input.forEachIndexed { index, newRecord ->
             val existingRecord = current.find { it.timeSlot == index }
-            
-            if (newRecord != null) {
-                // 新規または更新
-                actions.add(SyncAction.Insert(newRecord))
-            } else if (existingRecord != null) {
-                // 入力が null になったので削除
-                actions.add(SyncAction.Delete(existingRecord))
+
+            when {
+                newRecord != null -> {
+                    if (existingRecord != null && existingRecord.status == newRecord.status) {
+                        // 内容が同じなので「維持」
+                        actions.add(SyncAction.None)
+                    } else {
+                        // 新規またはステータス変更なので「保存」
+                        actions.add(SyncAction.Insert(newRecord))
+                    }
+                }
+                existingRecord != null -> {
+                    // 入力が null になったので「削除」
+                    actions.add(SyncAction.Delete(existingRecord))
+                }
+                else -> {
+                    // 元々なく、今もないので「何もしない」
+                    actions.add(SyncAction.None)
+                }
             }
         }
         return actions
+    }
+
+    /**
+     * 服薬記録の内容をバリデーションします。
+     */
+    fun validateMedication(record: MedicationRecord, today: LocalDate = LocalDate.now()): MedicationValidationResult {
+        // 未来日付のチェック (dosageDate は yyyy-MM-dd 形式)
+        val dosageDate = try {
+            LocalDate.parse(record.dosageDate)
+        } catch (e: Exception) {
+            return MedicationValidationResult.SUCCESS
+        }
+        
+        if (dosageDate.isAfter(today)) {
+            return MedicationValidationResult.FUTURE_DATE_NOT_ALLOWED
+        }
+
+        // ステータスの範囲チェック
+        if (record.status !in 0..2) {
+            return MedicationValidationResult.INVALID_STATUS
+        }
+
+        return MedicationValidationResult.SUCCESS
+    }
+
+    /**
+     * 不正なステータスを持つレコードを除外します（インポート時などのクレンジング）。
+     */
+    fun filterValidRecords(records: List<MedicationRecord>): List<MedicationRecord> {
+        return records.filter { it.status in 0..2 }
     }
 }

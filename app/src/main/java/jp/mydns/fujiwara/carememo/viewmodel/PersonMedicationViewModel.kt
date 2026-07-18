@@ -11,9 +11,11 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
+import jp.mydns.fujiwara.carememo.logic.common.MedicationValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.SyncAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -50,26 +52,30 @@ class PersonMedicationViewModel(
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
 
+    private val _monthlyRecords = MutableStateFlow<List<MedicationRecord>>(emptyList())
+    private var monthlyRecordsJob: Job? = null
+
     /**
      * 選択された月の服薬記録一覧
      */
-    val monthlyRecords: StateFlow<List<MedicationRecord>> = combine(
-        _currentPerson,
-        _selectedMonth
-    ) { person, month ->
-        person to month
-    }.flatMapLatest { (person, month) ->
-        if (person != null) {
-            medicationRepository.getMedicationRecordsByMonth(person.id, month.toString())
-                .onEach { _isLoading.value = false }
-        } else {
-            flowOf(emptyList())
+    val monthlyRecords: StateFlow<List<MedicationRecord>> = _monthlyRecords.asStateFlow()
+
+    private fun refreshMonthlyRecords() {
+        val personId = _currentPerson.value?.id ?: return
+        val month = _selectedMonth.value
+
+        monthlyRecordsJob?.cancel()
+        monthlyRecordsJob = safeCollect(
+            operation = "monthlyRecordsFlow",
+            loadingState = _isLoading,
+            contextBuilder = { tableName = TABLE_MEDICATION },
+            flowProvider = {
+                medicationRepository.getMedicationRecordsByMonth(personId, month.toString())
+            }
+        ) {
+            _monthlyRecords.value = it
         }
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "monthlyRecordsFlow", TABLE_MEDICATION))
-        _isLoading.value = false
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
 
     /**
      * 利用者の全服薬記録 (PDF出力用)
@@ -90,21 +96,35 @@ class PersonMedicationViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun nextMonth() {
-        _isLoading.value = true
         _selectedMonth.value = _selectedMonth.value.plusMonths(1)
+        refreshMonthlyRecords()
     }
 
     fun previousMonth() {
-        _isLoading.value = true
         _selectedMonth.value = _selectedMonth.value.minusMonths(1)
+        refreshMonthlyRecords()
     }
 
     override fun loadPerson(personId: Int) {
-        val isDifferentPerson = currentPerson.value?.id != personId
-        super.loadPerson(personId)
-        if (isDifferentPerson) {
-            _selectedMonth.value = YearMonth.now()
+        if (_currentPerson.value?.id == personId) return
+
+        _currentPerson.value = null
+
+        loadPersonJob?.cancel()
+        loadPersonJob = safeCollect(
+            operation = "loadPerson",
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = "person_db"
+                affectedId = personId.toString()
+            },
+            flowProvider = { repository.getPersonById(personId) }
+        ) {
+            _currentPerson.value = it
+            refreshMonthlyRecords()
         }
+        
+        _selectedMonth.value = YearMonth.now()
     }
 
     /**
@@ -121,17 +141,55 @@ class PersonMedicationViewModel(
                 affectedId = _currentPerson.value?.id?.toString()
             }
         ) {
+            // 1. バリデーション（事実の判定）
+            slotRecords.filterNotNull().forEach { record ->
+                val validationResult = MedicationLogic.validateMedication(record)
+                translateValidationResult(validationResult)
+            }
+
             val currentDayRecords = recordsByDate.value[date] ?: emptyList()
+            
+            // 2. 同期アクションの判定
             val actions = MedicationLogic.determineSyncActions(currentDayRecords, slotRecords)
 
+            // 3. アクションの実行（Noneは無視）
             actions.forEach { action ->
                 when (action) {
                     is SyncAction.Insert -> medicationRepository.insertMedicationRecord(action.record, featureName, OP_SYNC)
                     is SyncAction.Delete -> medicationRepository.deleteMedicationRecord(action.record, featureName, "$OP_SYNC(delete)")
+                    SyncAction.None -> { /* 何もしない */ }
                 }
             }
-            showSnackbar(R.string.p_med_msg_update_success)
+            
+            if (actions.any { it !is SyncAction.None }) {
+                showSnackbar(R.string.p_med_msg_update_success)
+            }
         }
+    }
+
+    /**
+     * バリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
+     */
+    private fun translateValidationResult(result: MedicationValidationResult) {
+        if (result == MedicationValidationResult.SUCCESS) return
+
+        val messageRes = when (result) {
+            MedicationValidationResult.FUTURE_DATE_NOT_ALLOWED -> R.string.common_err_duplicate_blocked_simple // 仮：適切なリソースがないため
+            MedicationValidationResult.INVALID_STATUS -> R.string.common_error_save
+            else -> R.string.common_error_save
+        }
+        
+        val args = when (result) {
+            MedicationValidationResult.FUTURE_DATE_NOT_ALLOWED -> listOf("未来の日付には記録できません")
+            else -> emptyList()
+        }
+
+        throw AppValidationException(
+            titleResId = R.string.common_error_title_save,
+            messageResId = messageRes,
+            args = args,
+            logMessage = "Validation failed: $result"
+        )
     }
 
     class Factory(

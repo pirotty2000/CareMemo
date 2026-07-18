@@ -22,7 +22,7 @@ import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.KanaIndexBar
 import jp.mydns.fujiwara.carememo.ui.components.main.UserListItem
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import java.time.LocalDate
 import java.time.ZoneId
 

@@ -59,7 +59,9 @@ class PersonDetailViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
-        
+        // summaryRepository も値を流すようにモック（combine を動作させるため）
+        every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
+
         viewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
     }
 
@@ -70,7 +72,7 @@ class PersonDetailViewModelTest {
     }
 
     @Test
-    fun `loadPersonを実行したとき、指定したIDの利用者が取得できること`() = runTest {
+    fun `loadPersonを実行したとき、指定したIDの利用者が取得できること`() = runTest(testDispatcher) {
         viewModel.loadPerson(1)
 
         viewModel.currentPerson.test {
@@ -79,14 +81,14 @@ class PersonDetailViewModelTest {
     }
 
     @Test
-    fun `setCategoryを実行したとき、currentCategoryが更新されること`() = runTest {
+    fun `setCategoryを実行したとき、currentCategoryが更新されること`() = runTest(testDispatcher) {
         viewModel.setCategory(Category.BP_AND_PULSE)
         
         assertEquals(Category.BP_AND_PULSE, viewModel.currentCategory.value)
     }
 
     @Test
-    fun `personCategorySummaryで例外が発生したとき、isLoadingがfalseになりエラーログが記録されること`() = runTest {
+    fun `personCategorySummaryで例外が発生したとき、isLoadingがfalseになりエラーログが記録されること`() = runTest(testDispatcher) {
         // 1. ViewModel を作る前に例外を投げるように設定
         every { summaryRepository.getPersonCategorySummaryById(any()) } returns flow {
             throw RuntimeException("Summary error")
@@ -94,31 +96,28 @@ class PersonDetailViewModelTest {
 
         // 2. ViewModel 再生成
         val errorViewModel = PersonDetailViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        
+
         // 3. 利用者をロードして Flow を動かす
         errorViewModel.loadPerson(1)
 
         // 4. 検証
-        errorViewModel.personCategorySummary.test {
-            awaitItem() // 初期値 null
-            // エラーが発生して isLoading が false になるのを待つ
-            assertEquals(false, errorViewModel.isLoading.value)
-            coVerify {
-                auditLogRepository.log(
-                    featureName = any(),
-                    operation = "personCategorySummaryFlow",
-                    tableName = any(),
-                    actionType = "ERROR",
-                    affectedId = any(),
-                    details = match { it?.contains("Summary error") == true },
-                    resultType = "OTHER_ERROR"
-                )
-            }
+        // リファクタリングにより summary 取得は loadPersonWithSummary 経由の safeCollect に統合された
+        assertEquals(false, errorViewModel.isLoading.value)
+        coVerify {
+            auditLogRepository.log(
+                featureName = any(),
+                operation = "loadPersonWithSummary",
+                tableName = any(),
+                actionType = "ERROR",
+                affectedId = "1",
+                details = match { it?.contains("Summary error") == true },
+                resultType = "OTHER_ERROR"
+            )
         }
     }
 
     @Test
-    fun `loadPersonで例外が発生したとき、isLoadingがfalseになりエラーログが記録されること`() = runTest {
+    fun `loadPersonで例外が発生したとき、isLoadingがfalseになりエラーログが記録されること`() = runTest(testDispatcher) {
         every { personRepository.getPersonById(any()) } returns flow {
             throw RuntimeException("Load error")
         }
@@ -129,10 +128,10 @@ class PersonDetailViewModelTest {
         coVerify {
             auditLogRepository.log(
                 featureName = any(),
-                operation = "loadPerson",
+                operation = "loadPersonWithSummary",
                 tableName = any(),
                 actionType = "ERROR",
-                affectedId = any(),
+                affectedId = "1",
                 details = match { it?.contains("Load error") == true },
                 resultType = "OTHER_ERROR"
             )
@@ -140,18 +139,21 @@ class PersonDetailViewModelTest {
     }
 
     @Test
-    fun `loadPersonを実行したとき、サマリー取得が完了するまでisLoadingがtrueを維持すること`() = runTest {
+    fun `loadPersonを実行したとき、サマリー取得が完了するまでisLoadingがtrueを維持すること`() = runTest(testDispatcher) {
         val personId = 2
         val expectedSummary = PersonCategorySummary(hasHeightWeight = true)
 
         // 1. 各リポジトリのレスポンスに遅延を入れる
+        // flow { ... } は emit 後に終了してしまうため、末尾に大きな delay を入れて Flow を維持する
         every { personRepository.getPersonById(personId) } returns flow {
-            delay(1000) // 利用者取得に1秒
+            delay(1000)
             emit(testPerson.copy(id = personId))
+            delay(5000)
         }
         every { summaryRepository.getPersonCategorySummaryById(personId) } returns flow {
-            delay(1000) // サマリー取得にさらに1秒
+            delay(1000)
             emit(expectedSummary)
+            delay(5000)
         }
 
         // 2. ViewModel作成
@@ -172,16 +174,12 @@ class PersonDetailViewModelTest {
             advanceTimeBy(500)
             assertEquals(true, viewModel.isLoading.value)
             
-            // 1500ms経過：利用者(1s)は取れたが、サマリー(1s)がまだなのでLoading中
-            advanceTimeBy(1000)
-            assertEquals(true, viewModel.isLoading.value)
-            
-            // 2500ms経過：全て完了したので Loading が false になる
-            advanceTimeBy(1000)
-            assertEquals(false, viewModel.isLoading.value)
+            // 1000ms経過：並列取得（1000ms）が完了
+            advanceTimeBy(500)
             
             // 最終的なデータが流れてくること
             assertEquals(expectedSummary, awaitItem())
+            assertEquals(false, viewModel.isLoading.value)
         }
     }
 }

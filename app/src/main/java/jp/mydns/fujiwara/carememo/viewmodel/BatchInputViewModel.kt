@@ -12,23 +12,23 @@ import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputCategory
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputValidationResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.time.Instant
 
 /**
  * A系統（健康記録）の一括入力画面専用の ViewModel。
- * 複数のカテゴリを同時に保存し、連続入力のための状態管理を行います。
  */
 class BatchInputViewModel(
     private val healthRepository: HealthRepository,
@@ -46,23 +46,12 @@ class BatchInputViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    init {
-        // 利用者情報がロードされたらローディング状態を解除する
-        currentPerson.onEach { person ->
-            if (person != null) {
-                _isLoading.value = false
-            }
-        }.launchIn(viewModelScope)
-    }
-
     private val _recordTime = MutableStateFlow(Instant.now())
     val recordTime = _recordTime.asStateFlow()
 
-    // UI状態の一括管理
     private val _uiState = MutableStateFlow(BatchInputUiState())
     val uiState: StateFlow<BatchInputUiState> = _uiState.asStateFlow()
 
-    // UI側からの直接アクセス用 (プロパティ委譲のような形式)
     fun updateHeight(v: String) { _uiState.update { it.copy(height = v) } }
     fun updateWeight(v: String) { _uiState.update { it.copy(weight = v) } }
     fun updateBpSystolic(v: String) { _uiState.update { it.copy(bpSystolic = v) } }
@@ -74,8 +63,7 @@ class BatchInputViewModel(
     fun updateHbA1c(v: String) { _uiState.update { it.copy(hba1c = v) } }
 
     /**
-     * 現在の入力内容が保存可能かどうかを判定する（A系統のルールに基づく）。
-     * いずれかのカテゴリが有効な入力を持っていれば true を返す。
+     * 現在の入力内容が保存可能かどうかを判定する。
      */
     val isInputValid: StateFlow<Boolean> = uiState.map { state ->
         BatchInputLogic.isValid(state)
@@ -99,7 +87,6 @@ class BatchInputViewModel(
 
     /**
      * 入力された全データを一括保存します。
-     * 値が入力されているカテゴリのみが保存対象となります。
      */
     fun saveBatch() {
         val person = currentPerson.value ?: return
@@ -114,37 +101,48 @@ class BatchInputViewModel(
                 affectedId = person.id.toString()
             }
         ) {
-            // --- 重複チェック (新規登録のみを許可するため) ---
+            // 1. バリデーション（事実の判定）
+            val validationResult = BatchInputLogic.validate(currentState)
+
+            // 2. バリデーション結果の翻訳（ViewModelの責務）
+            if (validationResult != BatchInputValidationResult.SUCCESS) {
+                translateValidationResult(validationResult, currentState)
+            }
+
+            // 3. 重複チェック
+            val effectiveCategories = BatchInputLogic.getEffectiveCategories(currentState)
             val duplicateCategories = mutableListOf<Int>()
-            
-            if (HealthLogic.isValidHeightAndWeight(currentState.height, currentState.weight)) {
-                if (healthRepository.findHeightAndWeightAtTime(person.id, time) != null) {
-                    duplicateCategories.add(R.string.common_category_height_weight)
+            val duplicateCategoryNames = mutableListOf<String>()
+
+            effectiveCategories.forEach { category ->
+                val isDuplicate = when (category) {
+                    BatchInputCategory.HEIGHT_WEIGHT -> healthRepository.findHeightAndWeightAtTime(person.id, time) != null
+                    BatchInputCategory.VITAL -> healthRepository.findBpAndPulseAtTime(person.id, time) != null
+                    BatchInputCategory.GLUCOSE -> healthRepository.findGlucoseAndHbA1cAtTime(person.id, time) != null
                 }
-            }
-            if (HealthLogic.isValidBpAndPulse(currentState.bpSystolic, currentState.bpDiastolic, currentState.sat, currentState.pulse, currentState.bodyTemperature)) {
-                if (healthRepository.findBpAndPulseAtTime(person.id, time) != null) {
-                    duplicateCategories.add(R.string.common_category_vital)
-                }
-            }
-            if (HealthLogic.isValidGlucoseAndHbA1c(currentState.glucose, currentState.hba1c)) {
-                if (healthRepository.findGlucoseAndHbA1cAtTime(person.id, time) != null) {
-                    duplicateCategories.add(R.string.common_category_glucose)
+                if (isDuplicate) {
+                    duplicateCategoryNames.add(category.name)
+                    duplicateCategories.add(
+                        when (category) {
+                            BatchInputCategory.HEIGHT_WEIGHT -> R.string.common_category_height_weight
+                            BatchInputCategory.VITAL -> R.string.common_category_vital
+                            BatchInputCategory.GLUCOSE -> R.string.common_category_glucose
+                        }
+                    )
                 }
             }
 
             if (duplicateCategories.isNotEmpty()) {
-                // 重複がある場合は保存をブロック
                 val categoryNames = duplicateCategories.joinToString("、") { "__RES__$it" }
-                sendUiEvent(UiEvent.ShowErrorDialogRes(
-                    R.string.common_error_title_save,
-                    R.string.batch_err_duplicate_blocked,
-                    listOf(categoryNames)
-                ))
-                return@safeLaunch
+                throw AppValidationException(
+                    titleResId = R.string.common_error_title_save,
+                    messageResId = R.string.batch_err_duplicate_blocked,
+                    args = listOf(categoryNames),
+                    logMessage = "Duplicate categories detected: ${duplicateCategoryNames.joinToString(", ")}"
+                )
             }
             
-            // --- 保存実行 ---
+            // 4. 保存実行 (バリデーション済みなので安全に Entity 生成)
             val entities = BatchInputLogic.createEntities(person.id, time, currentState)
             entities.forEach { entity ->
                 when (entity) {
@@ -157,14 +155,41 @@ class BatchInputViewModel(
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(R.string.batch_msg_save_success)
             
-            // 保存成功後にクリア
             resetInputs()
         }
     }
 
     /**
-     * 入力値をリセットします（次の利用者の入力に備えるため）。
+     * バリデーション結果を詳細な例外に翻訳します。
      */
+    private fun translateValidationResult(result: BatchInputValidationResult, state: BatchInputUiState) {
+        if (result == BatchInputValidationResult.SUCCESS) return
+
+        val messageRes = when (result) {
+            BatchInputValidationResult.EMPTY_ALL -> R.string.p_detail_empty_records
+            BatchInputValidationResult.INVALID_VALUE -> R.string.common_error_save
+            else -> R.string.common_error_save
+        }
+
+        val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
+            val details = mutableListOf<String>()
+            if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("身長・体重が範囲外です")
+            if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("バイタルが範囲外です")
+            if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("血糖値が範囲外です")
+            
+            if (details.isEmpty()) listOf("入力値が正しくありません") else listOf(details.joinToString("\n"))
+        } else {
+            emptyList()
+        }
+
+        throw AppValidationException(
+            titleResId = R.string.common_error_title_save,
+            messageResId = messageRes,
+            args = args,
+            logMessage = "Validation failed: $result"
+        )
+    }
+
     fun resetInputs() {
         _uiState.value = BatchInputUiState()
     }

@@ -21,6 +21,16 @@ data class PersonEditUiState(
 )
 
 /**
+ * 利用者編集画面のバリデーション結果
+ */
+enum class PersonEditValidationResult {
+    SUCCESS,
+    EMPTY_LAST_NAME,
+    EMPTY_FIRST_NAME,
+    INVALID_BIRTHDAY
+}
+
+/**
  * 利用者編集画面のドメインロジック
  */
 object PersonEditLogic {
@@ -57,29 +67,42 @@ object PersonEditLogic {
     }
 
     /**
-     * 保存可能かどうかを判定します。
+     * 入力内容の妥当性を判定します。
+     */
+    fun validate(current: PersonEditUiState): PersonEditValidationResult {
+        if (current.lastName.isBlank()) return PersonEditValidationResult.EMPTY_LAST_NAME
+        if (current.firstName.isBlank()) return PersonEditValidationResult.EMPTY_FIRST_NAME
+
+        val y = current.year.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY
+        val m = current.month.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY
+        val d = current.day.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY
+
+        if (!JapaneseDateLogic.isValid(current.era, y, m, d)) {
+            return PersonEditValidationResult.INVALID_BIRTHDAY
+        }
+
+        return PersonEditValidationResult.SUCCESS
+    }
+
+    /**
+     * 保存可能かどうかを簡易的に判定します（UI用）。
      */
     fun isValid(current: PersonEditUiState): Boolean {
-        val y = current.year.toIntOrNull() ?: return false
-        val m = current.month.toIntOrNull() ?: return false
-        val d = current.day.toIntOrNull() ?: return false
-
-        return current.lastName.isNotBlank() &&
-                current.firstName.isNotBlank() &&
-                JapaneseDateLogic.isValid(current.era, y, m, d)
+        return validate(current) == PersonEditValidationResult.SUCCESS
     }
 
     /**
      * UI状態から保存用の Person Entity を構築します。
+     * バリデーションに失敗している場合は例外をスローします。
      */
-    fun createPerson(current: PersonEditUiState, initial: Person?): Person? {
-        val y = current.year.toIntOrNull() ?: return null
-        val m = current.month.toIntOrNull() ?: return null
-        val d = current.day.toIntOrNull() ?: return null
+    fun createPerson(current: PersonEditUiState, initial: Person?): Person {
+        val y = current.year.toIntOrNull() ?: throw IllegalArgumentException("Invalid year")
+        val m = current.month.toIntOrNull() ?: throw IllegalArgumentException("Invalid month")
+        val d = current.day.toIntOrNull() ?: throw IllegalArgumentException("Invalid day")
 
         val birthday = JapaneseDateLogic.toLocalDate(current.era, y, m, d)
             ?.atStartOfDay(ZoneOffset.UTC)
-            ?.toInstant() ?: return null
+            ?.toInstant() ?: throw IllegalArgumentException("Invalid date")
 
         return (initial?.copy(
             lastName = current.lastName.trim(),

@@ -69,6 +69,9 @@
     <string name="main_msg_user_updated">利用者情報を更新しました</string>
     <string name="main_msg_user_archived">%1$s さんをアーカイブに移動しました</string>
     <string name="main_msg_user_restored">%1$s さんを利用者一覧に戻しました</string>
+    <string name="main_err_edit_empty_last_name">姓を入力してください</string>
+    <string name="main_err_edit_empty_first_name">名を入力してください</string>
+    <string name="main_err_edit_invalid_birthday">生年月日が正しくありません</string>
     <string name="main_err_duplicate_active">既に同じ内容の利用者が登録されています。別人として登録したい場合は「同姓同名識別用メモ」の内容を変更して区別してください。</string>
     <string name="main_err_duplicate_archived">入力された内容（%1$s 様）は、現在「利用修了者（アーカイブ）」の中に存在します。\n\n●その方を復帰させたい場合：\nこの画面を閉じ、設定メニューの「利用終了者の復帰」から操作してください。\n\n●別人として新規登録／更新したい場合：\n「同姓同名識別用メモ」を別の内容に変更してから再度保存してください。</string>
     <string name="main_err_title_duplicate_archived_add">登録エラー（利用修了者に存在）</string>
@@ -195,6 +198,8 @@
     <string name="p_cond_msg_delete_success">記録を削除しました</string>
     <string name="p_cond_msg_photo_save_success">写真を保存しました</string>
     <string name="p_cond_msg_photo_delete_success">写真を削除しました</string>
+    <string name="p_cond_err_title_photo">写真の取得に失敗</string>
+    <string name="p_cond_err_photo_capture_failed">写真の取得または読み込みに失敗しました。</string>
     <string name="p_cond_err_photo_process_failure">画像の処理に失敗しました。空き容量を確認してください。</string>
 
     <!-- PersonMedicationScreen -->
@@ -230,6 +235,7 @@
     <string name="settings_msg_integrity_ok">不整合なデータは見つかりませんでした。</string>
     <string name="settings_msg_fix_success">%1$d件の孤立したデータを削除しました。</string>
     <string name="settings_msg_test_inconsistency_added">テスト用不整合データを1件挿入しました。</string>
+    <string name="settings_msg_dev_mode_enabled">管理者向け設定が有効になりました</string>
 
     <!-- Archive (DeleteOrRestorePerson) -->
     <string name="archive_msg_restored">%1$d 名の利用者を一覧に戻しました</string>

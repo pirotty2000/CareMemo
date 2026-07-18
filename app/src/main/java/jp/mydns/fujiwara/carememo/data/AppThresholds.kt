@@ -40,6 +40,7 @@ object AppThresholds {
 
     // --- 各カテゴリのUI/データ制限値 ---
     const val CONDITION_PHOTO_MAX_COUNT = 3
+    const val CONDITION_MAX_LENGTH = 1000
     const val IMAGE_MAX_SIZE = 1024
     const val IMAGE_THUMBNAIL_SIZE = 256
     const val PHOTOS_DIR_NAME = "photos"
@@ -127,16 +128,39 @@ object AppThresholds {
     // --- 数値入力・表示制限（A系統） ---
     const val DIGITS_HEIGHT_INT = 3
     const val DIGITS_HEIGHT_DEC = 1
+    const val MAX_HEIGHT = 250.0
+    const val MIN_HEIGHT = 50.0
+
     const val DIGITS_WEIGHT_INT = 3
     const val DIGITS_WEIGHT_DEC = 1
+    const val MAX_WEIGHT = 300.0
+    const val MIN_WEIGHT = 1.0
+
     const val DIGITS_BP_INT = 3
+    const val MAX_BP = 300.0
+    const val MIN_BP = 20.0
+
     const val DIGITS_PULSE_INT = 3
+    const val MAX_PULSE = 300.0
+    const val MIN_PULSE = 20.0
+
     const val DIGITS_SAT_INT = 3
+    const val MAX_SAT = 100.0
+    const val MIN_SAT = 50.0
+
     const val DIGITS_TEMP_INT = 2
     const val DIGITS_TEMP_DEC = 1
+    const val MAX_TEMP = 45.0
+    const val MIN_TEMP = 30.0
+
     const val DIGITS_GLUCOSE_INT = 3
+    const val MAX_GLUCOSE = 999.0
+    const val MIN_GLUCOSE = 10.0
+
     const val DIGITS_HBA1C_INT = 2
     const val DIGITS_HBA1C_DEC = 1
+    const val MAX_HBA1C = 20.0
+    const val MIN_HBA1C = 3.0
 
     // --- 単位定義 ---
     const val UNIT_HEIGHT = "cm"
@@ -149,9 +173,15 @@ object AppThresholds {
     const val UNIT_HBA1C = "%"
 
     /**
-     * 文字列が指定された整数桁・小数桁の形式に合致するか判定する
+     * 文字列が指定された整数桁・小数桁の形式に合致し、かつ指定された範囲内にあるか判定する
      */
-    fun isWithinFormat(value: String, intDigits: Int, decDigits: Int = 0): Boolean {
+    fun isWithinFormat(
+        value: String,
+        intDigits: Int,
+        decDigits: Int = 0,
+        min: Double? = null,
+        max: Double? = null
+    ): Boolean {
         if (value.isBlank()) return true
         val parts = value.split(".")
         if (parts.size > 2) return false
@@ -164,8 +194,13 @@ object AppThresholds {
             if (decPart.length > decDigits) return false
         }
 
-        val num = value.toDoubleOrNull()
-        return num != null && num >= 0
+        val num = value.toDoubleOrNull() ?: return false
+        if (num < 0) return false
+
+        if (min != null && num < min) return false
+        if (max != null && num > max) return false
+
+        return true
     }
 
     // --- 表示用フォーマッタ ---

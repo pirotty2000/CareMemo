@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.data.repository
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -44,9 +45,9 @@ class AppMaintenanceRepository(
             glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
             conditionAtVisitDao.insertAll(backup.conditionAtVisits)
             conditionPhotoDao.insertAll(backup.conditionPhotos)
-            
-            // 服薬記録のインポート（有効なステータスを持つものだけを保存するガード）
-            val validMedicationRecords = backup.medicationRecords.filter { (it.status in (0..2)) }
+
+            // 服薬記録のインポート（クレンジングを Logic へ委譲）
+            val validMedicationRecords = MedicationLogic.filterValidRecords(backup.medicationRecords)
             medicationRecordDao.insertAll(validMedicationRecords)
         }
     }

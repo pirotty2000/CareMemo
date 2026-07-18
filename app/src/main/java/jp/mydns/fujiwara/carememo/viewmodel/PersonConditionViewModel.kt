@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
@@ -14,6 +15,10 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
+import jp.mydns.fujiwara.carememo.logic.common.ConditionValidationResult
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,25 +64,12 @@ class PersonConditionViewModel(
     private val _selectedConditionId = MutableStateFlow<Int?>(null)
     val selectedConditionId: StateFlow<Int?> = _selectedConditionId.asStateFlow()
 
+    private val _records = MutableStateFlow<List<ConditionAtVisit>>(emptyList())
+
     /**
      * 現在の利用者に紐づく所見メモ一覧
      */
-    val records: StateFlow<List<ConditionAtVisit>> = _currentPerson
-        .flatMapLatest { person ->
-            if (person == null) flowOf(emptyList())
-            else conditionRepository.getConditionAtVisitByPersonId(person.id)
-        }
-        .onEach { 
-            if (_currentPerson.value != null) {
-                _isLoading.value = false
-            }
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "recordsFlow", TABLE_CONDITION))
-            _isLoading.value = false
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val records: StateFlow<List<ConditionAtVisit>> = _records.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -87,7 +79,11 @@ class PersonConditionViewModel(
      */
     val filteredRecords: StateFlow<List<ConditionAtVisit>> = combine(records, _searchQuery) { recs, query ->
         ConditionLogic.filterRecords(recs, query)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(
+        scope = viewModelScope, 
+        started = SharingStarted.Eagerly, 
+        initialValue = emptyList()
+    )
 
     /**
      * 選択された所見メモに紐づく写真一覧
@@ -142,16 +138,17 @@ class PersonConditionViewModel(
      */
     fun notifyPhotoError(message: String) {
         _errorMessage.value = message
-        showError("写真の取得に失敗", message)
-        viewModelScope.launch {
-            auditLogRepository.log(
-                featureName = featureName,
-                operation = "photoOperation",
-                tableName = TABLE_CONDITION,
-                actionType = "ERROR",
-                affectedId = _selectedConditionId.value?.toString() ?: "",
-                details = message,
-                resultType = "OTHER_ERROR"
+        safeLaunch(
+            operation = "photoOperation",
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = _selectedConditionId.value?.toString() ?: ""
+            }
+        ) {
+            throw AppExternalException(
+                titleResId = R.string.p_cond_err_title_photo,
+                messageResId = R.string.p_cond_err_photo_capture_failed,
+                logMessage = "Photo operation failed: $message"
             )
         }
     }
@@ -161,11 +158,29 @@ class PersonConditionViewModel(
     }
 
     fun loadPerson(personId: Int, initialQuery: String) {
-        val isDifferentPerson = currentPerson.value?.id != personId
-        super.loadPerson(personId)
-        if (isDifferentPerson) {
-            _searchQuery.value = initialQuery
-            _selectedConditionId.value = null
+        if (_currentPerson.value?.id == personId) return
+
+        _currentPerson.value = null
+        _searchQuery.value = initialQuery
+        _selectedConditionId.value = null
+
+        loadPersonJob?.cancel()
+        loadPersonJob = safeCollect(
+            operation = "loadPersonAndRecords",
+            loadingState = _isLoading,
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = personId.toString()
+            },
+            flowProvider = {
+                combine(
+                    repository.getPersonById(personId),
+                    conditionRepository.getConditionAtVisitByPersonId(personId)
+                ) { person, records -> person to records }
+            }
+        ) { (person, records) ->
+            _currentPerson.value = person
+            _records.value = records
         }
     }
 
@@ -176,24 +191,36 @@ class PersonConditionViewModel(
     /**
      * 所見メモを保存または更新します。
      */
-    fun saveRecord(record: ConditionAtVisit, onSuccess: (Int) -> Unit = {}) {
+    fun saveRecord(
+        personId: Int,
+        conditionId: Int,
+        state: PersonConditionUiState,
+        onSuccess: (Int) -> Unit = {}
+    ) {
         safeLaunch(
             operation = OP_SAVE,
             loadingState = _isProcessing,
             contextBuilder = {
                 tableName = TABLE_CONDITION
-                affectedId = record.id.toString()
+                affectedId = conditionId.toString()
             }
         ) {
+            // 1. バリデーション（事実の判定）
+            val validationResult = PersonConditionLogic.validate(state)
+
+            // 2. バリデーション結果の翻訳（ViewModelの責務）
+            translateValidationResult(validationResult)
+
+            // 3. Entity 構築
+            val record = PersonConditionLogic.createRecord(personId, conditionId, state)
             val isUpdate = record.id != 0
 
-            // --- 重複チェック (新規登録、または日時変更時) ---
+            // 4. 重複チェック (新規登録、または日時変更時)
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
-            if (ConditionLogic.isDuplicate(record, existing)) {
-                showError(R.string.common_error_title_save, R.string.common_err_duplicate_blocked_simple)
-                return@safeLaunch
-            }
+            val duplicateResult = ConditionLogic.validateDuplicate(record, existing)
+            translateValidationResult(duplicateResult)
 
+            // 5. 保存実行
             val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE)
             
             // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける
@@ -209,6 +236,47 @@ class PersonConditionViewModel(
             // コールバックを実行
             onSuccess(if (isUpdate) record.id else newId.toInt())
         }
+    }
+
+    /**
+     * バリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
+     */
+    private fun translateValidationResult(result: PersonConditionValidationResult) {
+        if (result == PersonConditionValidationResult.SUCCESS) return
+
+        val messageRes = R.string.common_error_save
+        val args = when (result) {
+            PersonConditionValidationResult.EMPTY_CONDITION -> listOf("内容を入力してください")
+            PersonConditionValidationResult.EMPTY_AUTHOR -> listOf("記録者を入力してください")
+            PersonConditionValidationResult.CONDITION_TOO_LONG -> listOf("内容が長すぎます（${AppThresholds.CONDITION_MAX_LENGTH}文字以内）")
+            PersonConditionValidationResult.INVALID_TIME -> listOf("日時を正しく入力してください")
+            else -> emptyList()
+        }
+
+        throw AppValidationException(
+            titleResId = R.string.common_error_title_save,
+            messageResId = messageRes,
+            args = args,
+            logMessage = "Validation failed: $result"
+        )
+    }
+
+    /**
+     * ドメイン共通のバリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
+     */
+    private fun translateValidationResult(result: ConditionValidationResult) {
+        if (result == ConditionValidationResult.SUCCESS) return
+
+        val (titleRes, messageRes) = when (result) {
+            ConditionValidationResult.DUPLICATE_TIME -> R.string.common_error_title_save to R.string.common_err_duplicate_blocked_simple
+            else -> R.string.common_error_title_save to R.string.common_error_save
+        }
+
+        throw AppValidationException(
+            titleResId = titleRes,
+            messageResId = messageRes,
+            logMessage = "Validation failed: $result"
+        )
     }
 
     /**
@@ -232,7 +300,7 @@ class PersonConditionViewModel(
      * 一時ファイルを削除します。
      */
     fun deleteTempFile(context: Context, uri: Uri) {
-        viewModelScope.launch {
+        safeLaunch(operation = "deleteTempFile") {
             try {
                 if (uri.scheme == "file" || uri.scheme == "content") {
                     try {
@@ -257,36 +325,30 @@ class PersonConditionViewModel(
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = conditionId.toString()
+                errorMessageRes = R.string.p_cond_err_photo_process_failure
             }
         ) {
-            val fileNames = ImageUtils.processAndSaveImage(context, uri)
-            if (fileNames != null) {
-                val (photoName, thumbName) = fileNames
-                val photo = ConditionPhoto(
-                    conditionId = conditionId,
-                    personId = personId,
-                    photoFileName = photoName,
-                    thumbnailFileName = thumbName,
-                    capturedAt = Instant.now(),
-                    caption = caption
-                )
-                conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
-                
-                // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
-                if (uri.scheme == "file" || uri.scheme == "content") {
-                    try {
-                        context.contentResolver.delete(uri, null, null)
-                    } catch (_: Exception) {
-                        uri.path?.let { File(it).delete() }
-                    }
+            val (photoName, thumbName) = ImageUtils.processAndSaveImage(context, uri)
+            val photo = ConditionPhoto(
+                conditionId = conditionId,
+                personId = personId,
+                photoFileName = photoName,
+                thumbnailFileName = thumbName,
+                capturedAt = Instant.now(),
+                caption = caption
+            )
+            conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
+            
+            // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
+            if (uri.scheme == "file" || uri.scheme == "content") {
+                try {
+                    context.contentResolver.delete(uri, null, null)
+                } catch (_: Exception) {
+                    uri.path?.let { File(it).delete() }
                 }
-
-                showSnackbar(R.string.p_cond_msg_photo_save_success)
-            } else {
-                val msg = context.getString(R.string.p_cond_err_photo_process_failure)
-                _errorMessage.value = msg
-                showError(context.getString(R.string.common_error_title_save), msg)
             }
+
+            showSnackbar(R.string.p_cond_msg_photo_save_success)
         }
     }
 

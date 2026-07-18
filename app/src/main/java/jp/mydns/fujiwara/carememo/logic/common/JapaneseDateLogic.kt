@@ -1,45 +1,74 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
+import java.time.DateTimeException
 import java.time.LocalDate
-import java.time.YearMonth
 
 /**
- * 西暦と和暦の相互変換、および日付の妥当性判定を行うロジッククラス。
+ * 日付バリデーションの結果（事実）
+ */
+enum class DateValidationResult {
+    SUCCESS,
+    INVALID_YEAR,
+    INVALID_MONTH,
+    INVALID_DAY,
+    INVALID_ERA_RANGE, // 元号の期間外（例：令和1年4月）
+    OUT_OF_APP_RANGE   // アプリのサポート範囲外（1900年未満など）
+}
+
+/**
+ * 西暦と和暦の相互変換、および日付妥当性の判定ロジック。
  */
 object JapaneseDateLogic {
 
-    private val SHOWA_START = LocalDate.of(1926, 12, 25)
-    private val HEISEI_START = LocalDate.of(1989, 1, 8)
-    private val REIWA_START = LocalDate.of(2019, 5, 1)
-
     /**
-     * 西暦から和暦（元号・年）へ変換します。
+     * 西暦から和暦と年に変換します。
      */
     fun toJapaneseDate(date: LocalDate): Pair<BirthEra, Int> {
         return when {
-            !date.isBefore(REIWA_START) -> {
+            date >= LocalDate.of(2019, 5, 1) ->
                 BirthEra.REIWA to (date.year - 2018)
-            }
-            !date.isBefore(HEISEI_START) -> {
+
+            date >= LocalDate.of(1989, 1, 8) ->
                 BirthEra.HEISEI to (date.year - 1988)
-            }
-            !date.isBefore(SHOWA_START) -> {
+
+            date >= LocalDate.of(1926, 12, 25) ->
                 BirthEra.SHOWA to (date.year - 1925)
-            }
-            else -> {
+
+            else ->
                 BirthEra.AD to date.year
-            }
         }
     }
 
     /**
-     * 和暦（元号・年・月・日）から西暦（LocalDate）へ変換します。
-     * 存在しない日付や、元号の範囲外の場合は null を返します。
+     * 和暦の日付を西暦（LocalDate）に変換します。
+     * 不正な日付の場合は null を返します。
      */
     fun toLocalDate(era: BirthEra, year: Int, month: Int, day: Int): LocalDate? {
-        if (month !in 1..12) return null
+        if (validate(era, year, month, day) != DateValidationResult.SUCCESS) return null
 
-        val westernYear = when (era) {
+        val adYear = when (era) {
+            BirthEra.SHOWA -> year + 1925
+            BirthEra.HEISEI -> year + 1988
+            BirthEra.REIWA -> year + 2018
+            BirthEra.AD -> year
+        }
+
+        return try {
+            LocalDate.of(adYear, month, day)
+        } catch (e: DateTimeException) {
+            null
+        }
+    }
+
+    /**
+     * 和暦日付の妥当性を詳細に判定します。
+     */
+    fun validate(era: BirthEra, year: Int, month: Int, day: Int): DateValidationResult {
+        if (year <= 0) return DateValidationResult.INVALID_YEAR
+        if (month !in 1..12) return DateValidationResult.INVALID_MONTH
+
+        // 1. 物理的な日付の存在チェック
+        val adYear = when (era) {
             BirthEra.SHOWA -> year + 1925
             BirthEra.HEISEI -> year + 1988
             BirthEra.REIWA -> year + 2018
@@ -47,41 +76,29 @@ object JapaneseDateLogic {
         }
 
         val date = try {
-            if (day !in 1..YearMonth.of(westernYear, month).lengthOfMonth()) return null
-            LocalDate.of(westernYear, month, day)
-        } catch (_: Exception) {
-            return null
+            LocalDate.of(adYear, month, day)
+        } catch (e: DateTimeException) {
+            return DateValidationResult.INVALID_DAY
         }
 
-        // 変換した日付が、指定された元号の範囲内にあるかチェック
-        // ただし、入力が AD（西暦）の場合は、日付自体が有効であれば全期間許容する
-        if (era != BirthEra.AD) {
-            val (actualEra, actualYear) = toJapaneseDate(date)
-            if (actualEra != era || actualYear != year) {
-                return null
-            }
+        // 2. 元号の期間妥当性チェック
+        val (actualEra, _) = toJapaneseDate(date)
+        if (era != BirthEra.AD && era != actualEra) {
+            return DateValidationResult.INVALID_ERA_RANGE
         }
 
-        return date
+        // 3. アプリの制限（1900年1月1日以降）
+        if (date.isBefore(LocalDate.of(1900, 1, 1))) {
+            return DateValidationResult.OUT_OF_APP_RANGE
+        }
+
+        return DateValidationResult.SUCCESS
     }
 
     /**
-     * 日付の妥当性を判定します。
-     * 1900年以前の日付はアプリの制限として false とします。
+     * 和暦日付が妥当かどうかを判定します（旧来の互換用）。
      */
     fun isValid(era: BirthEra, year: Int, month: Int, day: Int): Boolean {
-        val date = toLocalDate(era, year, month, day) ?: return false
-        
-        // 1900年以前は無効とする（アプリ仕様）
-        if (date.isBefore(LocalDate.of(1900, 1, 1))) return false
-        
-        return true
-    }
-
-    /**
-     * 年の数値を表示用にフォーマットします（1年を「元年」とする）。
-     */
-    fun formatYear(year: Int): String {
-        return if (year == 1) "元年" else year.toString()
+        return validate(era, year, month, day) == DateValidationResult.SUCCESS
     }
 }

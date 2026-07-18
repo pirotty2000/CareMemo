@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.utils
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.*
@@ -23,8 +24,11 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -90,8 +94,10 @@ object PdfExporter {
 
     /**
      * PDFを作成し、共有インテントを呼び出す。
+     * @throws IllegalArgumentException 出力対象データが空の場合
+     * @throws IOException ファイル操作に失敗した場合
      */
-    fun exportAndShare(
+    suspend fun exportAndShare(
         context: Context,
         person: Person,
         category: Category,
@@ -102,12 +108,14 @@ object PdfExporter {
         customStartDate: Instant? = null,
         customEndDate: Instant? = null,
         password: String? = null,
-    ): Boolean {
+    ) = withContext(Dispatchers.IO) {
         PDFBoxResourceLoader.init(context)
         clearOldExports(context)
 
         val filteredRecords = filterAnyRecords(category, records, range, customStartDate, customEndDate)
-        if (filteredRecords.isEmpty()) return false
+        if (filteredRecords.isEmpty()) {
+            throw IllegalArgumentException("出力対象のデータが存在しません。")
+        }
 
         val document = PdfDocument()
         val pageContext = PdfPageContext(context, document, person, category)
@@ -141,11 +149,9 @@ object PdfExporter {
                 encryptPdf(file, password)
             }
 
-            shareFile(context, file)
-            return true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return false
+            withContext(Dispatchers.Main) {
+                shareFile(context, file)
+            }
         } finally {
             document.close()
         }
@@ -635,8 +641,17 @@ object PdfExporter {
 
     private fun shareFile(context: Context, file: File) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply { type = "application/pdf"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        context.startActivity(Intent.createChooser(intent, context.getString(R.string.pdf_share_chooser_title)))
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(intent, context.getString(R.string.pdf_share_chooser_title))
+        try {
+            context.startActivity(chooser)
+        } catch (e: ActivityNotFoundException) {
+            throw IOException("PDFファイルを共有できるアプリが見つかりません。", e)
+        }
     }
 
     fun clearOldExports(context: Context) {

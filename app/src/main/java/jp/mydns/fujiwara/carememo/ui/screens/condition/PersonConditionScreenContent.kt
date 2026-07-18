@@ -50,6 +50,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
@@ -66,14 +67,14 @@ fun PersonConditionScreenContent(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     selectedId: Int,
-    onSelectedIdChange: (Int?) -> Unit,
+    onSelectedIdChange: (Int) -> Unit,
     conditionPhotoMap: Map<Int, Boolean>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
+    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
     onNavigateToFullScreen: (Int, Int) -> Unit,

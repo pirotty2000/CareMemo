@@ -12,8 +12,11 @@ import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepositor
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.PersonDuplicateResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,24 +29,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * 利用者一覧の各項目の表示状態を保持するクラス
- */
-data class PersonUiState(
-    val person: Person,
-    val maskedName: String,
-    val maskedFurigana: String,
-    val age: Int,
-    val formattedBirthday: String,
-    val summary: PersonCategorySummary
-)
-
-/**
  * 利用者一覧画面用の ViewModel
  */
 class PersonListViewModel(
     private val repository: PersonRepository,
     private val archivedRepository: DeleteOrRestorePersonRepository,
-    summaryRepository: PersonSummaryRepository,
+    private val summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
@@ -59,12 +50,6 @@ class PersonListViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    init {
-        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
-            showError(title, msg, *args)
-        }
-    }
-
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -73,6 +58,56 @@ class PersonListViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _userList = MutableStateFlow<List<PersonUiState>>(emptyList())
+
+    /**
+     * 利用者一覧
+     */
+    val userList: StateFlow<List<PersonUiState>> = _userList.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val _personsWithMatchedConditions = _searchQuery
+        .flatMapLatest { query ->
+            if (query.isBlank()) flowOf(null)
+            else conditionRepository.getPersonIdsByConditionKeyword(query)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = summaryRepository.getPersonCategorySummaries()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+
+        safeCollect(
+            operation = "userListFlow",
+            loadingState = _isLoading,
+            contextBuilder = { tableName = TABLE_PERSON },
+            flowProvider = {
+                combine(
+                    repository.getAllPersons(),
+                    _selectedSection,
+                    _personsWithMatchedConditions,
+                    isNameMaskingEnabled,
+                    categorySummaries
+                ) { allPersons, section, matchedIds, isMasking, summaries ->
+                    val filtered = PersonListLogic.filterPersons(allPersons, section, matchedIds)
+                    filtered.map { person ->
+                        PersonListLogic.createPersonUiState(person, isMasking, summaries[person.id])
+                    }
+                }
+            }
+        ) {
+            _userList.value = it
+        }
+    }
 
     fun setSelectedSection(section: String) {
         _selectedSection.value = section
@@ -85,42 +120,6 @@ class PersonListViewModel(
         }
     }
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val _personsWithMatchedConditions = _searchQuery
-        .flatMapLatest { query ->
-            if (query.isBlank()) flowOf(null)
-            else conditionRepository.getPersonIdsByConditionKeyword(query)
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = summaryRepository.getPersonCategorySummaries()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyMap()
-        )
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val userList: StateFlow<List<PersonUiState>> = combine(
-        repository.getAllPersons().onEach { _isLoading.value = false },
-        _selectedSection,
-        _personsWithMatchedConditions,
-        isNameMaskingEnabled,
-        categorySummaries
-    ) { allPersons, section, matchedIds, isMasking, summaries ->
-        // 1. フィルタリングロジックを抽出した Logic へ委譲
-        val filtered = PersonListLogic.filterPersons(allPersons, section, matchedIds)
-        
-        // 2. 表示用データの構築を Logic へ委譲
-        filtered.map { person ->
-            PersonListLogic.createPersonUiState(person, isMasking, summaries[person.id])
-        }
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "userListFlow", TABLE_PERSON))
-        _isLoading.value = false
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     fun addPerson(person: Person) {
         safeLaunch(
             operation = OP_ADD,
@@ -129,14 +128,14 @@ class PersonListViewModel(
                 tableName = TABLE_PERSON
             }
         ) {
-            // 1. 保存前に論理的な重複をチェック
+            // 1. 保存前に論理的な重複をチェック（事実の判定）
             val existing = repository.findExistingPerson(person)
-            if (existing != null) {
-                handleDuplicateError(existing, person)
-                return@safeLaunch
-            }
+            val duplicateResult = PersonListLogic.validateDuplicate(person, existing)
+            
+            // 2. 重複結果を翻訳（例外スロー）
+            translateDuplicateResult(duplicateResult, person)
 
-            // 2. データベースへ保存
+            // 3. データベースへ保存
             repository.insertPerson(person, featureName, OP_ADD)
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
@@ -144,22 +143,26 @@ class PersonListViewModel(
     }
 
     /**
-     * 重複エラーが発生した際のメッセージ表示を共通化
+     * 重複判定の結果（事実）を UI 通知用の例外（翻訳）に変換します。
      */
-    private fun handleDuplicateError(existing: Person, input: Person) {
+    private fun translateDuplicateResult(result: PersonDuplicateResult, input: Person) {
+        if (result == PersonDuplicateResult.SUCCESS) return
+
         val personName = input.getMaskedName(isNameMaskingEnabled.value)
         val titleRes = R.string.main_err_title_duplicate_archived_add
 
-        if (existing.deletedAt == null) {
-            // アクティブな利用者に重複
-            showError(
-                titleRes,
-                R.string.main_err_duplicate_active
-            )
-        } else {
-            // アーカイブ済みの利用者に重複
-            showError(titleRes, R.string.main_err_duplicate_archived, personName)
+        val messageRes = when (result) {
+            PersonDuplicateResult.DUPLICATE_ACTIVE -> R.string.main_err_duplicate_active
+            PersonDuplicateResult.DUPLICATE_ARCHIVED -> R.string.main_err_duplicate_archived
+            else -> R.string.common_error_save
         }
+
+        throw AppValidationException(
+            titleResId = titleRes,
+            messageResId = messageRes,
+            args = if (result == PersonDuplicateResult.DUPLICATE_ARCHIVED) listOf(personName) else emptyList(),
+            logMessage = "Duplicate person detected: $result"
+        )
     }
 
     fun logicalDeletePerson(person: Person) {

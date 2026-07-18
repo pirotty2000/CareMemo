@@ -3,7 +3,27 @@ package jp.mydns.fujiwara.carememo.logic.feature
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
-import jp.mydns.fujiwara.carememo.viewmodel.PersonUiState
+
+/**
+ * 利用者一覧の各項目の表示状態を保持するクラス
+ */
+data class PersonUiState(
+    val person: Person,
+    val maskedName: String,
+    val maskedFurigana: String,
+    val age: Int,
+    val formattedBirthday: String,
+    val summary: PersonCategorySummary
+)
+
+/**
+ * 利用者追加・更新時の重複判定結果（事実）
+ */
+enum class PersonDuplicateResult {
+    SUCCESS,
+    DUPLICATE_ACTIVE,
+    DUPLICATE_ARCHIVED
+}
 
 /**
  * 利用者一覧画面に関するドメインロジック。
@@ -73,5 +93,21 @@ object PersonListLogic {
             formattedBirthday = DateTimeUtils.formatDateJapaneseEra(person.birthday),
             summary = summary ?: PersonCategorySummary()
         )
+    }
+
+    /**
+     * 新規追加または更新時に、既存データとの重複を判定します。
+     */
+    fun validateDuplicate(input: Person, existing: Person?): PersonDuplicateResult {
+        if (existing == null) return PersonDuplicateResult.SUCCESS
+        
+        // 更新時、自分自身（ID一致）であれば重複とはみなさない
+        if (input.id != 0 && input.id == existing.id) return PersonDuplicateResult.SUCCESS
+
+        return if (existing.deletedAt == null) {
+            PersonDuplicateResult.DUPLICATE_ACTIVE
+        } else {
+            PersonDuplicateResult.DUPLICATE_ARCHIVED
+        }
     }
 }

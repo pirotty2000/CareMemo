@@ -10,9 +10,11 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.DateValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditValidationResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -123,37 +125,60 @@ class PersonEditViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun save() {
-        val person = PersonEditLogic.createPerson(_uiState.value, initialPerson) ?: return
-
         safeLaunch(
             operation = OP_SAVE,
             loadingState = _isLoading,
             contextBuilder = {
                 tableName = TABLE_PERSON
-                affectedId = person.id.toString()
+                affectedId = personId.toString()
             }
         ) {
+            val currentState = _uiState.value
+
+            // 1. バリデーション（事実の判定）
+            val validationResult = PersonEditLogic.validate(currentState)
+
+            // 2. 翻訳
+            if (validationResult != PersonEditValidationResult.SUCCESS) {
+                val messageRes = when (validationResult) {
+                    PersonEditValidationResult.EMPTY_LAST_NAME -> R.string.main_err_edit_empty_last_name
+                    PersonEditValidationResult.EMPTY_FIRST_NAME -> R.string.main_err_edit_empty_first_name
+                    PersonEditValidationResult.INVALID_BIRTHDAY -> {
+                        // 生年月日が不正な場合、詳細な理由を Logic から取得 (将来の拡張用)
+                        val y = currentState.year.toIntOrNull() ?: 0
+                        val m = currentState.month.toIntOrNull() ?: 0
+                        val d = currentState.day.toIntOrNull() ?: 0
+                        val dateDetail = JapaneseDateLogic.validate(currentState.era, y, m, d)
+                        
+                        // 現状は一律「不正」としているが、将来的に dateDetail ごとにメッセージを分けられる
+                        R.string.main_err_edit_invalid_birthday
+                    }
+                    else -> R.string.common_error_save
+                }
+                throw AppValidationException(
+                    titleResId = R.string.common_error_title_save,
+                    messageResId = messageRes,
+                    logMessage = "Validation failed: $validationResult"
+                )
+            }
+
+            // Entity の構築
+            val person = PersonEditLogic.createPerson(currentState, initialPerson)
+
             // 重複チェック
             val existing = repository.findExistingPerson(person)
             if (existing != null && (personId == -1 || existing.id != personId)) {
                 handleDuplicateError(existing, person, isUpdate = personId != -1)
-                return@safeLaunch
             }
 
-            try {
-                if (personId == -1) {
-                    repository.insertPerson(person, featureName, OP_SAVE)
-                    showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
-                } else {
-                    repository.updatePerson(person, featureName, OP_SAVE)
-                    showSnackbar(R.string.main_msg_user_updated)
-                }
-                sendUiEvent(UiEvent.SaveSuccess)
-            } catch (e: SQLiteConstraintException) {
-                // 重複の可能性が高いが、一応ログとエラー表示
-                showError(R.string.common_error_title_save, R.string.common_error_save, e.localizedMessage ?: "Unknown error")
-                throw e // 再スローしてハンドラに記録させる
+            if (personId == -1) {
+                repository.insertPerson(person, featureName, OP_SAVE)
+                showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isNameMaskingEnabled.value))
+            } else {
+                repository.updatePerson(person, featureName, OP_SAVE)
+                showSnackbar(R.string.main_msg_user_updated)
             }
+            sendUiEvent(UiEvent.SaveSuccess)
         }
     }
 
@@ -161,11 +186,18 @@ class PersonEditViewModel(
         val personName = input.getMaskedName(isNameMaskingEnabled.value)
         val titleRes = if (isUpdate) R.string.main_err_title_duplicate_archived_update else R.string.main_err_title_duplicate_archived_add
         
-        if (existing.deletedAt == null) {
-            showError(titleRes, R.string.main_err_duplicate_active)
+        val messageRes = if (existing.deletedAt == null) {
+            R.string.main_err_duplicate_active
         } else {
-            showError(titleRes, R.string.main_err_duplicate_archived, personName)
+            R.string.main_err_duplicate_archived
         }
+
+        throw AppValidationException(
+            titleResId = titleRes,
+            messageResId = messageRes,
+            args = if (existing.deletedAt == null) emptyList() else listOf(personName),
+            logMessage = "Duplicate person detected (ID: ${existing.id})"
+        )
     }
 
     class Factory(

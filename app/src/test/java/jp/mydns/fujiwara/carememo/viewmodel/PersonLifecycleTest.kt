@@ -54,6 +54,8 @@ class PersonLifecycleTest {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { userSettingsRepository.defaultRecorderName } returns flowOf("")
+        // PersonDetailViewModel が使用するサマリーもデフォルト値を返すように設定（combine を完了させるため）
+        every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(jp.mydns.fujiwara.carememo.data.PersonCategorySummary())
     }
 
     @After

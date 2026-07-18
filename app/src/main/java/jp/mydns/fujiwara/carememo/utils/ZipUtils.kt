@@ -4,10 +4,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.exception.ZipException
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.EncryptionMethod
 import net.lingala.zip4j.progress.ProgressMonitor
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -22,41 +25,39 @@ object ZipUtils {
      * @param zipFile 出力先Zipファイル
      * @param password パスワード（nullまたは空文字でパスワードなし）
      * @param onProgress 進捗通知コールバック (0-100)
-     * @return 処理結果
+     * @throws IOException 圧縮に失敗した場合
      */
     suspend fun zip(
         files: List<File>,
         zipFile: File,
         password: String? = null,
         onProgress: (Int) -> Unit = {}
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val zip = ZipFile(zipFile)
-            val isEncrypted = !password.isNullOrEmpty()
+    ) = withContext(Dispatchers.IO) {
+        val zip = ZipFile(zipFile)
+        val isEncrypted = !password.isNullOrEmpty()
 
-            val parameters = ZipParameters().apply {
-                if (isEncrypted) {
-                    isEncryptFiles = true
-                    encryptionMethod = EncryptionMethod.AES
-                }
-            }
-
+        val parameters = ZipParameters().apply {
             if (isEncrypted) {
-                zip.setPassword(password.toCharArray())
+                isEncryptFiles = true
+                encryptionMethod = EncryptionMethod.AES
             }
+        }
 
-            // 非同期モードを有効にして進捗を監視可能にする
-            zip.isRunInThread = true
-            
-            files.forEach { file ->
-                if (file.isDirectory) {
-                    zip.addFolder(file, parameters)
-                } else {
-                    zip.addFile(file, parameters)
-                }
-                // 各ファイル追加ごとに完了を待機し、進捗を報告する
-                waitForCompletion(zip, onProgress)
+        if (isEncrypted) {
+            zip.setPassword(password.toCharArray())
+        }
+
+        // 非同期モードを有効にして進捗を監視可能にする
+        zip.isRunInThread = true
+        
+        files.forEach { file ->
+            if (file.isDirectory) {
+                zip.addFolder(file, parameters)
+            } else {
+                zip.addFile(file, parameters)
             }
+            // 各ファイル追加ごとに完了を待機し、進捗を報告する
+            waitForCompletion(zip, onProgress)
         }
     }
 
@@ -66,25 +67,23 @@ object ZipUtils {
      * @param targetDir 解凍先ディレクトリ
      * @param password パスワード
      * @param onProgress 進捗通知コールバック (0-100)
-     * @return 処理結果
+     * @throws IOException 解凍に失敗した場合
      */
     suspend fun unzip(
         zipFile: File,
         targetDir: File,
         password: String? = null,
         onProgress: (Int) -> Unit = {}
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val zip = ZipFile(zipFile)
-            if (zip.isEncrypted && !password.isNullOrEmpty()) {
-                zip.setPassword(password.toCharArray())
-            }
-
-            zip.isRunInThread = true
-            zip.extractAll(targetDir.absolutePath)
-            
-            waitForCompletion(zip, onProgress)
+    ) = withContext(Dispatchers.IO) {
+        val zip = ZipFile(zipFile)
+        if (zip.isEncrypted && !password.isNullOrEmpty()) {
+            zip.setPassword(password.toCharArray())
         }
+
+        zip.isRunInThread = true
+        zip.extractAll(targetDir.absolutePath)
+        
+        waitForCompletion(zip, onProgress)
     }
 
     /**
@@ -96,15 +95,16 @@ object ZipUtils {
 
     /**
      * パスワードが正しいか確認する。
+     * @throws IOException ファイルが見つからない、またはアクセスできない場合
      */
     suspend fun isValidPassword(zipFile: File, password: String): Boolean = withContext(Dispatchers.IO) {
+        if (!zipFile.exists()) throw FileNotFoundException("Zipファイルが見つかりません。")
+
         try {
             val zip = ZipFile(zipFile)
             if (!zip.isEncrypted) return@withContext true
 
             zip.setPassword(password.toCharArray())
-            // 中央ディレクトリが暗号化されていない場合、ヘッダー取得だけではパスワードの正否を判定できない。
-            // 最初のファイルの内容を1バイト読み取ってみることで、確実に判定する。
             val firstFileHeader = zip.fileHeaders.find { !it.isDirectory }
             if (firstFileHeader != null) {
                 zip.getInputStream(firstFileHeader).use { it.read() }
@@ -112,8 +112,16 @@ object ZipUtils {
             } else {
                 zip.fileHeaders.isNotEmpty()
             }
-        } catch (_: Exception) {
-            false
+        } catch (e: ZipException) {
+            // パスワード相違に起因する例外の場合は false、それ以外の致命的なエラーは再スロー
+            if (e.message?.contains("password", ignoreCase = true) == true || 
+                e.message?.contains("WRONG_PASSWORD", ignoreCase = true) == true) {
+                false
+            } else {
+                throw IOException("Zipファイルの検証中にエラーが発生しました。", e)
+            }
+        } catch (e: Exception) {
+            throw IOException("Zipファイルの読み込みに失敗しました。", e)
         }
     }
 

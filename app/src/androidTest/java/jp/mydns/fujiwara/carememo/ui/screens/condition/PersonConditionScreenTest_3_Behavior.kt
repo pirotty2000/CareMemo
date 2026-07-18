@@ -94,7 +94,7 @@ class PersonConditionScreenTest_3_Behavior {
         composeTestRule.onNodeWithText("記録者").performTextInput("テスト担当者")
         composeTestRule.onNodeWithTag("Condition_MemoInput").performTextInput("テストの所見内容")
         composeTestRule.onNodeWithTag("Condition_SaveButton").assertIsEnabled().performClick()
-        verify(exactly = 1) { conditionViewModel.saveRecord(any(), any()) }
+        verify(exactly = 1) { conditionViewModel.saveRecord(any(), any(), any(), any()) }
     }
 
     @Test
@@ -111,6 +111,9 @@ class PersonConditionScreenTest_3_Behavior {
         setContent()
         runBlocking {
             uiEventFlow.emit(BaseViewModel.UiEvent.ShowErrorDialog("重複エラー", "既に同じ日時の記録が存在します。"))
+        }
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            composeTestRule.onAllNodesWithText("既に同じ日時の記録が存在します。").fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNodeWithText("既に同じ日時の記録が存在します。").assertIsDisplayed()
     }
@@ -135,6 +138,10 @@ class PersonConditionScreenTest_3_Behavior {
         composeTestRule.onNodeWithTag("Condition_MemoInput").performTextInput("維持されるべきメモ")
         
         runBlocking { uiEventFlow.emit(BaseViewModel.UiEvent.ShowSnackbar("通知")) }
+        // Snackbar の表示を待つ
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            composeTestRule.onAllNodesWithText("通知").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithTag("Condition_MemoInput").assertTextContains("維持されるべきメモ")
     }
 
@@ -175,6 +182,9 @@ class PersonConditionScreenTest_3_Behavior {
         setContent()
         runBlocking {
             uiEventFlow.emit(BaseViewModel.UiEvent.ShowErrorDialog(title = "エラー", message = testErrorMessage))
+        }
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            composeTestRule.onAllNodesWithText(testErrorMessage).fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNodeWithText(testErrorMessage).assertIsDisplayed()
         composeTestRule.onNodeWithText("閉じる").assertExists()

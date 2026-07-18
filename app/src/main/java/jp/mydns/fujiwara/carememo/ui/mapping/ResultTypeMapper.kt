@@ -7,6 +7,9 @@ val String.toResultLabel: String
     get() = when (this) {
         "SUCCESS" -> "成功"
         "DB_ERROR" -> "DBエラー"
+        "IO_ERROR" -> "入出力エラー"
+        "FORMAT_ERROR" -> "形式エラー"
+        "VALIDATION_ERROR" -> "検証エラー"
         "OTHER_ERROR" -> "その他エラー"
         "UNKNOWN" -> "不明"
         else -> "不明"

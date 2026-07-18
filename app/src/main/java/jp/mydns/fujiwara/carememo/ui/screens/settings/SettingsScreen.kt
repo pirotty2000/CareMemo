@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
@@ -45,6 +46,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    navController: NavController,
     onNavigateToArchiveManagement: (DeleteOrRestorePersonViewModel.OperationMode) -> Unit,
     onNavigateToAuditLog: () -> Unit,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
@@ -62,11 +64,30 @@ fun SettingsScreen(
     val endedUserList by viewModel.deletedUserList.collectAsStateWithLifecycle()
     val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
     val processingProgress by viewModel.processingProgress.collectAsStateWithLifecycle()
+    val isDeveloperModeEnabled by viewModel.isDeveloperModeEnabled.collectAsStateWithLifecycle()
     val inconsistencies: List<DatabaseInconsistency> by viewModel.inconsistencies.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // 設定変更があったかどうかの内部状態
+    var isChangedByMe by rememberSaveable { mutableStateOf(false) }
+
+    // 子画面（利用者管理 S-003）からの更新要求を監視
+    val childRefreshRequested by navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("refresh_needed", false)
+        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+
+    // 戻る際の処理（親画面への通知準備）
+    val handleBack = {
+        if (isChangedByMe || childRefreshRequested) {
+            // 親画面（MainScreen）の SavedStateHandle にフラグをセット
+            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
+        }
+        onBack()
+    }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
     val isPasswordValid = backupPassword.length >= 6
@@ -81,10 +102,6 @@ fun SettingsScreen(
     var showLogClearConfirm by rememberSaveable { mutableStateOf(false) }
     var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
-
-    // 開発者モード（リセット表示用）の状態管理
-    var versionTapCount by remember { mutableIntStateOf(0) }
-    var isDeveloperModeEnabled by rememberSaveable { mutableStateOf(false) }
 
     var dialogTitle by rememberSaveable { mutableStateOf<String?>(null) }
     var dialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -433,9 +450,13 @@ fun SettingsScreen(
         snackbarHostState = snackbarHostState,
         isMaskingEnabled = isMaskingEnabled,
         defaultRecorderName = persistedRecorderName,
-        onMaskingChange = { viewModel.setNameMaskingEnabled(it) },
+        onMaskingChange = {
+            viewModel.setNameMaskingEnabled(it)
+            isChangedByMe = true // 伏せ字設定が変更されたらフラグを立てる (BH-01)
+        },
         onRecorderNameChange = {
             viewModel.setDefaultRecorderName(it)
+            isChangedByMe = true
         },
         endedUserCount = endedUserList.size,
         onNavigateToRestore = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
@@ -460,9 +481,11 @@ fun SettingsScreen(
                     viewModel.setBackupPasswordEnabled(false)
                 }
             }
+            isChangedByMe = true
         },
         onBackupPasswordChange = {
             if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it)
+            isChangedByMe = true
         },
         onPasswordVisibilityToggle = {
             if (isPasswordVisible) {
@@ -505,18 +528,13 @@ fun SettingsScreen(
                     viewModel.setBiometricEnabled(context, false)
                 }
             }
+            isChangedByMe = true
         },
         onTimeoutClick = { showTimeoutDialog = true },
         themeSetting = themeSetting,
         onThemeClick = { showThemeDialog = true },
         onVersionClick = {
-            if (!isDeveloperModeEnabled) {
-                versionTapCount++
-                if (versionTapCount >= 7) {
-                    isDeveloperModeEnabled = true
-                    scope.launch { snackbarHostState.showSnackbar("管理者向け設定が有効になりました") }
-                }
-            }
+            viewModel.handleVersionClick()
             showVersionDialog = true
         },
         onClearAllClick = {
@@ -542,7 +560,7 @@ fun SettingsScreen(
         isDeveloperModeEnabled = isDeveloperModeEnabled,
         isProcessing = isProcessing,
         processingProgress = processingProgress,
-        onBack = onBack
+        onBack = handleBack
     )
 }
 
@@ -595,7 +613,14 @@ fun SettingsScreenContent(
         topBar = {
             TopAppBar(
                 title = { Text("設定・管理", fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") } },
+                navigationIcon = { 
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("SettingsScreen_BackButton")
+                    ) { 
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") 
+                    } 
+                },
                 colors = appTopAppBarColors(),
             )
         },
@@ -814,7 +839,7 @@ private fun DataManagementSection(
             headlineContent = { Text("データのバックアップ (保存)") },
             supportingContent = { Text("全データと写真をZip書き出しします") },
             trailingContent = { 
-                IconButton(onClick = onExportClick, enabled = canExport, modifier = Modifier.testTag("Settings_ExportButton")) { 
+                IconButton(onClick = onExportClick, enabled = canExport, modifier = Modifier.testTag("Settings_BackupButton")) { 
                     Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) 
                 } 
             },
@@ -931,7 +956,7 @@ private fun ResetSection(
             headlineContent = { Text(context.getString(R.string.settings_btn_view_audit_logs)) },
             supportingContent = { Text("現在の記録件数: $auditLogCount 件") },
             leadingContent = { Icon(Icons.Rounded.History, contentDescription = null) },
-            modifier = Modifier.clickable { onViewLogsClick() }.testTag("Settings_AuditLogViewButton")
+            modifier = Modifier.clickable { onViewLogsClick() }.testTag("Settings_AuditLogButton")
         )
 
         ListItem(

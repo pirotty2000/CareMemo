@@ -24,7 +24,6 @@ package jp.mydns.fujiwara.carememo.ui.components.common
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
@@ -32,7 +31,6 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
-import kotlinx.coroutines.launch
 
 /**
  * PDF出力アクションを共通で処理するハンドラーコンポーネント。
@@ -51,7 +49,6 @@ fun PdfExportActionHandler(
     photos: List<ConditionPhoto> = emptyList()
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     if (showDialog && person != null) {
         PdfSettingsDialog(
@@ -64,8 +61,13 @@ fun PdfExportActionHandler(
             // アプリロックがかからないようにバイパスを設定
             viewModel.setLockBypassEnabled(true)
             
-            scope.launch {
-                val success = PdfExporter.exportAndShare(
+            viewModel.safeLaunch(
+                operation = "exportAndShare",
+                contextBuilder = {
+                    tableName = "pdf_export"
+                }
+            ) {
+                PdfExporter.exportAndShare(
                     context = context,
                     person = person,
                     category = category,
@@ -77,10 +79,6 @@ fun PdfExportActionHandler(
                     customEndDate = end,
                     password = password
                 )
-                
-                if (!success) {
-                    snackbarHostState.showSnackbar("PDFの出力に失敗しました。対象データがない可能性があります。")
-                }
             }
         }
     }

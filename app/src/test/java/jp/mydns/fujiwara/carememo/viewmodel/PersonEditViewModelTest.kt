@@ -116,4 +116,33 @@ class PersonEditViewModelTest {
             )
         }
     }
+
+    @Test
+    fun lg03_validationFailure_translation() = runTest {
+        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
+        advanceUntilIdle()
+
+        // 必須項目（苗字）を空にする
+        viewModel.updateLastName("")
+        viewModel.updateFirstName("太郎")
+        viewModel.updateYear("25")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
+
+        viewModel.save()
+        advanceUntilIdle()
+
+        // バリデーションエラーが監査ログに VALIDATION_ERROR として記録されること
+        coVerify {
+            auditLogRepository.log(
+                featureName = "PersonEdit",
+                operation = "save",
+                tableName = "person_db",
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it?.contains("EMPTY_LAST_NAME") == true },
+                resultType = "VALIDATION_ERROR"
+            )
+        }
+    }
 }

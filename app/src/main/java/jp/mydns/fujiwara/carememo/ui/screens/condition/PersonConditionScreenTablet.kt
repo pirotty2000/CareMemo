@@ -2,23 +2,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
 
 /**
  * Screen : PersonConditionScreenTablet
- *
- * 【画面名】
- * 利用者所見記録画面（タブレット版）
- *
- * 【役割】
- * タブレットや大画面デバイスに最適化された、所見記録（カテゴリB）のUIを提供し、効率的な情報管理を実現する。
- *
- * 【主な機能】
- * ・2ペインレイアウト：左側に所見履歴リスト、右側に選択中の詳細内容と写真・入力フォームを表示。
- * ・マルチビュー操作：過去の記録を参照しながら、新しい所見の入力や写真の確認が同時に可能。
- * ・クイックアクセス：画面遷移なしでリストから詳細へ素早くアクセスできる。
- *
- * 【遷移】
- * ← PersonConditionScreen（呼び出し元）
- *
- * 【備考】
- * 広い画面を活用し、一度に多くの情報を提示することで、利用者の状態変化を俯瞰的に把握しやすくしている。
  */
 
 import androidx.compose.foundation.layout.*
@@ -40,6 +23,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import java.time.Instant
 
@@ -67,7 +51,7 @@ fun PersonConditionScreenTablet(
     onNavigateToFullScreen: (Int, Int) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
+    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -82,7 +66,7 @@ fun PersonConditionScreenTablet(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
                             defaultTitle = "所見記録",
-                            modifier = Modifier.testTag("PersonHeader_NameAndAge")
+                            modifier = Modifier.testTag("PersonHeader_Title")
                         )
                     },
                     navigationIcon = {
@@ -134,7 +118,7 @@ fun PersonConditionScreenTablet(
                 onSearchQueryChange = onSearchQueryChange,
                 selectedId = selectedId,
                 onSelectedIdChange = { id -> 
-                    onSelectedIdChange(id ?: -1)
+                    onSelectedIdChange(id)
                 },
                 conditionPhotoMap = conditionPhotoMap,
                 photos = photos,
@@ -193,7 +177,7 @@ fun PersonConditionScreenTabletPreview() {
             onNavigateToFullScreen = { _, _ -> },
             onShowPdfSettings = {},
             onDeleteRecord = {},
-            onSaveRecord = { _, _ -> },
+            onSaveRecord = { _, _, _, _ -> },
             onDeletePhoto = {},
             onMicClick = {},
             snackbarHostState = remember { SnackbarHostState() }

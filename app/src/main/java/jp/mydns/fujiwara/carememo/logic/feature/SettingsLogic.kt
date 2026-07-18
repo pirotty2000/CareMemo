@@ -1,7 +1,21 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
-import android.os.StatFs
-import java.io.File
+/**
+ * インポートデータの検証結果（事実）
+ */
+enum class ImportValidationResult {
+    SUCCESS,
+    NOT_A_ZIP,
+    INCOMPATIBLE
+}
+
+/**
+ * ストレージ容量の検証結果（事実）
+ */
+enum class StorageValidationResult {
+    SUCCESS,
+    INSUFFICIENT_SPACE
+}
 
 /**
  * 設定画面・バックアップ管理に関するドメインロジック。
@@ -11,31 +25,44 @@ object SettingsLogic {
     /**
      * ファイルヘッダーが Zip 形式（マジックナンバー）に合致するか判定します。
      */
-    fun isValidZipHeader(header: ByteArray): Boolean {
-        if (header.size < 4) return false
-        return header[0] == 0x50.toByte() &&
+    fun validateImportFormat(header: ByteArray): ImportValidationResult {
+        if (header.size < 4) return ImportValidationResult.NOT_A_ZIP
+        
+        val isZip = header[0] == 0x50.toByte() &&
                 header[1] == 0x4B.toByte() &&
                 header[2] == 0x03.toByte() &&
                 header[3] == 0x04.toByte()
+        
+        return if (isZip) ImportValidationResult.SUCCESS else ImportValidationResult.NOT_A_ZIP
     }
 
     /**
      * バックアップデータが現在のアプリバージョンと互換性があるか判定します。
      */
-    fun isVersionCompatible(backupVersionCode: Int, currentVersionCode: Int): Boolean {
-        return backupVersionCode <= currentVersionCode
+    fun validateVersion(backupVersionCode: Int, currentVersionCode: Int): ImportValidationResult {
+        return if (backupVersionCode <= currentVersionCode) {
+            ImportValidationResult.SUCCESS
+        } else {
+            ImportValidationResult.INCOMPATIBLE
+        }
     }
 
     /**
-     * 指定されたディレクトリに、要求されたバイト数以上の空き容量があるか判定します。
+     * 要求されたバイト数以上の空き容量があるか判定します。
+     * 依存性を排除するため、数値の比較のみを行います。
      */
-    fun hasAvailableSpace(dir: File, requiredBytes: Long): Boolean {
-        return try {
-            val stats = StatFs(dir.absolutePath)
-            val available = stats.availableBlocksLong * stats.blockSizeLong
-            available > requiredBytes
-        } catch (_: Exception) {
-            true // 取得に失敗した場合は念のため通すが、通常は失敗しない
+    fun validateStorageSpace(availableBytes: Long, requiredBytes: Long): StorageValidationResult {
+        return if (availableBytes >= requiredBytes) {
+            StorageValidationResult.SUCCESS
+        } else {
+            StorageValidationResult.INSUFFICIENT_SPACE
         }
+    }
+
+    /**
+     * 開発者モードを有効にすべきか判定します。
+     */
+    fun shouldEnableDeveloperMode(tapCount: Int): Boolean {
+        return tapCount >= 7
     }
 }

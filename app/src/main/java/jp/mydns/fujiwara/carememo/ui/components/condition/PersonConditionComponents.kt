@@ -159,7 +159,7 @@ fun ConditionDetailPane(
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     defaultRecorderName: String,
-    onSaveRecord: (ConditionAtVisit, (Int) -> Unit) -> Unit,
+    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onSelectedIdChange: (Int) -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -257,11 +257,9 @@ fun ConditionDetailPane(
             isProcessing = isProcessing,
             onSave = {
                 val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
-                PersonConditionLogic.createRecord(personId, conditionId, currentState)?.let { newMemo ->
-                    onSaveRecord(newMemo) { newId ->
-                        onSelectedIdChange(newId)
-                        isEditing = false
-                    }
+                onSaveRecord(personId, conditionId, currentState) { newId ->
+                    onSelectedIdChange(newId)
+                    isEditing = false
                 }
             },
             onCancel = {
@@ -578,7 +576,7 @@ private fun PreviewConditionDetailPane() {
             photos = emptyList(),
             isProcessing = false,
             defaultRecorderName = "A",
-            onSaveRecord = { _, _ -> },
+            onSaveRecord = { _, _, _, _ -> },
             onDeletePhoto = {},
             onSelectedIdChange = {},
             onAddPhotoClick = {},

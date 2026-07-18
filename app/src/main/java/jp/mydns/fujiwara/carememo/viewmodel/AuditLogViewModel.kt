@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.stateIn
  * 操作ログ（監査ログ）閲覧画面用の ViewModel
  */
 class AuditLogViewModel(
-    auditLogRepository: AuditLogRepository,
+    private val auditLogRepository: AuditLogRepository,
     userSettingsRepository: UserSettingsRepository,
 ) : BaseViewModel(userSettingsRepository) {
 
@@ -31,11 +31,8 @@ class AuditLogViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    init {
-        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
-            showError(title, msg, *args)
-        }
-    }
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     // 絞り込み・並び替え状態
     private val _selectedFeature = MutableStateFlow<String?>(null)
@@ -47,18 +44,36 @@ class AuditLogViewModel(
     private val _isAscending = MutableStateFlow(false)
     val isAscending = _isAscending.asStateFlow()
 
-    // 絞り込み・並び替え済みのログリスト
-    val auditLogs: StateFlow<List<AuditLog>> = combine(
-        auditLogRepository.allLogs,
-        _selectedFeature,
-        _selectedResult,
-        _isAscending,
-    ) { logs, feature, result, ascending ->
-        AuditLogLogic.filterAuditLogs(logs, feature, result, ascending)
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "auditLogsFlow", "audit_log"))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _auditLogs = MutableStateFlow<List<AuditLog>>(emptyList())
+
+    /**
+     * 絞り込み・並び替え済みのログリスト
+     */
+    val auditLogs: StateFlow<List<AuditLog>> = _auditLogs.asStateFlow()
+
+    init {
+        coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
+            showError(title, msg, *args)
+        }
+
+        safeCollect(
+            operation = "auditLogsFlow",
+            loadingState = _isLoading,
+            contextBuilder = { tableName = "audit_log" },
+            flowProvider = {
+                combine(
+                    auditLogRepository.allLogs,
+                    _selectedFeature,
+                    _selectedResult,
+                    _isAscending,
+                ) { logs, feature, result, ascending ->
+                    AuditLogLogic.filterAuditLogs(logs, feature, result, ascending)
+                }
+            }
+        ) {
+            _auditLogs.value = it
+        }
+    }
 
     // 存在する項目の一覧（フィルター選択用）
     val availableFeatures: StateFlow<List<String>> = auditLogRepository.allLogs

@@ -457,6 +457,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
                     SettingsScreen(
                         viewModel = settingsViewModel, 
+                        navController = navController,
                         onNavigateToArchiveManagement = { mode ->
                             navController.navigate("archive_management/${mode.name}")
                         },
@@ -488,6 +489,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             deleteOrRestorePersonRepository, userSettingsRepository, auditLogRepository))
                     DeleteOrRestorePersonScreen(
                         viewModel = archiveViewModel,
+                        navController = navController,
                         mode = mode,
                         onBack = { navController.popBackStack() }
                     )
