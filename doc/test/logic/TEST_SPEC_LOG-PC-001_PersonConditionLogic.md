@@ -3,6 +3,13 @@
 - **対象テストコード:**
     - `app/src/test/java/jp/mydns/fujiwara/carememo/logic/feature/PersonConditionLogicTest.kt`
 
+## 0. UI 状態の構造 (PersonConditionUiState)
+**集約されたプロパティ:**
+- 入力フィールド: `title`, `condition`, `author`, `recordTime`
+- 利用者コンテキスト: `personId`
+- 画面固有の状態: `records`, `filteredRecords`, `searchQuery`, `selectedConditionId`, `currentConditionPhotos`, `conditionPhotoMap`
+- 派生・制御状態: `isLoading`, `isProcessing`, `errorMessage`
+
 ## 1. 変更検知テスト (isChanged)
 **目的:** 画面上の入力内容が初期状態から変更されたかを正しく判定できることを検証する。
 

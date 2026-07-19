@@ -5,6 +5,24 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
+ * 利用者一覧画面全体の表示状態
+ */
+data class PersonListUiState(
+    val isLoading: Boolean = true,
+    val selectedSection: String = "全",
+    val searchQuery: String = "",
+    val userList: List<PersonUiState> = emptyList(),
+    val isNameMaskingEnabled: Boolean = true
+)
+
+/**
+ * 利用者一覧画面固有のイベント
+ */
+sealed interface PersonListViewEvent {
+    // 将来的な拡張用
+}
+
+/**
  * 利用者一覧の各項目の表示状態を保持するクラス
  */
 data class PersonUiState(

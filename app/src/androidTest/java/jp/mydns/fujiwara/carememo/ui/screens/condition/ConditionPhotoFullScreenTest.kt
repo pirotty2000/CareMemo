@@ -5,6 +5,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,7 @@ class ConditionPhotoFullScreenTest {
 
     private lateinit var conditionViewModel: PersonConditionViewModel
 
-    private val currentConditionPhotos = MutableStateFlow<List<ConditionPhoto>>(emptyList())
+    private val uiState = MutableStateFlow(PersonConditionUiState())
 
     private val testPhotos = listOf(
         ConditionPhoto(id = 1, conditionId = 100, personId = 1, photoFileName = "photo1.jpg", thumbnailFileName = "thumb1.jpg", capturedAt = Instant.now(), caption = "キャプション1"),
@@ -37,9 +38,9 @@ class ConditionPhotoFullScreenTest {
     @Before
     fun setup() {
         conditionViewModel = mockk(relaxed = true)
-        every { conditionViewModel.currentConditionPhotos } returns currentConditionPhotos.asStateFlow()
+        every { conditionViewModel.uiState } returns uiState.asStateFlow()
         
-        currentConditionPhotos.value = testPhotos
+        uiState.value = PersonConditionUiState(currentConditionPhotos = testPhotos)
     }
 
     private fun setContent(conditionId: Int = 100, initialPhotoId: Int = 1, onBack: () -> Unit = {}) {
@@ -89,7 +90,7 @@ class ConditionPhotoFullScreenTest {
 
     @Test
     fun cp05_loading_display_when_empty_list() {
-        currentConditionPhotos.value = emptyList()
+        uiState.value = PersonConditionUiState(currentConditionPhotos = emptyList())
         setContent()
         composeTestRule.onNodeWithTag("PhotoFullScreen_Loading").assertIsDisplayed()
     }

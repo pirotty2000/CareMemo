@@ -1,11 +1,18 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
+import android.net.Uri
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.IOException
 
 /**
  * システムメンテナンス（バックアップ、リストア、全消去）を担当するリポジトリ
@@ -143,6 +150,111 @@ class AppMaintenanceRepository(
         } finally {
             // 制約を必ず元に戻す
             db.execSQL("PRAGMA foreign_keys = ON")
+        }
+    }
+
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+
+    /**
+     * アプリ全体のデータをZIP形式でエクスポートします。
+     */
+    suspend fun exportData(context: Context, uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
+        val backup = getBackupData()
+        val jsonString = json.encodeToString(CareMemoBackup.serializer(), backup)
+        
+        val tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        
+        try {
+            // 元々の仕様に合わせて backup.json という名称で出力
+            val dataFile = File(tempDir, "backup.json")
+            dataFile.writeText(jsonString)
+            
+            val photosDir = ImageUtils.getPhotosDirPublic(context)
+            val filesToZip = mutableListOf(dataFile)
+            if (photosDir.exists() && photosDir.listFiles()?.isNotEmpty() == true) {
+                filesToZip.add(photosDir)
+            }
+            
+            val tempZipFile = File(context.cacheDir, "export.zip")
+            ZipUtils.zip(filesToZip, tempZipFile, password, onProgress)
+            
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                tempZipFile.inputStream().use { input ->
+                    input.copyTo(output)
+                }
+            }
+            tempZipFile.delete()
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    /**
+     * ZIP形式のバックアップからデータをインポート（復元）します。
+     */
+    suspend fun importData(context: Context, uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
+        val tempZipFile = File(context.cacheDir, "import.zip")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            tempZipFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        } ?: throw IOException("ファイルの読み込みに失敗しました。")
+        
+        val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        
+        try {
+            ZipUtils.unzip(tempZipFile, tempDir, password, onProgress)
+            
+            // 探索対象のディレクトリ（ZIPの圧縮のされ方によって階層が深くなる場合があるため）
+            val searchDirs = mutableListOf(tempDir)
+            tempDir.listFiles()?.filter { it.isDirectory }?.let { searchDirs.addAll(it) }
+
+            // 互換性のため backup.json を優先し、なければ data.json を探す
+            var dataFile: File? = null
+            for (dir in searchDirs) {
+                val f = File(dir, "backup.json").takeIf { it.exists() }
+                    ?: File(dir, "data.json").takeIf { it.exists() }
+                if (f != null) {
+                    dataFile = f
+                    break
+                }
+            }
+            
+            if (dataFile == null) throw IOException("バックアップデータ(backup.json)が見つかりません。")
+            
+            val jsonString = dataFile.readText()
+            val backup = try {
+                json.decodeFromString(CareMemoBackup.serializer(), jsonString)
+            } catch (e: Exception) {
+                throw IOException("データの解析に失敗しました。ファイルが破損しているか、形式が異なります。", e)
+            }
+            
+            // アプリバージョンの互換性チェック
+            if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
+                throw IOException("バックアップの作成バージョン(${backup.appVersionCode})が現在のアプリ(${BuildConfig.VERSION_CODE})より新しいため復元できません。")
+            }
+
+            // データの置き換え実行
+            replaceAllData(backup)
+            
+            // 写真の差し替え
+            val photosDir = ImageUtils.getPhotosDirPublic(context)
+            // JSONファイルと同じ階層にある photos ディレクトリを探す
+            val importedPhotosDir = File(dataFile.parentFile, AppThresholds.PHOTOS_DIR_NAME)
+            
+            if (importedPhotosDir.exists()) {
+                ImageUtils.clearPhotosDir(context)
+                importedPhotosDir.listFiles()?.forEach { file ->
+                    if (!file.isDirectory) {
+                        file.copyTo(File(photosDir, file.name), overwrite = true)
+                    }
+                }
+            }
+        } finally {
+            tempZipFile.delete()
+            tempDir.deleteRecursively()
         }
     }
 }

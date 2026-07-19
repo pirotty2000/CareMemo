@@ -1,6 +1,6 @@
-# CareMemo 開発ルール
+# CareMemo AI開発ルール (AGENT_RULES.md)
 
-- このドキュメントは、ソースコードを修正・追加・レビューする際の行動規範と実装ルールを定義します。
+- このドキュメントは、AI Agent が CareMemo のソースコードを修正・追加・レビューする際の行動規範と実装ルールを定義します。
 - プロジェクト全体のパッケージ構造やファイル構成については、`project_structure.md` を参照してください。
 - UI/UX 設計、および画面デザインの共通ルールについては、`project_UI_GUIDELINES.md` を参照してください。
 
@@ -20,21 +20,21 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 
 各カテゴリは、原則として役割を分離した4つのファイルで構成されます（MainScreen等、現時点でマルチペインが不要な画面は Tablet/Phone を分けない場合がありますが、Content の分離は共通ルールとします）。
 
-- `Screen.kt`: 画面のエントリポイント。WindowSize判定と各ViewModelの管理、および**画面遷移（遷移ロジック）**を担当。
-- `ScreenPhone.kt`: スマートフォン用レイアウト。シングルペイン構成。
-- `ScreenTablet.kt`: タブレット用レイアウト。2ペイン構成。
-- `ScreenContent.kt`: Phone/Tabletで共有されるコアな表示・入力ロジックの定義（Stateless）。
+- `*Screen.kt`: 画面のエントリポイント。WindowSize判定と各ViewModelの管理、および**画面遷移（遷移ロジック）**を担当。
+- `*ScreenPhone.kt`: スマートフォン用レイアウト。シングルペイン構成。
+- `*ScreenTablet.kt`: タブレット用レイアウト。2ペイン構成。
+- `*ScreenContent.kt`: Phone/Tabletで共有されるコアな表示・入力ロジックの定義（Stateless）。
 
 ### 1.2.2. ViewModel の二段構え (Dual-ViewModel)
 
 すべての詳細画面 Composable は、以下の2つの ViewModel を併用します。
 
-- **`PersonDetailUiStateViewModel`**: 詳細画面全体の共通フレームワーク（利用者基本情報の保持、カテゴリ切り替え、共通UIイベント等）を担当。
+- **`PersonDetailViewModel`**: 詳細画面全体の共通フレームワーク（利用者基本情報の保持、カテゴリ切り替え、共通UIイベント等）を担当。
 - **専門 ViewModel**: 各カテゴリ固有のデータ操作（CRUD）とビジネスロジックを担当。
   - (A) `PersonHealthViewModel`
   - (B) `PersonConditionViewModel`
   - (C) `PersonMedicationViewModel`
-- **ViewModel間の連携**: `PersonDetailUiStateViewModel` が保持する `personId` を、Screen(Composable) 経由で専門 ViewModel の `loadPerson(id)`へ伝達し、利用者コンテキストの同期とデータロードを開始します。
+- **ViewModel間の連携**: `PersonDetailViewModel` が保持する `personId` を、Screen(Composable) 経由で専門 ViewModel の `loadPerson(id)` へ伝達し、利用者コンテキストの同期とデータロードを開始します。
 
 ---
 
@@ -79,25 +79,23 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 ## 3.3. 状態管理とパフォーマンス
 
 ### 3.3.1. UI状態の初期化とブランキング抑制
-
-#### 3.3.1.1. 基本ルール
 - IDに基づく編集画面・入力画面では、状態変数の初期化に LaunchedEffect を使用しない。
 - 第一選択: 編集対象の状態は ViewModel が保持し、Composable はその状態を表示・更新すること。
 - 簡易入力や一時的なUI状態 に限り、remember(key) による初期化を許可する。
 - derivedStateOf は変更検知や入力可否などの派生状態の算出に使用し、初期値設定には使用しない。
 - 理由: LaunchedEffect による初期化は非同期で実行されるため、初回表示時のブランキング（チラつき）の原因となる。
 
-#### 3.3.1.2. 実装パターン
-- **パターン(1)：ViewModel による状態管理（推奨）**
+#### 実装パターン（①/②/③）
+- **パターン①：ViewModel による状態管理（推奨）**
   - 編集対象のデータは ViewModel 内で `MutableStateFlow` や `mutableStateOf` として保持する。
   - Composable はこれらを直接参照し、イベント（`onValueChange`）で ViewModel を更新する。
   - **用途**: 主要な入力画面（利用者編集、記録入力、設定等）。
-- **パターン(2)：`remember(key)` による即時初期化**
+- **パターン②：`remember(key)` による即時初期化**
   - ViewModel を介さない一時的な状態や、引数の変更に即座に追従すべき状態に使用する。
   - `val state = remember(key) { mutableStateOf(初期値) }` の形式を徹底する。
   - **用途**: ダイアログ内の一時入力、検索フィルタ等。
   - **例外**: `AppTextField` 等の低レイヤー共通部品において、IME状態やカーソル位置の保持が最優先される場合は、内部状態との同期に `LaunchedEffect` を使用することを許容する（日本語入力の堅牢性維持のため）。
-- **パターン(3)：`LaunchedEffect` は「アクション」に限定**
+- **パターン③：`LaunchedEffect` は「アクション」に限定**
   - スナックバー表示、ナビゲーション、データロードの開始（`loadPerson`）など、「副作用を伴う一度きりの動作」にのみ使用する。
   - **禁止**: `LaunchedEffect` 内で UI ローカルな `mutableStateOf` を書き換えて初期値をセットする行為。
 
@@ -121,7 +119,7 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 異なる利用者間での画面遷移や、画面内でのカテゴリ切り替えにおいて、古いデータの残存やローディングのハングを防ぐため、以下の実装を徹底してください。
 
 ### 3.4.1. ViewModel でのロード制御
-- **即時クリア**: `loadPerson(id)` の開始時に `updateUiState { it.copy(person = null, ...) }` 等を行い、UiState 内のデータを明示的に消去する。
+- **即時クリア**: `loadPerson(id)` の開始時に `_currentPerson.value = null` をセットし、古いデータを明示的に消去する。
 - **Flow監視の自動制御**: データのロード（継続的な監視）は **`flatMapLatest` を第一選択**とし、上流（IDや検索条件等）の変更に伴う古い Flow の自動キャンセルを徹底する。
 - **単発Jobの排他制御**: データの保存、同期、一過性の取得などの「単発処理」に限り、`Job` 変数で手動管理を行い、重複実行の防止や適切なタイミングでのキャンセル（`cancel()`）を担保する。基盤機能（`safeLaunch` 等）を用いた実行制御の詳細は第4章を参照。
 
@@ -141,25 +139,41 @@ ViewModel の肥大化を防ぎ、テストの信頼性を高めるため、計�
 - **再利用性**: 複数の ViewModel で共有される可能性がある計算ルール。
 
 ### 3.5.2. 実装ルールと禁止事項
-- **Pure Kotlin の徹底**: 原則として **Pure Kotlin** で実装し、`Context` や `LiveData/Flow` などの Android 依存、および Repository 依存を持たない。
 - **副作用の禁止**: Logic クラス内で `MutableStateFlow` を更新したり、Toast を表示したりしてはならない。
-- **依存性の排除**: Android依存を持たせないことで、JUnit による高速な単体テストを可能にする。
-- **役割の分離**: ViewModel が「状態(State)の管理」を担当し、Logic が「ルールの判定(Calculation/Validation/Conversion/Entity生成)」を担当する。
+- **依存性の排除**: `Context`, `Resources`, `Repository`, `Flow` などの Android 依存やデータソース依存を持たせない。
 - **引数と戻り値の明確化**: 入力はプリミティブ型またはデータクラスとし、結果を戻り値として返す「関数型」のスタイルを基本とする。
+
+## 3.6. Logic / Utility レイヤーにおけるエラー設計
+
+Logic レイヤーの純粋性（Pure Kotlin）と、ViewModel による適切な通知を両立させるためのルールです。
+
+- **Logic の純粋性**: Logic は UI リソース（`R.string`）や `AppException`（ViewModel層のクラス）に依存してはならない。
+- **役割の分離（事実と通知）**:
+  - **Logic (事実 of 定義)**: 判定を行い、その「事実（理由）」を返す。失敗理由が複数ある場合は `Boolean` ではなく **`enum class` や `sealed interface`** など、理由を詳細に識別可能な型を戻り値として使用する。
+  - **ViewModel (通知への翻訳)**: Logic から返された事実に基づき、適切なリソースIDを選択して `AppException` をスローする。
+- **例外の伝播（低レイヤー）**: `ImageUtils`, `ZipUtils` 等の低レイヤー部品で発生したシステム的な失敗（`IOException` 等）は、内部で握りつぶさず、そのままスローして ViewModel に判断を委ねる。
+- **標準例外 of 活用**: Logic of 契約（前提条件）違反を検知した場合は、`IllegalArgumentException` や `IllegalStateException` をスローして良い。これらは回復不能なプログラミング上の誤りとして扱い、ViewModel of ハンドラで `VALIDATION_ERROR` 等として自動処理される。これは ViewModel のハンドラで `VALIDATION_ERROR` として自動処理される。
+- **AppException の継承階層**:
+  ViewModel がスローする通知用例外は、以下の構造で定義・使用すること。
+
+  ```
+  AppException
+  ├── AppValidationException (バリデーション失敗・業務ルール違反)
+  ├── AppIOException (ファイル入出力・接続エラー)
+  ├── AppDataException (データ整合性・DBエラー)
+  ├── AppExternalException (外部アプリ連携エラー)
+  └── AppSecurityException (生体認証・権限エラー)
+  ```
 
 ---
 
 # 4. エラーハンドリングと実行制御 (safeLaunch / safeCollect)
 
-予期せぬエラー発生時もユーザーが迷わず、かつシステムの状態が確実に復帰するよう、`BaseUiStateViewModel` の基盤機能を活用した実装を徹底してください。
+予期せぬエラー発生時もユーザーが迷わず、かつシステムの状態が確実に復帰するよう、`BaseViewModel` の基盤機能を活用した実装を徹底してください。
 
 ## 4.1. 基盤機能の利用原則
-- **非同期実行制御**: 全ての ViewModel は `BaseUiStateViewModel` を継承し、`safeLaunch` / `safeCollect` を使用して非同期処理を開始する。`viewModelScope.launch { ... }` の直接使用は原則禁止。
-- **Repository の純粋化**: Repository は業務判断（ステータスによるフィルタリング等）を持たず、純粋なデータ操作と例外の再スローに専念する。
-- **通知の委譲**: 異常系（エラー）発生時は、ブロック内で `showError` を直接呼ばず、適切な `AppException` をスローして基盤側に通知とログ記録を委譲する。
-- **正常系通知**: 保存完了等の正常な通知には `showSnackbar` を利用する。
-- **共有コンテキスト**: `PersonDetailUiStateViewModel` は、詳細画面群 (A)(B)(C) で共有される利用者情報の保持と共通ヘッダーの制御を担当する。
-- **ローディング状態の自動制御**: `safeLaunch` 等の `loadingState` 引数を利用し、開始・終了のフラグ更新を基盤側に委譲する。手動でのフラグ操作（漏れの原因）を避けること。
+- **標準的な起動メソッド**: ViewModel 内からの非同期処理は、原則として `safeLaunch` または `safeCollect` を使用する。`viewModelScope.launch { ... }` の直接使用は禁止。
+- **ローディング状態の自動制御**: `loadingState` 引数に `MutableStateFlow<Boolean>` を渡すことで、開始・終了（成否問わず）のフラグ制御を基盤に任せる。これにより、手動での `isLoading = false` 漏れを防止する。
 - **手動 try-catch の制限**: ViewModel 内に生の `try-catch` を記述するのは、複雑な合成 Flow や特殊なリトライ処理など、基盤機能では表現できない特殊ケースのみとする。
 - **CancellationException**: 基盤側で自動的に再スローされるため、ViewModel 側で個別にキャッチや判定をする必要はない。
 
@@ -174,18 +188,7 @@ ViewModel の肥大化を防ぎ、テストの信頼性を高めるため、計�
 | **ViewModel**  | **UI判断**と状態管理 | 事実を UIリソース（R.string）に翻訳し、`AppException` を生成・スローする。 |
 | **Handler**    | **通知**と記録（基盤） | `AppException` を受け取り、ダイアログ表示と監査ログ記録を自動で完遂する。       |
 
-## 4.3. Logic / Utility レイヤーにおけるエラー設計
-
-Logic レイヤーの純粋性（Pure Kotlin）と、ViewModel による適切な通知を両立させるためのルールです。
-
-- **Logic の純粋性**: Logic は UI リソース（`R.string`）や `AppException`（ViewModel層のクラス）に依存してはならない。
-- **役割の分離（事実と通知）**:
-  - **Logic (事実 of 定義)**: 判定を行い、その「事実（理由）」を返す。失敗理由が複数ある場合は `Boolean` ではなく **`enum class` や `sealed interface`** など、理由を詳細に識別可能な型を戻り値として使用する。
-  - **ViewModel (通知への翻訳)**: Logic から返された事実に基づき、適切なリソースIDを選択して `AppException` をスローする。
-- **例外の伝播（低レイヤー）**: `ImageUtils`, `ZipUtils` 等の低レイヤー部品で発生したシステム的な失敗（`IOException` 等）は、内部で握りつぶさず、そのままスローして ViewModel に判断を委ねる。
-- **標準例外 of 活用**: Logic of 契約（前提条件）違反を検知した場合は、`IllegalArgumentException` や `IllegalStateException` をスローして良い。これらは回復不能なプログラミング上の誤りとして扱い、ViewModel of ハンドラで `VALIDATION_ERROR` 等として自動処理される。
-
-## 4.4. 通知と例外のスロー (AppException)
+## 4.3. 通知と例外のスロー (AppException)
 UI通知が必要なエラーについては、以下のルールに従い `AppException` を活用します。
 
 - **ViewModel の責務（翻訳）**: **`AppException` は、Logic が返した業務上の判定結果や、下位レイヤーから伝播した例外を、UI通知へ変換するために ViewModel が生成する。**
@@ -193,69 +196,23 @@ UI通知が必要なエラーについては、以下のルールに従い `AppE
 - **AppException のスロー**: タイトルやメッセージのリソースIDを保持できる `AppException`（および `AppValidationException`, `AppIOException`）をスローすることで、基盤に通知を委譲する。
 - **自動ハンドリング**: 基底クラス側で例外の型に基づき、`resultType`（`IO_ERROR`, `VALIDATION_ERROR` 等）の判別と、適切なダイアログ表示が自動的に行われる。
 
-### 4.4.1. AppException の継承階層
-ViewModel がスローする通知用例外は、以下の構造で定義・使用すること。
-
-```
-AppException
-├── AppValidationException (バリデーション失敗・業務ルール違反)
-├── AppIOException (ファイル入出力・接続エラー)
-├── AppDataException (データ整合性・DBエラー)
-├── AppExternalException (外部アプリ連携エラー)
-└── AppSecurityException (生体認証・権限エラー)
-```
-
-## 4.5. 通知の使い分け
+## 4.4. 通知の使い分け
 - **致命的・要対話エラー (AppException)**: ユーザーへの通知が必要な異常系。適切な情報を保持させた `AppException` をスローし、基盤（Handler）を介してダイアログで通知する。
 - **正常系通知 (showSnackbar)**: **例外ではない正常な完了通知専用**とする。保存完了、削除完了、コピー完了、設定変更の適用など、ユーザーの操作が成功したことを知らせるために使用する。
 
 ---
 
-# 5. UI 状態（UiState）の集約と原子性の確保
-
-## 5.1. 目的
-- UI状態管理を UiState に統一し、状態更新の原子性を確保する。
-
-## 5.2. 具体的ルール
-
-- **1画面 1UiState**:
-  - 画面が表示に必要とする状態は、原則として一つの UiState データクラスに集約する。
-  - 例：`loading`, `error`, `data`, `selectedItem` , `dialog表示状態`, `isValid`, `その他UI表示に必要な状態`等
-- **原子的な更新**:
-  - UiState の変更は、原則として `_uiState.update { it.copy(...) }` のみで行う。
-  - 複数の MutableStateFlow を個別更新し、一時的に矛盾した状態をUIへ通知してはならない。
-- **派生状態の定義**:
-  - 画面内で使用する派生状態(例：isValid)は、「`UiState`のプロパティ」または「`UiState`更新時に計算した結果」として保持する
-  - `combine()`の利用ルールを次の通りとする。
-    - **禁止**：
-      - MutableStateFlow 同士を combine() して UiState を構成すること。
-      - UiState の各プロパティを combine() に依存して維持すること
-    - **許可**：
-      - Repository 等の複数の外部 Flow を同期すること。
-      - 同期した結果を 1 回の `_uiState.update { ... }` で反映すること。
-      - Repository等から取得するデータそのものを合成する用途まで禁止するものではありません。
-- **状態の分類**：状態は次の2種類を区別する。
-  - **保存すべき状態**：UIが保持する値、編集中データ、選択状態、ダイアログ状態、エラー状態
-  - **毎回計算すべき値**：一時的な表示用の値、単純な算出結果、保持不要な派生値
-  - 保持不要な値まで UiState に保存しない。
-- **型安全な状態とイベント**: ジェネリクスを用い、画面ごとの `UiState` (S) と `ViewEvent` (E) を適切に管理する。
-- **安全なローディング制御**:
-  - 基盤の `loadingStateProxy` を通じて `UiState.isLoading` を自動更新させる。
-  - ViewModel 内で `isLoading = true` といったプロパティへの直接代入（個別更新）を行わない。
-
----
-
-# 6. テスト・品質保証ルール
+# 5. テスト・品質保証ルール
 
 「動くコード」だけでなく「壊れないコード」を維持するため、以下のテスト戦略を遵守してください。
 
-- **プレビューの義務化：** すべての `*Content.kt` および主要な `Components` にには、**「正常系」「空状態」「エラー/注意状態」**を網羅する 1 つ以上の `@Preview` を含めること。
-- **テストの作成・更新：** 新規機能追加や大規模な修正時は、`doc/test/project_TEST_GUIDELINES.md` に基づき、Logic Test (JUnit) と UI Test (ComposeTestRule) をセットで更新し、デグレードを防止すること。基底クラスの変更時は `BaseUiStateViewModelTest.kt` も確認すること。
+- **プレビューの義務化：** すべての `*Content.kt` および主要な `Components` には、**「正常系」「空状態」「エラー/注意状態」**を網羅する 1 つ以上の `@Preview` を含めること。
+- **テストの作成・更新：** 新規機能追加や大規模な修正時は、`doc/test/project_TEST_GUIDELINES.md` に基づき、Logic Test (JUnit) と UI Test (ComposeTestRule) をセットで更新し、デグレードを防止すること。基底クラスの変更時は `BaseViewModelTest.kt` も確認すること。
 - **テスト容易性の確保：** ViewModel や Repository を Composable に直接渡さず、Stateless な Content 層を設けることで、プレビューおよびコンポーネントテストの容易性を維持すること。
 
 ---
 
-# 7. セキュリティ・バイ・デフォルト
+# 6. セキュリティ・バイ・デフォルト
 
 CareMemo では、ユーザーの操作なしに「デフォルトで最も安全な状態」が提供されるよう、以下の設計指針を遵守してください。
 
@@ -265,38 +222,30 @@ CareMemo では、ユーザーの操作なしに「デフォルトで最も安�
 
 ---
 
-# 8. 操作ログ (監査ログ) の実装
+# 7. 操作ログ (監査ログ) の実装
 
 アプリの透明性と保守性を高めるため、データの変更を伴う操作（CRUD）および**重大なエラー**については必ず操作ログを記録します。
 
-## 8.1. 識別子の管理ルール
+## 7.1. 識別子の管理ルール
 ログの検索性と一貫性を保つため、以下のルールに従って名称を定義します。
 
 - **tableName (テーブル名)**: プロジェクト共通の定数として管理することを推奨。
 - **featureName (機能名)**: 各 ViewModel で `companion object` 定数を定義し、`abstract val featureName` をオーバーライドしてそれを返す。
 - **operation (操作名)**: 各 ViewModel 内で `private const val OP_...` として定義する。
 
-## 8.2. ログ記録のフロー
+## 7.2. ログ記録のフロー
 - **正常操作**: Repository のメソッド内で、ViewModel から渡された `featureName`, `operation` を用いて記録する。
 - **エラー（ERROR）記録**: `safeLaunch` / `safeCollect` の `contextBuilder` で情報を指定し、ハンドラを介して自動的に記録する。**`resultType` は、発生した例外の型に応じて自動的に決定される。**
 
-## 8.3 実装上の注意点
+## 7.3 実装上の注意点
 - **例外処理**: ログ記録自体が失敗しても、本来の業務処理を妨げないこと（基盤側で考慮済）。
 - **actionType**: 原則として `INSERT`, `UPDATE`, `DELETE`, `LOGICAL_DELETE`, `RESTORE`, **`ERROR`** を使用する。
 - **個人情報の保護**: `details` には氏名等の個人情報を直接含めず、IDのみを記録するかマスキングを適用すること。
 
 ---
 
-# 9. 画面遷移 (NAV) ルール
-
-- **Back Stack の遵守**: 本アプリは Android 標準の Back Stack に従う。
-- **遷移の局所化**: 画面遷移は原則として隣接する画面間のみ定義する。
-- **戻る操作の定義**:
-    - Android の「戻る」ボタン/ジェスチャーによる単純な戻りは NAV-ID を定義しない。
-    - **「保存」や「完了」といったボタン操作の結果、処理に成功して自動的に前の画面へ戻る挙動は、シナリオ上重要であるため NAV-ID を定義する。**
-- **NAV と SCN の関係**: 
-    - NAV は利用者の1操作に対する期待される状態遷移を定義する最小単位である。各 NAV は独立して Integration Test の対象とする。
-    - SCN（シナリオ）は、複数の NAV を組み合わせて利用者の業務フローを表現する。
+# 8. 共通化・共通部品の判断基準
+（既存の内容を維持）
 
 ---
 
@@ -305,8 +254,8 @@ CareMemo では、ユーザーの操作なしに「デフォルトで最も安�
 - **規約**:
   - **State収集**: Composable内では `collectAsStateWithLifecycle()` を使用する。
   - **Modifier**: 常に Composable 関数の最初のオプション引数とする。
-- **エラーハンドリング**: 第4章の指針に従い、`safeLaunch` / `safeCollect` を用いて例外の伝播と適切な通知（`AppException`）を徹底すること。
+- **エラーハンドリング**: 「例外を握りつぶさない」「ローディングを放置しない」「ユーザーに次のアクションを示す」の3点を `safeLaunch` / `safeCollect` を通じて実現すること。
 
 ---
 
-最終更新日: 2026/07/19
+最終更新日: 2026/07/13

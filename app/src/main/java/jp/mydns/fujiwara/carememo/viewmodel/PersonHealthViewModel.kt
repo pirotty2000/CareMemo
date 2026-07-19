@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -15,25 +17,35 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * 利用者健康記録（身長体重、バイタル、血糖値）固有のロジックを扱う ViewModel。
- * これら3つのカテゴリ(A系統)の取得・保存・削除を担当します。
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class PersonHealthViewModel(
     private val healthRepository: HealthRepository,
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository
-) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
+) : PersonBaseUiStateViewModel<PersonHealthUiState, PersonHealthViewEvent>(
+    personRepository,
+    summaryRepository,
+    userSettingsRepository,
+    auditLogRepository,
+    PersonHealthUiState()
+) {
 
     companion object {
         private const val FEATURE_NAME = "PersonHealth"
@@ -45,33 +57,56 @@ class PersonHealthViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    private val _currentCategory = MutableStateFlow<Category?>(null)
-    private val _records = MutableStateFlow<List<HistoryRecord>>(emptyList())
     private var recordsJob: Job? = null
+    private val _currentCategory = MutableStateFlow<Category?>(null)
 
-    /**
-     * 現在の数値系カテゴリの履歴データを取得します。
-     */
-    val records: StateFlow<List<HistoryRecord>> = _records.asStateFlow()
-
-    /**
-     * 表示するカテゴリを設定します。
-     */
-    fun setCategory(category: Category) {
-        if (_currentCategory.value != category) {
-            _currentCategory.value = category
-            refreshRecords()
+    init {
+        // PersonId または Category が変更されたら自動的にレコードを再ロードする
+        scope.launch {
+            combine(
+                uiState.map { it.personId }.distinctUntilChanged(),
+                _currentCategory
+            ) { personId, category ->
+                personId to category
+            }.collect { (personId, category) ->
+                if (personId != null && category != null) {
+                    refreshRecords(personId, category)
+                }
+            }
         }
     }
 
-    private fun refreshRecords() {
-        val personId = _currentPerson.value?.id ?: return
-        val category = _currentCategory.value ?: return
+    // --- 基底クラスの抽象メソッド実装 ---
 
+    override fun copyWithLoadingState(state: PersonHealthUiState, isLoading: Boolean): PersonHealthUiState {
+        return state.copy(isLoading = isLoading)
+    }
+
+    override fun getPersonId(state: PersonHealthUiState): Int? = state.personId
+
+    override fun updateWithPersonData(
+        state: PersonHealthUiState,
+        person: Person,
+        summary: PersonCategorySummary?
+    ): PersonHealthUiState {
+        return state.copy(personId = person.id)
+    }
+
+    /**
+     * 表示カテゴリを設定します。
+     */
+    fun setCategory(category: Category) {
+        _currentCategory.value = category
+    }
+
+    /**
+     * 指定されたカテゴリと人物に基づき、履歴データを購読します。
+     */
+    private fun refreshRecords(personId: Int, category: Category) {
         recordsJob?.cancel()
         recordsJob = safeCollect(
             operation = OP_RECORDS_FLOW,
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_HEALTH },
             flowProvider = {
                 when (category) {
@@ -81,30 +116,8 @@ class PersonHealthViewModel(
                     else -> flowOf(emptyList())
                 }
             }
-        ) {
-            _records.value = it
-        }
-    }
-
-    override fun loadPerson(personId: Int) {
-        if (_currentPerson.value?.id == personId) return
-
-        _currentPerson.value = null
-        // カテゴリは維持するが、データロードは再開する必要がある
-
-        loadPersonJob?.cancel()
-        loadPersonJob = safeCollect(
-            operation = "loadPerson",
-            loadingState = _isLoading,
-            contextBuilder = {
-                tableName = "person_db"
-                affectedId = personId.toString()
-            },
-            flowProvider = { repository.getPersonById(personId) }
-        ) {
-            _currentPerson.value = it
-            // 人物が確定したらレコードのロードを開始（または再開）
-            refreshRecords()
+        ) { records ->
+            updateUiState { it.copy(records = records) }
         }
     }
 
@@ -112,27 +125,14 @@ class PersonHealthViewModel(
      * 指定された数値系カテゴリの履歴データを取得します(拡大表示画面などで使用)。
      */
     fun getHealthRecords(category: Category): StateFlow<List<HistoryRecord>> {
-        val result = MutableStateFlow<List<HistoryRecord>>(emptyList())
-        val personId = _currentPerson.value?.id
+        val personId = currentState.personId ?: return flowOf(emptyList<HistoryRecord>()).stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-        if (personId != null) {
-            safeCollect(
-                operation = "getHealthRecords",
-                loadingState = _isLoading,
-                contextBuilder = { tableName = TABLE_HEALTH },
-                flowProvider = {
-                    when (category) {
-                        Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(personId)
-                        Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(personId)
-                        Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(personId)
-                        else -> flowOf(emptyList())
-                    }
-                }
-            ) {
-                result.value = it
-            }
-        }
-        return result.asStateFlow()
+        return when (category) {
+            Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(personId)
+            Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(personId)
+            Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(personId)
+            else -> flowOf(emptyList())
+        }.stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
 
     /**
@@ -143,19 +143,19 @@ class PersonHealthViewModel(
         
         safeLaunch(
             operation = OP_SAVE,
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
                 affectedId = record.id.toString()
             }
         ) {
-            // 1. バリデーション（事実の判定）
+            // 1. バリデーション
             val validationResult = PersonHealthLogic.validate(record)
             translateValidationResult(validationResult)
 
             val isUpdate = !PersonHealthLogic.isNew(record)
 
-            // 2. 重複チェック (新規登録、または日時変更時)
+            // 2. 重複チェック
             val existing = when (record) {
                 is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
                 is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
@@ -173,9 +173,6 @@ class PersonHealthViewModel(
         }
     }
 
-    /**
-     * バリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
-     */
     private fun translateValidationResult(result: HealthValidationResult) {
         if (result == HealthValidationResult.SUCCESS) return
 
@@ -211,7 +208,7 @@ class PersonHealthViewModel(
     fun deleteRecord(record: Any) {
         safeLaunch(
             operation = OP_DELETE,
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
                 affectedId = (record as? HistoryRecord)?.id?.toString()
@@ -238,16 +235,13 @@ class PersonHealthViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(PersonHealthViewModel::class.java)) {
-                return PersonHealthViewModel(
-                    healthRepository,
-                    personRepository,
-                    summaryRepository,
-                    userSettingsRepository,
-                    auditLogRepository
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+            return PersonHealthViewModel(
+                healthRepository,
+                personRepository,
+                summaryRepository,
+                userSettingsRepository,
+                auditLogRepository
+            ) as T
         }
     }
 }

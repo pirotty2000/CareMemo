@@ -15,7 +15,7 @@ import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepositor
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -23,14 +23,13 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
 /**
- * SCR-S-003 DeleteOrRestorePersonViewModel のロジック・安全性テスト
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-S-003_DeleteOrRestorePerson.md に準拠
+ * SCR-S-003 DeleteOrRestorePersonViewModel のユニットテスト (System B 移行済)
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeleteOrRestorePersonViewModelTest {
@@ -38,32 +37,22 @@ class DeleteOrRestorePersonViewModelTest {
     private val repository = mockk<DeleteOrRestorePersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
-    
+
     private lateinit var viewModel: DeleteOrRestorePersonViewModel
     private val testDispatcher = StandardTestDispatcher()
 
-    private val testPerson = Person(
-        id = 1,
-        lastName = "削除済",
-        firstName = "太郎",
-        lastNameFurigana = "さくじょずみ",
-        firstNameFurigana = "たろう",
-        birthday = Instant.now()
-    )
+    private val testPerson = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now())
 
     @Before
     fun setup() {
         mockkStatic(Log::class)
         every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
-        
-        every { repository.getArchivedPersons() } returns flow { emit(listOf(testPerson)) }
 
-        viewModel = DeleteOrRestorePersonViewModel(
-            repository,
-            userSettingsRepository,
-            auditLogRepository
-        )
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
+        every { repository.getArchivedPersons() } returns flowOf(listOf(testPerson))
+
+        viewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository)
     }
 
     @After
@@ -72,33 +61,89 @@ class DeleteOrRestorePersonViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    // ======================================================================================
-    // 3. ロジック・安全性テスト (DeleteOrRestorePersonViewModel)
-    // ======================================================================================
+    @Test
+    fun init_loadsArchivedPersons() = runTest {
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.archivedPersons.size)
+        assertEquals(testPerson, viewModel.uiState.value.archivedPersons[0])
+    }
 
     @Test
-    fun lg01_operationFailure_safety() = runTest {
-        // 復元操作中に例外が発生する状況をシミュレート
-        coEvery { repository.restorePerson(any(), any(), any()) } throws RuntimeException("Restore Error")
+    fun setMode_clearsSelection() = runTest {
+        advanceUntilIdle()
+        viewModel.toggleSelection(1)
+        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+
+        viewModel.setMode(DeleteOrRestorePersonViewModel.OperationMode.DELETE)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+        assertEquals(DeleteOrRestorePersonViewModel.OperationMode.DELETE, viewModel.uiState.value.mode)
+    }
+
+    @Test
+    fun toggleSelection_updatesSelectedIds() = runTest {
+        advanceUntilIdle()
+        viewModel.toggleSelection(1)
+        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
 
         viewModel.toggleSelection(1)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun selectAll_clearSelection_updatesState() = runTest {
+        advanceUntilIdle()
+        viewModel.selectAll(listOf(testPerson))
+        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+
+        viewModel.clearSelection()
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun lg_01_restoreFailure_safety() = runTest {
+        coEvery { repository.restorePerson(any(), any(), any()) } throws RuntimeException("Restore Error")
+        advanceUntilIdle()
+        viewModel.toggleSelection(1)
+
         viewModel.restoreSelectedPersons(listOf(testPerson))
         advanceUntilIdle()
 
-        // 検証: isLoading が false に戻ること
-        assertEquals(false, viewModel.isLoading.value)
-        
-        // 検証: 監査ログにエラーが記録されること
+        // Then: isLoading が false に戻ること
+        assertEquals(false, viewModel.uiState.value.isLoading)
         coVerify {
             auditLogRepository.log(
                 featureName = "DeleteOrRestorePerson",
                 operation = "restoreSelectedPersons",
                 actionType = "ERROR",
-                details = match { it.contains("Restore Error") },
-                resultType = "OTHER_ERROR",
-                tableName = any(),
-                affectedId = any()
+                tableName = "person_db",
+                affectedId = any(),
+                details = any(),
+                resultType = any()
             )
         }
+    }
+
+    @Test
+    fun lg_02_maskingSetting_syncsToUiState() = runTest {
+        // 設定が ON の場合
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(true)
+        
+        // 新しく ViewModel を作成して Flow を購読させる
+        val syncViewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository)
+        
+        // TestDispatcher でコルーチンを回す
+        advanceUntilIdle()
+
+        assertEquals(true, syncViewModel.uiState.value.isNameMaskingEnabled)
+    }
+
+    @Test
+    fun lg_03_atomicClearSelection() = runTest {
+        advanceUntilIdle()
+        viewModel.toggleSelection(1)
+        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+
+        viewModel.clearSelection()
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
     }
 }

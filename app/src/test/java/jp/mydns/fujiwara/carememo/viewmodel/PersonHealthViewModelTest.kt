@@ -20,7 +20,7 @@ import java.time.Instant
 
 /**
  * ViewModel層テスト：PersonHealthViewModel (4. ロジック・安全性)
- * 仕様書項目: LG-01 〜 LG-02
+ * 仕様書項目: LG-01 〜 LG-03
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonHealthViewModelTest {
@@ -40,6 +40,8 @@ class PersonHealthViewModelTest {
         birthday = Instant.now()
     )
 
+    private val emptySummary = PersonCategorySummary(false, false, false, false, false)
+
     @Before
     fun setup() {
         mockkStatic(Log::class)
@@ -48,6 +50,7 @@ class PersonHealthViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
+        every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(emptySummary)
         
         // 重複チェックをパスさせるための初期設定
         coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
@@ -71,6 +74,7 @@ class PersonHealthViewModelTest {
 
     @Test
     fun lg01_data_load_failure_safety() = runTest {
+        // 特定のカテゴリ（バイタル）のロードでエラーを発生させる
         every { healthRepository.getBpAndPulseByPersonId(any()) } returns flow {
             throw RuntimeException("Load Failure")
         }
@@ -78,59 +82,60 @@ class PersonHealthViewModelTest {
         viewModel.loadPerson(1)
         viewModel.setCategory(Category.BP_AND_PULSE)
 
-        viewModel.records.test {
-            awaitItem()
+        // 状態の変化を監視
+        viewModel.uiState.test {
+            // ローディングが終了していること
+            assertEquals(false, awaitItem().isLoading)
             cancelAndIgnoreRemainingEvents()
         }
 
-        assertEquals(false, viewModel.isLoading.value)
         coVerify(exactly = 1) { 
             auditLogRepository.log(
-                "PersonHealth",
-                "recordsFlow",
-                "health_db",
-                "ERROR",
-                any(),
-                any(), // details
-                "OTHER_ERROR" // resultType
+                featureName = "PersonHealth",
+                operation = "recordsFlow",
+                tableName = "health_db",
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it.contains("Load Failure") },
+                resultType = "OTHER_ERROR"
             ) 
         }
     }
 
     @Test
     fun lg02_save_failure_safety() = runTest {
+        viewModel.loadPerson(1)
         val record = BpAndPulse(id = 0, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
         coEvery { healthRepository.insertBpAndPulse(any(), any(), any()) } throws RuntimeException("Save Failure")
 
         viewModel.saveRecord(record)
         
-        // 重要：safeLaunch で起動されたコルーチンの完了（例外ハンドリング含む）を待機
         advanceUntilIdle()
 
-        assertEquals(false, viewModel.isLoading.value)
+        // isLoading が false に戻ること
+        assertEquals(false, viewModel.uiState.value.isLoading)
         coVerify(exactly = 1) { 
             auditLogRepository.log(
-                "PersonHealth",
-                "saveRecord",
-                "health_db",
-                "ERROR",
-                any(),
-                any(),
-                "OTHER_ERROR"
+                featureName = "PersonHealth",
+                operation = "saveRecord",
+                tableName = "health_db",
+                actionType = "ERROR",
+                affectedId = "0",
+                details = match { it.contains("Save Failure") },
+                resultType = "OTHER_ERROR"
             ) 
         }
     }
 
     @Test
-    fun additional_set_category_calls_correct_repository() = runTest {
+    fun lg04_atomicity_category_switch() = runTest {
         viewModel.loadPerson(1)
-        
-        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
-        viewModel.records.test { awaitItem(); cancelAndIgnoreRemainingEvents() }
-        verify { healthRepository.getHeightAndWeightByPersonId(1) }
+        advanceUntilIdle()
 
+        // カテゴリを切り替えた際、リポジトリが呼ばれていること
         viewModel.setCategory(Category.GLUCOSE_AND_HBA1C)
-        viewModel.records.test { awaitItem(); cancelAndIgnoreRemainingEvents() }
+        advanceUntilIdle()
+        
         verify { healthRepository.getGlucoseAndHbA1cByPersonId(1) }
     }
 }

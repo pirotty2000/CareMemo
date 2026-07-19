@@ -1,41 +1,9 @@
 package jp.mydns.fujiwara.carememo.ui.screens.medication
 
-/**
- * Screen : PersonMedicationScreenContent
- *
- * 【画面名】：
- * 利用者服薬記録画面（共通コンテンツレイアウト）
- *
- * 【役割】：
- * 服薬記録（カテゴリC）において、Phone版とTablet版で共通して使用される表示・入力ロジックの基盤を提供する。
- *
- * 【主な機能】：
- * ・マルチレイアウト制御（Phone版のカレンダー/履歴切り替えと、Tablet版の同時表示を管理）
- * ・月間ナビゲーション：年月選択の共通UI提供。
- * ・表示コンポーネントの統合：[CalendarGrid] と [MedicationHistoryTable] の出し分け。
- *
- * 【遷移】：
- * なし（親画面である PersonMedicationScreenPhone/Tablet が制御）
- *
- * 【使用するViewModel】：
- * なし（Stateless化済み。親からラムダ経由で操作を実行）
- *
- * 【使用するComponents】：
- * ・detail/medication/CalendarGrid (PersonMedicationComponents.kt)
- * ・detail/medication/MedicationHistoryTable (PersonMedicationComponents.kt)
- * ・base/LoadingScreen.kt
- * ・base/VerticalScrollIndicator.kt
- *
- * 【備考】：
- * このコンポーネントをStatelessに保つことで、Phone/Tabletの両レイアウトでのプレビュー表示とロジックの共通化を両立している。
- *
- * ---
- * 最終更新日: 2026/07/04
- */
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -47,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
+import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.medication.CalendarGrid
@@ -69,6 +38,9 @@ fun PersonMedicationScreenContent(
     onNextMonth: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
 ) {
+    // 記録が1件でもあるか判定
+    val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize().testTag("Medication_Loading")) {
             LoadingScreen()
@@ -113,13 +85,20 @@ fun PersonMedicationScreenContent(
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
-                    val historyTableState = rememberLazyListState()
-                    MedicationHistoryTable(
-                        yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate,
-                        lazyListState = historyTableState
-                    )
-                    VerticalScrollIndicator(lazyListState = historyTableState)
+                    if (!hasAnyRecord) {
+                        EmptyState(
+                            message = stringResource(R.string.p_detail_empty_records),
+                            icon = Icons.Outlined.Description
+                        )
+                    } else {
+                        val historyTableState = rememberLazyListState()
+                        MedicationHistoryTable(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate,
+                            lazyListState = historyTableState
+                        )
+                        VerticalScrollIndicator(lazyListState = historyTableState)
+                    }
                 }
             }
         }
@@ -204,13 +183,20 @@ fun PersonMedicationScreenContent(
             // コンテンツ
             Box(modifier = Modifier.weight(1f)) {
                 if (isHistoryMode) {
-                    val historyTableState = rememberLazyListState()
-                    MedicationHistoryTable(
-                        yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate,
-                        lazyListState = historyTableState
-                    )
-                    VerticalScrollIndicator(lazyListState = historyTableState)
+                    if (!hasAnyRecord) {
+                        EmptyState(
+                            message = stringResource(R.string.p_detail_empty_records),
+                            icon = Icons.Outlined.Description
+                        )
+                    } else {
+                        val historyTableState = rememberLazyListState()
+                        MedicationHistoryTable(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate,
+                            lazyListState = historyTableState
+                        )
+                        VerticalScrollIndicator(lazyListState = historyTableState)
+                    }
                 } else {
                     CalendarGrid(
                         yearMonth = selectedMonth,

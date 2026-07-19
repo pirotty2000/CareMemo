@@ -2,11 +2,12 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -18,13 +19,8 @@ import jp.mydns.fujiwara.carememo.logic.feature.BatchInputCategory
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputValidationResult
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 /**
@@ -36,7 +32,13 @@ class BatchInputViewModel(
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository
-) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
+) : PersonBaseUiStateViewModel<BatchInputUiState, BatchInputViewEvent>(
+    personRepository,
+    summaryRepository,
+    userSettingsRepository,
+    auditLogRepository,
+    BatchInputUiState()
+) {
 
     companion object {
         private const val FEATURE_NAME = "BatchInput"
@@ -46,42 +48,76 @@ class BatchInputViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    private val _recordTime = MutableStateFlow(Instant.now())
-    val recordTime = _recordTime.asStateFlow()
-
-    private val _uiState = MutableStateFlow(BatchInputUiState())
-    val uiState: StateFlow<BatchInputUiState> = _uiState.asStateFlow()
-
-    fun updateHeight(v: String) { _uiState.update { it.copy(height = v) } }
-    fun updateWeight(v: String) { _uiState.update { it.copy(weight = v) } }
-    fun updateBpSystolic(v: String) { _uiState.update { it.copy(bpSystolic = v) } }
-    fun updateBpDiastolic(v: String) { _uiState.update { it.copy(bpDiastolic = v) } }
-    fun updateSat(v: String) { _uiState.update { it.copy(sat = v) } }
-    fun updatePulse(v: String) { _uiState.update { it.copy(pulse = v) } }
-    fun updateBodyTemp(v: String) { _uiState.update { it.copy(bodyTemperature = v) } }
-    fun updateGlucose(v: String) { _uiState.update { it.copy(glucose = v) } }
-    fun updateHbA1c(v: String) { _uiState.update { it.copy(hba1c = v) } }
-
-    /**
-     * 現在の入力内容が保存可能かどうかを判定する。
-     */
-    val isInputValid: StateFlow<Boolean> = uiState.map { state ->
-        BatchInputLogic.isValid(state)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    private val _isSaving = MutableStateFlow(false)
-    val isSaving = _isSaving.asStateFlow()
-
-    fun setRecordTime(time: Instant) {
-        _recordTime.value = time
+    init {
+        // 共通設定の同期
+        scope.launch {
+            isNameMaskingEnabled.collect { enabled ->
+                updateUiState { it.copy(isNameMaskingEnabled = enabled) }
+            }
+        }
     }
 
-    override fun loadPerson(personId: Int) {
-        val isDifferentPerson = currentPerson.value?.id != personId
-        super.loadPerson(personId)
-        if (isDifferentPerson) {
-            resetInputs()
-            _recordTime.value = Instant.now()
+    // --- 基底クラスの抽象メソッド実装 ---
+
+    override fun copyWithLoadingState(state: BatchInputUiState, isLoading: Boolean): BatchInputUiState {
+        return state.copy(isLoading = isLoading)
+    }
+
+    override fun getPersonId(state: BatchInputUiState): Int? = state.personId
+
+    override fun updateWithPersonData(
+        state: BatchInputUiState,
+        person: Person,
+        summary: PersonCategorySummary?
+    ): BatchInputUiState {
+        // 利用者が切り替わった場合は入力をリセットし、日時を現在時刻にする
+        val isDifferentPerson = state.personId != person.id
+        val next = if (isDifferentPerson) {
+            val now = Instant.now()
+            state.copy(
+                personId = person.id,
+                person = person,
+                currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
+                personSummary = summary,
+                height = "", weight = "", bpSystolic = "", bpDiastolic = "",
+                sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
+                recordTime = now,
+                initialRecordTime = now
+            )
+        } else {
+            state.copy(
+                personId = person.id,
+                currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
+                personSummary = summary
+            )
+        }
+        // 派生状態（isValid, isChanged）を更新して返す
+        return next.copy(
+            isValid = BatchInputLogic.isValid(next),
+            isChanged = BatchInputLogic.isChanged(next)
+        )
+    }
+
+    // --- 更新用メソッド群 (原子的な一括更新) ---
+
+    fun setRecordTime(time: Instant) = updateState { it.copy(recordTime = time) }
+    fun updateHeight(v: String) = updateState { it.copy(height = v) }
+    fun updateWeight(v: String) = updateState { it.copy(weight = v) }
+    fun updateBpSystolic(v: String) = updateState { it.copy(bpSystolic = v) }
+    fun updateBpDiastolic(v: String) = updateState { it.copy(bpDiastolic = v) }
+    fun updateSat(v: String) = updateState { it.copy(sat = v) }
+    fun updatePulse(v: String) = updateState { it.copy(pulse = v) }
+    fun updateBodyTemp(v: String) = updateState { it.copy(bodyTemperature = v) }
+    fun updateGlucose(v: String) = updateState { it.copy(glucose = v) }
+    fun updateHbA1c(v: String) = updateState { it.copy(hba1c = v) }
+
+    private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
+        updateUiState { current ->
+            val next = reducer(current)
+            next.copy(
+                isValid = BatchInputLogic.isValid(next),
+                isChanged = BatchInputLogic.isChanged(next)
+            )
         }
     }
 
@@ -89,40 +125,40 @@ class BatchInputViewModel(
      * 入力された全データを一括保存します。
      */
     fun saveBatch() {
-        val person = currentPerson.value ?: return
-        val time = _recordTime.value
-        val currentState = _uiState.value
+        val state = currentState
+        val personId = state.personId ?: return
+        val time = state.recordTime
 
         safeLaunch(
             operation = OP_SAVE_BATCH,
-            loadingState = _isSaving,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = person.id.toString()
+                affectedId = personId.toString()
             }
         ) {
             // 1. バリデーション（事実の判定）
-            val validationResult = BatchInputLogic.validate(currentState)
+            val validationResult = BatchInputLogic.validate(state)
 
-            // 2. バリデーション結果の翻訳（ViewModelの責務）
+            // 2. 翻訳
             if (validationResult != BatchInputValidationResult.SUCCESS) {
-                translateValidationResult(validationResult, currentState)
+                translateValidationResult(validationResult, state)
             }
 
             // 3. 重複チェック
-            val effectiveCategories = BatchInputLogic.getEffectiveCategories(currentState)
-            val duplicateCategories = mutableListOf<Int>()
+            val effectiveCategories = BatchInputLogic.getEffectiveCategories(state)
             val duplicateCategoryNames = mutableListOf<String>()
+            val duplicateResIds = mutableListOf<Int>()
 
             effectiveCategories.forEach { category ->
                 val isDuplicate = when (category) {
-                    BatchInputCategory.HEIGHT_WEIGHT -> healthRepository.findHeightAndWeightAtTime(person.id, time) != null
-                    BatchInputCategory.VITAL -> healthRepository.findBpAndPulseAtTime(person.id, time) != null
-                    BatchInputCategory.GLUCOSE -> healthRepository.findGlucoseAndHbA1cAtTime(person.id, time) != null
+                    BatchInputCategory.HEIGHT_WEIGHT -> healthRepository.findHeightAndWeightAtTime(personId, time) != null
+                    BatchInputCategory.VITAL -> healthRepository.findBpAndPulseAtTime(personId, time) != null
+                    BatchInputCategory.GLUCOSE -> healthRepository.findGlucoseAndHbA1cAtTime(personId, time) != null
                 }
                 if (isDuplicate) {
                     duplicateCategoryNames.add(category.name)
-                    duplicateCategories.add(
+                    duplicateResIds.add(
                         when (category) {
                             BatchInputCategory.HEIGHT_WEIGHT -> R.string.common_category_height_weight
                             BatchInputCategory.VITAL -> R.string.common_category_vital
@@ -132,8 +168,8 @@ class BatchInputViewModel(
                 }
             }
 
-            if (duplicateCategories.isNotEmpty()) {
-                val categoryNames = duplicateCategories.joinToString("、") { "__RES__$it" }
+            if (duplicateResIds.isNotEmpty()) {
+                val categoryNames = duplicateResIds.joinToString("、") { "__RES__$it" }
                 throw AppValidationException(
                     titleResId = R.string.common_error_title_save,
                     messageResId = R.string.batch_err_duplicate_blocked,
@@ -142,8 +178,8 @@ class BatchInputViewModel(
                 )
             }
             
-            // 4. 保存実行 (バリデーション済みなので安全に Entity 生成)
-            val entities = BatchInputLogic.createEntities(person.id, time, currentState)
+            // 4. 保存実行
+            val entities = BatchInputLogic.createEntities(personId, time, state)
             entities.forEach { entity ->
                 when (entity) {
                     is HeightAndWeight -> healthRepository.insertHeightAndWeight(entity, featureName, OP_SAVE_BATCH)
@@ -152,22 +188,27 @@ class BatchInputViewModel(
                 }
             }
 
+            // 保存成功イベント (演出用)
+            sendViewEvent(BatchInputViewEvent.SaveSuccessEffects)
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(R.string.batch_msg_save_success)
             
-            resetInputs()
+            // 保存後のリセット（日時は保持、数値はクリア、変更基準点を更新）
+            updateUiState { current ->
+                current.copy(
+                    height = "", weight = "", bpSystolic = "", bpDiastolic = "",
+                    sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
+                    initialRecordTime = current.recordTime,
+                    isChanged = false,
+                    isValid = false
+                )
+            }
         }
     }
 
-    /**
-     * バリデーション結果を詳細な例外に翻訳します。
-     */
     private fun translateValidationResult(result: BatchInputValidationResult, state: BatchInputUiState) {
-        if (result == BatchInputValidationResult.SUCCESS) return
-
         val messageRes = when (result) {
             BatchInputValidationResult.EMPTY_ALL -> R.string.p_detail_empty_records
-            BatchInputValidationResult.INVALID_VALUE -> R.string.common_error_save
             else -> R.string.common_error_save
         }
 
@@ -190,10 +231,6 @@ class BatchInputViewModel(
         )
     }
 
-    fun resetInputs() {
-        _uiState.value = BatchInputUiState()
-    }
-
     class Factory(
         private val personRepository: PersonRepository,
         private val summaryRepository: PersonSummaryRepository,
@@ -203,16 +240,13 @@ class BatchInputViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(BatchInputViewModel::class.java)) {
-                return BatchInputViewModel(
-                    healthRepository,
-                    personRepository,
-                    summaryRepository,
-                    userSettingsRepository,
-                    auditLogRepository
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+            return BatchInputViewModel(
+                healthRepository,
+                personRepository,
+                summaryRepository,
+                userSettingsRepository,
+                auditLogRepository
+            ) as T
         }
     }
 }

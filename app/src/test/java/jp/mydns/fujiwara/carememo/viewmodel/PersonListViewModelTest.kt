@@ -99,11 +99,11 @@ class PersonListViewModelTest {
             conditionRepository, userSettingsRepository, auditLogRepository
         )
 
-        errorViewModel.userList.test {
+        errorViewModel.uiState.test {
             awaitItem() // 初期値
             
             // Then: isLoading が false になり、監査ログに ERROR が記録されること
-            assertEquals(false, errorViewModel.isLoading.value)
+            assertEquals(false, errorViewModel.uiState.value.isLoading)
             
             coVerify {
                 auditLogRepository.log(
@@ -128,7 +128,7 @@ class PersonListViewModelTest {
         viewModel.addPerson(testPerson)
         
         // Then: isLoading が false になり、監査ログに ERROR が記録されること
-        assertEquals(false, viewModel.isLoading.value)
+        assertEquals(false, viewModel.uiState.value.isLoading)
         
         coVerify {
             auditLogRepository.log(
@@ -141,5 +141,34 @@ class PersonListViewModelTest {
                 resultType = any()
             )
         }
+    }
+
+    @Test
+    fun lg03_setSearchQuery_updatesQueryAndResetsSection() = runTest {
+        viewModel.setSelectedSection("か")
+        assertEquals("か", viewModel.uiState.value.selectedSection)
+
+        viewModel.setSearchQuery("テスト")
+        
+        // Then: 検索クエリが更新され、セクションが「全」にリセットされること (原子性の検証)
+        assertEquals("テスト", viewModel.uiState.value.searchQuery)
+        assertEquals("全", viewModel.uiState.value.selectedSection)
+    }
+
+    @Test
+    fun lg04_maskingSetting_syncsToUiState() = runTest {
+        // 設定が ON の場合
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(true)
+        
+        // 新しく ViewModel を作成して Flow を購読させる
+        val syncViewModel = PersonListViewModel(
+            personRepository, archivedRepository, summaryRepository,
+            conditionRepository, userSettingsRepository, auditLogRepository
+        )
+        
+        // TestDispatcher でコルーチンを回す
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(true, syncViewModel.uiState.value.isNameMaskingEnabled)
     }
 }

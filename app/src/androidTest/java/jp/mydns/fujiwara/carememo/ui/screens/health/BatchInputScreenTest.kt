@@ -7,10 +7,10 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,39 +23,34 @@ import java.time.Instant
 /**
  * UI層テスト：BatchInputScreen (健康記録一括入力)
  * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-002_BatchInputScreen.md
+ * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-002_BatchInputScreen.md に準拠
  */
 class BatchInputScreenTest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private val mockPerson = Person(
-        id = 1, 
-        lastName = "山田", 
-        firstName = "太郎", 
-        lastNameFurigana = "ヤマダ", 
-        firstNameFurigana = "タロウ", 
-        birthday = Instant.parse("1950-01-01T00:00:00Z")
-    )
-
     private lateinit var viewModel: BatchInputViewModel
-    private val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(extraBufferCapacity = 1)
-    private val isInputValidFlow = MutableStateFlow(true)
-    private val isSavingFlow = MutableStateFlow(false)
+    private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
+    private val viewEventFlow = MutableSharedFlow<BatchInputViewEvent>(extraBufferCapacity = 1)
+    private val uiStateFlow = MutableStateFlow(BatchInputUiState(
+        personId = 1,
+        person = jp.mydns.fujiwara.carememo.data.Person(
+            id = 1, lastName = "山田", firstName = "太郎",
+            lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
+            birthday = Instant.now()
+        ),
+        currentPersonName = "山田 太郎"
+    ))
 
     @Before
     fun setup() {
         viewModel = mockk<BatchInputViewModel>(relaxed = true)
         
         every { viewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
-        every { viewModel.currentPerson } returns MutableStateFlow(mockPerson)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
+        every { viewModel.viewEvent } returns viewEventFlow.asSharedFlow()
+        every { viewModel.uiState } returns uiStateFlow
         every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { viewModel.isSaving } returns isSavingFlow
-        every { viewModel.isInputValid } returns isInputValidFlow
-        every { viewModel.recordTime } returns MutableStateFlow(Instant.now())
-        every { viewModel.uiState } returns MutableStateFlow(BatchInputUiState())
     }
 
     private fun setContent(onBack: () -> Unit = {}) {
@@ -63,7 +58,6 @@ class BatchInputScreenTest {
             CareMemoTheme {
                 BatchInputScreen(
                     viewModel = viewModel,
-                    personId = 1,
                     onBack = onBack
                 )
             }
@@ -130,7 +124,7 @@ class BatchInputScreenTest {
 
     @Test
     fun bh01_save_operation_calls_viewmodel() {
-        isInputValidFlow.value = true
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = true, personId = 1) // personId も必要
         setContent()
 
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().performClick()
@@ -138,8 +132,8 @@ class BatchInputScreenTest {
     }
 
     @Test
-    fun bh02_invalid_date_disables_save_button() {
-        isInputValidFlow.value = false // バリデーション失敗状態をシミュレート
+    fun bh02_invalid_state_disables_save_button() {
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = false)
         setContent()
 
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsNotEnabled()
@@ -150,7 +144,7 @@ class BatchInputScreenTest {
         setContent()
 
         // 成功イベント発行
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.SaveSuccess)
+        viewEventFlow.tryEmit(BatchInputViewEvent.SaveSuccessEffects)
         composeTestRule.waitForIdle()
 
         // スクロールがトップに戻っていることを確認（日時入力エリアが表示されているか）
@@ -166,7 +160,7 @@ class BatchInputScreenTest {
         val cat2 = R.string.common_category_vital
         val categoryNameTag = "__RES__${cat1}、__RES__${cat2}"
         
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.ShowErrorDialogRes(
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
             R.string.common_error_title_save,
             R.string.batch_err_duplicate_blocked,
             listOf(categoryNameTag)
@@ -177,7 +171,6 @@ class BatchInputScreenTest {
         composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
         
         // 2. 複数のカテゴリ名が列記されていることを確認
-        // チップ等と重複するため onAllNodes を使い、少なくとも1つ（ダイアログ内）が表示されていることを確認
         val expected1 = composeTestRule.activity.getString(cat1)
         val expected2 = composeTestRule.activity.getString(cat2)
         
@@ -192,26 +185,23 @@ class BatchInputScreenTest {
     @Test
     fun bh05_continuous_input_maintained() {
         var backCalled = false
-        val uiStateFlow = MutableStateFlow(BatchInputUiState(weight = "60.0")) // 入力あり状態
-        every { viewModel.uiState } returns uiStateFlow
+        uiStateFlow.value = BatchInputUiState(weight = "60.0", currentPersonName = "山田 太郎")
         
         setContent(onBack = { backCalled = true })
 
         // 成功イベント発行
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.SaveSuccess)
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess)
         
-        // ViewModel側でリセットされるのをシミュレート
-        uiStateFlow.value = BatchInputUiState() 
+        // ViewModel側でリセットされるのをシミュレート（日時は維持）
+        val now = Instant.now()
+        uiStateFlow.value = BatchInputUiState(recordTime = now, initialRecordTime = now, currentPersonName = "山田 太郎") 
         
         composeTestRule.waitForIdle()
 
         // 1. 画面が閉じられていないこと（連続入力のため）
         assert(!backCalled)
         
-        // 2. 記録日時は表示されたままであること
-        composeTestRule.onNodeWithTag("BatchInputScreen_DateTimeInput").assertIsDisplayed()
-        
-        // 3. 入力フィールドがクリアされていること
+        // 2. 入力フィールドがクリアされていること
         composeTestRule.onNodeWithTag("BatchInputScreen_WeightField").assertTextContains("")
     }
 
@@ -219,9 +209,7 @@ class BatchInputScreenTest {
     fun bh06_discard_confirmation_dialog() {
         var backCalled = false
         // UIStateを「変更あり」の状態にする
-        every { viewModel.uiState } returns MutableStateFlow(BatchInputUiState(weight = "60.0"))
-        // バリデーションが通る状態
-        every { viewModel.isInputValid } returns MutableStateFlow(true)
+        uiStateFlow.value = uiStateFlow.value.copy(isChanged = true)
         
         setContent(onBack = { backCalled = true })
 
@@ -239,24 +227,18 @@ class BatchInputScreenTest {
     }
 
     @Test
-    fun bh07_discard_confirmation_on_date_change_only() {
+    fun bh07_save_success_prevents_discard_dialog() {
         var backCalled = false
-        // UIStateは空のまま
-        every { viewModel.uiState } returns MutableStateFlow(BatchInputUiState())
+        // 初期状態: 変更なし
+        uiStateFlow.value = uiStateFlow.value.copy(isChanged = false)
         
         setContent(onBack = { backCalled = true })
 
-        // 日付入力フィールド（年）を書き換える
-        composeTestRule.onNodeWithText("年", substring = true).performTextReplacement("2020")
-        
         // 戻るボタンタップ
         composeTestRule.onNodeWithTag("BatchInputScreen_BackButton").performClick()
         
-        // 破棄確認ダイアログが表示されること（日時変更だけでも保護される）
-        composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").assertIsDisplayed()
-        
-        // キャンセルして戻る
-        composeTestRule.onNodeWithTag("BatchInputScreen_DiscardCancelButton").performClick()
-        assert(!backCalled)
+        // ダイアログが出ずに画面が閉じること
+        composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").assertDoesNotExist()
+        assert(backCalled)
     }
 }

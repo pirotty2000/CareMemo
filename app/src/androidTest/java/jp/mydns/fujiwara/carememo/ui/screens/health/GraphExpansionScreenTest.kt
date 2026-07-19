@@ -14,8 +14,10 @@ import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
@@ -27,14 +29,14 @@ import java.time.temporal.ChronoUnit
 /**
  * UI層テスト：GraphExpansionScreen (グラフ拡大表示)
  * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-003_GraphExpansionScreen.md
+ * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-003_GraphExpansionScreen.md に準拠
  */
 class GraphExpansionScreenTest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var viewModel: PersonDetailViewModel
+    private lateinit var detailViewModel: PersonDetailUiStateViewModel
     private lateinit var healthViewModel: PersonHealthViewModel
 
     private val mockPerson = Person(
@@ -53,17 +55,19 @@ class GraphExpansionScreenTest {
         BpAndPulse(id = 2, personId = 1, bpSystolic = 130, bpDiastolic = 85, pulse = 75, recordTime = baseTime.plus(1, ChronoUnit.DAYS))
     )
 
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = mockPerson, personId = 1, currentCategory = Category.BP_AND_PULSE))
+    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(personId = 1))
     private val recordsFlow = MutableStateFlow<List<HistoryRecord>>(emptyList())
-    private val isLoadingFlow = MutableStateFlow(false)
 
     @Before
     fun setup() {
-        viewModel = mockk<PersonDetailViewModel>(relaxed = true)
+        detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
         healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
 
-        every { viewModel.currentPerson } returns MutableStateFlow(mockPerson)
-        every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { healthViewModel.isLoading } returns isLoadingFlow
+        every { detailViewModel.uiState } returns detailUiStateFlow
+        every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
+
+        every { healthViewModel.uiState } returns healthUiStateFlow
         every { healthViewModel.getHealthRecords(any()) } returns recordsFlow
     }
 
@@ -75,7 +79,7 @@ class GraphExpansionScreenTest {
             CompositionLocalProvider(LocalContext provides context.applicationContext) {
                 CareMemoTheme {
                     GraphExpansionScreen(
-                        viewModel = viewModel,
+                        detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
                         personId = 1,
                         category = category,
@@ -186,7 +190,7 @@ class GraphExpansionScreenTest {
         recordsFlow.value = mockRecords
         setContent()
         
-        // スワイプ操作のシミュレーション（グラフ内スクロール）
+        // スワップ操作のシミュレーション（グラフ内スクロール）
         composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput {
             swipeLeft()
         }

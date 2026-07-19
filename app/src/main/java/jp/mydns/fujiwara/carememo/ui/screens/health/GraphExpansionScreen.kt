@@ -1,37 +1,11 @@
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
-/**
- * Screen : GraphExpansionScreen
- *
- * 【画面名】
- * グラフ拡大表示画面
- *
- * 【役割】
- * バイタル、血糖値、身体計測などの各統計グラフを全画面で詳細に閲覧するための画面。
- * 画面を横向き（ランドスケープ）に固定することで、より長い期間のデータ推移を詳細に分析可能にする。
- *
- * 【主な機能】
- * ・全画面表示：端末の画面全体を使用した高精細なグラフ表示。
- * ・画面回転制御：表示開始時に横画面へ、終了時に元の向きへ自動制御。
- * ・対話型グラフ：グラフ上のタップによる詳細値（ツールチップ）の表示。
- *
- * 【遷移】
- * ← PersonHealthScreen（グラフタップ時に遷移）
- *
- * 【使用するViewModel】
- * PersonHealthViewModel
- *
- * 【備考】
- * 医療従事者やケアマネージャーが利用者の状態変化を時系列で精密に確認することを目的としている。
- */
-
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -42,12 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
@@ -55,15 +30,18 @@ import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.health.LineChart
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Screen : GraphExpansionScreen
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GraphExpansionScreen(
-    viewModel: PersonDetailViewModel,
+    detailViewModel: PersonDetailUiStateViewModel,
     healthViewModel: PersonHealthViewModel,
     personId: Int,
     category: Category,
@@ -71,10 +49,15 @@ fun GraphExpansionScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val records by remember(category) { healthViewModel.getHealthRecords(category) }.collectAsStateWithLifecycle()
-    val isLoading by healthViewModel.isLoading.collectAsStateWithLifecycle()
-    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
+    val healthState by healthViewModel.uiState.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+
+    val records by remember(category, healthState.personId) { 
+        healthViewModel.getHealthRecords(category) 
+    }.collectAsStateWithLifecycle()
+    
+    val isLoading = healthState.isLoading
 
     // 画面を横向きに固定
     DisposableEffect(Unit) {
@@ -87,10 +70,10 @@ fun GraphExpansionScreen(
     }
 
     LaunchedEffect(personId, category) {
-        viewModel.loadPerson(personId)
+        detailViewModel.loadPerson(personId)
+        detailViewModel.setCategory(category)
         healthViewModel.loadPerson(personId)
         healthViewModel.setCategory(category)
-        viewModel.setCategory(category)
     }
 
     val listState = rememberLazyListState()
@@ -100,7 +83,7 @@ fun GraphExpansionScreen(
     LaunchedEffect(records) {
         if (records.isNotEmpty()) {
             listState.scrollToItem(initialGraphIndex)
-            delay(500.milliseconds) // 少し待ってからハイライトを消す演出
+            delay(500.milliseconds)
             highlightedIndex = -1
         }
     }
@@ -128,7 +111,7 @@ fun GraphExpansionScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), modifier = Modifier.size(20.dp))
                     }
                     Text(
-                        text = "${currentPerson?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${stringResource(category.displayNameRes)}",
+                        text = "${detailState.person?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${stringResource(category.displayNameRes)}",
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
                         modifier = Modifier.testTag("GraphExpansion_HeaderTitle")
@@ -138,7 +121,7 @@ fun GraphExpansionScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (isLoading) {
+            if (isLoading && records.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_Loading")) {
                     LoadingScreen()
                 }
@@ -173,7 +156,7 @@ fun GraphExpansionScreen(
                                 .testTag("GraphExpansion_GraphCard_$index"),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
-                            Box(modifier = Modifier.padding(4.dp).height(210.dp)) { // 360dp高に最適化
+                            Box(modifier = Modifier.padding(4.dp).height(210.dp)) {
                                 SingleGraphInLandscape(
                                     records = records,
                                     category = category,
@@ -200,9 +183,7 @@ fun SingleGraphInLandscape(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    // 背景色の輝度で判定
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    // 共通のX軸範囲計算
     val (globalMinX, globalMaxX) = remember(records) {
         HealthChartHelper.calculateGlobalXRange(records)
     }
@@ -212,8 +193,6 @@ fun SingleGraphInLandscape(
     }
 
     if (config != null) {
-        // semantics { mergeDescendants = true } を追加することで、
-        // 内部の LineChart が持つ contentDescription をテストから読み取れるようにする
         Column(
             modifier = modifier
                 .fillMaxSize()

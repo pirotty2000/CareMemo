@@ -17,8 +17,21 @@ data class PersonEditUiState(
     val era: BirthEra = BirthEra.SHOWA,
     val year: String = "",
     val month: String = "",
-    val day: String = ""
+    val day: String = "",
+    // フェーズ 2 で追加: 集約された状態
+    val isLoading: Boolean = false,
+    val isValid: Boolean = false,
+    val isChanged: Boolean = false,
+    val isNameMaskingEnabled: Boolean = true,
+    val isNew: Boolean = false
 )
+
+/**
+ * 利用者編集画面固有のイベント
+ */
+sealed interface PersonEditViewEvent {
+    // 現在は UiEvent.SaveSuccess を使用しているが、将来的な拡張のために定義
+}
 
 /**
  * 利用者編集画面のバリデーション結果
@@ -27,6 +40,8 @@ enum class PersonEditValidationResult {
     SUCCESS,
     EMPTY_LAST_NAME,
     EMPTY_FIRST_NAME,
+    EMPTY_LAST_FURIGANA,
+    EMPTY_FIRST_FURIGANA,
     INVALID_BIRTHDAY
 }
 
@@ -72,6 +87,8 @@ object PersonEditLogic {
     fun validate(current: PersonEditUiState): PersonEditValidationResult {
         if (current.lastName.isBlank()) return PersonEditValidationResult.EMPTY_LAST_NAME
         if (current.firstName.isBlank()) return PersonEditValidationResult.EMPTY_FIRST_NAME
+        if (current.lastNameFurigana.isBlank()) return PersonEditValidationResult.EMPTY_LAST_FURIGANA
+        if (current.firstNameFurigana.isBlank()) return PersonEditValidationResult.EMPTY_FIRST_FURIGANA
 
         val y = current.year.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY
         val m = current.month.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY

@@ -42,22 +42,16 @@ fun AuditLogScreen(
     viewModel: AuditLogViewModel,
     onBack: () -> Unit,
 ) {
-    val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val selectedFeature by viewModel.selectedFeature.collectAsStateWithLifecycle()
-    val selectedResult by viewModel.selectedResult.collectAsStateWithLifecycle()
-    val isAscending by viewModel.isAscending.collectAsStateWithLifecycle()
-    val availableFeatures by viewModel.availableFeatures.collectAsStateWithLifecycle()
-    val availableResults by viewModel.availableResults.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     AuditLogScreenContent(
-        auditLogs = auditLogs,
-        isLoading = isLoading,
-        selectedFeature = selectedFeature,
-        selectedResult = selectedResult,
-        isAscending = isAscending,
-        availableFeatures = availableFeatures,
-        availableResults = availableResults,
+        auditLogs = uiState.auditLogs,
+        isLoading = uiState.isLoading,
+        selectedFeature = uiState.selectedFeature,
+        selectedResult = uiState.selectedResult,
+        isAscending = uiState.isAscending,
+        availableFeatures = uiState.availableFeatures,
+        availableResults = uiState.availableResults,
         onFeatureSelect = { viewModel.setFeatureFilter(it) },
         onResultSelect = { viewModel.setResultFilter(it) },
         onToggleSort = { viewModel.toggleSortOrder() },

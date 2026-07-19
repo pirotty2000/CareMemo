@@ -40,6 +40,9 @@ import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,21 +54,8 @@ fun SettingsScreen(
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
     onBack: () -> Unit,
 ) {
-    val isMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
-    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
-    val lockTimeoutMinutes by viewModel.lockTimeoutMinutes.collectAsStateWithLifecycle()
-    val persistedRecorderName by viewModel.defaultRecorderName.collectAsStateWithLifecycle()
-    val isBackupPasswordEnabled by viewModel.isBackupPasswordEnabled.collectAsStateWithLifecycle()
-    val backupPassword by viewModel.backupPassword.collectAsStateWithLifecycle()
-    val themeSetting by viewModel.themeSetting.collectAsStateWithLifecycle()
-    val auditLogRetentionDays by viewModel.auditLogRetentionDays.collectAsStateWithLifecycle()
-    val auditLogCount by viewModel.auditLogCount.collectAsStateWithLifecycle(initialValue = 0)
-    val endedUserList by viewModel.deletedUserList.collectAsStateWithLifecycle()
-    val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
-    val processingProgress by viewModel.processingProgress.collectAsStateWithLifecycle()
-    val isDeveloperModeEnabled by viewModel.isDeveloperModeEnabled.collectAsStateWithLifecycle()
-    val inconsistencies: List<DatabaseInconsistency> by viewModel.inconsistencies.collectAsStateWithLifecycle()
-
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -88,9 +78,10 @@ fun SettingsScreen(
     }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
-    val isPasswordValid = backupPassword.length >= 6
+    val isPasswordValid = uiState.backupPassword.length >= 6
 
     var showImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
     var showEraseConfirm by rememberSaveable { mutableStateOf(false) }
     var showDevClearConfirm by rememberSaveable { mutableStateOf(false) }
     var showVersionDialog by rememberSaveable { mutableStateOf(false) }
@@ -105,36 +96,42 @@ fun SettingsScreen(
     var dialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.uiEventFlow.collect { event ->
-            when (event) {
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
-                    dialogTitle = context.getString(R.string.common_error_title_info)
-                    dialogMessage = event.message
+        launch {
+            viewModel.uiEventFlow.collect { event ->
+                when (event) {
+                    is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
+                        dialogTitle = context.getString(R.string.common_error_title_info)
+                        dialogMessage = context.getString(event.resId, *event.args.toTypedArray())
+                    }
+                    is BaseUiStateViewModel.UiEvent.ShowInfoDialog -> {
+                        dialogTitle = event.title
+                        dialogMessage = event.message
+                    }
+                    is BaseUiStateViewModel.UiEvent.ShowInfoDialogRes -> {
+                        dialogTitle = context.getString(event.titleResId)
+                        dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                    }
+                    is BaseUiStateViewModel.UiEvent.ShowErrorDialog -> {
+                        dialogTitle = event.title
+                        dialogMessage = event.message
+                    }
+                    is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
+                        dialogTitle = context.getString(event.titleResId)
+                        dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                    }
+                    is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
+                        onBack()
+                    }
+                    else -> {}
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbarRes -> {
-                    dialogTitle = context.getString(R.string.common_error_title_info)
-                    dialogMessage = context.getString(event.resId, *event.args.toTypedArray())
-                }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
-                    dialogTitle = event.title
-                    dialogMessage = event.message
-                }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialogRes -> {
-                    dialogTitle = context.getString(event.titleResId)
-                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
-                }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
-                    dialogTitle = event.title
-                    dialogMessage = event.message
-                }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialogRes -> {
-                    dialogTitle = context.getString(event.titleResId)
-                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
-                }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowOverwriteConfirm -> {}
-                jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.RequestPassword -> showPasswordInputDialog = true
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.SaveSuccess -> {
-                    onBack()
+            }
+        }
+        launch {
+            viewModel.viewEvent.collect { event ->
+                when (event) {
+                    SettingsViewEvent.RequestImportPassword -> showPasswordInputDialog = true
+                    SettingsViewEvent.ExportSuccess -> {}
+                    SettingsViewEvent.ImportSuccess -> {}
                 }
             }
         }
@@ -165,7 +162,11 @@ fun SettingsScreen(
             confirmButton = {
                 AppDialogConfirmButton(
                     text = "復元を実行",
-                    onClick = { viewModel.importData(context, showImportUri!!); showImportUri = null }
+                    onClick = {
+                        pendingImportUri = showImportUri
+                        viewModel.importData(context, showImportUri!!)
+                        showImportUri = null
+                    }
                 )
             },
             dismissButton = {
@@ -182,8 +183,8 @@ fun SettingsScreen(
             onDismiss = { showEraseConfirm = false },
             onDelete = { viewModel.deleteEndedPersons() },
             title = "個人情報の完全抹消",
-            message = "現在「利用終了」となっている ${endedUserList.size} 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？",
-            confirmButtonText = "対象者 (${endedUserList.size}名) を抹消する"
+            message = "現在「利用終了」となっている ${uiState.endedUserCount} 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？",
+            confirmButtonText = "対象者 (${uiState.endedUserCount}名) を抹消する"
         )
     }
 
@@ -208,7 +209,7 @@ fun SettingsScreen(
     }
 
     // データベース不整合レポート・ダイアログ
-    if (inconsistencies.isNotEmpty()) {
+    if (uiState.inconsistencies.isNotEmpty()) {
         AppDialog(
             onDismissRequest = { viewModel.clearInconsistencyResults() },
             title = { Text("データベース不整合レポート") },
@@ -216,11 +217,11 @@ fun SettingsScreen(
                 AppDialogContent {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            "以下の ${inconsistencies.size} 件の孤立したデータが見つかりました：",
+                            "以下の ${uiState.inconsistencies.size} 件の孤立したデータが見つかりました：",
                             style = MaterialTheme.typography.bodySmall
                         )
 
-                        inconsistencies.forEach { inc ->
+                        uiState.inconsistencies.forEach { inc ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -292,7 +293,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    if ((minutes == -1) && (lockTimeoutMinutes != -1)) {
+                                    if ((minutes == -1) && (uiState.lockTimeoutMinutes != -1)) {
                                         if (viewModel.canAuthenticate(context)) {
                                             onRequireAuthentication(
                                                 R.string.security_auth_title,
@@ -313,7 +314,7 @@ fun SettingsScreen(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = lockTimeoutMinutes == minutes, onClick = null)
+                            RadioButton(selected = uiState.lockTimeoutMinutes == minutes, onClick = null)
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(label)
                         }
@@ -345,7 +346,7 @@ fun SettingsScreen(
                                 }.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = themeSetting == selectionOption, onClick = null)
+                            RadioButton(selected = uiState.themeSetting == selectionOption, onClick = null)
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(selectionOption.label)
                         }
@@ -379,7 +380,7 @@ fun SettingsScreen(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = auditLogRetentionDays == days, onClick = null)
+                            RadioButton(selected = uiState.auditLogRetentionDays == days, onClick = null)
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(label)
                         }
@@ -425,7 +426,7 @@ fun SettingsScreen(
                 AppDialogConfirmButton(
                     text = "実行",
                     onClick = {
-                        viewModel.importData(context, android.net.Uri.EMPTY, inputPasswordForImport)
+                        pendingImportUri?.let { viewModel.importData(context, it, inputPasswordForImport) }
                         showPasswordInputDialog = false
                         inputPasswordForImport = ""
                     },
@@ -446,8 +447,8 @@ fun SettingsScreen(
 
     SettingsScreenContent(
         snackbarHostState = snackbarHostState,
-        isMaskingEnabled = isMaskingEnabled,
-        defaultRecorderName = persistedRecorderName,
+        isMaskingEnabled = uiState.isNameMaskingEnabled,
+        defaultRecorderName = uiState.defaultRecorderName,
         onMaskingChange = {
             viewModel.setNameMaskingEnabled(it)
             isChangedByMe = true // 伏せ字設定が変更されたらフラグを立てる (BH-01)
@@ -456,11 +457,11 @@ fun SettingsScreen(
             viewModel.setDefaultRecorderName(it)
             isChangedByMe = true
         },
-        endedUserCount = endedUserList.size,
+        endedUserCount = uiState.endedUserCount,
         onNavigateToRestore = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
         onEraseClick = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.DELETE) },
-        isBackupPasswordEnabled = isBackupPasswordEnabled,
-        backupPassword = backupPassword,
+        isBackupPasswordEnabled = uiState.isBackupPasswordEnabled,
+        backupPassword = uiState.backupPassword,
         isPasswordValid = isPasswordValid,
         isPasswordVisible = isPasswordVisible,
         onBackupPasswordEnabledChange = { enabled ->
@@ -509,8 +510,8 @@ fun SettingsScreen(
             viewModel.setLockBypassEnabled(true)
             importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
         },
-        isBiometricEnabled = isBiometricEnabled,
-        lockTimeoutMinutes = lockTimeoutMinutes,
+        isBiometricEnabled = uiState.isBiometricEnabled,
+        lockTimeoutMinutes = uiState.lockTimeoutMinutes,
         onBiometricEnabledChange = { enabled ->
             if (enabled) {
                 viewModel.setBiometricEnabled(context, true)
@@ -529,7 +530,7 @@ fun SettingsScreen(
             isChangedByMe = true
         },
         onTimeoutClick = { showTimeoutDialog = true },
-        themeSetting = themeSetting,
+        themeSetting = uiState.themeSetting,
         onThemeClick = { showThemeDialog = true },
         onVersionClick = {
             viewModel.handleVersionClick()
@@ -549,15 +550,15 @@ fun SettingsScreen(
         },
         onCheckIntegrity = { viewModel.checkIntegrity() },
         onInsertTestInconsistency = { viewModel.insertTestInconsistency() },
-        auditLogRetentionDays = auditLogRetentionDays,
-        auditLogCount = auditLogCount,
+        auditLogRetentionDays = uiState.auditLogRetentionDays,
+        auditLogCount = uiState.auditLogCount,
         onRetentionClick = { showRetentionDialog = true },
         onViewLogsClick = onNavigateToAuditLog,
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
-        isDeveloperModeEnabled = isDeveloperModeEnabled,
-        isProcessing = isProcessing,
-        processingProgress = processingProgress,
+        isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
+        isProcessing = uiState.isProcessing,
+        processingProgress = uiState.processingProgress,
         onBack = handleBack
     )
 }

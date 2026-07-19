@@ -144,6 +144,7 @@ fun PersonConditionScreenContent(
                     onSaveRecord = onSaveRecord,
                     onDeletePhoto = onDeletePhoto,
                     onSelectedIdChange = { onSelectedIdChange(it) },
+                    onCancel = { onSelectedIdChange(-1) },
                     onAddPhotoClick = onAddPhotoClick,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = onMicClick
@@ -151,55 +152,36 @@ fun PersonConditionScreenContent(
             }
         }
     } else {
-        // スマホ用レイアウト (切り替え)
-        if (selectedId != -1) {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                ConditionDetailPane(
-                    personId = personId,
-                    conditionId = selectedId,
-                    records = conditionRecords,
-                    photos = photos,
-                    isProcessing = isProcessing,
-                    defaultRecorderName = defaultRecorderName,
-                    onSaveRecord = onSaveRecord,
-                    onDeletePhoto = onDeletePhoto,
-                    onSelectedIdChange = { onSelectedIdChange(it) },
-                    onAddPhotoClick = onAddPhotoClick,
-                    onNavigateToFullScreen = onNavigateToFullScreen,
-                    onMicClick = onMicClick
-                )
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SearchBox(
-                    query = searchQuery,
-                    onQueryChange = onSearchQueryChange,
-                    modifier = Modifier.testTag("ConditionScreen_SearchBox")
-                )
-                Box(modifier = Modifier.weight(1f)) {
-                    if (records.isEmpty()) {
-                        EmptyState(
-                            message = stringResource(R.string.p_detail_empty_records),
-                            description = stringResource(R.string.p_detail_empty_records_desc),
-                            icon = Icons.Outlined.Description
-                        )
-                    } else {
-                        ConditionList(
-                            records = records,
-                            selectedId = selectedId,
-                            conditionPhotoMap = conditionPhotoMap,
-                            isAnyDialogOpen = isAnyDialogOpen,
-                            onSelect = { onSelectedIdChange(it) },
-                            onDelete = onDeleteRecord,
-                            lazyListState = lazyListState
-                        )
-                        VerticalScrollIndicator(lazyListState = lazyListState)
-                    }
+        // スマホ用レイアウト
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SearchBox(
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange,
+                modifier = Modifier.testTag("ConditionScreen_SearchBox")
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                if (records.isEmpty()) {
+                    EmptyState(
+                        message = stringResource(R.string.p_detail_empty_records),
+                        description = stringResource(R.string.p_detail_empty_records_desc),
+                        icon = Icons.Outlined.Description
+                    )
+                } else {
+                    ConditionList(
+                        records = records,
+                        selectedId = selectedId,
+                        conditionPhotoMap = conditionPhotoMap,
+                        isAnyDialogOpen = isAnyDialogOpen,
+                        onSelect = { onSelectedIdChange(it) },
+                        onDelete = onDeleteRecord,
+                        lazyListState = lazyListState
+                    )
+                    VerticalScrollIndicator(lazyListState = lazyListState)
                 }
             }
         }

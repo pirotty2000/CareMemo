@@ -6,16 +6,22 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavController
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * SCR-S-001 SettingsScreen (設定・管理) の UI テスト
+ * SCR-S-001 SettingsScreen (設定・管理) の UI テスト (System B 移行済)
  *
  * 仕様書：doc/test/screen/TEST_SPEC_SCR-S-001_SettingsScreen.md に準拠
  */
@@ -24,24 +30,41 @@ class SettingsScreenTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
+    private val uiStateFlow = MutableStateFlow(SettingsUiState())
+
     private fun setupViewModelMock(): SettingsViewModel {
         val viewModel = mockk<SettingsViewModel>(relaxed = true)
-        every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(true)
-        every { viewModel.isBiometricEnabled } returns MutableStateFlow(true)
-        every { viewModel.lockTimeoutMinutes } returns MutableStateFlow(5)
-        every { viewModel.defaultRecorderName } returns MutableStateFlow("テスト記録者")
-        every { viewModel.isBackupPasswordEnabled } returns MutableStateFlow(true)
-        every { viewModel.backupPassword } returns MutableStateFlow("123456")
-        every { viewModel.themeSetting } returns MutableStateFlow(ThemeSetting.SYSTEM)
-        every { viewModel.auditLogRetentionDays } returns MutableStateFlow(30)
-        every { viewModel.auditLogCount } returns MutableStateFlow(10)
-        every { viewModel.deletedUserList } returns MutableStateFlow(emptyList())
-        every { viewModel.isProcessing } returns MutableStateFlow(false)
-        every { viewModel.processingProgress } returns MutableStateFlow(0)
-        every { viewModel.isDeveloperModeEnabled } returns MutableStateFlow(false)
-        every { viewModel.inconsistencies } returns MutableStateFlow(emptyList())
-        every { viewModel.uiEventFlow } returns MutableSharedFlow()
+        
+        // System B 形式の uiState 購読を stub
+        // collectAsStateWithLifecycle や collect がクラッシュしないよう、有効な Flow を返すようにする
+        every { viewModel.uiState } returns uiStateFlow.asStateFlow()
+        every { viewModel.uiEventFlow } returns MutableSharedFlow<BaseUiStateViewModel.UiEvent>().asSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow<SettingsViewEvent>().asSharedFlow()
+        every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(true).asStateFlow()
+        every { viewModel.defaultRecorderName } returns MutableStateFlow("").asStateFlow()
+
         every { viewModel.canAuthenticate(any()) } returns true
+        
+        // 初期状態のセット
+        uiStateFlow.value = SettingsUiState(
+            isNameMaskingEnabled = true,
+            isBiometricEnabled = true,
+            lockTimeoutMinutes = 5,
+            defaultRecorderName = "テスト記録者",
+            isBackupPasswordEnabled = true,
+            backupPassword = "123456",
+            themeSetting = ThemeSetting.SYSTEM,
+            auditLogRetentionDays = 30,
+            auditLogCount = 10,
+            endedUserCount = 0,
+            isProcessing = false,
+            processingProgress = 0,
+            isDeveloperModeEnabled = false
+        )
+        
+        // 互換性維持のための個別の StateFlow mock (もし View 側が直接参照している場合)
+        // 今回の移行で View 側は uiState を見るように変更しているため、本来は不要。
+        
         return viewModel
     }
 
@@ -76,8 +99,7 @@ class SettingsScreenTest {
     @Test
     fun cp02_variousItems_areDisplayed() {
         val viewModel = setupViewModelMock()
-        val isDevMode = MutableStateFlow(false)
-        every { viewModel.isDeveloperModeEnabled } returns isDevMode
+        uiStateFlow.value = uiStateFlow.value.copy(isDeveloperModeEnabled = false)
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
@@ -98,8 +120,8 @@ class SettingsScreenTest {
         // バックアップ実行ボタン
         composeTestRule.onNodeWithTag("Settings_BackupButton").performScrollTo().assertIsDisplayed()
         
-        // 開発者モードを有効にする（モック経由）
-        isDevMode.value = true
+        // 開発者モードを有効にする（UiState経由）
+        uiStateFlow.value = uiStateFlow.value.copy(isDeveloperModeEnabled = true)
         composeTestRule.waitForIdle()
         
         // 監査ログ遷移ボタンが表示されること
@@ -176,7 +198,7 @@ class SettingsScreenTest {
     fun bh03_auditLogNavigation_isCalled() {
         val viewModel = setupViewModelMock()
         // 最初から開発者モードをONにする
-        every { viewModel.isDeveloperModeEnabled } returns MutableStateFlow(true)
+        uiStateFlow.value = uiStateFlow.value.copy(isDeveloperModeEnabled = true)
         val navController = mockk<NavController>(relaxed = true)
         var navigated = false
 
@@ -206,7 +228,7 @@ class SettingsScreenTest {
     fun bh04_scrollPosition_isMaintained() {
         val viewModel = setupViewModelMock()
         // 最初から開発者モードをONにして項目を増やす
-        every { viewModel.isDeveloperModeEnabled } returns MutableStateFlow(true)
+        uiStateFlow.value = uiStateFlow.value.copy(isDeveloperModeEnabled = true)
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {

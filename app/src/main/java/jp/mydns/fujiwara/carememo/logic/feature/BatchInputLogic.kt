@@ -3,14 +3,22 @@ package jp.mydns.fujiwara.carememo.logic.feature
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
+import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 
 /**
  * 一括入力画面用の UI 状態
  */
 data class BatchInputUiState(
+    val personId: Int? = null,
+    val person: Person? = null, // 追加
+    val currentPersonName: String = "",
+    val personSummary: PersonCategorySummary? = null,
+
     val height: String = "",
     val weight: String = "",
     val bpSystolic: String = "",
@@ -19,8 +27,24 @@ data class BatchInputUiState(
     val pulse: String = "",
     val bodyTemperature: String = "",
     val glucose: String = "",
-    val hba1c: String = ""
-)
+    val hba1c: String = "",
+
+    val recordTime: Instant = Instant.now(),
+    val initialRecordTime: Instant = recordTime, // 変更検知の基準点
+    
+    override val isLoading: Boolean = false,
+    val isValid: Boolean = false,
+    val isChanged: Boolean = false,
+    val isNameMaskingEnabled: Boolean = true
+) : PersonAwareState
+
+/**
+ * 一括入力画面固有のイベント
+ */
+sealed interface BatchInputViewEvent {
+    /** 保存成功時の演出（フラッシュ、スクロールトップ等）を要求する */
+    object SaveSuccessEffects : BatchInputViewEvent
+}
 
 /**
  * 一括入力のバリデーション結果
@@ -112,18 +136,18 @@ object BatchInputLogic {
     /**
      * 初期状態から変更されているかどうかを判定します。
      */
-    fun isChanged(current: BatchInputUiState, currentInstant: Instant?, initialInstant: Instant?): Boolean {
-        val hasInput = current.height.isNotBlank() ||
-                current.weight.isNotBlank() ||
-                current.bpSystolic.isNotBlank() ||
-                current.bpDiastolic.isNotBlank() ||
-                current.sat.isNotBlank() ||
-                current.pulse.isNotBlank() ||
-                current.bodyTemperature.isNotBlank() ||
-                current.glucose.isNotBlank() ||
-                current.hba1c.isNotBlank()
+    fun isChanged(state: BatchInputUiState): Boolean {
+        val hasInput = state.height.isNotBlank() ||
+                state.weight.isNotBlank() ||
+                state.bpSystolic.isNotBlank() ||
+                state.bpDiastolic.isNotBlank() ||
+                state.sat.isNotBlank() ||
+                state.pulse.isNotBlank() ||
+                state.bodyTemperature.isNotBlank() ||
+                state.glucose.isNotBlank() ||
+                state.hba1c.isNotBlank()
 
-        val isTimeChanged = currentInstant == null || initialInstant == null || currentInstant != initialInstant
+        val isTimeChanged = state.recordTime != state.initialRecordTime
 
         return hasInput || isTimeChanged
     }

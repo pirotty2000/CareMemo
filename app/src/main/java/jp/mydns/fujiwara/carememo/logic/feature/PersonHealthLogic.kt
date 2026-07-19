@@ -2,9 +2,27 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+
+/**
+ * 健康記録画面用の UI 状態
+ */
+data class PersonHealthUiState(
+    val personId: Int? = null,
+    val records: List<HistoryRecord> = emptyList(),
+    override val isLoading: Boolean = false
+) : PersonAwareState
+
+/**
+ * 健康記録画面固有のイベント
+ */
+sealed interface PersonHealthViewEvent {
+    // 必要に応じて定義
+}
 
 /**
  * 健康記録のバリデーション結果（事実）
@@ -34,7 +52,7 @@ object PersonHealthLogic {
     fun validate(record: HistoryRecord?): HealthValidationResult {
         if (record == null) return HealthValidationResult.INVALID_VALUE
         
-        // 1. 日時の確認 (VAL-05 対応: インターフェース上は非nullだが、安全性とテスト仕様のためにチェック)
+        // 1. 日時の確認
         @Suppress("SENSELESS_COMPARISON")
         if (record.recordTime == null) return HealthValidationResult.INVALID_TIME
 

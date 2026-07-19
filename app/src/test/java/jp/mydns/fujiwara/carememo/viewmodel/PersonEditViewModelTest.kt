@@ -69,7 +69,7 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         // isLoading が false になり、監査ログに記録されること
-        assertEquals(false, viewModel.isLoading.value)
+        assertEquals("ローディングが終了していること", false, viewModel.uiState.value.isLoading)
         coVerify {
             auditLogRepository.log(
                 featureName = "PersonEdit",
@@ -77,7 +77,7 @@ class PersonEditViewModelTest {
                 tableName = "person_db",
                 actionType = "ERROR",
                 affectedId = personId.toString(),
-                details = match { it?.contains("Load Error") == true },
+                details = match { it.contains("Load Error") },
                 resultType = "OTHER_ERROR"
             )
         }
@@ -91,6 +91,8 @@ class PersonEditViewModelTest {
         // 必須項目入力
         viewModel.updateLastName("山田")
         viewModel.updateFirstName("太郎")
+        viewModel.updateLastNameFurigana("ヤマダ")
+        viewModel.updateFirstNameFurigana("タロウ")
         viewModel.updateYear("25")
         viewModel.updateMonth("1")
         viewModel.updateDay("1")
@@ -103,15 +105,15 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         // isLoading が false になり、監査ログに記録されること
-        assertEquals(false, viewModel.isLoading.value)
+        assertEquals("ローディングが終了していること", false, viewModel.uiState.value.isLoading)
         coVerify {
             auditLogRepository.log(
                 featureName = "PersonEdit",
                 operation = "save",
                 tableName = "person_db",
                 actionType = "ERROR",
-                affectedId = any(),
-                details = match { it?.contains("Save Error") == true },
+                affectedId = "-1",
+                details = match { it.contains("Save Error") },
                 resultType = "OTHER_ERROR"
             )
         }
@@ -122,9 +124,11 @@ class PersonEditViewModelTest {
         val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
-        // 必須項目（苗字）を空にする
+        // 必須項目（苗字）を空にする。他の必須項目（ふりがな等）は埋める。
         viewModel.updateLastName("")
         viewModel.updateFirstName("太郎")
+        viewModel.updateLastNameFurigana("ヤマダ")
+        viewModel.updateFirstNameFurigana("タロウ")
         viewModel.updateYear("25")
         viewModel.updateMonth("1")
         viewModel.updateDay("1")
@@ -139,10 +143,39 @@ class PersonEditViewModelTest {
                 operation = "save",
                 tableName = "person_db",
                 actionType = "ERROR",
-                affectedId = any(),
-                details = match { it?.contains("EMPTY_LAST_NAME") == true },
+                affectedId = "-1",
+                details = match { it.contains("EMPTY_LAST_NAME") },
                 resultType = "VALIDATION_ERROR"
             )
         }
+    }
+
+    @Test
+    fun lg04_uiState_atomicity() = runTest {
+        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
+        advanceUntilIdle()
+
+        // 初期状態の確認
+        assertEquals(false, viewModel.uiState.value.isChanged)
+        assertEquals(false, viewModel.uiState.value.isValid)
+
+        // 値を更新
+        viewModel.updateLastName("山田")
+        
+        // lastName が更新されると同時に isChanged も更新されていること（原子性の確認）
+        val state = viewModel.uiState.value
+        assertEquals("山田", state.lastName)
+        assertEquals(true, state.isChanged)
+        
+        // 全ての必須項目を入力
+        viewModel.updateFirstName("太郎")
+        viewModel.updateLastNameFurigana("ヤマダ")
+        viewModel.updateFirstNameFurigana("タロウ")
+        viewModel.updateYear("25")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
+
+        // isValid が true になっていること
+        assertEquals(true, viewModel.uiState.value.isValid)
     }
 }

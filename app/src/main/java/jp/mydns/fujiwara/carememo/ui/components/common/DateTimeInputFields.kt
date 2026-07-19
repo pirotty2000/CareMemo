@@ -66,6 +66,22 @@ class DateTimeInputState(
             null
         }
     }
+
+    /**
+     * 指定された Instant で各フィールドの値を更新する。
+     * 現在の入力値（論理値）が指定された Instant と既に一致している場合は、
+     * ユーザーの入力を妨げないよう、表示文字列の上書きをスキップする。
+     */
+    fun updateFromInstant(instant: Instant) {
+        if (toInstant() != instant) {
+            val zdt = instant.atZone(ZoneId.systemDefault())
+            year.value = zdt.year.toString()
+            month.value = zdt.monthValue.toString()
+            day.value = zdt.dayOfMonth.toString()
+            hour.value = "%02d".format(zdt.hour)
+            minute.value = "%02d".format(zdt.minute)
+        }
+    }
 }
 
 /**

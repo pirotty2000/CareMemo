@@ -18,51 +18,51 @@ class AuditLogLogicTest {
     )
 
     @Test
-    fun `AL_LG_01_フィルタなしの場合は全件取得できること`() {
-        val result = AuditLogLogic.filterAuditLogs(testLogs, null, null, false)
+    fun lg_01_filterAndSortLogs_noFilter() {
+        val result = AuditLogLogic.filterAndSortLogs(testLogs, null, null, false)
         assertEquals(3, result.size)
     }
 
     @Test
-    fun `AL_LG_02_機能名でフィルタリングできること`() {
-        val result = AuditLogLogic.filterAuditLogs(testLogs, "Settings", null, false)
+    fun lg_02_filterAndSortLogs_byFeature() {
+        val result = AuditLogLogic.filterAndSortLogs(testLogs, "Settings", null, false)
         assertEquals(2, result.size)
         assertTrue(result.all { it.featureName == "Settings" })
     }
 
     @Test
-    fun `AL_LG_03_結果種別でフィルタリングできること`() {
-        val result = AuditLogLogic.filterAuditLogs(testLogs, null, "DB_ERROR", false)
+    fun lg_03_filterAndSortLogs_byResult() {
+        val result = AuditLogLogic.filterAndSortLogs(testLogs, null, "DB_ERROR", false)
         assertEquals(1, result.size)
         assertEquals("DB_ERROR", result[0].resultType)
     }
 
     @Test
-    fun `AL_LG_04_機能名と結果種別の両方でフィルタリングできること`() {
-        val result = AuditLogLogic.filterAuditLogs(testLogs, "Settings", "SUCCESS", false)
+    fun lg_04_filterAndSortLogs_combined() {
+        val result = AuditLogLogic.filterAndSortLogs(testLogs, "Settings", "SUCCESS", false)
         assertEquals(2, result.size)
     }
 
     @Test
-    fun `AL_LG_05_昇順での並べ替えができること`() {
+    fun lg_05_filterAndSortLogs_ascending() {
         // デフォルト(false)は降順（新しい順）、trueは昇順（古い順）
-        val resultAsc = AuditLogLogic.filterAuditLogs(testLogs, null, null, true)
-        assertEquals(1L, resultAsc[0].id)
-        assertEquals(3L, resultAsc[2].id)
+        val resultAsc = AuditLogLogic.filterAndSortLogs(testLogs, null, null, true)
+        assertEquals(1, resultAsc[0].id)
+        assertEquals(3, resultAsc[2].id)
 
-        val resultDesc = AuditLogLogic.filterAuditLogs(testLogs, null, null, false)
-        assertEquals(3L, resultDesc[0].id)
-        assertEquals(1L, resultDesc[2].id)
+        val resultDesc = AuditLogLogic.filterAndSortLogs(testLogs, null, null, false)
+        assertEquals(3, resultDesc[0].id)
+        assertEquals(1, resultDesc[2].id)
     }
 
     @Test
-    fun `AL_LG_06_該当なしの条件では空リストを返すこと`() {
-        val result = AuditLogLogic.filterAuditLogs(testLogs, "NonExistent", null, false)
+    fun lg_06_filterAndSortLogs_noMatch() {
+        val result = AuditLogLogic.filterAndSortLogs(testLogs, "NonExistent", null, false)
         assertTrue(result.isEmpty())
     }
 
     @Test
-    fun `AL_EX_01_存在する機能名の一覧を重複なくソートして抽出できること`() {
+    fun ex_01_extractAvailableFeatures() {
         val result = AuditLogLogic.extractAvailableFeatures(testLogs)
         assertEquals(2, result.size)
         assertEquals("PersonList", result[0])
@@ -70,7 +70,7 @@ class AuditLogLogicTest {
     }
 
     @Test
-    fun `AL_EX_02_存在する結果種別の一覧を重複なくソートして抽出できること`() {
+    fun ex_02_extractAvailableResults() {
         val result = AuditLogLogic.extractAvailableResults(testLogs)
         assertEquals(2, result.size)
         assertEquals("DB_ERROR", result[0])

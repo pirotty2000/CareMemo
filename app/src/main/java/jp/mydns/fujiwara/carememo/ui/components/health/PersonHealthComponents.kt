@@ -237,35 +237,26 @@ fun HealthRecordDetailPane(
     var glucoseText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
     var hba1cText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
 
-    // 変更検知用の初期状態
-    val initialDateTime = remember(recordId) { record?.recordTime }
-    val initialHeight = remember(recordId, category, records) {
-        if (record is HeightAndWeight) {
-            record.height?.toString() ?: ""
-        } else if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
-            records.filterIsInstance<HeightAndWeight>()
-                .filter { it.height != null }
-                .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
-        } else {
-            ""
-        }
-    }
-    val initialWeight = remember(recordId) { if (record is HeightAndWeight) record.weight?.toString() ?: "" else "" }
-    val initialBpSystolic = remember(recordId) { if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "" }
-    val initialBpDiastolic = remember(recordId) { if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "" }
-    val initialSat = remember(recordId) { if (record is BpAndPulse) record.sat?.toString() ?: "" else "" }
-    val initialPulse = remember(recordId) { if (record is BpAndPulse) record.pulse?.toString() ?: "" else "" }
-    val initialBodyTemp = remember(recordId) { if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "" }
-    val initialGlucose = remember(recordId) { if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "" }
-    val initialHbA1c = remember(recordId) { if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "" }
+    // 変更検知用の初期状態（UI初期化直後のスナップショットを保持することで、新規作成時のデフォルト値による誤検知を防ぐ）
+    val initialHeightSnapshot = remember(recordId, category) { heightText }
+    val initialWeightSnapshot = remember(recordId) { weightText }
+    val initialBpSystolicSnapshot = remember(recordId) { bpSystolicText }
+    val initialBpDiastolicSnapshot = remember(recordId) { bpDiastolicText }
+    val initialSatSnapshot = remember(recordId) { satText }
+    val initialPulseSnapshot = remember(recordId) { pulseText }
+    val initialBodyTempSnapshot = remember(recordId) { bodyTemperatureText }
+    val initialGlucoseSnapshot = remember(recordId) { glucoseText }
+    val initialHbA1cSnapshot = remember(recordId) { hba1cText }
+    val initialDateTimeSnapshot = remember(recordId) { dateTimeState.toInstant() }
 
     val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
         derivedStateOf {
-            heightText != initialHeight || weightText != initialWeight ||
-            bpSystolicText != initialBpSystolic || bpDiastolicText != initialBpDiastolic ||
-            satText != initialSat || pulseText != initialPulse || bodyTemperatureText != initialBodyTemp ||
-            glucoseText != initialGlucose || hba1cText != initialHbA1c ||
-            dateTimeState.toInstant() != initialDateTime
+            heightText != initialHeightSnapshot || weightText != initialWeightSnapshot ||
+            bpSystolicText != initialBpSystolicSnapshot || bpDiastolicText != initialBpDiastolicSnapshot ||
+            satText != initialSatSnapshot || pulseText != initialPulseSnapshot || 
+            bodyTemperatureText != initialBodyTempSnapshot ||
+            glucoseText != initialGlucoseSnapshot || hba1cText != initialHbA1cSnapshot ||
+            dateTimeState.toInstant() != initialDateTimeSnapshot
         }
     }
 
@@ -385,14 +376,14 @@ private fun HealthRecordEditForm(
                     }
                     Category.BP_AND_PULSE -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AppCompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_systolic)) }, modifier = Modifier.weight(1f))
-                            AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_diastolic)) }, modifier = Modifier.weight(1f))
+                            AppCompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_systolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpSystolic"))
+                            AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_diastolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpDiastolic"))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_sat)) }, suffix = { Text(AppThresholds.UNIT_SAT) }, modifier = Modifier.weight(1f))
-                            AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_pulse)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.weight(1f))
+                            AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_sat)) }, suffix = { Text(AppThresholds.UNIT_SAT) }, modifier = Modifier.weight(1f).testTag("HealthField_Sat"))
+                            AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_pulse)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.weight(1f).testTag("HealthField_Pulse"))
                         }
-                        AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_body_temp)) }, suffix = { Text(AppThresholds.UNIT_BODY_TEMP) }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
+                        AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_body_temp)) }, suffix = { Text(AppThresholds.UNIT_BODY_TEMP) }, modifier = Modifier.fillMaxWidth().testTag("HealthField_Temp"), imeAction = ImeAction.Done)
                     }
                     Category.GLUCOSE_AND_HBA1C -> {
                         AppCompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_glucose)) }, suffix = { Text(AppThresholds.UNIT_GLUCOSE) }, modifier = Modifier.fillMaxWidth())
@@ -402,10 +393,10 @@ private fun HealthRecordEditForm(
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_cancel)) }
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).testTag("HealthField_CancelButton")) { Text(stringResource(R.string.common_cancel)) }
                     Button(
                         onClick = onSave,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).testTag("HealthField_SaveButton"),
                         enabled = (when (category) {
                             Category.HEIGHT_AND_WEIGHT -> HealthLogic.isValidHeightAndWeight(heightText, weightText)
                             Category.BP_AND_PULSE -> HealthLogic.isValidBpAndPulse(bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText)

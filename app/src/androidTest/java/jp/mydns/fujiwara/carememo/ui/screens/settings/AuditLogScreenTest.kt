@@ -9,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import jp.mydns.fujiwara.carememo.data.AuditLog
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,7 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * AuditLogScreen の UI テスト
+ * AuditLogScreen の UI テスト (System B 移行済)
  * 
  * 仕様書: doc/test/screen/TEST_SPEC_SCR-S-002_AuditLogScreen.md に準拠
  */
@@ -31,15 +32,20 @@ class AuditLogScreenTest {
         AuditLog(id = 2, timestamp = Instant.now(), featureName = "PersonHealth", operation = "saveRecord", tableName = "health_db", actionType = "UPDATE", affectedId = "10", resultType = "DB_ERROR")
     )
 
+    private val uiStateFlow = MutableStateFlow(AuditLogUiState())
+
     private fun setupMockViewModel(): AuditLogViewModel {
         val viewModel = mockk<AuditLogViewModel>(relaxed = true)
-        every { viewModel.auditLogs } returns MutableStateFlow(mockLogs)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.selectedFeature } returns MutableStateFlow(null)
-        every { viewModel.selectedResult } returns MutableStateFlow(null)
-        every { viewModel.isAscending } returns MutableStateFlow(false)
-        every { viewModel.availableFeatures } returns MutableStateFlow(listOf("PersonList", "PersonHealth"))
-        every { viewModel.availableResults } returns MutableStateFlow(listOf("SUCCESS", "DB_ERROR"))
+        
+        // System B 形式の uiState 購読を stub
+        every { viewModel.uiState } returns uiStateFlow
+        
+        uiStateFlow.value = AuditLogUiState(
+            auditLogs = mockLogs,
+            isLoading = false,
+            availableFeatures = listOf("PersonList", "PersonHealth"),
+            availableResults = listOf("SUCCESS", "DB_ERROR")
+        )
         return viewModel
     }
 
@@ -196,7 +202,7 @@ class AuditLogScreenTest {
     @Test
     fun bh02_backOperation_callsOnBack() {
         val viewModel = setupMockViewModel()
-        every { viewModel.auditLogs } returns MutableStateFlow(emptyList())
+        uiStateFlow.value = AuditLogUiState(auditLogs = emptyList(), isLoading = false)
         
         var backCalled = false
         composeTestRule.setContent {

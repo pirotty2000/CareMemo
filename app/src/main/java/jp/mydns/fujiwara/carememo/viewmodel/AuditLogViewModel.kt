@@ -2,28 +2,24 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
-import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogLogic
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
- * 操作ログ（監査ログ）閲覧画面用の ViewModel
+ * 操作ログ（監査ログ）閲覧画面用の ViewModel (System B)
  */
 class AuditLogViewModel(
     private val auditLogRepository: AuditLogRepository,
     userSettingsRepository: UserSettingsRepository,
-) : BaseViewModel(userSettingsRepository) {
+) : BaseUiStateViewModel<AuditLogUiState, AuditLogViewEvent>(
+    userSettingsRepository,
+    AuditLogUiState()
+) {
 
     companion object {
         private const val FEATURE_NAME = "AuditLog"
@@ -31,86 +27,64 @@ class AuditLogViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    // 絞り込み・並び替え状態
-    private val _selectedFeature = MutableStateFlow<String?>(null)
-    val selectedFeature = _selectedFeature.asStateFlow()
-
-    private val _selectedResult = MutableStateFlow<String?>(null)
-    val selectedResult = _selectedResult.asStateFlow()
-
-    private val _isAscending = MutableStateFlow(false)
-    val isAscending = _isAscending.asStateFlow()
-
-    private val _auditLogs = MutableStateFlow<List<AuditLog>>(emptyList())
-
-    /**
-     * 絞り込み・並び替え済みのログリスト
-     */
-    val auditLogs: StateFlow<List<AuditLog>> = _auditLogs.asStateFlow()
-
     init {
+        // (B)系統標準のエラーハンドラをセットアップ
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
             showError(title, msg, *args)
         }
 
+        // ログの購読とフィルタリングの統合フロー
         safeCollect(
             operation = "auditLogsFlow",
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = { tableName = "audit_log" },
             flowProvider = {
                 combine(
                     auditLogRepository.allLogs,
-                    _selectedFeature,
-                    _selectedResult,
-                    _isAscending,
-                ) { logs, feature, result, ascending ->
-                    AuditLogLogic.filterAuditLogs(logs, feature, result, ascending)
+                    uiState // selectedFeature, selectedResult, isAscending を含む
+                ) { logs, state ->
+                    val filtered = AuditLogLogic.filterAndSortLogs(
+                        logs,
+                        state.selectedFeature,
+                        state.selectedResult,
+                        state.isAscending
+                    )
+                    val features = AuditLogLogic.extractAvailableFeatures(logs)
+                    val results = AuditLogLogic.extractAvailableResults(logs)
+                    
+                    // 内部データを一括で構築
+                    Triple(filtered, features, results)
                 }
             }
-        ) {
-            _auditLogs.value = it
+        ) { (filtered, features, results) ->
+            updateUiState { current ->
+                current.copy(
+                    auditLogs = filtered,
+                    availableFeatures = features,
+                    availableResults = results
+                )
+            }
         }
     }
 
-    // 存在する項目の一覧（フィルター選択用）
-    val availableFeatures: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs ->
-            AuditLogLogic.extractAvailableFeatures(logs)
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableFeaturesFlow"))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val availableResults: StateFlow<List<String>> = auditLogRepository.allLogs
-        .map { logs ->
-            AuditLogLogic.extractAvailableResults(logs)
-        }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "availableResultsFlow"))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    override fun copyWithLoadingState(state: AuditLogUiState, isLoading: Boolean): AuditLogUiState {
+        return state.copy(isLoading = isLoading)
+    }
 
     fun setFeatureFilter(feature: String?) {
-        _selectedFeature.value = feature
+        updateUiState { it.copy(selectedFeature = feature) }
     }
 
     fun setResultFilter(result: String?) {
-        _selectedResult.value = result
+        updateUiState { it.copy(selectedResult = result) }
     }
 
     fun toggleSortOrder() {
-        _isAscending.value = !_isAscending.value
+        updateUiState { it.copy(isAscending = !it.isAscending) }
     }
 
     fun clearFilters() {
-        _selectedFeature.value = null
-        _selectedResult.value = null
+        updateUiState { it.copy(selectedFeature = null, selectedResult = null) }
     }
 
     class Factory(
@@ -119,10 +93,7 @@ class AuditLogViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(AuditLogViewModel::class.java)) {
-                return AuditLogViewModel(auditLogRepository, userSettingsRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+            return AuditLogViewModel(auditLogRepository, userSettingsRepository) as T
         }
     }
 }

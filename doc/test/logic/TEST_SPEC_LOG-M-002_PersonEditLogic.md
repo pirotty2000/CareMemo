@@ -3,6 +3,16 @@
 - **対象テストコード:**
     - `app/src/test/java/jp/mydns/fujiwara/carememo/logic/feature/PersonEditLogicTest.kt`
 
+## 0. UI 状態の構造 (PersonEditUiState)
+**集約されたプロパティ:**
+- 基本入力項目: `lastName`, `firstName`, `lastNameFurigana`, `firstNameFurigana`, `note`, `era`, `year`, `month`, `day`
+- 派生・制御状態:
+    - `isLoading`: ロード中フラグ
+    - `isValid`: バリデーション成功フラグ（入力変更時に即座に更新される）
+    - `isChanged`: 初期状態からの変更ありフラグ（入力変更時に即座に更新される）
+    - `isNameMaskingEnabled`: 氏名伏せ字設定
+    - `isNew`: 新規登録モードフラグ
+
 ## 1. 変更検知テスト (isChanged)
 **目的:** 利用者の基本情報が初期状態から変更されたかを正しく判定できることを検証する。
 

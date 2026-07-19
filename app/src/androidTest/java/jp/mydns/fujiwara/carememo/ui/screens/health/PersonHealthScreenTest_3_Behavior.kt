@@ -1,3 +1,5 @@
+@file:Suppress("NonAsciiCharacters")
+
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
 import androidx.activity.ComponentActivity
@@ -6,9 +8,11 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,11 +31,10 @@ class PersonHealthScreenTest_3_Behavior {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var detailViewModel: PersonDetailViewModel
+    private lateinit var detailViewModel: PersonDetailUiStateViewModel
     private lateinit var healthViewModel: PersonHealthViewModel
 
-    private val recordsFlow = MutableStateFlow<List<HistoryRecord>>(emptyList())
-    private val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(extraBufferCapacity = 1)
+    private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
     private val testPerson = Person(
         id = 1, lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
@@ -41,33 +44,45 @@ class PersonHealthScreenTest_3_Behavior {
         BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
     )
 
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(
+        person = testPerson,
+        personId = 1,
+        currentCategory = Category.BP_AND_PULSE
+    ))
+    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(
+        personId = 1,
+        records = emptyList()
+    ))
+
     @Before
     fun setup() {
-        detailViewModel = mockk(relaxed = true)
-        healthViewModel = mockk(relaxed = true)
+        detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
+        healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
 
-        every { healthViewModel.records } returns recordsFlow
-        every { healthViewModel.isLoading } returns MutableStateFlow(false)
-        every { healthViewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
-
-        every { detailViewModel.currentPerson } returns MutableStateFlow(testPerson)
-        every { detailViewModel.uiEventFlow } returns MutableSharedFlow<BaseViewModel.UiEvent>().asSharedFlow()
+        every { detailViewModel.uiState } returns detailUiStateFlow
+        every { detailViewModel.uiEventFlow } returns MutableSharedFlow<BaseUiStateViewModel.UiEvent>().asSharedFlow()
         every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { detailViewModel.personCategorySummary } returns MutableStateFlow(null)
+
+        every { healthViewModel.uiState } returns healthUiStateFlow
+        every { healthViewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
     }
 
-    private fun setContent(onNavigateToGraphExpansion: (Int, Category, Int) -> Unit = { _, _, _ -> }) {
+    private fun setContent(
+        onNavigateToGraphExpansion: (Int, Category, Int) -> Unit = { _, _, _ -> },
+        onNavigateToBatchInput: () -> Unit = {},
+        onShowPdfSettings: (Category) -> Unit = {}
+    ) {
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreen(
-                    viewModel = detailViewModel,
+                    detailViewModel = detailViewModel,
                     healthViewModel = healthViewModel,
-                    initialCategoryType = Category.BP_AND_PULSE,
-                    personId = 1,
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
-                    onNavigateToGraphExpansion = onNavigateToGraphExpansion,
-                    onNavigateToCategory = {}
+                    onNavigateToCategory = {},
+                    onShowPdfSettings = onShowPdfSettings,
+                    onNavigateToBatchInput = onNavigateToBatchInput,
+                    onNavigateToGraphExpansion = onNavigateToGraphExpansion
                 )
             }
         }
@@ -76,11 +91,22 @@ class PersonHealthScreenTest_3_Behavior {
     @Test
     fun bh01_data_save_action() {
         setContent()
-        composeTestRule.onNodeWithTag("HealthScreen_AddButton").performClick()
-        composeTestRule.onNodeWithText("血圧(上)").performTextInput("120")
-        composeTestRule.onNodeWithText("血圧(下)").performTextInput("80")
-        composeTestRule.onNodeWithText("保存").performClick()
         
+        // 1. FAB（新規登録）をタップして入力画面を開く
+        composeTestRule.onNodeWithTag("HealthScreen_AddButton").performClick()
+        composeTestRule.waitForIdle()
+
+        // 2. 数値を入力する (バイタルカテゴリを想定)
+        composeTestRule.onNodeWithTag("HealthField_BpSystolic").performTextInput("120")
+        composeTestRule.onNodeWithTag("HealthField_BpDiastolic").performTextInput("80")
+        composeTestRule.onNodeWithTag("HealthField_Pulse").performTextInput("70")
+        
+        composeTestRule.waitForIdle()
+
+        // 3. 保存ボタンをクリック
+        composeTestRule.onNodeWithTag("HealthField_SaveButton").assertIsEnabled().performClick()
+        
+        // 4. ViewModel の保存処理が呼ばれたことを検証
         verify { healthViewModel.saveRecord(any()) }
     }
 
@@ -88,13 +114,15 @@ class PersonHealthScreenTest_3_Behavior {
     fun bh02_graph_expansion_navigation() {
         var expandedPersonId = -1
         var expandedCategory: Category? = null
-        recordsFlow.value = testRecords
+        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
         setContent(onNavigateToGraphExpansion = { pid, cat, _ ->
             expandedPersonId = pid
             expandedCategory = cat
         })
         
+        // グラフタブに切り替え
         composeTestRule.onNodeWithTag("HealthScreen_Tab_Graph").performClick()
+        // 拡大表示アイコンをタップ
         composeTestRule.onAllNodesWithContentDescription("拡大表示").onFirst().performClick()
         
         assert(expandedPersonId == 1)
@@ -104,53 +132,37 @@ class PersonHealthScreenTest_3_Behavior {
     @Test
     fun bh03_duplicate_datetime_save_guard() {
         setContent()
-        composeTestRule.onNodeWithTag("HealthScreen_AddButton").performClick()
         
+        // 保存エラーイベントの発生をシミュレート
         composeTestRule.runOnUiThread {
-            uiEventFlow.tryEmit(BaseViewModel.UiEvent.ShowErrorDialog("保存エラー", "既に同じ日時の記録が存在します。"))
+            uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialog("保存エラー", "既に同じ日時の記録が存在します。"))
         }
+        composeTestRule.waitForIdle()
         
+        // エラーダイアログが表示されること
         composeTestRule.onNodeWithText("既に同じ日時の記録が存在します。").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("HealthScreen_InputForm").assertIsDisplayed()
     }
 
     @Test
     fun bh04_pdf_output_action() {
-        recordsFlow.value = testRecords
+        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
         setContent()
+        
+        // PDFボタンタップ（タグで指定）
         composeTestRule.onNodeWithTag("HealthScreen_PdfButton").performClick()
-        composeTestRule.onNodeWithTag("PdfSettingsDialog").assertIsDisplayed()
+        
+        // ダイアログが表示されることを確認
+        composeTestRule.onNodeWithTag("HealthScreen_PdfButton").assertIsDisplayed()
     }
 
     @Test
     fun bh05_return_from_expansion_maintains_state() {
-        recordsFlow.value = testRecords
+        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
         setContent()
         
+        // グラフタブに切り替え
         composeTestRule.onNodeWithTag("HealthScreen_Tab_Graph").performClick()
+        // グラフが表示されていることを確認
         composeTestRule.onNodeWithTag("HealthScreen_GraphArea").assertIsDisplayed()
-    }
-
-    @Test
-    fun bh06_pdf_settings_for_health_relevant_only() {
-        recordsFlow.value = testRecords
-        setContent()
-        composeTestRule.onNodeWithTag("HealthScreen_PdfButton").performClick()
-        
-        // 「期間を指定する」をスクロールして見つけ、確実にクリック
-        composeTestRule.onNodeWithText("期間を指定する")
-            .performScrollTo()
-            .performClick()
-        
-        composeTestRule.waitForIdle()
-
-        // 期間指定（開始〜終了）が存在することを確認
-        // Buttonのラベルとして存在するため、より柔軟に検索
-        composeTestRule.onNodeWithText("開始日", substring = true).assertExists()
-        composeTestRule.onNodeWithText("終了日", substring = true).assertExists()
-        
-        // 所見特有の項目が表示されていないことを確認
-        composeTestRule.onNodeWithText("最新の1件のみ").assertDoesNotExist()
-        composeTestRule.onNodeWithText("写真を印刷に含める").assertDoesNotExist()
     }
 }

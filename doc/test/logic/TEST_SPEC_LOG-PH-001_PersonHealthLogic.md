@@ -5,6 +5,13 @@
 - **関連するロジック仕様書:**
     - [LOG-PH-002 HealthLogic (共通計算ルール)](TEST_SPEC_LOG-PH-002_HealthLogic.md)
 
+## 0. UI 状態の構造 (PersonHealthUiState)
+**集約されたプロパティ:**
+- 利用者コンテキスト: `personId`
+- 画面固有の状態: `records`
+- 派生・制御状態:
+    - `isLoading`: ロード中フラグ
+
 ## 1. 新規判定テスト (isNew)
 **目的:** エンティティが新規登録用（IDが0）か更新用かを正しく判定できることを検証する。
 

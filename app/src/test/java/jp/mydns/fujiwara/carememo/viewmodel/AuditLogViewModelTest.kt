@@ -28,7 +28,7 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * AuditLogViewModel のロジック・安全性テスト
+ * AuditLogViewModel のロジック・安全性テスト (System B 移行済)
  * 
  * 仕様書: doc/test/screen/TEST_SPEC_SCR-S-002_AuditLogScreen.md に準拠
  */
@@ -70,7 +70,7 @@ class AuditLogViewModelTest {
     // ======================================================================================
 
     @Test
-    fun lg01_dataFetchFailure_safety() = runTest {
+    fun lg_01_dataFetchFailure_safety() = runTest {
         // ログ取得中に例外が発生する状況をシミュレート
         every { auditLogRepository.allLogs } returns flow {
             throw RuntimeException("AuditLogs Flow Error")
@@ -78,12 +78,12 @@ class AuditLogViewModelTest {
 
         val errorViewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
 
-        errorViewModel.auditLogs.test {
-            awaitItem() // 初期値(emptyList)
+        errorViewModel.uiState.test {
+            awaitItem() // 初期値
             advanceUntilIdle()
             
             // 検証: isLoading が false になること
-            assertEquals(false, errorViewModel.isLoading.value)
+            assertEquals(false, errorViewModel.uiState.value.isLoading)
             
             // 検証: 監査ログにエラーが記録されること (BaseViewModel/SafeCollectの機能)
             coVerify {
@@ -99,5 +99,18 @@ class AuditLogViewModelTest {
             }
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun lg_02_atomicStateUpdate() = runTest {
+        advanceUntilIdle()
+        
+        // フィルタ変更
+        viewModel.setFeatureFilter("Settings")
+        advanceUntilIdle()
+        
+        assertEquals("Settings", viewModel.uiState.value.selectedFeature)
+        // リストは mockLogs (PersonList) なので、Settings でフィルタすると空になるはず
+        assertEquals(0, viewModel.uiState.value.auditLogs.size)
     }
 }

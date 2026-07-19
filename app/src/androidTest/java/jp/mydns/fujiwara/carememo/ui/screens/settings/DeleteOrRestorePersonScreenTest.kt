@@ -9,16 +9,19 @@ import androidx.navigation.NavController
 import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
 /**
- * SCR-S-003 DeleteOrRestorePerson の UI テスト
+ * SCR-S-003 DeleteOrRestorePerson の UI テスト (System B 移行済)
  * 
  * 仕様書: doc/test/screen/TEST_SPEC_SCR-S-003_DeleteOrRestorePerson.md に準拠
  */
@@ -32,13 +35,22 @@ class DeleteOrRestorePersonScreenTest {
         Person(id = 2, lastName = "アーカイブ", firstName = "次郎", lastNameFurigana = "あーかいぶ", firstNameFurigana = "じろう", birthday = Instant.now())
     )
 
+    private val uiStateFlow = MutableStateFlow(DeleteOrRestorePersonUiState())
+
     private fun setupMockViewModel(): DeleteOrRestorePersonViewModel {
         val viewModel = mockk<DeleteOrRestorePersonViewModel>(relaxed = true)
-        every { viewModel.archivedPersonList } returns MutableStateFlow(mockPersons)
-        every { viewModel.selectedIds } returns MutableStateFlow(emptySet())
-        every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
+        
+        // System B 形式の uiState 購読を stub
+        every { viewModel.uiState } returns uiStateFlow.asStateFlow()
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
+        
+        // 初期状態のセット
+        uiStateFlow.value = DeleteOrRestorePersonUiState(
+            archivedPersons = mockPersons,
+            selectedIds = emptySet(),
+            isNameMaskingEnabled = false,
+            isLoading = false
+        )
         return viewModel
     }
 
@@ -74,7 +86,7 @@ class DeleteOrRestorePersonScreenTest {
     @Test
     fun cp02_emptyState_isDisplayed() {
         val viewModel = setupMockViewModel()
-        every { viewModel.archivedPersonList } returns MutableStateFlow(emptyList())
+        uiStateFlow.value = uiStateFlow.value.copy(archivedPersons = emptyList())
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
@@ -105,7 +117,7 @@ class DeleteOrRestorePersonScreenTest {
             birthday = Instant.now()
         )
         val viewModel = setupMockViewModel()
-        every { viewModel.archivedPersonList } returns MutableStateFlow(listOf(longNamePerson))
+        uiStateFlow.value = uiStateFlow.value.copy(archivedPersons = listOf(longNamePerson))
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
@@ -132,7 +144,7 @@ class DeleteOrRestorePersonScreenTest {
     fun bh01_restoreOperation_showsConfirmDialog() {
         val viewModel = setupMockViewModel()
         // 項目1を選択済みにする
-        every { viewModel.selectedIds } returns MutableStateFlow(setOf(1))
+        uiStateFlow.value = uiStateFlow.value.copy(selectedIds = setOf(1))
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
@@ -158,7 +170,7 @@ class DeleteOrRestorePersonScreenTest {
     @Test
     fun bh02_deleteOperation_showsWarningDialog() {
         val viewModel = setupMockViewModel()
-        every { viewModel.selectedIds } returns MutableStateFlow(setOf(1))
+        uiStateFlow.value = uiStateFlow.value.copy(selectedIds = setOf(1), mode = DeleteOrRestorePersonViewModel.OperationMode.DELETE)
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
@@ -199,7 +211,7 @@ class DeleteOrRestorePersonScreenTest {
         every { navController.currentBackStackEntry } returns currentEntry
 
         // 成功イベントを発行するための SharedFlow
-        val uiEventFlow = MutableSharedFlow<jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent>(replay = 1)
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
         every { viewModel.uiEventFlow } returns uiEventFlow
 
         composeTestRule.setContent {
@@ -214,9 +226,9 @@ class DeleteOrRestorePersonScreenTest {
         }
         composeTestRule.waitForIdle()
 
-        // 成功イベントを発行。tryEmitではなく、コルーチンスコープ内でemitすることで確実性を高める
+        // 成功イベントを発行
         composeTestRule.runOnIdle {
-            uiEventFlow.tryEmit(jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbarRes(jp.mydns.fujiwara.carememo.R.string.archive_msg_restored, listOf(1)))
+            uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowSnackbarRes(jp.mydns.fujiwara.carememo.R.string.archive_msg_restored, listOf(1)))
         }
         composeTestRule.waitForIdle()
 

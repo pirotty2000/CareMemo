@@ -4,11 +4,11 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -19,34 +19,27 @@ import jp.mydns.fujiwara.carememo.logic.common.ConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import java.io.File
+import kotlinx.coroutines.Job
 import java.time.Instant
 
 /**
  * 所見メモ（体調記録）固有のロジック(B系統)を扱う ViewModel。
- * 所見テキストデータの取得・保存・削除と、付随する写真処理を担当します。
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository
-) : PersonBaseViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository) {
+) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
+    personRepository,
+    summaryRepository,
+    userSettingsRepository,
+    auditLogRepository,
+    PersonConditionUiState()
+) {
 
     companion object {
         private const val FEATURE_NAME = "PersonCondition"
@@ -59,131 +52,100 @@ class PersonConditionViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    private val _selectedConditionId = MutableStateFlow<Int?>(null)
-    val selectedConditionId: StateFlow<Int?> = _selectedConditionId.asStateFlow()
+    private var recordsJob: Job? = null
+    private var photoJob: Job? = null
+    private var photoMapJob: Job? = null
 
-    private val _records = MutableStateFlow<List<ConditionAtVisit>>(emptyList())
+    // --- 基底クラスの抽象メソッド実装 ---
 
-    /**
-     * 現在の利用者に紐づく所見メモ一覧
-     */
-    val records: StateFlow<List<ConditionAtVisit>> = _records.asStateFlow()
+    override fun copyWithLoadingState(state: PersonConditionUiState, isLoading: Boolean): PersonConditionUiState {
+        return state.copy(isLoading = isLoading)
+    }
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    override fun getPersonId(state: PersonConditionUiState): Int? = state.personId
 
-    /**
-     * 検索クエリでフィルタリングされた所見メモ一覧
-     */
-    val filteredRecords: StateFlow<List<ConditionAtVisit>> = combine(records, _searchQuery) { recs, query ->
-        ConditionLogic.filterRecords(recs, query)
-    }.stateIn(
-        scope = viewModelScope, 
-        started = SharingStarted.Eagerly, 
-        initialValue = emptyList()
-    )
+    override fun updateWithPersonData(
+        state: PersonConditionUiState,
+        person: Person,
+        summary: PersonCategorySummary?
+    ): PersonConditionUiState {
+        val next = state.copy(personId = person.id)
+        refreshRecords(next)
+        refreshPhotoMap(next)
+        return next
+    }
 
-    /**
-     * 選択された所見メモに紐づく写真一覧
-     */
-    val currentConditionPhotos: StateFlow<List<ConditionPhoto>> = _selectedConditionId
-        .flatMapLatest { id ->
-            if (id != null) conditionRepository.getConditionPhotosByConditionId(id)
-            else flowOf(emptyList())
+    override fun onPrepareLoadPerson(state: PersonConditionUiState): PersonConditionUiState {
+        return state.copy(searchQuery = "") // ロード開始時に検索クエリをリセット
+    }
+
+    // --- 購読ロジック (原子的な反映) ---
+
+    private fun refreshRecords(state: PersonConditionUiState) {
+        val personId = state.personId ?: return
+        recordsJob?.cancel()
+        recordsJob = safeCollect(
+            operation = "recordsFlow",
+            loadingState = loadingStateProxy,
+            contextBuilder = { tableName = TABLE_CONDITION },
+            flowProvider = { conditionRepository.getConditionAtVisitByPersonId(personId) }
+        ) { records ->
+            updateUiState { current ->
+                current.copy(
+                    records = records,
+                    filteredRecords = ConditionLogic.filterRecords(records, current.searchQuery)
+                )
+            }
         }
-        .catch { e ->
-            if (e is CancellationException) throw e
-            coroutineErrorHandler.handleException(e, ErrorContext(featureName, "photosFlow", TABLE_CONDITION))
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
 
-    /**
-     * 所見メモIDと「写真の有無」のマップ（一覧表示でのアイコン制御用）
-     */
-    val conditionPhotoMap: StateFlow<Map<Int, Boolean>> = combine(_currentPerson, records) { person, recs ->
-        person to recs
-    }.flatMapLatest { (person, recs) ->
-        if (person == null || recs.isEmpty()) {
-            flowOf(emptyMap())
-        } else {
-            conditionRepository.getAllPhotosByPersonIdFlow(person.id).map { photos ->
-                recs.associate { memo ->
+    private fun refreshPhotoMap(state: PersonConditionUiState) {
+        val personId = state.personId ?: return
+        photoMapJob?.cancel()
+        photoMapJob = safeCollect(
+            operation = "photoMapFlow",
+            contextBuilder = { tableName = TABLE_CONDITION },
+            flowProvider = { conditionRepository.getAllPhotosByPersonIdFlow(personId) }
+        ) { photos ->
+            updateUiState { current ->
+                val map = current.records.associate { memo ->
                     memo.id to photos.any { it.conditionId == memo.id }
                 }
+                current.copy(conditionPhotoMap = map)
             }
         }
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        coroutineErrorHandler.handleException(e, ErrorContext(featureName, "photoMapFlow", TABLE_CONDITION))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
-
-    private val _isProcessing = MutableStateFlow(false)
-    val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    }
 
     fun setSelectedConditionId(id: Int?) {
-        _selectedConditionId.value = id
-    }
-
-    fun clearError() {
-        _errorMessage.value = null
-    }
-
-    /**
-     * UI層で発生した撮影・選択などのエラーを通知します。
-     */
-    fun notifyPhotoError(message: String) {
-        _errorMessage.value = message
-        safeLaunch(
-            operation = "photoOperation",
-            contextBuilder = {
-                tableName = TABLE_CONDITION
-                affectedId = _selectedConditionId.value?.toString() ?: ""
+        updateUiState { it.copy(selectedConditionId = id) }
+        
+        photoJob?.cancel()
+        if (id != null) {
+            photoJob = safeCollect(
+                operation = "photosFlow",
+                contextBuilder = { tableName = TABLE_CONDITION },
+                flowProvider = { conditionRepository.getConditionPhotosByConditionId(id) }
+            ) { photos ->
+                updateUiState { it.copy(currentConditionPhotos = photos) }
             }
-        ) {
-            throw AppExternalException(
-                titleResId = R.string.p_cond_err_title_photo,
-                messageResId = R.string.p_cond_err_photo_capture_failed,
-                logMessage = "Photo operation failed: $message"
+        } else {
+            updateUiState { it.copy(currentConditionPhotos = emptyList()) }
+        }
+    }
+
+    // --- UI アクション ---
+
+    fun updateSearchQuery(query: String) {
+        updateUiState { current ->
+            current.copy(
+                searchQuery = query,
+                filteredRecords = ConditionLogic.filterRecords(current.records, query)
             )
         }
     }
 
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun loadPerson(personId: Int, initialQuery: String) {
-        if (_currentPerson.value?.id == personId) return
-
-        _currentPerson.value = null
-        _searchQuery.value = initialQuery
-        _selectedConditionId.value = null
-
-        loadPersonJob?.cancel()
-        loadPersonJob = safeCollect(
-            operation = "loadPersonAndRecords",
-            loadingState = _isLoading,
-            contextBuilder = {
-                tableName = TABLE_CONDITION
-                affectedId = personId.toString()
-            },
-            flowProvider = {
-                combine(
-                    repository.getPersonById(personId),
-                    conditionRepository.getConditionAtVisitByPersonId(personId)
-                ) { person, records -> person to records }
-            }
-        ) { (person, records) ->
-            _currentPerson.value = person
-            _records.value = records
-        }
-    }
-
-    override fun loadPerson(personId: Int) {
-        loadPerson(personId, "")
+    fun clearError() {
+        updateUiState { it.copy(errorMessage = null) }
     }
 
     /**
@@ -192,98 +154,74 @@ class PersonConditionViewModel(
     fun saveRecord(
         personId: Int,
         conditionId: Int,
-        state: PersonConditionUiState,
+        title: String,
+        condition: String,
+        author: String,
+        recordTime: Instant,
         onSuccess: (Int) -> Unit = {}
     ) {
+        val inputState = PersonConditionUiState(title, condition, author, recordTime)
+        
         safeLaunch(
             operation = OP_SAVE,
-            loadingState = _isProcessing,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = conditionId.toString()
             }
         ) {
-            // 1. バリデーション（事実の判定）
-            val validationResult = PersonConditionLogic.validate(state)
-
-            // 2. バリデーション結果の翻訳（ViewModelの責務）
+            // 1. バリデーション
+            val validationResult = PersonConditionLogic.validate(inputState)
             translateValidationResult(validationResult)
 
-            // 3. Entity 構築
-            val record = PersonConditionLogic.createRecord(personId, conditionId, state)
+            // 2. Entity 構築
+            val record = PersonConditionLogic.createRecord(personId, conditionId, inputState)
             val isUpdate = record.id != 0
 
-            // 4. 重複チェック (新規登録、または日時変更時)
+            // 3. 重複チェック
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
             val duplicateResult = ConditionLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            // 5. 保存実行
+            // 4. 保存実行
             val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE)
             
-            // 新規登録の場合、一時保存されていた写真（conditionId=0）を新しいIDに紐付ける
             if (!isUpdate) {
                 conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt(), featureName, "${OP_SAVE}(link)")
             }
 
             showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
+            sendUiEvent(UiEvent.SaveSuccess)
             
-            // 選択中IDを更新して、詳細画面が新しいIDを参照するようにする
-            setSelectedConditionId(if (isUpdate) record.id else newId.toInt())
-
-            // コールバックを実行
-            onSuccess(if (isUpdate) record.id else newId.toInt())
+            val finalId = if (isUpdate) record.id else newId.toInt()
+            setSelectedConditionId(finalId)
+            onSuccess(finalId)
         }
     }
 
-    /**
-     * バリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
-     */
     private fun translateValidationResult(result: PersonConditionValidationResult) {
         if (result == PersonConditionValidationResult.SUCCESS) return
-
         val messageRes = R.string.common_error_save
         val args = when (result) {
             PersonConditionValidationResult.EMPTY_CONDITION -> listOf("内容を入力してください")
             PersonConditionValidationResult.EMPTY_AUTHOR -> listOf("記録者を入力してください")
-            PersonConditionValidationResult.CONDITION_TOO_LONG -> listOf("内容が長すぎます（${AppThresholds.CONDITION_MAX_LENGTH}文字以内）")
+            PersonConditionValidationResult.CONDITION_TOO_LONG -> listOf("内容が長すぎます")
             PersonConditionValidationResult.INVALID_TIME -> listOf("日時を正しく入力してください")
             else -> emptyList()
         }
-
-        throw AppValidationException(
-            titleResId = R.string.common_error_title_save,
-            messageResId = messageRes,
-            args = args,
-            logMessage = "Validation failed: $result"
-        )
+        throw AppValidationException(R.string.common_error_title_save, messageRes, args, "Validation failed: $result")
     }
 
-    /**
-     * ドメイン共通のバリデーション結果（事実）を UI 通知用の例外（翻訳）に変換します。
-     */
     private fun translateValidationResult(result: ConditionValidationResult) {
         if (result == ConditionValidationResult.SUCCESS) return
-
-        val (titleRes, messageRes) = when (result) {
-            ConditionValidationResult.DUPLICATE_TIME -> R.string.common_error_title_save to R.string.common_err_duplicate_blocked_simple
-            else -> R.string.common_error_title_save to R.string.common_error_save
-        }
-
-        throw AppValidationException(
-            titleResId = titleRes,
-            messageResId = messageRes,
-            logMessage = "Validation failed: $result"
-        )
+        val messageRes = if (result == ConditionValidationResult.DUPLICATE_TIME) R.string.common_err_duplicate_blocked_simple else R.string.common_error_save
+        throw AppValidationException(R.string.common_error_title_save, messageRes, emptyList(), "Validation failed: $result")
     }
 
-    /**
-     * 所見メモを削除します。
-     */
     fun deleteRecord(record: ConditionAtVisit) {
         safeLaunch(
             operation = OP_DELETE,
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = record.id.toString()
@@ -294,32 +232,14 @@ class PersonConditionViewModel(
         }
     }
 
-    /**
-     * 一時ファイルを削除します。
-     */
-    fun deleteTempFile(context: Context, uri: Uri) {
-        safeLaunch(operation = "deleteTempFile") {
-            try {
-                if (uri.scheme == "file" || uri.scheme == "content") {
-                    try {
-                        context.contentResolver.delete(uri, null, null)
-                    } catch (_: Exception) {
-                        uri.path?.let { File(it).delete() }
-                    }
-                }
-            } catch (_: Exception) {
-                // ここは補助的な処理なのでハンドリングのみ
-            }
-        }
+    fun onPhotoCaptured(uri: Uri, personId: Int, conditionId: Int) {
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, personId, conditionId))
     }
 
-    /**
-     * 写真をリサイズ・保存し、データベースに登録します。
-     */
     fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int, caption: String) {
         safeLaunch(
             operation = OP_SAVE_PHOTO,
-            loadingState = _isProcessing,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = conditionId.toString()
@@ -337,26 +257,17 @@ class PersonConditionViewModel(
             )
             conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
             
-            // Exif情報（GPS等）が含まれている可能性がある一時ファイルを削除
             if (uri.scheme == "file" || uri.scheme == "content") {
-                try {
-                    context.contentResolver.delete(uri, null, null)
-                } catch (_: Exception) {
-                    uri.path?.let { File(it).delete() }
-                }
+                try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
             }
-
             showSnackbar(R.string.p_cond_msg_photo_save_success)
         }
     }
 
-    /**
-     * 写真データおよび物理ファイルを削除します。
-     */
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
         safeLaunch(
             operation = OP_DELETE_PHOTO,
-            loadingState = _isProcessing,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = photo.id.toString()
@@ -366,6 +277,11 @@ class PersonConditionViewModel(
             ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
             showSnackbar(R.string.p_cond_msg_photo_delete_success)
         }
+    }
+
+    fun notifyPhotoError(message: String) {
+        updateUiState { it.copy(errorMessage = message) }
+        showError(title = "エラー", message = message)
     }
 
     suspend fun getAllPhotosForPerson(personId: Int): List<ConditionPhoto> {
@@ -381,16 +297,13 @@ class PersonConditionViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(PersonConditionViewModel::class.java)) {
-                return PersonConditionViewModel(
-                    conditionRepository,
-                    personRepository,
-                    summaryRepository,
-                    userSettingsRepository,
-                    auditLogRepository
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+            return PersonConditionViewModel(
+                conditionRepository,
+                personRepository,
+                summaryRepository,
+                userSettingsRepository,
+                auditLogRepository
+            ) as T
         }
     }
 }

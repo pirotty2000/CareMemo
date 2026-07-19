@@ -49,7 +49,8 @@ fun ConditionPhotoFullScreen(
         viewModel.setSelectedConditionId(conditionId)
     }
 
-    val photos by viewModel.currentConditionPhotos.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val photos = uiState.currentConditionPhotos
 
     if (photos.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Loading"), contentAlignment = Alignment.Center) {

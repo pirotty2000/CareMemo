@@ -11,7 +11,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -230,12 +230,8 @@ class PersonEditScreenTest {
     @Test
     fun cp06_eraSelector_switch() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiStateFlow = MutableStateFlow(PersonEditUiState(era = BirthEra.SHOWA))
+        val uiStateFlow = MutableStateFlow(PersonEditUiState(era = BirthEra.SHOWA, isNew = true))
         every { viewModel.uiState } returns uiStateFlow
-        every { viewModel.isChanged } returns MutableStateFlow(false)
-        every { viewModel.isValid } returns MutableStateFlow(false)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
         composeTestRule.setContent {
@@ -299,12 +295,8 @@ class PersonEditScreenTest {
     @Test
     fun bh01_duplicateWarning_isDisplayed() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
-        every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.isValid } returns MutableStateFlow(true)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
         every { viewModel.uiEventFlow } returns uiEventFlow
 
         composeTestRule.setContent {
@@ -314,7 +306,7 @@ class PersonEditScreenTest {
         }
 
         // 重複警告イベントを発生させる
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.ShowErrorDialogRes(
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
             titleResId = R.string.main_err_title_duplicate_archived_add,
             messageResId = R.string.main_err_duplicate_active
         ))
@@ -329,12 +321,8 @@ class PersonEditScreenTest {
         // 同姓同名・同年月日の許容（メモが異なれば重複とみなされない）
         // これは ViewModel 側のテストで主に行うが、UI 側では重複警告が出ないことを確認する
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
-        every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.isValid } returns MutableStateFlow(true)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
         every { viewModel.uiEventFlow } returns uiEventFlow
 
         composeTestRule.setContent {
@@ -344,7 +332,7 @@ class PersonEditScreenTest {
         }
 
         // 保存ボタンを押し、ViewModel 側で重複なしと判定され SaveSuccess が返るケース
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.SaveSuccess)
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess)
         composeTestRule.waitForIdle()
 
         // 警告ダイアログが出ないことを確認
@@ -354,11 +342,7 @@ class PersonEditScreenTest {
     @Test
     fun bh03_editMode_updateProcess() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        every { viewModel.isNew } returns false // 編集モード
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
-        every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.isValid } returns MutableStateFlow(true)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = false))
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
         composeTestRule.setContent {
@@ -375,12 +359,8 @@ class PersonEditScreenTest {
     @Test
     fun bh04_duplicateWarning_focusMemo() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
-        every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.isValid } returns MutableStateFlow(true)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
         every { viewModel.uiEventFlow } returns uiEventFlow
 
         composeTestRule.setContent {
@@ -389,7 +369,7 @@ class PersonEditScreenTest {
             }
         }
 
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.ShowErrorDialogRes(
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
             titleResId = R.string.main_err_title_duplicate_archived_add,
             messageResId = R.string.main_err_duplicate_active
         ))
@@ -406,11 +386,7 @@ class PersonEditScreenTest {
     @Test
     fun bh05_cancelOperation() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
-        every { viewModel.isChanged } returns MutableStateFlow(true) // 変更あり
-        every { viewModel.isValid } returns MutableStateFlow(false)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isNew = true))
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
         composeTestRule.setContent {
@@ -465,12 +441,8 @@ class PersonEditScreenTest {
     fun bh07_saveSuccess_and_close() {
         var screenClosed = false
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
-        every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.isValid } returns MutableStateFlow(true)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
         every { viewModel.uiEventFlow } returns uiEventFlow
 
         composeTestRule.setContent {
@@ -480,7 +452,7 @@ class PersonEditScreenTest {
         }
 
         // 保存成功イベントを発生させる
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.SaveSuccess)
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess)
         composeTestRule.waitForIdle()
 
         // 画面が閉じる（onBack が呼ばれる）こと
@@ -490,12 +462,10 @@ class PersonEditScreenTest {
     @Test
     fun bh08_saveFailure_behavior() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(lastName = "入力中データ"))
-        every { viewModel.isChanged } returns MutableStateFlow(true)
-        every { viewModel.isValid } returns MutableStateFlow(true)
-        every { viewModel.isLoading } returns MutableStateFlow(false)
-        every { viewModel.isNew } returns true
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        every { viewModel.uiState } returns MutableStateFlow(
+            PersonEditUiState(lastName = "入力中データ", isChanged = true, isValid = true, isNew = true)
+        )
         every { viewModel.uiEventFlow } returns uiEventFlow
 
         composeTestRule.setContent {
@@ -505,7 +475,7 @@ class PersonEditScreenTest {
         }
 
         // 保存失敗（エラーダイアログ）イベントを発生させる
-        uiEventFlow.tryEmit(BaseViewModel.UiEvent.ShowErrorDialogRes(
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
             titleResId = R.string.common_error_title_save,
             messageResId = R.string.common_error_save,
             args = listOf("テストエラー詳細")
@@ -516,5 +486,31 @@ class PersonEditScreenTest {
         composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
         // 入力中のデータが維持されていること
         composeTestRule.onNodeWithTag("PersonEdit_LastName").assertTextContains("入力中データ")
+    }
+
+    @Test
+    fun bh09_validationError_display() {
+        val viewModel = mockk<PersonEditViewModel>(relaxed = true)
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        every { viewModel.uiState } returns MutableStateFlow(
+            PersonEditUiState(lastName = "", isChanged = true, isValid = false, isNew = true)
+        )
+        every { viewModel.uiEventFlow } returns uiEventFlow
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonEditScreen(viewModel = viewModel, onBack = {})
+            }
+        }
+
+        // バリデーションエラー（姓名未入力等）のイベントを発生させる
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
+            titleResId = R.string.common_error_title_save,
+            messageResId = R.string.main_err_edit_empty_last_name
+        ))
+
+        composeTestRule.waitForIdle()
+        // 具体的な不備内容を示すエラーダイアログが表示されること
+        composeTestRule.onNodeWithText("姓を入力してください").assertIsDisplayed()
     }
 }

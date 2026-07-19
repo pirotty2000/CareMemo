@@ -34,6 +34,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.net.Uri
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.screens.main.MainScreen
@@ -50,7 +52,7 @@ import jp.mydns.fujiwara.carememo.ui.screens.settings.DeleteOrRestorePersonScree
 import jp.mydns.fujiwara.carememo.ui.screens.settings.SettingsScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
@@ -60,9 +62,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
-import java.net.URLDecoder
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -257,7 +257,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     MainScreen(
                         viewModel = listViewModel, 
                         onNavigateToDetail = { personId, category ->
-                            val query = listViewModel.searchQuery.value
+                            val query = listViewModel.uiState.value.searchQuery
                             val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
                             navController.navigate(category.getRoute(personId, encodedQuery))
                         }, 
@@ -300,26 +300,35 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
                     val category = Category.valueOf(categoryName)
-                    val detailViewModel: PersonDetailViewModel = viewModel(
-                        factory = PersonDetailViewModel.Factory(
+                    
+                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
+                        factory = PersonDetailUiStateViewModel.Factory(
                             personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val healthViewModel: PersonHealthViewModel = viewModel(
                         factory = PersonHealthViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
+
+                    // 初期データのロードとカテゴリ設定
+                    LaunchedEffect(personId, category) {
+                        detailViewModel.loadPerson(personId)
+                        detailViewModel.setCategory(category)
+                    }
+
                     PersonHealthScreen(
-                        viewModel = detailViewModel,
+                        detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
-                        initialCategoryType = category,
-                        personId = personId,
                         widthSizeClass = widthSizeClass,
-                        onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack("main", inclusive = false) },
-                        onNavigateToGraphExpansion = { pId, cat, index -> navController.navigate("graphExpansion/$pId/${cat.name}/$index") },
                         onNavigateToCategory = { cat ->
                             navController.navigate(cat.getRoute(personId)) {
                                 popUpTo("main")
                                 launchSingleTop = true
                             }
+                        },
+                        onShowPdfSettings = { cat -> /* PDF設定表示 */ },
+                        onNavigateToBatchInput = { navController.navigate("batch_input/$personId") },
+                        onNavigateToGraphExpansion = { pId, cat, index ->
+                            navController.navigate("graphExpansion/$pId/${cat.name}/$index")
                         }
                     )
                 }
@@ -332,13 +341,16 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
                     val category = Category.valueOf(categoryName)
                     val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+                    
+                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
+                        factory = PersonDetailUiStateViewModel.Factory(
+                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val healthViewModel: PersonHealthViewModel = viewModel(
                         factory = PersonHealthViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-                    val detailViewModel: PersonDetailViewModel = viewModel(
-                        factory = PersonDetailViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    GraphExpansionScreen(viewModel = detailViewModel,
+                    
+                    GraphExpansionScreen(
+                        detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
                         personId = personId,
                         category = category,
@@ -353,7 +365,13 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val batchViewModel: BatchInputViewModel = viewModel(
                         factory = BatchInputViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-                    BatchInputScreen(viewModel = batchViewModel, personId = personId, onBack = { navController.popBackStack() })
+                    
+                    // 利用者情報のロード（フェーズ 2: 状態は ViewModel が管理する）
+                    LaunchedEffect(personId) {
+                        batchViewModel.loadPerson(personId)
+                    }
+
+                    BatchInputScreen(viewModel = batchViewModel, onBack = { navController.popBackStack() })
                 }
 
                 // ---------- 「所見メモ」 ----------
@@ -364,15 +382,22 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val initialQuery = backStackEntry.arguments?.getString("query")?.let {
                         if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
-                    val detailViewModel: PersonDetailViewModel = viewModel(
-                        factory = PersonDetailViewModel.Factory(
+                    
+                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
+                        factory = PersonDetailUiStateViewModel.Factory(
                             personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(
                         factory = PersonConditionViewModel.Factory(
                             personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
 
+                    // 初期データのロード
+                    LaunchedEffect(personId) {
+                        detailViewModel.loadPerson(personId)
+                        detailViewModel.setCategory(Category.CONDITION_AT_VISIT)
+                    }
+
                     PersonConditionScreen(
-                        viewModel = detailViewModel,
+                        detailViewModel = detailViewModel,
                         conditionViewModel = conditionViewModel,
                         personId = personId,
                         initialQuery = initialQuery,
@@ -403,9 +428,29 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    ConditionPhotoPreviewScreen(viewModel = detailViewModel, conditionViewModel = conditionViewModel, uri = uri, personId = personId, conditionId = conditionId, onBack = { navController.popBackStack() }, onSaved = { navController.popBackStack() })
+                    
+                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
+                        factory = PersonDetailUiStateViewModel.Factory(
+                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
+                    val conditionViewModel: PersonConditionViewModel = viewModel(
+                        factory = PersonConditionViewModel.Factory(
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
+
+                    // 利用者情報のロード
+                    LaunchedEffect(personId) {
+                        detailViewModel.loadPerson(personId)
+                        conditionViewModel.loadPerson(personId)
+                    }
+
+                    ConditionPhotoPreviewScreen(
+                        detailViewModel = detailViewModel,
+                        conditionViewModel = conditionViewModel,
+                        uri = uri,
+                        personId = personId,
+                        conditionId = conditionId,
+                        onBack = { navController.popBackStack() },
+                        onSaved = { navController.popBackStack() }
+                    )
                 }
 
                 // ---------- 「所見メモ」の写真表示 ----------
@@ -431,21 +476,31 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 // ---------- 「服薬管理」 ----------
                 composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
-                    val detailViewModel: PersonDetailViewModel = viewModel(factory = PersonDetailViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
+                    
+                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
+                        factory = PersonDetailUiStateViewModel.Factory(
+                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository, auditLogRepository))
+
+                    LaunchedEffect(personId) {
+                        detailViewModel.loadPerson(personId)
+                        detailViewModel.setCategory(Category.MEDICATION)
+                    }
+
                     PersonMedicationScreen(
-                        viewModel = detailViewModel,
+                        detailViewModel = detailViewModel,
                         medicationViewModel = medicationViewModel,
                         personId = personId,
                         widthSizeClass = widthSizeClass,
                         onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToCategory = { category ->
-                        navController.navigate(category.getRoute(personId)) {
-                            popUpTo("main")
-                            launchSingleTop = true
+                            navController.navigate(category.getRoute(personId)) {
+                                popUpTo("main")
+                                launchSingleTop = true
+                            }
                         }
-                    })
+                    )
                 }
 
                 // -------------------------------------------------------------

@@ -20,7 +20,7 @@ import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputState
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 
 /**
@@ -36,9 +36,9 @@ fun PersonEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val isChanged by viewModel.isChanged.collectAsStateWithLifecycle()
-    val isValid by viewModel.isValid.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isChanged = uiState.isChanged
+    val isValid = uiState.isValid
+    val isLoading = uiState.isLoading
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -53,13 +53,13 @@ fun PersonEditScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is BaseViewModel.UiEvent.SaveSuccess -> {
+                is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
                     onBack()
                 }
-                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
                     snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
                 }
-                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                     // 重複エラーかどうかをタイトルリソースIDで判定
@@ -123,7 +123,7 @@ fun PersonEditScreen(
     }
 
     PersonEditScreenContent(
-        isNew = viewModel.isNew,
+        isNew = uiState.isNew,
         isLoading = isLoading,
         lastName = uiState.lastName,
         firstName = uiState.firstName,

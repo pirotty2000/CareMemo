@@ -3,8 +3,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,13 +20,13 @@ import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionPhotoPreviewScreen(
-    viewModel: PersonDetailViewModel,
+    detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
     uri: Uri,
     personId: Int,
@@ -36,11 +34,14 @@ fun ConditionPhotoPreviewScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
+    val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
+    val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val isProcessing by conditionViewModel.isProcessing.collectAsStateWithLifecycle()
-    val errorMessage by conditionViewModel.errorMessage.collectAsStateWithLifecycle()
-    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    
+    val isProcessing = conditionState.isProcessing
+    val errorMessage = conditionState.errorMessage
+    val person = detailState.person
 
     val initialCaption = remember { DateTimeUtils.getCurrentPhotoCaption() }
     var caption by remember { mutableStateOf(initialCaption) }
@@ -64,21 +65,10 @@ fun ConditionPhotoPreviewScreen(
             TopAppBar(
                 title = {
                     PersonHeaderTitle(
-                        person = currentPerson,
+                        person = person,
                         isNameMaskingEnabled = isNameMaskingEnabled,
                         defaultTitle = "写真の確認"
                     )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = handleBack,
-                        modifier = Modifier.testTag("PhotoPreview_BackButton")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "戻る"
-                        )
-                    }
                 }
             )
         }
@@ -109,7 +99,6 @@ fun ConditionPhotoPreviewScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth().testTag("PhotoPreview_Image"),
                 contentScale = ContentScale.Fit,
                 onError = {
-                    // 読み込みエラー時の処理（本来はViewModelで管理すべきだが、ここでは簡易的にメッセージを表示する仕組みに合わせる）
                 }
             )
             
@@ -163,7 +152,6 @@ fun ConditionPhotoPreviewScreen(
                 TextButton(
                     onClick = {
                         showDeleteConfirmDialog = false
-                        conditionViewModel.deleteTempFile(context, uri)
                         onBack()
                     }
                 ) {

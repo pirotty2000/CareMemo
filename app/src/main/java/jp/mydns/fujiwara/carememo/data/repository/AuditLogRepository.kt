@@ -4,6 +4,7 @@ import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.Instant
 
@@ -17,6 +18,11 @@ class AuditLogRepository(
      * ログを全件取得（新しい順）
      */
     val allLogs: Flow<List<AuditLog>> = auditLogDao.getAllLogs()
+
+    /**
+     * ログの総件数を Flow で取得
+     */
+    fun getAuditLogCountFlow(): Flow<Int> = allLogs.map { it.size }
 
     /**
      * ログを記録する

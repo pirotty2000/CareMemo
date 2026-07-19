@@ -7,18 +7,22 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
- * 利用者の復帰（論理削除解除）および完全抹消（物理削除）を担当する ViewModel
+ * 利用者の復帰（論理削除解除）および完全抹消（物理削除）を担当する ViewModel (System B)
  */
 class DeleteOrRestorePersonViewModel(
     private val repository: DeleteOrRestorePersonRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository
-) : BaseViewModel(userSettingsRepository) {
+) : BaseUiStateViewModel<DeleteOrRestorePersonUiState, DeleteOrRestorePersonViewEvent>(
+    userSettingsRepository,
+    DeleteOrRestorePersonUiState()
+) {
 
     companion object {
         private const val FEATURE_NAME = "DeleteOrRestorePerson"
@@ -29,9 +33,6 @@ class DeleteOrRestorePersonViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
     /**
      * 操作モードの定義
      */
@@ -40,52 +41,57 @@ class DeleteOrRestorePersonViewModel(
         DELETE   // 完全抹消モード
     }
 
-    private val _mode = MutableStateFlow(OperationMode.RESTORE)
-
-    private val _archivedPersonList = MutableStateFlow<List<Person>>(emptyList())
-
-    /**
-     * アーカイブ済み（論理削除された）利用者のリスト
-     */
-    val archivedPersonList: StateFlow<List<Person>> = _archivedPersonList.asStateFlow()
-
     init {
+        // (B)系統標準のエラーハンドラをセットアップ
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
             showError(title, msg, *args)
         }
 
+        // 共通設定の同期
+        scope.launch {
+            isNameMaskingEnabled.collect { enabled ->
+                updateUiState { it.copy(isNameMaskingEnabled = enabled) }
+            }
+        }
+
+        // アーカイブ済み利用者の購読
         safeCollect(
             operation = "archivedPersonListFlow",
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_PERSON },
             flowProvider = { repository.getArchivedPersons() }
-        ) {
-            _archivedPersonList.value = it
+        ) { newList ->
+            updateUiState { it.copy(archivedPersons = newList) }
         }
+    }
+
+    override fun copyWithLoadingState(state: DeleteOrRestorePersonUiState, isLoading: Boolean): DeleteOrRestorePersonUiState {
+        return state.copy(isLoading = isLoading)
     }
 
     /**
      * モードを設定します。
      */
     fun setMode(newMode: OperationMode) {
-        _mode.value = newMode
-        // モード変更時に選択状態をクリア
-        _selectedIds.value = emptySet()
+        updateUiState { 
+            it.copy(
+                mode = newMode,
+                selectedIds = emptySet() // モード変更時に選択状態をクリア
+            )
+        }
     }
-
-    // 選択された利用者のIDセット（完全抹消モード用）
-    private val _selectedIds = MutableStateFlow<Set<Int>>(emptySet())
-    val selectedIds: StateFlow<Set<Int>> = _selectedIds.asStateFlow()
 
     /**
      * 利用者の選択状態を切り替えます。
      */
     fun toggleSelection(personId: Int) {
-        val current = _selectedIds.value
-        _selectedIds.value = if (current.contains(personId)) {
-            current - personId
-        } else {
-            current + personId
+        updateUiState { current ->
+            val nextIds = if (current.selectedIds.contains(personId)) {
+                current.selectedIds - personId
+            } else {
+                current.selectedIds + personId
+            }
+            current.copy(selectedIds = nextIds)
         }
     }
 
@@ -93,14 +99,14 @@ class DeleteOrRestorePersonViewModel(
      * 全選択（RESTOREモード時のみ利用可能に制限することを想定）
      */
     fun selectAll(persons: List<Person>) {
-        _selectedIds.value = persons.map { it.id }.toSet()
+        updateUiState { it.copy(selectedIds = persons.map { p -> p.id }.toSet()) }
     }
 
     /**
      * 選択解除
      */
     fun clearSelection() {
-        _selectedIds.value = emptySet()
+        updateUiState { it.copy(selectedIds = emptySet()) }
     }
 
     /**
@@ -109,12 +115,12 @@ class DeleteOrRestorePersonViewModel(
     fun restoreSelectedPersons(persons: List<Person>) {
         safeLaunch(
             operation = OP_RESTORE,
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
             }
         ) {
-            val targets = persons.filter { _selectedIds.value.contains(it.id) }
+            val targets = persons.filter { currentState.selectedIds.contains(it.id) }
             targets.forEach { 
                 repository.restorePerson(it.id, featureName, OP_RESTORE) 
             }
@@ -130,12 +136,12 @@ class DeleteOrRestorePersonViewModel(
     fun deleteSelectedPersons(persons: List<Person>) {
         safeLaunch(
             operation = OP_DELETE,
-            loadingState = _isLoading,
+            loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
             }
         ) {
-            val targets = persons.filter { _selectedIds.value.contains(it.id) }
+            val targets = persons.filter { currentState.selectedIds.contains(it.id) }
             targets.forEach { 
                 repository.permanentlyDeletePerson(it.id, featureName, OP_DELETE)
             }
@@ -152,10 +158,7 @@ class DeleteOrRestorePersonViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(DeleteOrRestorePersonViewModel::class.java)) {
-                return DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
+            return DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository) as T
         }
     }
 }

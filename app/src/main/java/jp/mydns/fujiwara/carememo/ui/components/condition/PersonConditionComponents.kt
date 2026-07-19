@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -162,6 +163,7 @@ fun ConditionDetailPane(
     onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onSelectedIdChange: (Int) -> Unit,
+    onCancel: () -> Unit, // 追加
     onAddPhotoClick: () -> Unit,
     onNavigateToFullScreen: (Int, Int) -> Unit,
     onMicClick: () -> Unit,
@@ -184,10 +186,18 @@ fun ConditionDetailPane(
         mutableStateOf(memo?.author ?: defaultRecorderName) 
     }
 
+    // 変更検知用の初期状態（UI初期化直後のスナップショットを保持）
+    val initialTitleSnapshot = remember(conditionId) { title }
+    val initialConditionSnapshot = remember(conditionId) { condition }
+    val initialAuthorSnapshot = remember(conditionId) { author }
+    val initialDateTimeSnapshot = remember(conditionId) { dateTimeState.toInstant() }
+
     val isChanged by remember(title, condition, author, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
         derivedStateOf {
-            val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
-            PersonConditionLogic.isChanged(currentState, memo, defaultRecorderName)
+            title != initialTitleSnapshot ||
+            condition != initialConditionSnapshot ||
+            author != initialAuthorSnapshot ||
+            dateTimeState.toInstant() != initialDateTimeSnapshot
         }
     }
 
@@ -278,6 +288,7 @@ fun ConditionDetailPane(
             memo = memo,
             photos = photos,
             isProcessing = isProcessing,
+            onBack = onCancel, // ダイアログを閉じる/戻る
             onEditClick = { isEditing = true },
             onPhotoClick = { onNavigateToFullScreen(it.conditionId, it.id) },
             onAddPhotoClick = onAddPhotoClick
@@ -302,6 +313,7 @@ private fun ConditionRecordDisplayCard(
     memo: ConditionAtVisit?,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
+    onBack: () -> Unit, // 追加
     onEditClick: () -> Unit,
     onPhotoClick: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -320,11 +332,16 @@ private fun ConditionRecordDisplayCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "記録の詳細",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                    }
+                    Text(
+                        text = "記録の詳細",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 IconButton(onClick = onEditClick) {
                     Icon(Icons.Rounded.EditNote, contentDescription = "編集")
                 }
@@ -579,6 +596,7 @@ private fun PreviewConditionDetailPane() {
             onSaveRecord = { _, _, _, _ -> },
             onDeletePhoto = {},
             onSelectedIdChange = {},
+            onCancel = {},
             onAddPhotoClick = {},
             onNavigateToFullScreen = { _, _ -> },
             onMicClick = {}

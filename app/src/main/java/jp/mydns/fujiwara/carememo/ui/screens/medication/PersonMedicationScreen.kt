@@ -1,44 +1,10 @@
 package jp.mydns.fujiwara.carememo.ui.screens.medication
 
-/**
- * Screen : PersonMedicationScreen
- *
- * 【画面名】：
- * 利用者服薬記録画面
- *
- * 【役割】：
- * 特定の利用者の服薬履歴を管理し、日ごとの服薬状況（朝・昼・夕・寝る前）の登録、
- * 月間状況の確認、および服薬レポートのPDF出力を行う画面。
- *
- * 【主な機能】：
- * ・利用者情報の表示（ヘッダー）
- * ・月間状況の可視化（カレンダー表示 / 履歴リスト表示の切り替え）
- * ・一括入力ダイアログによる服薬状況の登録・更新・削除
- * ・PDFエクスポート機能（服薬状況の月間一覧出力）
- * ・画面最適化（Phone/Tabletの動的レイアウト切り替え）
- *
- * 【遷移】：
- * ← MainScreen (戻るボタン)
- * → PersonMedicationScreenPhone / PersonMedicationScreenTablet (デバイスサイズによる内部分岐)
- *
- * 【使用するViewModel】：
- * ・PersonDetailViewModel (詳細画面共通フレームワーク)
- * ・PersonMedicationViewModel (服薬記録固有ロジック)
- *
- * 【使用するComponents】：
- * ・screens/detail/medication/PersonMedicationScreenPhone.kt
- * ・screens/detail/medication/PersonMedicationScreenTablet.kt
- * ・detail/medication/MedicationInputDialog (PersonMedicationComponents.kt)
- * ・detail/common/PdfExportActionHandler.kt
- *
- * 【備考】：
- * 履歴データは月単位でロードされ、カレンダーによる直感的な確認とリストによる詳細確認が可能。
- */
-
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
@@ -46,15 +12,18 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * 利用者服薬記録画面
+ */
 @Composable
 fun PersonMedicationScreen(
-    viewModel: PersonDetailViewModel,
+    detailViewModel: PersonDetailUiStateViewModel,
     medicationViewModel: PersonMedicationViewModel,
     personId: Int,
     widthSizeClass: WindowWidthSizeClass,
@@ -62,21 +31,22 @@ fun PersonMedicationScreen(
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit
 ) {
+    val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
+    val medicationState by medicationViewModel.uiState.collectAsStateWithLifecycle()
+    val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+
+    // 1.2.2項に基づき、ID変更時のみロードをトリガー
+    LaunchedEffect(detailState.personId) {
+        detailState.personId?.let { medicationViewModel.loadPerson(it) }
+    }
+
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    val isLoading by medicationViewModel.isLoading.collectAsStateWithLifecycle()
-    val currentPerson by viewModel.currentPerson.collectAsStateWithLifecycle()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
-    val personCategorySummary by viewModel.personCategorySummary.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
-    val selectedMonth by medicationViewModel.selectedMonth.collectAsStateWithLifecycle()
-    val recordsByDate by medicationViewModel.recordsByDate.collectAsStateWithLifecycle()
-    val allRecords by medicationViewModel.allRecords.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf<LocalDate?>(null) }
     var isHistoryMode by rememberSaveable { mutableStateOf(false) }
 
@@ -86,58 +56,18 @@ fun PersonMedicationScreen(
     val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
     val medicationCategoryName = stringResource(Category.MEDICATION.displayNameRes)
 
-    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // イベント監視
     LaunchedEffect(Unit) {
         medicationViewModel.uiEventFlow.collect { event ->
             when (event) {
-                is BaseViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
-                }
-                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
                     snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
                 }
-                is BaseViewModel.UiEvent.ShowInfoDialog -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is BaseViewModel.UiEvent.ShowInfoDialogRes -> {
-                    dialogTitle = context.getString(event.titleResId)
-                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
-                }
-                is BaseViewModel.UiEvent.ShowErrorDialog -> {
-                    dialogTitle = event.title
-                    dialogMessage = event.message
-                }
-                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
-                    dialogTitle = context.getString(event.titleResId)
-                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
-                }
-                else -> {}
-            }
-        }
-    }
-    LaunchedEffect(Unit) {
-        viewModel.uiEventFlow.collect { event ->
-            when (event) {
-                is BaseViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
-                }
-                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
-                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
-                }
-                is BaseViewModel.UiEvent.ShowInfoDialog -> {
-                    dialogTitle = event.title
-                    dialogMessage = event.message
-                }
-                is BaseViewModel.UiEvent.ShowInfoDialogRes -> {
-                    dialogTitle = context.getString(event.titleResId)
-                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
-                }
-                is BaseViewModel.UiEvent.ShowErrorDialog -> {
-                    dialogTitle = event.title
-                    dialogMessage = event.message
-                }
-                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
@@ -146,27 +76,20 @@ fun PersonMedicationScreen(
         }
     }
 
-    LaunchedEffect(personId) {
-        viewModel.loadPerson(personId)
-        medicationViewModel.loadPerson(personId)
-        viewModel.setCategory(Category.MEDICATION)
-    }
-
-    // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (isExpanded) {
         PersonMedicationScreenTablet(
-            currentPerson = currentPerson,
+            currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            isLoading = isLoading,
-            selectedMonth = selectedMonth,
-            recordsByDate = recordsByDate,
-            personCategorySummary = personCategorySummary,
+            isLoading = medicationState.isLoading,
+            selectedMonth = medicationState.selectedMonth,
+            recordsByDate = medicationState.recordsByDate,
+            personCategorySummary = detailState.personSummary,
             onPreviousMonth = { medicationViewModel.previousMonth() },
             onNextMonth = { medicationViewModel.nextMonth() },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = {
-                if (allRecords.isEmpty()) {
+                if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
                         snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
                     }
@@ -179,12 +102,12 @@ fun PersonMedicationScreen(
         )
     } else {
         PersonMedicationScreenPhone(
-            currentPerson = currentPerson,
+            currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            isLoading = isLoading,
-            selectedMonth = selectedMonth,
-            recordsByDate = recordsByDate,
-            personCategorySummary = personCategorySummary,
+            isLoading = medicationState.isLoading,
+            selectedMonth = medicationState.selectedMonth,
+            recordsByDate = medicationState.recordsByDate,
+            personCategorySummary = detailState.personSummary,
             isHistoryMode = isHistoryMode,
             onHistoryModeChange = { isHistoryMode = it },
             onPreviousMonth = { medicationViewModel.previousMonth() },
@@ -192,7 +115,7 @@ fun PersonMedicationScreen(
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = {
-                if (allRecords.isEmpty()) {
+                if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
                         snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
                     }
@@ -206,22 +129,24 @@ fun PersonMedicationScreen(
     }
 
     // PDF出力共通ハンドラー
-    PdfExportActionHandler(
-        showDialog = showPdfSettingsDialog,
-        onDismiss = { showPdfSettingsDialog = false },
-        category = Category.MEDICATION,
-        person = currentPerson,
-        records = allRecords,
-        viewModel = viewModel,
-        onRequireAuthentication = onRequireAuthentication
-    )
+    if (showPdfSettingsDialog) {
+        PdfExportActionHandler(
+            showDialog = showPdfSettingsDialog,
+            onDismiss = { showPdfSettingsDialog = false },
+            category = Category.MEDICATION,
+            person = detailState.person,
+            records = medicationState.allRecords,
+            viewModel = medicationViewModel,
+            onRequireAuthentication = onRequireAuthentication
+        )
+    }
 
     if (showDialog != null) {
         val dateStr = showDialog.toString()
         MedicationInputDialog(
             date = showDialog!!,
             personId = personId,
-            records = recordsByDate[dateStr] ?: emptyList(),
+            records = medicationState.recordsByDate[dateStr] ?: emptyList(),
             onDismiss = { showDialog = null },
             onConfirm = { slotRecords ->
                 medicationViewModel.syncMedicationDay(dateStr, slotRecords)

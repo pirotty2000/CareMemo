@@ -1,3 +1,5 @@
+@file:Suppress("NonAsciiCharacters")
+
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
@@ -9,42 +11,51 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 
+/**
+ * LOG-PH-003 BatchInputLogic のテスト
+ * 
+ * 仕様書: doc/test/logic/TEST_SPEC_LOG-PH-003_BatchInputLogic.md に準拠
+ */
 class BatchInputLogicTest {
 
-    // --- Validation (validate / isValid) ---
+    // ======================================================================================
+    // 3.1. バリデーション (validate / isValid)
+    // ======================================================================================
 
     @Test
-    fun vl01_all_empty_invalid() {
+    fun vl_01_全項目が空_invalid() {
         val state = BatchInputUiState()
         assertEquals(BatchInputValidationResult.EMPTY_ALL, BatchInputLogic.validate(state))
         assertFalse(BatchInputLogic.isValid(state))
     }
 
     @Test
-    fun vl02_partial_valid_success() {
+    fun vl_02_体重のみ正常入力_success() {
         val state = BatchInputUiState(weight = "60.5")
         assertEquals(BatchInputValidationResult.SUCCESS, BatchInputLogic.validate(state))
         assertTrue(BatchInputLogic.isValid(state))
     }
 
     @Test
-    fun vl03_invalid_format_invalid() {
+    fun vl_03_不正な値が含まれる_invalid() {
         val state = BatchInputUiState(height = "160.0.1", weight = "60.0")
         assertEquals(BatchInputValidationResult.INVALID_VALUE, BatchInputLogic.validate(state))
         assertFalse(BatchInputLogic.isValid(state))
     }
 
     @Test
-    fun vl04_out_of_range_invalid() {
-        val state = BatchInputUiState(bodyTemperature = "50.0") // Too high
+    fun vl_04_範囲外の値_invalid() {
+        val state = BatchInputUiState(bodyTemperature = "50.0") // 業務ルール違反
         assertEquals(BatchInputValidationResult.INVALID_VALUE, BatchInputLogic.validate(state))
         assertFalse(BatchInputLogic.isValid(state))
     }
 
-    // --- Category Extraction (getEffectiveCategories) ---
+    // ======================================================================================
+    // 3.2. カテゴリ抽出 (getEffectiveCategories)
+    // ======================================================================================
 
     @Test
-    fun ex01_extract_multiple_categories() {
+    fun ex_01_体重と血圧を入力() {
         val state = BatchInputUiState(weight = "60.0", bpSystolic = "120")
         val categories = BatchInputLogic.getEffectiveCategories(state)
         assertEquals(2, categories.size)
@@ -53,7 +64,7 @@ class BatchInputLogicTest {
     }
 
     @Test
-    fun ex02_extract_single_category() {
+    fun ex_02_血糖値のみ入力() {
         val state = BatchInputUiState(glucose = "100")
         val categories = BatchInputLogic.getEffectiveCategories(state)
         assertEquals(1, categories.size)
@@ -61,26 +72,28 @@ class BatchInputLogicTest {
     }
 
     @Test
-    fun ex03_extract_empty_when_all_blank() {
+    fun ex_03_全項目空() {
         val state = BatchInputUiState()
         val categories = BatchInputLogic.getEffectiveCategories(state)
         assertTrue(categories.isEmpty())
     }
 
-    // --- Entity Creation (createEntities) ---
+    // ======================================================================================
+    // 3.3. Entity 生成 (createEntities)
+    // ======================================================================================
 
     @Test
-    fun cp01_create_multiple_entities() {
+    fun cp_01_体重と血圧を入力() {
         val state = BatchInputUiState(weight = "60.0", bpSystolic = "120")
         val entities = BatchInputLogic.createEntities(1, Instant.now(), state)
         
         assertEquals(2, entities.size)
-        assertTrue(entities[0] is HeightAndWeight)
-        assertTrue(entities[1] is BpAndPulse)
+        assertTrue(entities.any { it is HeightAndWeight })
+        assertTrue(entities.any { it is BpAndPulse })
     }
 
     @Test
-    fun cp02_create_single_entity() {
+    fun cp_02_血糖値のみ入力() {
         val state = BatchInputUiState(glucose = "100")
         val entities = BatchInputLogic.createEntities(1, Instant.now(), state)
         
@@ -89,8 +102,34 @@ class BatchInputLogicTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun cp03_invalid_input_throws_exception() {
+    fun cp_03_不正な値を含む() {
         val state = BatchInputUiState(height = "abc")
         BatchInputLogic.createEntities(1, Instant.now(), state)
+    }
+
+    // ======================================================================================
+    // 4. 変更検知 (isChanged) - フェーズ 2 追加
+    // ======================================================================================
+
+    @Test
+    fun chg_01_初期状態は変更なし() {
+        val now = Instant.now()
+        val state = BatchInputUiState(recordTime = now, initialRecordTime = now)
+        assertFalse(BatchInputLogic.isChanged(state))
+    }
+
+    @Test
+    fun chg_02_数値入力があれば変更あり() {
+        val now = Instant.now()
+        val state = BatchInputUiState(weight = "60", recordTime = now, initialRecordTime = now)
+        assertTrue(BatchInputLogic.isChanged(state))
+    }
+
+    @Test
+    fun chg_03_日時の変更があれば変更あり() {
+        val now = Instant.now()
+        val later = now.plusSeconds(60)
+        val state = BatchInputUiState(recordTime = later, initialRecordTime = now)
+        assertTrue(BatchInputLogic.isChanged(state))
     }
 }

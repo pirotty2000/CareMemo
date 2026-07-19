@@ -24,7 +24,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
  * DeleteOrRestorePersonViewModel
  *
  * ---
- * 最終更新日: 2026/07/04
+ * 最終更新日: 2026/07/19
  */
 
 import androidx.compose.foundation.background
@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,9 +62,10 @@ fun DeleteOrRestorePersonScreen(
     mode: DeleteOrRestorePersonViewModel.OperationMode,
     onBack: () -> Unit,
 ) {
-    val archivedPersons by viewModel.archivedPersonList.collectAsStateWithLifecycle()
-    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val archivedPersons = uiState.archivedPersons
+    val selectedIds = uiState.selectedIds
+    val isNameMaskingEnabled = uiState.isNameMaskingEnabled
 
     val scope = rememberCoroutineScope()
     var isRefreshNeeded by rememberSaveable { mutableStateOf(false) }
@@ -73,7 +75,7 @@ fun DeleteOrRestorePersonScreen(
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     // 戻る際の処理（親画面への通知準備）
     val handleBack = {
@@ -88,14 +90,11 @@ fun DeleteOrRestorePersonScreen(
         viewModel.setMode(mode)
     }
 
-    // ViewModelからのイベントを監視
+    // ViewModelからのイベントを監視 (System B)
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is BaseViewModel.UiEvent.ShowSnackbar -> {
-                    scope.launch { snackbarHostState.showSnackbar(event.message) }
-                }
-                is BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
                     // 復帰・抹消成功メッセージの場合、親画面の更新フラグを立てる
                     if (event.resId == R.string.archive_msg_restored || event.resId == R.string.archive_msg_deleted) {
                         isRefreshNeeded = true
@@ -104,19 +103,19 @@ fun DeleteOrRestorePersonScreen(
                         snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
                     }
                 }
-                is BaseViewModel.UiEvent.ShowInfoDialog -> {
+                is BaseUiStateViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is BaseViewModel.UiEvent.ShowInfoDialogRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowInfoDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
-                is BaseViewModel.UiEvent.ShowErrorDialog -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
@@ -125,7 +124,7 @@ fun DeleteOrRestorePersonScreen(
         }
     }
 
-    val isDeleteMode = mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
+    val isDeleteMode = uiState.mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
     
     // 背景色の決定 (DELETEモード時は警告色)
     val backgroundColor = if (isDeleteMode) {
@@ -169,9 +168,10 @@ fun DeleteOrRestorePersonScreen(
                 colors = topBarColors,
                 actions = {
                     if (!isDeleteMode && archivedPersons.isNotEmpty()) {
+                        val isAllSelected = selectedIds.size == archivedPersons.size
                         TextButton(
                             onClick = {
-                                if (selectedIds.size == archivedPersons.size) {
+                                if (isAllSelected) {
                                     viewModel.clearSelection()
                                 } else {
                                     viewModel.selectAll(archivedPersons)
@@ -180,7 +180,7 @@ fun DeleteOrRestorePersonScreen(
                             modifier = Modifier.testTag("DeleteOrRestore_SelectAllButton")
                         ) {
                             Text(
-                                text = if (selectedIds.size == archivedPersons.size) "全解除" else "全選択",
+                                text = if (isAllSelected) "全解除" else "全選択",
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
@@ -259,6 +259,7 @@ fun DeleteOrRestorePersonScreen(
                             state = listState
                         ) {
                             items(archivedPersons, key = { it.id }) { person ->
+                                val isSelected = selectedIds.contains(person.id)
                                 ListItem(
                                     headlineContent = { 
                                         Text(
@@ -284,7 +285,7 @@ fun DeleteOrRestorePersonScreen(
                                     },
                                     leadingContent = {
                                         Checkbox(
-                                            checked = selectedIds.contains(person.id),
+                                            checked = isSelected,
                                             onCheckedChange = { viewModel.toggleSelection(person.id) },
                                             colors = if (isDeleteMode) {
                                                 CheckboxDefaults.colors(

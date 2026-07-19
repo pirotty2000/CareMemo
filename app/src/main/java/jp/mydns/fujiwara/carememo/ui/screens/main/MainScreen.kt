@@ -32,7 +32,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.main
  * 実際のUIレイアウトは MainScreenContent.kt に委譲。
  *
  * ---
- * 最終更新日: 2026/07/04
+ * 最終更新日: 2026/07/15
  */
 
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -45,6 +45,7 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
+import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.coroutines.launch
 
@@ -62,11 +63,7 @@ fun MainScreen(
     onNavigateToEditPerson: (Int) -> Unit,          // 利用者の編集
     onNavigateToSettings: () -> Unit                // 設定・管理画面
 ) {
-    val userList by viewModel.userList.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
-    val selectedSection by viewModel.selectedSection.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -82,29 +79,29 @@ fun MainScreen(
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
-    // ViewModelからのイベントを監視
+    // ViewModelからのイベントを監視 (System B の共通通知イベントを使用)
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbar -> {
+                is BaseUiStateViewModel.UiEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowSnackbarRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
                     snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialog -> {
+                is BaseUiStateViewModel.UiEvent.ShowInfoDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowInfoDialogRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowInfoDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialog -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialog -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
                 }
-                is jp.mydns.fujiwara.carememo.viewmodel.BaseViewModel.UiEvent.ShowErrorDialogRes -> {
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
                     dialogTitle = context.getString(event.titleResId)
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
@@ -114,11 +111,11 @@ fun MainScreen(
     }
 
     MainScreenContent(
-        userList = userList,
-        isLoading = isLoading,
-        isNameMaskingEnabled = isNameMaskingEnabled,
-        searchQuery = searchQuery,
-        selectedSection = selectedSection,
+        userList = uiState.userList,
+        isLoading = uiState.isLoading,
+        isNameMaskingEnabled = uiState.isNameMaskingEnabled,
+        searchQuery = uiState.searchQuery,
+        selectedSection = uiState.selectedSection,
         onSearchQueryChange = { viewModel.setSearchQuery(it) },                 // 所見メモ検索
         onSectionSelect = { viewModel.setSelectedSection(it) },                 // 五十音カナ検索
         snackbarHostState = snackbarHostState,                                  //
@@ -129,7 +126,7 @@ fun MainScreen(
         onEndUser = { person ->                                                 // 利用終了
             viewModel.logicalDeletePerson(person)
             scope.launch {
-                val fullName = person.getMaskedName(isNameMaskingEnabled)
+                val fullName = person.getMaskedName(uiState.isNameMaskingEnabled)
                 val result = snackbarHostState.showSnackbar(
                     message = userEndedFormat.format(fullName), 
                     actionLabel = undoLabel,
@@ -160,7 +157,7 @@ fun MainScreen(
     if (showSheet && selectedPerson != null) {
         ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
             CategorySelectionSheet(
-                personName = selectedPerson!!.getMaskedName(isNameMaskingEnabled), 
+                personName = selectedPerson!!.getMaskedName(uiState.isNameMaskingEnabled),
                 onCategorySelect = { category -> 
                     showSheet = false
                     onNavigateToDetail(selectedPerson!!.id, category) 

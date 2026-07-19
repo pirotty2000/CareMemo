@@ -77,6 +77,18 @@ ViewModel 内の純粋なロジックを Logic クラスに抽出しました。
   - 初回作業で発生した不具合（画面遷移・写真保存等）が再発していない。
   - 既存機能との互換性が維持されている。
 
+### フェーズ 2-1: Dual-ViewModel 構造への回帰 (重要度: 中)
+
+現在継承によって実現されている ViewModel 構造を、設計原則（1.2.2項）通り、詳細画面共通（Detail）とカテゴリ専門の 2 つの ViewModel を協調させる構造に戻します。
+
+- **目的**：
+  - ViewModel の継承による肥大化を防ぎ、責務を明確に分離する。
+  - 詳細画面の共通フレームワーク（利用者情報の保持、カテゴリ切り替え）を独立させ、メンテナンス性を向上させる。
+- **具体的ルール**:
+  - **専門 ViewModel の独立**: `PersonHealthViewModel` 等が `PersonDetailUiStateViewModel` を継承するのをやめ、独立したクラスとする。
+  - **Screen での協調**: `*Screen.kt` が 2 つの ViewModel を受け取り、`loadPerson` 等の連携ロジックを Composable 側で記述する。
+- **実装対象**：
+  - `PersonHealthScreen`, `PersonConditionScreen`, `PersonMedicationScreen`
 
 
 ### フェーズ 3: ＜少し慎重に＞UseCase 層の導入によるオーケストレーション (重要度: 中)
