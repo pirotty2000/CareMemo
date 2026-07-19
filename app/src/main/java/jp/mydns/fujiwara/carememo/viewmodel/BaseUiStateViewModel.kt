@@ -12,30 +12,44 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * プロジェクト全体の ViewModel の基底クラス。
- * 共通の設定値保持や、UI通知（Snackbar/Dialog）の仕組みを提供します。
+ * (B)系統：UiState と ViewEvent を用いた画面状態管理の基底クラス。
+ *
+ * BaseViewModel (A系統) から完全に独立し、単一の状態管理と原子的な更新を提供します。
+ *
+ * @param S UI状態の型 (Data Class)
+ * @param E 画面固有イベントの型
  */
-abstract class BaseViewModel(
-    protected val userSettingsRepository: UserSettingsRepository
+abstract class BaseUiStateViewModel<S, E>(
+    protected val userSettingsRepository: UserSettingsRepository,
+    initialState: S
 ) : ViewModel() {
 
-    /**
-     * 監査ログ等で使用する機能名。子クラスで必ず実装（定数を返す）する。
-     */
+    /** 監査ログ等で使用する機能名。子クラスで実装する。 */
     protected abstract val featureName: String
 
-    /**
-     * エラーハンドラ。初期化時に適切なハンドラをセットすること。
-     */
+    /** エラーハンドラ。初期化時に適切なハンドラをセットすること。 */
     protected lateinit var coroutineErrorHandler: CoroutineErrorHandler
 
-    /**
-     * UIに対する一回限りの通知イベント
-     */
+    // --- 1. 状態管理 (UiState) ---
+
+    private val _uiState = MutableStateFlow(initialState)
+    val uiState: StateFlow<S> = _uiState.asStateFlow()
+
+    protected val currentState: S get() = _uiState.value
+
+    protected fun updateUiState(reducer: (S) -> S) {
+        _uiState.update(reducer)
+    }
+
+    // --- 2. イベント通知 (UiEvent & ViewEvent) ---
+
+    /** UIに対する一回限りの共通通知イベント (A系統の UiEvent と同等の機能を保持) */
     sealed interface UiEvent {
         data class ShowSnackbar(val message: String) : UiEvent
         data class ShowSnackbarRes(val resId: Int, val args: List<Any> = emptyList()) : UiEvent
@@ -48,12 +62,28 @@ abstract class BaseViewModel(
         object SaveSuccess : UiEvent
     }
 
-    protected val _uiEventFlow = MutableSharedFlow<UiEvent>()
+    private val _uiEventFlow = MutableSharedFlow<UiEvent>()
     val uiEventFlow = _uiEventFlow.asSharedFlow()
 
-    /**
-     * 氏名伏せ字設定（全画面共通）
-     */
+    private val _viewEvent = MutableSharedFlow<E>()
+    val viewEvent = _viewEvent.asSharedFlow()
+
+    protected fun sendUiEvent(event: UiEvent) {
+        viewModelScope.launch { _uiEventFlow.emit(event) }
+    }
+
+    protected fun sendViewEvent(event: E) {
+        viewModelScope.launch { _viewEvent.emit(event) }
+    }
+
+    protected fun showSnackbar(message: String) = sendUiEvent(UiEvent.ShowSnackbar(message))
+    protected fun showSnackbar(resId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowSnackbarRes(resId, args.toList()))
+    protected fun showError(title: String, message: String) = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
+    protected fun showError(titleResId: Int, messageResId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowErrorDialogRes(titleResId, messageResId, args.toList()))
+
+    // --- 3. 共通設定 ---
+
+    /** 氏名伏せ字設定 */
     val isNameMaskingEnabled: StateFlow<Boolean> = userSettingsRepository.isNameMaskingEnabled
         .stateIn(
             scope = viewModelScope,
@@ -61,9 +91,7 @@ abstract class BaseViewModel(
             initialValue = true
         )
 
-    /**
-     * デフォルト記録者名（全画面共通）
-     */
+    /** デフォルト記録者名 */
     val defaultRecorderName: StateFlow<String> = userSettingsRepository.defaultRecorderName
         .stateIn(
             scope = viewModelScope,
@@ -71,48 +99,28 @@ abstract class BaseViewModel(
             initialValue = ""
         )
 
-    /**
-     * 共通のメッセージ送信ヘルパー
-     */
-    protected fun sendUiEvent(event: UiEvent) {
-        viewModelScope.launch {
-            _uiEventFlow.emit(event)
-        }
-    }
-
-    protected fun showSnackbar(message: String) = sendUiEvent(UiEvent.ShowSnackbar(message))
-    protected fun showSnackbar(resId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowSnackbarRes(resId, args.toList()))
-    
-    protected fun showError(titleResId: Int, messageResId: Int, vararg args: Any) = 
-        sendUiEvent(UiEvent.ShowErrorDialogRes(titleResId, messageResId, args.toList()))
-
-    protected fun showError(title: String, message: String) =
-        sendUiEvent(UiEvent.ShowErrorDialog(title, message))
-
-    protected fun showInfo(titleResId: Int, messageResId: Int, vararg args: Any) =
-        sendUiEvent(UiEvent.ShowInfoDialogRes(titleResId, messageResId, args.toList()))
-
-    /**
-     * 外部アプリ（ファイルピッカー等）呼び出しのために、次回のフォアグラウンド復帰時のロックを一時的にスキップさせる
-     */
     fun setLockBypassEnabled(enabled: Boolean) {
         userSettingsRepository.isLockBypassed = enabled
     }
 
-    /**
-     * コルーチン実行に使用するスコープ。
-     * デフォルトは viewModelScope ですが、テスト時に差し替え可能です。
-     */
+    // --- 4. コルーチン制御 (safeLaunch / safeCollect) ---
+
     protected open val scope: CoroutineScope get() = viewModelScope
 
-    /**
-     * コルーチンを安全に実行し、例外ハンドリングとローディング制御を自動化します。
-     *
-     * @param operation 操作名（監査ログ用）
-     * @param loadingState ローディング状態を保持する MutableStateFlow
-     * @param contextBuilder ErrorContext を構築する DSL ブロック
-     * @param block 実行するサスペンド関数
-     */
+    /** UiState 内の loading フラグを更新するための抽象メソッド */
+    protected abstract fun copyWithLoadingState(state: S, isLoading: Boolean): S
+
+    /** safeLaunch 等で利用するローディング状態プロキシ */
+    protected val loadingStateProxy: MutableStateFlow<Boolean> by lazy {
+        val proxy = MutableStateFlow(false)
+        scope.launch {
+            proxy.collect { isLoading ->
+                updateUiState { copyWithLoadingState(it, isLoading) }
+            }
+        }
+        proxy
+    }
+
     open fun safeLaunch(
         operation: String,
         loadingState: MutableStateFlow<Boolean>? = null,
@@ -129,11 +137,7 @@ abstract class BaseViewModel(
                 block()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-
-                // ハンドラへ委譲（Error系も含む）
                 coroutineErrorHandler.handleException(t, context)
-
-                // Error系はログ記録後に再スローしてシステムに委ねる
                 if (t is Error) throw t
             } finally {
                 loadingState?.value = false
@@ -141,16 +145,6 @@ abstract class BaseViewModel(
         }
     }
 
-    /**
-     * Flow を安全に購読し、例外ハンドリングとローディング制御を自動化します。
-     *
-     * @param operation 操作名（監査ログ用）
-     * @param mode 購読モード (INITIAL: 初回ロード用 / MONITORING: 監視用)
-     * @param loadingState ローディング状態を保持する MutableStateFlow
-     * @param contextBuilder ErrorContext を構築する DSL ブロック
-     * @param flowProvider 購読対象の Flow を提供する関数
-     * @param action データ受信時に実行するサスペンド関数
-     */
     open fun <T> safeCollect(
         operation: String,
         mode: CollectMode = CollectMode.INITIAL,
@@ -172,9 +166,7 @@ abstract class BaseViewModel(
                 }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-
                 coroutineErrorHandler.handleException(t, context)
-
                 if (t is Error) throw t
             } finally {
                 if (mode == CollectMode.INITIAL) loadingState?.value = false
