@@ -2,7 +2,6 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import android.os.StatFs
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -10,7 +9,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
@@ -22,7 +20,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import java.io.File
 
 /**

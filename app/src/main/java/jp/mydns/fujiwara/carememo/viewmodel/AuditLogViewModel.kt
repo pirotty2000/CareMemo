@@ -8,7 +8,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.AuditLogLogic
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
 
 /**
  * 操作ログ（監査ログ）閲覧画面用の ViewModel (System B)

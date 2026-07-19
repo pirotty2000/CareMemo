@@ -4,7 +4,6 @@ import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
-import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 

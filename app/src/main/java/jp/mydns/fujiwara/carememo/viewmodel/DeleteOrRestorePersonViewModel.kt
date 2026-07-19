@@ -9,7 +9,6 @@ import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepositor
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**

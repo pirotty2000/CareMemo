@@ -2,7 +2,6 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.AppThresholds
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
