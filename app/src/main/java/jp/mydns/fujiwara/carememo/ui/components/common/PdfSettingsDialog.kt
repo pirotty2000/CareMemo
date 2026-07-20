@@ -33,7 +33,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -42,7 +41,6 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.*
-import jp.mydns.fujiwara.carememo.utils.SecurityHelper
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
