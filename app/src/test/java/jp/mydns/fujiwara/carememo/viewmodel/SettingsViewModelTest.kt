@@ -150,10 +150,9 @@ class SettingsViewModelTest {
 
     @Test
     fun lg_04_clearAllData_safetyOnFailure() = runTest {
-        val context = mockk<Context>(relaxed = true)
         coEvery { maintenanceRepository.clearAllData() } throws IOException("Clear Error")
 
-        viewModel.clearAllData(context)
+        viewModel.clearAllData()
         advanceUntilIdle()
 
         assertEquals(false, viewModel.uiState.value.isProcessing)

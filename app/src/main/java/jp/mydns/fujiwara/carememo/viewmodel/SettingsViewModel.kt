@@ -20,7 +20,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * アプリ設定・バックアップ管理用の ViewModel (System B)
@@ -39,7 +38,6 @@ class SettingsViewModel(
         private const val FEATURE_NAME = "Settings"
         private const val OP_EXPORT = "exportData"
         private const val OP_IMPORT = "importData"
-        private const val OP_PROCEED_IMPORT = "proceedImport"
         private const val OP_CLEAR_ALL = "clearAllData"
         private const val OP_CLEAR_LOGS = "clearAuditLogs"
         private const val OP_ROTATE_LOGS = "rotateLogsManually"
@@ -60,6 +58,7 @@ class SettingsViewModel(
         // 共通設定および統計情報の購読
         safeCollect(
             operation = "initialSettingsSync",
+            mode = CollectMode.INITIAL,
             contextBuilder = { tableName = "all_db" },
             flowProvider = {
                 combine(
@@ -104,10 +103,6 @@ class SettingsViewModel(
         }
     }
 
-    // インポート用の一時データ
-    private var pendingImportFile: File? = null
-    private var pendingImportUri: Uri? = null
-
     override fun copyWithLoadingState(state: SettingsUiState, isLoading: Boolean): SettingsUiState {
         return state.copy(isProcessing = isLoading)
     }
@@ -125,7 +120,7 @@ class SettingsViewModel(
             if (canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
                 viewModelScope.launch { userSettingsRepository.setBiometricEnabled(true) }
             } else {
-                showError("エラー", "この端末では生体認証を利用できません。")
+                showError("この端末では生体認証を利用できません。")
             }
         } else {
             viewModelScope.launch { userSettingsRepository.setBiometricEnabled(false) }
@@ -225,13 +220,7 @@ class SettingsViewModel(
         }
     }
 
-    fun clearPendingImport() {
-        pendingImportFile?.delete()
-        pendingImportFile = null
-        pendingImportUri = null
-    }
-
-    fun clearAllData(context: Context) {
+    fun clearAllData() {
         safeLaunch(operation = OP_CLEAR_ALL, loadingState = loadingStateProxy) {
             maintenanceRepository.clearAllData()
             showSnackbar(R.string.settings_msg_clear_all_success)

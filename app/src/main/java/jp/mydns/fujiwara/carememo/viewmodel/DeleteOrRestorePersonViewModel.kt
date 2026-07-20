@@ -7,6 +7,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonLogic
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import kotlinx.coroutines.launch
@@ -56,6 +57,7 @@ class DeleteOrRestorePersonViewModel(
         // アーカイブ済み利用者の購読
         safeCollect(
             operation = "archivedPersonListFlow",
+            mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_PERSON },
             flowProvider = { repository.getArchivedPersons() }
@@ -85,11 +87,7 @@ class DeleteOrRestorePersonViewModel(
      */
     fun toggleSelection(personId: Int) {
         updateUiState { current ->
-            val nextIds = if (current.selectedIds.contains(personId)) {
-                current.selectedIds - personId
-            } else {
-                current.selectedIds + personId
-            }
+            val nextIds = DeleteOrRestorePersonLogic.toggleSelection(current.selectedIds, personId)
             current.copy(selectedIds = nextIds)
         }
     }
@@ -98,7 +96,9 @@ class DeleteOrRestorePersonViewModel(
      * 全選択（RESTOREモード時のみ利用可能に制限することを想定）
      */
     fun selectAll(persons: List<Person>) {
-        updateUiState { it.copy(selectedIds = persons.map { p -> p.id }.toSet()) }
+        updateUiState { current -> 
+            current.copy(selectedIds = DeleteOrRestorePersonLogic.selectAll(persons))
+        }
     }
 
     /**
@@ -119,7 +119,7 @@ class DeleteOrRestorePersonViewModel(
                 tableName = TABLE_PERSON
             }
         ) {
-            val targets = persons.filter { currentState.selectedIds.contains(it.id) }
+            val targets = DeleteOrRestorePersonLogic.filterTargets(persons, currentState.selectedIds)
             targets.forEach { 
                 repository.restorePerson(it.id, featureName, OP_RESTORE) 
             }
@@ -140,7 +140,7 @@ class DeleteOrRestorePersonViewModel(
                 tableName = TABLE_PERSON
             }
         ) {
-            val targets = persons.filter { currentState.selectedIds.contains(it.id) }
+            val targets = DeleteOrRestorePersonLogic.filterTargets(persons, currentState.selectedIds)
             targets.forEach { 
                 repository.permanentlyDeletePerson(it.id, featureName, OP_DELETE)
             }

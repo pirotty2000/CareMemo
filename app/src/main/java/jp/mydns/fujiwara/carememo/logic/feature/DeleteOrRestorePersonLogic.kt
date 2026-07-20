@@ -25,5 +25,40 @@ sealed interface DeleteOrRestorePersonViewEvent {
  * 利用者復帰・抹消画面に関するドメインロジック。
  */
 object DeleteOrRestorePersonLogic {
-    // 現在は ViewModel 内のロジックがシンプルであるため、必要に応じてここに抽出する
+
+    /**
+     * 利用者の選択状態を切り替えます。
+     *
+     * @param currentIds 現在選択されている ID のセット
+     * @param personId 切り替え対象の利用者 ID
+     * @return 新しい選択 ID のセット
+     */
+    fun toggleSelection(currentIds: Set<Int>, personId: Int): Set<Int> {
+        return if (currentIds.contains(personId)) {
+            currentIds - personId
+        } else {
+            currentIds + personId
+        }
+    }
+
+    /**
+     * リスト内のすべての利用者を全選択した状態の ID セットを生成します。
+     *
+     * @param persons 利用者リスト
+     * @return すべての ID を含むセット
+     */
+    fun selectAll(persons: List<Person>): Set<Int> {
+        return persons.map { it.id }.toSet()
+    }
+
+    /**
+     * 現在の選択状態に基づき、処理（復帰・抹消）の対象となる利用者を抽出します。
+     *
+     * @param persons 全利用者リスト
+     * @param selectedIds 選択されている ID のセット
+     * @return 処理対象の利用者リスト
+     */
+    fun filterTargets(persons: List<Person>, selectedIds: Set<Int>): List<Person> {
+        return persons.filter { selectedIds.contains(it.id) }
+    }
 }

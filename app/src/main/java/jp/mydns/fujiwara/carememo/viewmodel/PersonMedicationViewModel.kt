@@ -79,6 +79,7 @@ class PersonMedicationViewModel(
         monthlyRecordsJob?.cancel()
         monthlyRecordsJob = safeCollect(
             operation = "monthlyRecordsFlow",
+            mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_MEDICATION },
             flowProvider = { medicationRepository.getMedicationRecordsByMonth(personId, month.toString()) }
@@ -97,6 +98,7 @@ class PersonMedicationViewModel(
         allRecordsJob?.cancel()
         allRecordsJob = safeCollect(
             operation = "allRecordsFlow",
+            mode = CollectMode.INITIAL,
             contextBuilder = { tableName = TABLE_MEDICATION },
             flowProvider = { medicationRepository.getMedicationRecords(personId) }
         ) { records ->

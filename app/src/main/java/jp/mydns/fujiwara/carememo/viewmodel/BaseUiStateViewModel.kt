@@ -58,7 +58,6 @@ abstract class BaseUiStateViewModel<S, E>(
         data class ShowErrorDialog(val title: String, val message: String) : UiEvent
         data class ShowErrorDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
         data class ShowOverwriteConfirm(val onConfirm: () -> Unit) : UiEvent
-        object RequestPassword : UiEvent
         object SaveSuccess : UiEvent
     }
 
@@ -78,7 +77,7 @@ abstract class BaseUiStateViewModel<S, E>(
 
     protected fun showSnackbar(message: String) = sendUiEvent(UiEvent.ShowSnackbar(message))
     protected fun showSnackbar(resId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowSnackbarRes(resId, args.toList()))
-    protected fun showError(title: String, message: String) = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
+    protected fun showError(message: String, title: String = "エラー") = sendUiEvent(UiEvent.ShowErrorDialog(title, message))
     protected fun showError(titleResId: Int, messageResId: Int, vararg args: Any) = sendUiEvent(UiEvent.ShowErrorDialogRes(titleResId, messageResId, args.toList()))
 
     // --- 3. 共通設定 ---
@@ -147,7 +146,7 @@ abstract class BaseUiStateViewModel<S, E>(
 
     open fun <T> safeCollect(
         operation: String,
-        mode: CollectMode = CollectMode.INITIAL,
+        mode: CollectMode,
         loadingState: MutableStateFlow<Boolean>? = null,
         contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
         flowProvider: () -> Flow<T>,

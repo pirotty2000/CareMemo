@@ -86,6 +86,7 @@ class PersonConditionViewModel(
         recordsJob?.cancel()
         recordsJob = safeCollect(
             operation = "recordsFlow",
+            mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_CONDITION },
             flowProvider = { conditionRepository.getConditionAtVisitByPersonId(personId) }
@@ -104,6 +105,7 @@ class PersonConditionViewModel(
         photoMapJob?.cancel()
         photoMapJob = safeCollect(
             operation = "photoMapFlow",
+            mode = CollectMode.INITIAL,
             contextBuilder = { tableName = TABLE_CONDITION },
             flowProvider = { conditionRepository.getAllPhotosByPersonIdFlow(personId) }
         ) { photos ->
@@ -123,6 +125,7 @@ class PersonConditionViewModel(
         if (id != null) {
             photoJob = safeCollect(
                 operation = "photosFlow",
+                mode = CollectMode.INITIAL,
                 contextBuilder = { tableName = TABLE_CONDITION },
                 flowProvider = { conditionRepository.getConditionPhotosByConditionId(id) }
             ) { photos ->
@@ -142,10 +145,6 @@ class PersonConditionViewModel(
                 filteredRecords = ConditionLogic.filterRecords(current.records, query)
             )
         }
-    }
-
-    fun clearError() {
-        updateUiState { it.copy(errorMessage = null) }
     }
 
     /**
@@ -281,7 +280,7 @@ class PersonConditionViewModel(
 
     fun notifyPhotoError(message: String) {
         updateUiState { it.copy(errorMessage = message) }
-        showError(title = "エラー", message = message)
+        showError(message)
     }
 
     suspend fun getAllPhotosForPerson(personId: Int): List<ConditionPhoto> {

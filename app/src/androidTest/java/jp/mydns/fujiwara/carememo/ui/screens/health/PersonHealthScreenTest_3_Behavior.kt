@@ -68,8 +68,7 @@ class PersonHealthScreenTest_3_Behavior {
     }
 
     private fun setContent(
-        onNavigateToGraphExpansion: (Int, Category, Int) -> Unit = { _, _, _ -> },
-        onNavigateToBatchInput: () -> Unit = {}
+        onNavigateToGraphExpansion: (Int, Category, Int) -> Unit = { _, _, _ -> }
     ) {
         composeTestRule.setContent {
             CareMemoTheme {
@@ -79,7 +78,6 @@ class PersonHealthScreenTest_3_Behavior {
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
                     onNavigateToCategory = {},
-                    onNavigateToBatchInput = onNavigateToBatchInput,
                     onNavigateToGraphExpansion = onNavigateToGraphExpansion
                 )
             }

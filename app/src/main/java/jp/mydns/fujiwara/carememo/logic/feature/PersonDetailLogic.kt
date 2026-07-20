@@ -22,10 +22,3 @@ data class PersonDetailUiState(
 sealed interface PersonDetailViewEvent {
     // 必要に応じて定義
 }
-
-/**
- * 利用者詳細画面共通のドメインロジック
- */
-object PersonDetailLogic {
-    // 共通の表示判定などがあればここに定義
-}

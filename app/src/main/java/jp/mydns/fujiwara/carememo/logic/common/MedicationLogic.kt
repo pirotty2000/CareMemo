@@ -11,11 +11,7 @@ enum class MedicationTimeSlot(val index: Int) {
     MORNING(0),
     LUNCH(1),
     DINNER(2),
-    BEDTIME(3);
-
-    companion object {
-        fun fromIndex(index: Int): MedicationTimeSlot? = entries.find { it.index == index }
-    }
+    BEDTIME(3)
 }
 
 /**

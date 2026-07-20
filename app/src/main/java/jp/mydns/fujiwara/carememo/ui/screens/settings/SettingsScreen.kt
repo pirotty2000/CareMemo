@@ -193,7 +193,7 @@ fun SettingsScreen(
     if (showDevClearConfirm) {
         AppDeleteConfirmDialog(
             onDismiss = { showDevClearConfirm = false },
-            onDelete = { viewModel.clearAllData(context) },
+            onDelete = { viewModel.clearAllData() },
             title = "(管理者) 全データ消去",
             message = "全てのデータおよび写真を物理削除します。取り消せません。",
             confirmButtonText = "実行する"

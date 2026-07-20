@@ -130,7 +130,7 @@ enum class CollectMode {
 
 protected fun <T> safeCollect(
     operation: String,
-    mode: CollectMode = CollectMode.INITIAL,
+    mode: CollectMode,
     loadingState: MutableStateFlow<Boolean>? = null,
     contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
     flowProvider: () -> Flow<T>,

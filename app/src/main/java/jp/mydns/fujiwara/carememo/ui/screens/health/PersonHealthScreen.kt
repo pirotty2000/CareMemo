@@ -25,7 +25,6 @@ fun PersonHealthScreen(
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
-    onNavigateToBatchInput: () -> Unit,
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()

@@ -335,7 +335,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                                 launchSingleTop = true
                             }
                         },
-                        onNavigateToBatchInput = { navController.navigate("batch_input/$personId") },
                         onNavigateToGraphExpansion = { pId, cat, index ->
                             navController.navigate("graphExpansion/$pId/${cat.name}/$index")
                         }

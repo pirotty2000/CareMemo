@@ -82,10 +82,6 @@ class PersonHealthViewModel(
         }
     }
 
-    override fun loadPerson(personId: Int) {
-        super.loadPerson(personId)
-    }
-
     // --- 基底クラスの抽象メソッド実装 ---
 
     override fun copyWithLoadingState(state: PersonHealthUiState, isLoading: Boolean): PersonHealthUiState {
@@ -130,6 +126,7 @@ class PersonHealthViewModel(
         recordsJob?.cancel()
         recordsJob = safeCollect(
             operation = OP_RECORDS_FLOW,
+            mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_HEALTH },
             flowProvider = {

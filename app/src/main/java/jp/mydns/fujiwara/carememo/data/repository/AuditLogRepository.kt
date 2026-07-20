@@ -67,11 +67,6 @@ class AuditLogRepository(
     }
 
     /**
-     * ログの総件数を取得
-     */
-    suspend fun getLogCount(): Int = auditLogDao.getLogCount()
-
-    /**
      * 全ログを物理削除
      */
     suspend fun deleteAllLogs() = auditLogDao.deleteAll()

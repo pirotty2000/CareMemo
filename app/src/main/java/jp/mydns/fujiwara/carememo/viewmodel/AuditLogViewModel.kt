@@ -35,6 +35,7 @@ class AuditLogViewModel(
         // ログの購読とフィルタリングの統合フロー
         safeCollect(
             operation = "auditLogsFlow",
+            mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = "audit_log" },
             flowProvider = {

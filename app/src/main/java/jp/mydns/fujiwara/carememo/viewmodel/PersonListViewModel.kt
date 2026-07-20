@@ -83,6 +83,7 @@ class PersonListViewModel(
 
         safeCollect(
             operation = "userListFlow",
+            mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_PERSON },
             flowProvider = {
