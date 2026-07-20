@@ -20,6 +20,7 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -280,7 +281,7 @@ fun HealthRecordDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        onCancel()
+                        if (recordId == 0) onCancel() else isEditing = false
                     }
                 )
             },
@@ -295,17 +296,17 @@ fun HealthRecordDetailPane(
 
     val scrollState = rememberScrollState()
     Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
-        Column(modifier = Modifier.fillMaxSize().padding(start = 16.dp).verticalScroll(scrollState), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = if (recordId == 0) "新規作成" else "記録の詳細", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (!isEditing && recordId != 0) {
-                    IconButton(onClick = { isEditing = true }) { Icon(Icons.Rounded.EditNote, contentDescription = "編集") }
-                }
-            }
-
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp) // horizontal に変更
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             if (isEditing) {
                 HealthRecordEditForm(
                     category = category,
+                    recordId = recordId,
                     dateTimeState = dateTimeState,
                     heightText = heightText, onHeightChange = { heightText = it },
                     weightText = weightText, onWeightChange = { weightText = it },
@@ -317,7 +318,11 @@ fun HealthRecordDetailPane(
                     glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
                     hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
                     onCancel = {
-                        if (isChanged) showDiscardDialog = true else onCancel()
+                        if (isChanged) {
+                            showDiscardDialog = true
+                        } else {
+                            if (recordId == 0) onCancel() else isEditing = false
+                        }
                     },
                     onSave = {
                         dateTimeState.toInstant()?.let { recordTime ->
@@ -332,7 +337,11 @@ fun HealthRecordDetailPane(
                     }
                 )
             } else {
-                HealthRecordDisplayCard(record = record!!)
+                HealthRecordDisplayCard(
+                    record = record!!,
+                    onBack = onCancel,
+                    onEditClick = { isEditing = true }
+                )
             }
             Spacer(modifier = Modifier.height(80.dp))
         }
@@ -346,6 +355,7 @@ fun HealthRecordDetailPane(
 @Composable
 private fun HealthRecordEditForm(
     category: Category,
+    recordId: Int,
     dateTimeState: DateTimeInputState,
     heightText: String, onHeightChange: (String) -> Unit,
     weightText: String, onWeightChange: (String) -> Unit,
@@ -361,50 +371,58 @@ private fun HealthRecordEditForm(
 ) {
     val isDateTimeValid by remember(dateTimeState) { derivedStateOf { dateTimeState.toInstant() != null } }
 
-    OutlinedCard(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            DateTimeInputFields(state = dateTimeState)
-            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            text = if (recordId == 0) "新規作成" else "記録の編集",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
 
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                when (category) {
-                    Category.HEIGHT_AND_WEIGHT -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AppCompactTextField(value = heightText, onValueChange = onHeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_height)) }, suffix = { Text(AppThresholds.UNIT_HEIGHT) }, modifier = Modifier.weight(1f))
-                            AppCompactTextField(value = weightText, onValueChange = onWeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_weight)) }, suffix = { Text(AppThresholds.UNIT_WEIGHT) }, modifier = Modifier.weight(1f), imeAction = ImeAction.Done)
-                        }
-                    }
-                    Category.BP_AND_PULSE -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AppCompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_systolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpSystolic"))
-                            AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_diastolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpDiastolic"))
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_sat)) }, suffix = { Text(AppThresholds.UNIT_SAT) }, modifier = Modifier.weight(1f).testTag("HealthField_Sat"))
-                            AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_pulse)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.weight(1f).testTag("HealthField_Pulse"))
-                        }
-                        AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_body_temp)) }, suffix = { Text(AppThresholds.UNIT_BODY_TEMP) }, modifier = Modifier.fillMaxWidth().testTag("HealthField_Temp"), imeAction = ImeAction.Done)
-                    }
-                    Category.GLUCOSE_AND_HBA1C -> {
-                        AppCompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_glucose)) }, suffix = { Text(AppThresholds.UNIT_GLUCOSE) }, modifier = Modifier.fillMaxWidth())
-                        AppCompactTextField(value = hba1cText, onValueChange = onHba1cChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_hba1c)) }, suffix = { Text(AppThresholds.UNIT_HBA1C) }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
-                    }
-                    else -> {}
-                }
+        OutlinedCard(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                DateTimeInputFields(state = dateTimeState)
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).testTag("HealthField_CancelButton")) { Text(stringResource(R.string.common_cancel)) }
-                    Button(
-                        onClick = onSave,
-                        modifier = Modifier.weight(1f).testTag("HealthField_SaveButton"),
-                        enabled = (when (category) {
-                            Category.HEIGHT_AND_WEIGHT -> HealthLogic.isValidHeightAndWeight(heightText, weightText)
-                            Category.BP_AND_PULSE -> HealthLogic.isValidBpAndPulse(bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText)
-                            Category.GLUCOSE_AND_HBA1C -> HealthLogic.isValidGlucoseAndHbA1c(glucoseText, hba1cText)
-                            else -> true
-                        }) && isDateTimeValid
-                    ) {
-                        Text(stringResource(R.string.common_save))
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    when (category) {
+                        Category.HEIGHT_AND_WEIGHT -> {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                AppCompactTextField(value = heightText, onValueChange = onHeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_height)) }, suffix = { Text(AppThresholds.UNIT_HEIGHT) }, modifier = Modifier.weight(1f))
+                                AppCompactTextField(value = weightText, onValueChange = onWeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_weight)) }, suffix = { Text(AppThresholds.UNIT_WEIGHT) }, modifier = Modifier.weight(1f), imeAction = ImeAction.Done)
+                            }
+                        }
+                        Category.BP_AND_PULSE -> {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                AppCompactTextField(value = bpSystolicText, onValueChange = onBpSystolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_systolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpSystolic"))
+                                AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_diastolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpDiastolic"))
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_sat)) }, suffix = { Text(AppThresholds.UNIT_SAT) }, modifier = Modifier.weight(1f).testTag("HealthField_Sat"))
+                                AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_pulse)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.weight(1f).testTag("HealthField_Pulse"))
+                            }
+                            AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_body_temp)) }, suffix = { Text(AppThresholds.UNIT_BODY_TEMP) }, modifier = Modifier.fillMaxWidth().testTag("HealthField_Temp"), imeAction = ImeAction.Done)
+                        }
+                        Category.GLUCOSE_AND_HBA1C -> {
+                            AppCompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_glucose)) }, suffix = { Text(AppThresholds.UNIT_GLUCOSE) }, modifier = Modifier.fillMaxWidth())
+                            AppCompactTextField(value = hba1cText, onValueChange = onHba1cChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_hba1c)) }, suffix = { Text(AppThresholds.UNIT_HBA1C) }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
+                        }
+                        else -> {}
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).testTag("HealthField_CancelButton")) { Text(stringResource(R.string.common_cancel)) }
+                        Button(
+                            onClick = onSave,
+                            modifier = Modifier.weight(1f).testTag("HealthField_SaveButton"),
+                            enabled = (when (category) {
+                                Category.HEIGHT_AND_WEIGHT -> HealthLogic.isValidHeightAndWeight(heightText, weightText)
+                                Category.BP_AND_PULSE -> HealthLogic.isValidBpAndPulse(bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText)
+                                Category.GLUCOSE_AND_HBA1C -> HealthLogic.isValidGlucoseAndHbA1c(glucoseText, hba1cText)
+                                else -> true
+                            }) && isDateTimeValid
+                        ) {
+                            Text(stringResource(R.string.common_save))
+                        }
                     }
                 }
             }
@@ -416,35 +434,113 @@ private fun HealthRecordEditForm(
  * 登録済みの記録内容を表示する詳細ビュー。
  */
 @Composable
-private fun HealthRecordDisplayCard(record: Any) {
+private fun HealthRecordDisplayCard(record: Any, onBack: () -> Unit, onEditClick: () -> Unit) {
     val context = LocalContext.current
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(text = formatRecordTime(when (record) { is HeightAndWeight -> record.recordTime; is BpAndPulse -> record.recordTime; is GlucoseAndHbA1c -> record.recordTime; else -> Instant.now() }), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            when (record) {
-                is HeightAndWeight -> {
-                    DetailItem(label = stringResource(R.string.health_label_height), value = "${AppThresholds.formatHeight(record.height)} ${AppThresholds.UNIT_HEIGHT}")
-                    DetailItem(label = stringResource(R.string.health_label_weight), value = "${AppThresholds.formatWeight(record.weight)} ${AppThresholds.UNIT_WEIGHT}")
-                    val bmi = record.calculateBMI()
-                    if (bmi > 0) {
-                        val (status, _) = HealthLogic.evaluateBMI(bmi)
-                        val label = status?.let { stringResource(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
-                        DetailItem(label = stringResource(R.string.health_label_bmi), value = "${AppThresholds.formatBmi(bmi)} ($label)")
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.offset(x = (-12).dp) // 左端に寄せるためのオフセットを追加
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                }
+                Text(
+                    text = "記録の詳細",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.offset(x = (-8).dp) // アイコンに合わせてテキストも少し左へ
+                )
+            }
+            IconButton(onClick = onEditClick) {
+                Icon(Icons.Rounded.EditNote, contentDescription = "編集")
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = formatRecordTime(
+                        when (record) {
+                            is HeightAndWeight -> record.recordTime
+                            is BpAndPulse -> record.recordTime
+                            is GlucoseAndHbA1c -> record.recordTime
+                            else -> Instant.now()
+                        }
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                when (record) {
+                    is HeightAndWeight -> {
+                        DetailItem(
+                            label = stringResource(R.string.health_label_height),
+                            value = "${AppThresholds.formatHeight(record.height)} ${AppThresholds.UNIT_HEIGHT}"
+                        )
+                        DetailItem(
+                            label = stringResource(R.string.health_label_weight),
+                            value = "${AppThresholds.formatWeight(record.weight)} ${AppThresholds.UNIT_WEIGHT}"
+                        )
+                        val bmi = record.calculateBMI()
+                        if (bmi > 0) {
+                            val (status, _) = HealthLogic.evaluateBMI(bmi)
+                            val label = status?.let { stringResource(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
+                            DetailItem(
+                                label = stringResource(R.string.health_label_bmi),
+                                value = "${AppThresholds.formatBmi(bmi)} ($label)"
+                            )
+                        }
                     }
-                }
-                is BpAndPulse -> {
-                    DetailItem(label = stringResource(R.string.health_label_bp), value = "${AppThresholds.formatBpValue(record.bpSystolic)} / ${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}")
-                    DetailItem(label = stringResource(R.string.health_label_sat), value = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}")
-                    DetailItem(label = stringResource(R.string.health_label_pulse), value = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}")
-                    DetailItem(label = stringResource(R.string.health_label_body_temp), value = "${AppThresholds.formatBodyTemp(record.bodyTemperature)} ${AppThresholds.UNIT_BODY_TEMP}")
-                    val statusText = HealthDisplayMapper.formatVitalResults(context, HealthLogic.evaluateVitalItems(record.bpSystolic, record.bpDiastolic, record.sat, record.pulse, record.bodyTemperature))
-                    DetailItem(label = stringResource(R.string.health_label_status), value = statusText)
-                }
-                is GlucoseAndHbA1c -> {
-                    DetailItem(label = stringResource(R.string.health_label_glucose), value = "${AppThresholds.formatGlucose(record.glucose)} ${AppThresholds.UNIT_GLUCOSE}")
-                    DetailItem(label = stringResource(R.string.health_label_hba1c), value = "${AppThresholds.formatHbA1c(record.hba1c)} ${AppThresholds.UNIT_HBA1C}")
-                    val statusText = record.getCombinedResultText(context)
-                    DetailItem(label = stringResource(R.string.health_label_status), value = statusText)
+
+                    is BpAndPulse -> {
+                        DetailItem(
+                            label = stringResource(R.string.health_label_bp),
+                            value = "${AppThresholds.formatBpValue(record.bpSystolic)} / ${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}"
+                        )
+                        DetailItem(
+                            label = stringResource(R.string.health_label_sat),
+                            value = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}"
+                        )
+                        DetailItem(
+                            label = stringResource(R.string.health_label_pulse),
+                            value = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}"
+                        )
+                        DetailItem(
+                            label = stringResource(R.string.health_label_body_temp),
+                            value = "${AppThresholds.formatBodyTemp(record.bodyTemperature)} ${AppThresholds.UNIT_BODY_TEMP}"
+                        )
+                        val statusText = HealthDisplayMapper.formatVitalResults(
+                            context,
+                            HealthLogic.evaluateVitalItems(
+                                record.bpSystolic,
+                                record.bpDiastolic,
+                                record.sat,
+                                record.pulse,
+                                record.bodyTemperature
+                            )
+                        )
+                        DetailItem(label = stringResource(R.string.health_label_status), value = statusText)
+                    }
+
+                    is GlucoseAndHbA1c -> {
+                        DetailItem(
+                            label = stringResource(R.string.health_label_glucose),
+                            value = "${AppThresholds.formatGlucose(record.glucose)} ${AppThresholds.UNIT_GLUCOSE}"
+                        )
+                        DetailItem(
+                            label = stringResource(R.string.health_label_hba1c),
+                            value = "${AppThresholds.formatHbA1c(record.hba1c)} ${AppThresholds.UNIT_HBA1C}"
+                        )
+                        val statusText = record.getCombinedResultText(context)
+                        DetailItem(label = stringResource(R.string.health_label_status), value = statusText)
+                    }
                 }
             }
         }

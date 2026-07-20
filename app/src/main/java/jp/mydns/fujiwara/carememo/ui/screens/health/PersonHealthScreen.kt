@@ -22,9 +22,9 @@ fun PersonHealthScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     healthViewModel: PersonHealthViewModel,
     widthSizeClass: WindowWidthSizeClass,
+    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
-    onShowPdfSettings: (Category) -> Unit,
     onNavigateToBatchInput: () -> Unit,
     onNavigateToGraphExpansion: (Int, Category, Int) -> Unit
 ) {
@@ -48,7 +48,6 @@ fun PersonHealthScreen(
 
     // 画面状態の管理
     var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
-    var preferredShowHistory by rememberSaveable { mutableStateOf(true) }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
@@ -105,8 +104,8 @@ fun PersonHealthScreen(
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            preferredShowHistory = preferredShowHistory,
-            onPreferredShowHistoryChange = { preferredShowHistory = it },
+            preferredShowHistory = healthState.preferredShowHistory,
+            onPreferredShowHistoryChange = { healthViewModel.updatePreferredShowHistory(it) },
             selectedRecordId = selectedRecordId,
             onSelectedRecordIdChange = { selectedRecordId = it },
             onBack = onBack,
@@ -138,7 +137,8 @@ fun PersonHealthScreen(
             category = detailState.currentCategory,
             person = detailState.person,
             records = healthState.records,
-            viewModel = healthViewModel
+            viewModel = healthViewModel,
+            onRequireAuthentication = onRequireAuthentication
         )
     }
 }

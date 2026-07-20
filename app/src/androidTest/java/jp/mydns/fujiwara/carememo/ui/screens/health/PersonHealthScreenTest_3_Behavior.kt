@@ -69,8 +69,7 @@ class PersonHealthScreenTest_3_Behavior {
 
     private fun setContent(
         onNavigateToGraphExpansion: (Int, Category, Int) -> Unit = { _, _, _ -> },
-        onNavigateToBatchInput: () -> Unit = {},
-        onShowPdfSettings: (Category) -> Unit = {}
+        onNavigateToBatchInput: () -> Unit = {}
     ) {
         composeTestRule.setContent {
             CareMemoTheme {
@@ -80,7 +79,6 @@ class PersonHealthScreenTest_3_Behavior {
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
                     onNavigateToCategory = {},
-                    onShowPdfSettings = onShowPdfSettings,
                     onNavigateToBatchInput = onNavigateToBatchInput,
                     onNavigateToGraphExpansion = onNavigateToGraphExpansion
                 )

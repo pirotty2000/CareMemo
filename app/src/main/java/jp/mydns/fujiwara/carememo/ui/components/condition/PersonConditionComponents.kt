@@ -324,6 +324,7 @@ private fun ConditionRecordDisplayCard(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -333,13 +334,17 @@ private fun ConditionRecordDisplayCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.offset(x = (-12).dp) // 左端に寄せるためのオフセットを追加
+                    ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                     Text(
                         text = "記録の詳細",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.offset(x = (-8).dp) // アイコンに合わせてテキストも少し左へ
                     )
                 }
                 IconButton(onClick = onEditClick) {
@@ -442,6 +447,7 @@ private fun ConditionRecordEditForm(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

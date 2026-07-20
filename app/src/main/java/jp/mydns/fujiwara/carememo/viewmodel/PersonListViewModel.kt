@@ -196,6 +196,16 @@ class PersonListViewModel(
         }
     }
 
+    /**
+     * 利用者詳細画面への遷移準備を行います。
+     * 表示モードをデフォルト（履歴）にリセットします。
+     */
+    fun prepareDetailNavigation() {
+        scope.launch {
+            userSettingsRepository.setHealthDisplayModeIsHistory(true)
+        }
+    }
+
     // 互換性ヘルパー
     private fun <T> kotlinx.coroutines.flow.MutableStateFlow<T>.asStateFlow(): StateFlow<T> = this
 

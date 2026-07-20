@@ -20,7 +20,7 @@ fun PdfExportActionHandler(
     person: Person?,
     records: List<HistoryRecord>,
     viewModel: BaseUiStateViewModel<*, *>,
-    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
+    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, onSuccess -> onSuccess() },
     photos: List<ConditionPhoto> = emptyList()
 ) {
     val context = LocalContext.current

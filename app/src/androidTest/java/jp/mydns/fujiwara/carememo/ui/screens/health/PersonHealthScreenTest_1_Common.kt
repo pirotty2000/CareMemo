@@ -60,7 +60,6 @@ class PersonHealthScreenTest_1_Common {
     private fun setContent(
         onBack: () -> Unit = {}, 
         onNavigateToCategory: (Category) -> Unit = {},
-        onShowPdfSettings: (Category) -> Unit = {},
         onNavigateToBatchInput: () -> Unit = {}
     ) {
         composeTestRule.setContent {
@@ -71,7 +70,6 @@ class PersonHealthScreenTest_1_Common {
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = onBack,
                     onNavigateToCategory = onNavigateToCategory,
-                    onShowPdfSettings = onShowPdfSettings,
                     onNavigateToBatchInput = onNavigateToBatchInput,
                     onNavigateToGraphExpansion = { _: Int, _: Category, _: Int -> }
                 )

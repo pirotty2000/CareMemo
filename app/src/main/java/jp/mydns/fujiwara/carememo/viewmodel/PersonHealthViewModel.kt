@@ -74,6 +74,16 @@ class PersonHealthViewModel(
                 }
             }
         }
+        // 表示モードの永続化設定を購読 (案Aの追加)
+        scope.launch {
+            userSettingsRepository.healthDisplayModeIsHistory.collect { isHistory ->
+                updateUiState { it.copy(preferredShowHistory = isHistory) }
+            }
+        }
+    }
+
+    override fun loadPerson(personId: Int) {
+        super.loadPerson(personId)
     }
 
     // --- 基底クラスの抽象メソッド実装 ---
@@ -90,6 +100,20 @@ class PersonHealthViewModel(
         summary: PersonCategorySummary?
     ): PersonHealthUiState {
         return state.copy(personId = person.id)
+    }
+
+    override fun onPrepareLoadPerson(state: PersonHealthUiState): PersonHealthUiState {
+        // ロード開始時にデータをクリアする（表示モードのリセットは loadPerson 側で永続化層に対して行う）
+        return state.copy(personId = null, records = emptyList())
+    }
+
+    /**
+     * 履歴/グラフの表示優先設定を更新します。
+     */
+    fun updatePreferredShowHistory(preferredShowHistory: Boolean) {
+        scope.launch {
+            userSettingsRepository.setHealthDisplayModeIsHistory(preferredShowHistory)
+        }
     }
 
     /**

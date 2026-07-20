@@ -75,7 +75,6 @@ class PersonHealthScreenTest_2_Component {
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
                     onNavigateToCategory = {},
-                    onShowPdfSettings = {},
                     onNavigateToBatchInput = {},
                     onNavigateToGraphExpansion = { _: Int, _: Category, _: Int -> }
                 )

@@ -10,6 +10,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -736,7 +738,18 @@ private fun DisplayAndRecordingSection(
         ListItem(
             headlineContent = { Text("氏名の伏せ字表示") },
             supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") },
-            trailingContent = { Switch(checked = isMaskingEnabled, onCheckedChange = onMaskingChange, modifier = Modifier.testTag("Settings_MaskingSwitch")) }
+            trailingContent = { 
+                Switch(
+                    checked = isMaskingEnabled, 
+                    onCheckedChange = null, 
+                    modifier = Modifier.testTag("Settings_MaskingSwitch")
+                ) 
+            },
+            modifier = Modifier.toggleable(
+                value = isMaskingEnabled,
+                role = Role.Switch,
+                onValueChange = onMaskingChange
+            )
         )
         AppTextField(
             value = defaultRecorderName,
@@ -808,7 +821,18 @@ private fun DataManagementSection(
                     }
                 }
             },
-            trailingContent = { Switch(checked = isBackupPasswordEnabled, onCheckedChange = onBackupPasswordEnabledChange, modifier = Modifier.testTag("Settings_BackupPasswordSwitch")) }
+            trailingContent = { 
+                Switch(
+                    checked = isBackupPasswordEnabled, 
+                    onCheckedChange = null, 
+                    modifier = Modifier.testTag("Settings_BackupPasswordSwitch")
+                ) 
+            },
+            modifier = Modifier.toggleable(
+                value = isBackupPasswordEnabled,
+                role = Role.Switch,
+                onValueChange = onBackupPasswordEnabledChange
+            )
         )
         if (isBackupPasswordEnabled) {
             AppTextField(
@@ -864,7 +888,18 @@ private fun SecuritySection(
         ListItem(
             headlineContent = { Text("アプリのロック") },
             supportingContent = { Text("起動時・復帰時に認証を求めます") },
-            trailingContent = { Switch(checked = isBiometricEnabled, onCheckedChange = onBiometricEnabledChange, modifier = Modifier.testTag("Settings_BiometricSwitch")) }
+            trailingContent = { 
+                Switch(
+                    checked = isBiometricEnabled, 
+                    onCheckedChange = null, 
+                    modifier = Modifier.testTag("Settings_BiometricSwitch")
+                ) 
+            },
+            modifier = Modifier.toggleable(
+                value = isBiometricEnabled,
+                role = Role.Switch,
+                onValueChange = onBiometricEnabledChange
+            )
         )
         val timeoutLabel = when (lockTimeoutMinutes) { 0 -> "即時"; -1 -> "ロックしない"; else -> "${lockTimeoutMinutes}分" }
         ListItem(

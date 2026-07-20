@@ -22,9 +22,10 @@ package jp.mydns.fujiwara.carememo.ui.components.common
  * PdfSettingsDialog
  */
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -38,7 +39,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.fragment.app.FragmentActivity
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -69,7 +69,6 @@ fun PdfSettingsDialog(
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
     onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean, String?) -> Unit,
 ) {
-    val context = LocalContext.current
     var selectedRange by remember { mutableStateOf(ExportRange.ALL) }
     var selectedOrder by remember { mutableStateOf(ExportOrder.NEWEST_FIRST) }
     var includePhotos by remember { mutableStateOf(true) }
@@ -134,26 +133,24 @@ fun PdfSettingsDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                val newChecked = !protectWithPassword
-                                if (newChecked) {
-                                    protectWithPassword = true
-                                    isPasswordVisible = false
-                                } else {
-                                    // OFFにする場合は認証を求める
-                                    val activity = context as? FragmentActivity
-                                    if (activity != null && SecurityHelper.canAuthenticate(activity)) {
+                            .toggleable(
+                                value = protectWithPassword,
+                                role = Role.Switch,
+                                onValueChange = { checked ->
+                                    if (checked) {
+                                        protectWithPassword = true
+                                        isPasswordVisible = false
+                                    } else {
+                                        // OFFにする場合は認証を求める（責務を呼び出し元に委譲）
                                         onRequireAuthentication(
                                             R.string.security_auth_title,
                                             R.string.security_auth_reason_change_settings
                                         ) {
                                             protectWithPassword = false
                                         }
-                                    } else {
-                                        protectWithPassword = false
                                     }
                                 }
-                            }
+                            )
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -161,25 +158,7 @@ fun PdfSettingsDialog(
                         Text(stringResource(R.string.protect_pdf_with_password))
                         Switch(
                             checked = protectWithPassword,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    protectWithPassword = true
-                                    isPasswordVisible = false
-                                } else {
-                                    // OFFにする場合は認証を求める
-                                    val activity = context as? FragmentActivity
-                                    if (activity != null && SecurityHelper.canAuthenticate(activity)) {
-                                        onRequireAuthentication(
-                                            R.string.security_auth_title,
-                                            R.string.security_auth_reason_change_settings
-                                        ) {
-                                            protectWithPassword = false
-                                        }
-                                    } else {
-                                        protectWithPassword = false
-                                    }
-                                }
-                            }
+                            onCheckedChange = null // 行側の toggleable で制御するため null に設定
                         )
                     }
 
@@ -205,15 +184,11 @@ fun PdfSettingsDialog(
                                     if (isPasswordVisible) {
                                         isPasswordVisible = false
                                     } else {
-                                        val activity = context as? FragmentActivity
-                                        if (activity != null && SecurityHelper.canAuthenticate(activity)) {
-                                            onRequireAuthentication(
-                                                R.string.security_auth_title,
-                                                R.string.security_auth_reason_show_password
-                                            ) {
-                                                isPasswordVisible = true
-                                            }
-                                        } else {
+                                        // 認証を求める（責務を呼び出し元に委譲）
+                                        onRequireAuthentication(
+                                            R.string.security_auth_title,
+                                            R.string.security_auth_reason_show_password
+                                        ) {
                                             isPasswordVisible = true
                                         }
                                     }
@@ -280,13 +255,20 @@ fun PdfSettingsDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { includePhotos = !includePhotos }
+                                .toggleable(
+                                    value = includePhotos,
+                                    role = Role.Switch,
+                                    onValueChange = { includePhotos = it }
+                                )
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(stringResource(R.string.include_photos))
-                            Switch(checked = includePhotos, onCheckedChange = { includePhotos = it })
+                            Switch(
+                                checked = includePhotos,
+                                onCheckedChange = null // 行側の toggleable で制御
+                            )
                         }
                     }
 

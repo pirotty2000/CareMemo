@@ -21,6 +21,7 @@ class UserSettingsRepository(private val context: Context) {
         private val BACKUP_PASSWORD = stringPreferencesKey("backup_password")
         private val THEME_SETTING = stringPreferencesKey("theme_setting")
         private val AUDIT_LOG_RETENTION_DAYS = intPreferencesKey("audit_log_retention_days")
+        private val HEALTH_DISPLAY_MODE_IS_HISTORY = booleanPreferencesKey("health_display_mode_is_history")
     }
 
     val isNameMaskingEnabled: Flow<Boolean> = context.dataStore.data
@@ -83,6 +84,11 @@ class UserSettingsRepository(private val context: Context) {
             preferences[AUDIT_LOG_RETENTION_DAYS] ?: 30
         }
 
+    val healthDisplayModeIsHistory: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] ?: true
+        }
+
     // 一時的にロックを無効化するためのフラグ（外部アプリ連携時など）
     var isLockBypassed: Boolean = false
 
@@ -137,6 +143,12 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setAuditLogRetentionDays(days: Int) {
         context.dataStore.edit { preferences ->
             preferences[AUDIT_LOG_RETENTION_DAYS] = days
+        }
+    }
+
+    suspend fun setHealthDisplayModeIsHistory(isHistory: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] = isHistory
         }
     }
 }

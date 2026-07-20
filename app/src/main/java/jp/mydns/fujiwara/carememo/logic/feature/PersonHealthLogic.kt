@@ -13,6 +13,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 data class PersonHealthUiState(
     val personId: Int? = null,
     val records: List<HistoryRecord> = emptyList(),
+    val preferredShowHistory: Boolean = true, // 追加: 履歴/グラフの選択状態
     override val isLoading: Boolean = false
 ) : PersonAwareState
 

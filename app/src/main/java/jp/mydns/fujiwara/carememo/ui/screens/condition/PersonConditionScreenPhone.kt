@@ -90,8 +90,6 @@ fun PersonConditionScreenPhone(
             if (selectedId == -1) {
                 FloatingActionButton(
                     onClick = { onSelectedIdChange(0) },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "新規追加")

@@ -221,23 +221,31 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         if (!(!isAuthenticated && isBiometricEnabled)) {
             // 認証要求を処理する共通関数
             val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
-                val executor = ContextCompat.getMainExecutor(activity)
-                val biometricPrompt = BiometricPrompt(
-                    activity, executor, object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        super.onAuthenticationSucceeded(result)
-                        onSuccess()
-                    }
-                })
-                val title = titleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_title)
-                val subtitle = subtitleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_reason_change_settings)
-                
-                val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                    .setTitle(title)
-                    .setSubtitle(subtitle)
-                    .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-                    .build()
-                biometricPrompt.authenticate(promptInfo)
+                val biometricManager = androidx.biometric.BiometricManager.from(activity)
+                val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+
+                // デバイスが認証不可能な状態（ハードウェア故障、セキュリティ未設定など）なら即座に成功とする
+                if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
+                    onSuccess()
+                } else {
+                    val executor = ContextCompat.getMainExecutor(activity)
+                    val biometricPrompt = BiometricPrompt(
+                        activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            onSuccess()
+                        }
+                    })
+                    val title = titleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_title)
+                    val subtitle = subtitleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_reason_change_settings)
+                    
+                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                        .setTitle(title)
+                        .setSubtitle(subtitle)
+                        .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                        .build()
+                    biometricPrompt.authenticate(promptInfo)
+                }
             }
 
             NavHost(navController = navController, startDestination = "main") {
@@ -257,6 +265,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     MainScreen(
                         viewModel = listViewModel, 
                         onNavigateToDetail = { personId, category ->
+                            listViewModel.prepareDetailNavigation() // 遷移準備（表示モードのリセット）を実行
                             val query = listViewModel.uiState.value.searchQuery
                             val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
                             navController.navigate(category.getRoute(personId, encodedQuery))
@@ -318,6 +327,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
                         widthSizeClass = widthSizeClass,
+                        onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack("main", inclusive = false) },
                         onNavigateToCategory = { cat ->
                             navController.navigate(cat.getRoute(personId)) {
@@ -325,7 +335,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                                 launchSingleTop = true
                             }
                         },
-                        onShowPdfSettings = { cat -> /* PDF設定表示 */ },
                         onNavigateToBatchInput = { navController.navigate("batch_input/$personId") },
                         onNavigateToGraphExpansion = { pId, cat, index ->
                             navController.navigate("graphExpansion/$pId/${cat.name}/$index")
