@@ -377,12 +377,6 @@ interface AuditLogDao {
     @Query("DELETE FROM audit_log_db WHERE timestamp < :threshold")
     suspend fun deleteOldLogs(threshold: java.time.Instant)
 
-    /**
-     * ログの総件数を取得（管理画面での統計用）
-     */
-    @Query("SELECT COUNT(*) FROM audit_log_db")
-    suspend fun getLogCount(): Int
-
     @Query("DELETE FROM audit_log_db")
     suspend fun deleteAll()
 }

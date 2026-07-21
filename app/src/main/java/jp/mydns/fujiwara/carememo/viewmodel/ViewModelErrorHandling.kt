@@ -114,6 +114,7 @@ interface CoroutineErrorHandler {
 enum class CollectMode {
     /** 初回ロード用：データ受信またはエラーで loadingState を解除する */
     INITIAL,
-    /** 継続監視用：原則として loadingState を制御しない */
+    /** 継続監視用：原則として loadingState を制御しない（将来のサーバー同期等で使用予定） */
+    @Suppress("unused")
     MONITORING
 }

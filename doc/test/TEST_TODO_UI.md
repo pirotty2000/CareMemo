@@ -28,12 +28,12 @@
 ### 2-D. メンテナンス・サブ表示テスト (優先度：中〜低)
 アプリの信頼性向上と、リッチメディアの表示確認。
 
-| ステータス | 対象画面 | ファイル名 | 検証内容 (予定) |
-|:---:|:---|:---|:---|
-| [x] | **操作ログ確認** | `AuditLogScreen.kt` | 監査ログのリスト表示、絞り込み（ある場合）。<br>→ `TEST_SPEC_UI_AuditLog.md` 実装済み |
-| [x] | **利用者削除・復元** | `DeleteOrRestorePerson.kt` | 削除済みリストの表示、復元アクションの成功確認。<br>→ `TEST_SPEC_UI_DeleteOrRestorePerson.md` 実装済み |
-| [x] | **写真フル画面表示** | `ConditionPhotoFullScreen.kt` | 選択画像の拡大表示、ズーム操作、閉じる動作。<br>→ `TEST_SPEC_UI_ConditionPhotoFullScreen.md` 実装済み |
-| [x] | **グラフ拡大表示** | `GraphExpansionScreen.kt` | 各種バイタルの拡大グラフ表示、凡例表示、閉じる動作。<br>→ `TEST_SPEC_UI_GraphExpansion.md` 実装済み |
+| ステータス | 対象画面         | ファイル名                         | 検証内容 (予定)                                                                   |
+|:-----:|:-------------|:------------------------------|:----------------------------------------------------------------------------|
+|  [x]  | **操作ログ確認**   | `AuditLogScreen.kt`           | 監査ログのリスト表示、絞り込み（ある場合）。<br>→ `TEST_SPEC_UI_AuditLog.md` 実装済み                 |
+|  [x]  | **利用者削除・復元** | `DeleteOrRestorePerson.kt`    | 削除済みリストの表示、復元アクションの成功確認。<br>→ `TEST_SPEC_UI_DeleteOrRestorePerson.md` 実装済み  |
+|  [x]  | **写真フル画面表示** | `ConditionPhotoFullScreen.kt` | 選択画像の拡大表示、ズーム操作、閉じる動作。<br>→ `TEST_SPEC_UI_ConditionPhotoFullScreen.md` 実装済み |
+|  [x]  | **グラフ拡大表示**  | `GraphExpansionScreen.kt`     | 各種バイタルの拡大グラフ表示、凡例表示、閉じる動作。<br>→ `TEST_SPEC_UI_GraphExpansion.md` 実装済み       |
 
 ---
 

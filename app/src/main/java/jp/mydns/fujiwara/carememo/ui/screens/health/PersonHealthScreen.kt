@@ -130,6 +130,7 @@ fun PersonHealthScreen(
 
     // PDF出力共通ハンドラー
     if (showPdfSettingsDialog) {
+        @Suppress("ConstantConditions")
         PdfExportActionHandler(
             showDialog = showPdfSettingsDialog,
             onDismiss = { showPdfSettingsDialog = false },
