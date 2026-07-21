@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavController
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
