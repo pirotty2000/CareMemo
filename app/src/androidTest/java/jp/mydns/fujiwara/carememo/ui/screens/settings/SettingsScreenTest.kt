@@ -115,8 +115,8 @@ class SettingsScreenTest {
             }
         }
 
-        // 氏名伏せ字設定スイッチ
-        composeTestRule.onNodeWithTag("Settings_MaskingSwitch").performScrollTo().assertIsDisplayed()
+        // 氏名伏せ字設定項目
+        composeTestRule.onNodeWithTag("Settings_MaskingRow").performScrollTo().assertIsDisplayed()
         // バックアップ実行ボタン
         composeTestRule.onNodeWithTag("Settings_BackupButton").performScrollTo().assertIsDisplayed()
         
@@ -161,7 +161,7 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag("Settings_MaskingSwitch").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("Settings_MaskingRow").performScrollTo().performClick()
         composeTestRule.onNodeWithTag("SettingsScreen_BackButton").performClick()
         
         assert(savedStateHandle.get<Boolean>("refresh_needed") == true)

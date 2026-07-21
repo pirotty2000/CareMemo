@@ -64,6 +64,11 @@ class PersonHealthScreenTest_2_Component {
 
         every { healthViewModel.uiState } returns healthUiStateFlow
         every { healthViewModel.uiEventFlow } returns MutableSharedFlow<BaseUiStateViewModel.UiEvent>().asSharedFlow()
+
+        // タブ切り替え時に UiState を更新するように設定
+        every { healthViewModel.updatePreferredShowHistory(any()) } answers {
+            healthUiStateFlow.value = healthUiStateFlow.value.copy(preferredShowHistory = firstArg())
+        }
     }
 
     private fun setContent() {

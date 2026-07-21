@@ -741,15 +741,16 @@ private fun DisplayAndRecordingSection(
             trailingContent = { 
                 Switch(
                     checked = isMaskingEnabled, 
-                    onCheckedChange = null, 
-                    modifier = Modifier.testTag("Settings_MaskingSwitch")
+                    onCheckedChange = null
                 ) 
             },
-            modifier = Modifier.toggleable(
-                value = isMaskingEnabled,
-                role = Role.Switch,
-                onValueChange = onMaskingChange
-            )
+            modifier = Modifier
+                .testTag("Settings_MaskingRow")
+                .toggleable(
+                    value = isMaskingEnabled,
+                    role = Role.Switch,
+                    onValueChange = onMaskingChange
+                )
         )
         AppTextField(
             value = defaultRecorderName,
