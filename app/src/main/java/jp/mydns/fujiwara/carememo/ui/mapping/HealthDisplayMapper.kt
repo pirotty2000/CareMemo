@@ -2,7 +2,6 @@ package jp.mydns.fujiwara.carememo.ui.mapping
 
 import android.content.Context
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.*
 
