@@ -108,7 +108,7 @@ fun PersonConditionScreenContent(
                     placeholder = stringResource(R.string.main_search_hint_short)
                 )
                 Box(modifier = Modifier.weight(1f)) {
-                    if (records.isEmpty()) {
+                    if (conditionRecords.isEmpty()) {
                         EmptyState(
                             message = stringResource(R.string.p_detail_empty_records),
                             description = stringResource(R.string.p_detail_empty_records_desc),
@@ -116,7 +116,7 @@ fun PersonConditionScreenContent(
                         )
                     } else {
                         ConditionList(
-                            records = records,
+                            records = conditionRecords,
                             selectedId = selectedId,
                             conditionPhotoMap = conditionPhotoMap,
                             isAnyDialogOpen = isAnyDialogOpen,
@@ -165,7 +165,7 @@ fun PersonConditionScreenContent(
                 modifier = Modifier.testTag("ConditionScreen_SearchBox")
             )
             Box(modifier = Modifier.weight(1f)) {
-                if (records.isEmpty()) {
+                if (conditionRecords.isEmpty()) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
                         description = stringResource(R.string.p_detail_empty_records_desc),
@@ -173,7 +173,7 @@ fun PersonConditionScreenContent(
                     )
                 } else {
                     ConditionList(
-                        records = records,
+                        records = conditionRecords,
                         selectedId = selectedId,
                         conditionPhotoMap = conditionPhotoMap,
                         isAnyDialogOpen = isAnyDialogOpen,

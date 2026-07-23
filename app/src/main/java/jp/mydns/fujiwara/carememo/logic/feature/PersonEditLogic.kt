@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import java.time.ZoneOffset
@@ -42,7 +43,10 @@ enum class PersonEditValidationResult {
     EMPTY_FIRST_NAME,
     EMPTY_LAST_FURIGANA,
     EMPTY_FIRST_FURIGANA,
-    INVALID_BIRTHDAY
+    INVALID_BIRTHDAY,
+    NAME_TOO_LONG,
+    FURIGANA_TOO_LONG,
+    NOTE_TOO_LONG
 }
 
 /**
@@ -85,10 +89,22 @@ object PersonEditLogic {
      * 入力内容の妥当性を判定します。
      */
     fun validate(current: PersonEditUiState): PersonEditValidationResult {
+        val spec = ConstraintSpecifications.Person.Validation
+        
         if (current.lastName.isBlank()) return PersonEditValidationResult.EMPTY_LAST_NAME
         if (current.firstName.isBlank()) return PersonEditValidationResult.EMPTY_FIRST_NAME
         if (current.lastNameFurigana.isBlank()) return PersonEditValidationResult.EMPTY_LAST_FURIGANA
         if (current.firstNameFurigana.isBlank()) return PersonEditValidationResult.EMPTY_FIRST_FURIGANA
+
+        if (current.lastName.length > spec.MAX_LENGTH_LAST_NAME || current.firstName.length > spec.MAX_LENGTH_FIRST_NAME) {
+            return PersonEditValidationResult.NAME_TOO_LONG
+        }
+        if (current.lastNameFurigana.length > spec.MAX_LENGTH_LAST_NAME_FURIGANA || current.firstNameFurigana.length > spec.MAX_LENGTH_FIRST_NAME_FURIGANA) {
+            return PersonEditValidationResult.FURIGANA_TOO_LONG
+        }
+        if (current.note.length > spec.MAX_LENGTH_NOTE) {
+            return PersonEditValidationResult.NOTE_TOO_LONG
+        }
 
         val y = current.year.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY
         val m = current.month.toIntOrNull() ?: return PersonEditValidationResult.INVALID_BIRTHDAY

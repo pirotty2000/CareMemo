@@ -1,10 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
-import jp.mydns.fujiwara.carememo.data.AppThresholds
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 
 /**
@@ -12,6 +9,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
  */
 data class PersonHealthUiState(
     val personId: Int? = null,
+    override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     val records: List<HistoryRecord> = emptyList(),
     val preferredShowHistory: Boolean = true, // 追加: 履歴/グラフの選択状態
     override val isLoading: Boolean = false
@@ -56,22 +54,30 @@ object PersonHealthLogic {
         @Suppress("SENSELESS_COMPARISON")
         if (record.recordTime == null) return HealthValidationResult.INVALID_TIME
 
-        // 2. 数値の範囲確認（AppThresholds を利用）
+        // 2. 数値の範囲確認
         val isValid = when (record) {
             is HeightAndWeight -> {
-                (record.height == null || record.height in AppThresholds.MIN_HEIGHT..AppThresholds.MAX_HEIGHT) &&
-                (record.weight == null || record.weight in AppThresholds.MIN_WEIGHT..AppThresholds.MAX_WEIGHT)
+                val hSpec = HealthSpecifications.Height
+                val wSpec = HealthSpecifications.Weight
+                (record.height == null || record.height in hSpec.MIN_VALUE..hSpec.MAX_VALUE) &&
+                (record.weight == null || record.weight in wSpec.MIN_VALUE..wSpec.MAX_VALUE)
             }
             is BpAndPulse -> {
-                (record.bpSystolic == null || record.bpSystolic.toDouble() in AppThresholds.MIN_BP..AppThresholds.MAX_BP) &&
-                (record.bpDiastolic == null || record.bpDiastolic.toDouble() in AppThresholds.MIN_BP..AppThresholds.MAX_BP) &&
-                (record.pulse == null || record.pulse.toDouble() in AppThresholds.MIN_PULSE..AppThresholds.MAX_PULSE) &&
-                (record.sat == null || record.sat.toDouble() in AppThresholds.MIN_SAT..AppThresholds.MAX_SAT) &&
-                (record.bodyTemperature == null || record.bodyTemperature in AppThresholds.MIN_TEMP..AppThresholds.MAX_TEMP)
+                val bpSpec = HealthSpecifications.BloodPressure
+                val pulseSpec = HealthSpecifications.Pulse
+                val satSpec = HealthSpecifications.OxygenSaturation
+                val tempSpec = HealthSpecifications.BodyTemperature
+                (record.bpSystolic == null || record.bpSystolic.toDouble() in bpSpec.MIN_VALUE..bpSpec.MAX_VALUE) &&
+                (record.bpDiastolic == null || record.bpDiastolic.toDouble() in bpSpec.MIN_VALUE..bpSpec.MAX_VALUE) &&
+                (record.pulse == null || record.pulse.toDouble() in pulseSpec.MIN_VALUE..pulseSpec.MAX_VALUE) &&
+                (record.sat == null || record.sat.toDouble() in satSpec.MIN_VALUE..satSpec.MAX_VALUE) &&
+                (record.bodyTemperature == null || record.bodyTemperature in tempSpec.MIN_VALUE..tempSpec.MAX_VALUE)
             }
             is GlucoseAndHbA1c -> {
-                (record.glucose == null || record.glucose.toDouble() in AppThresholds.MIN_GLUCOSE..AppThresholds.MAX_GLUCOSE) &&
-                (record.hba1c == null || record.hba1c in AppThresholds.MIN_HBA1C..AppThresholds.MAX_HBA1C)
+                val gSpec = HealthSpecifications.BloodGlucose
+                val hSpec = HealthSpecifications.HbA1c
+                (record.glucose == null || record.glucose.toDouble() in gSpec.MIN_VALUE..gSpec.MAX_VALUE) &&
+                (record.hba1c == null || record.hba1c in hSpec.MIN_VALUE..hSpec.MAX_VALUE)
             }
             else -> true
         }

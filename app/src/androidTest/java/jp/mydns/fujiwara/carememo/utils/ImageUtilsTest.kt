@@ -10,7 +10,7 @@ import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import jp.mydns.fujiwara.carememo.data.AppThresholds
+import jp.mydns.fujiwara.carememo.data.spec.*
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -93,7 +93,8 @@ class ImageUtilsTest {
     fun IMG_03_processAndSaveImage_resize() = runBlocking {
         val dummyFile = File(context.cacheDir, "dummy_03.jpg")
         // 上限を超える大きな画像を作成
-        val largeSize = AppThresholds.IMAGE_MAX_SIZE + 500
+        val maxSpec = ConstraintSpecifications.Condition.Photo.MAX_SIZE_KB
+        val largeSize = maxSpec + 500
         createDummyImageFile(dummyFile, largeSize, largeSize)
         
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", dummyFile)
@@ -103,8 +104,8 @@ class ImageUtilsTest {
         val options = BitmapFactory.Options()
         BitmapFactory.decodeFile(savedFile.absolutePath, options)
 
-        assertTrue("Saved width should be <= IMAGE_MAX_SIZE", options.outWidth <= AppThresholds.IMAGE_MAX_SIZE)
-        assertTrue("Saved height should be <= IMAGE_MAX_SIZE", options.outHeight <= AppThresholds.IMAGE_MAX_SIZE)
+        assertTrue("Saved width should be <= MAX_SIZE_KB", options.outWidth <= maxSpec)
+        assertTrue("Saved height should be <= MAX_SIZE_KB", options.outHeight <= maxSpec)
         
         dummyFile.delete()
         Unit
@@ -145,13 +146,15 @@ class ImageUtilsTest {
         val photosDir = ImageUtils.getPhotosDirPublic(context)
         val photoName = "test_photo.jpg"
         val thumbName = "test_thumb.jpg"
-        File(photosDir, photoName).createNewFile()
-        File(photosDir, thumbName).createNewFile()
+        val photoFile = File(photosDir, photoName)
+        val thumbFile = File(photosDir, thumbName)
+        photoFile.createNewFile()
+        thumbFile.createNewFile()
 
         ImageUtils.deleteImageFiles(context, photoName, thumbName)
 
-        assertFalse(File(photosDir, photoName).exists())
-        assertFalse(File(photosDir, thumbName).exists())
+        assertFalse(photoFile.exists())
+        assertFalse(thumbFile.exists())
         Unit
     }
 

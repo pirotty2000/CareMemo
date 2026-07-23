@@ -12,99 +12,13 @@
 
 ---
 
-## 🚀 改善ステップ
-
-### ✅フェーズ 1: ドメインロジックの抽出 (重要度: 高) ✅ 完了 (2026/07/13)
-ViewModel 内の純粋なロジックを Logic クラスに抽出しました。
-*   **対象**: 全ての主要 ViewModel (`PersonEdit`, `PersonHealth`, `PersonList`, `PersonMedication`, `BatchInput`, `Settings`)
-*   **成果**: 
-    *   `jp.mydns.fujiwara.carememo.logic` パッケージの新設。
-    *   和暦計算、健康判定、カレンダー生成、検索フィルタリング等の純粋な Kotlin 化。
-    *   ユニットテストの拡充（全144件パス）。
-
-### ✅フェーズ 2: UI 状態（UiState）の集約と原子性の確保 (重要度: 高) ✅ 完了 (2026/07/14)
-
-散在する `MutableStateFlow` を一つの `UiState` データクラスに集約します。
-
-- **目的**：
-  - UI状態管理を UiState に統一し、状態更新の原子性を確保する。
-  - 本フェーズでは 状態の持ち方を改善すること が目的であり、既存の画面仕様・業務ロジック・Repository の振る舞いは変更しない。
-- **具体的ルール**:
-  - **1画面 1UiState**:
-    - 画面が表示に必要とする状態は、原則として一つの UiState データクラスに集約する。
-    - 例：`loading`, `error`, `data`, `selectedItem` , `dialog表示状態`, `isValid`, `その他UI表示に必要な状態`等
-  - **原子的な更新**: 
-    - UiState の変更は、原則として `_uiState.update { it.copy(...) }` のみで行う。
-    - 複数の MutableStateFlow を個別更新し、一時的に矛盾した状態をUIへ通知してはならない。。
-  - **派生状態の定義**: 
-    - 画面内で使用する派生状態(例：isValid)は、「`UiState`のプロパティ」または「`UiState`更新時に計算した結果」として保持する
-    - `combine()`の利用ルールを次の通りとする。
-      - **禁止**：
-        - MutableStateFlow 同士を combine() して UiState を構成すること。
-        - UiState の各プロパティを combine() に依存して維持すること
-      - **許可**：
-        - Repository 等の複数の外部 Flow を同期すること。
-        - 同期した結果を 1 回の `_uiState.update { ... }` で反映すること。
-        - Repository等から取得するデータそのものを合成する用途まで禁止するものではありません。
-  - **状態の分類**：状態は次の2種類を区別する。
-    - **保存すべき状態**：UIが保持する値、編集中データ、選択状態、ダイアログ状態、エラー状態
-    - **毎回計算すべき値**：一時的な表示用の値、単純な算出結果、保持不要な派生値
-    - 保持不要な値まで UiState に保存しない。
-- **実装上の制約**：
-  - 以下は、本フェーズでは変更しない。
-    - Repositoryの責務、Logicの責務、DBアクセス順序、非同期処理の流れ、業務ロジック、Navigation
-  - 変更対象は ViewModel の状態管理方法のみ とする。
-- **注意**: 
-  - この修正は2度目の作業です。1度目は、ほとんどのUnitTestが失敗となる･･･写真を撮影してもプレビュー画面に遷移せず写真が保存されない･･･など不具合に悩まされました。その反省を踏まえ、1度目の作業をリセットし、やり直しています。
-  - 1度目の修正作業の中で、『BaseViewModel に 「リクエスト ID 方式（RESTART モード）」 を組み込むこと』が提案されました。採用する場合は、「解決したい問題」「導入コスト」「他の画面への影響」「既存safeLaunchとの整合性」を評価し、採否を決定すること。実装ありきで進めてはならない。
-- **方針**：
-  - **Side-by-side 移行戦略**: 既存の `BaseViewModel` は維持したまま、フェーズ 2 用の新しい基底クラス `BaseUiStateViewModel<S, E>` を新規作成する。
-  - **型安全な状態とイベント**: ジェネリクスを用い、画面ごとの `UiState` (S) と `ViewEvent` (E) をジェネリスクで管理する。
-  - **既存基盤の継承**: `BaseUiStateViewModel` は `BaseViewModel` を継承し、フェーズ 4 で確立したエラーハンドリング（`safeLaunch`、エラーハンドリング、ログ出力)など既存基盤を再利用する。
-  - **段階的な適用**: 1 画面ずつ新基底クラスへ移行し、全画面の移行完了後に`BaseViewModel`、`BaseUiStateViewModel`の統合を検討する。
-  - **動作維持の最優先**: 
-    - Repository呼び出し順序、Logic、データ取得方法、UI仕様は変更しない。
-    - 変更対象は ViewModel 内部の状態保持方法と UiState 更新方法に限定する。イベントの流れや画面遷移契機は変更しない。
-  - **安全なローディング制御**: 
-    - `safeLaunchState` は loadingフラグの管理を担当する。
-    - 画面固有のデータ更新・エラー状態更新は各 ViewModel が明示的に行う。
-    - 画面固有のローディング制御はViewModel側へ分散させない。
-- **実装完了条件**：次の条件をすべて満たした時点で完了とする。
-  - MutableStateFlow の散在が解消され、画面状態が UiState に集約されている。
-  - UiState は _uiState.update { it.copy(...) } により原子的に更新されている。
-  - 既存の画面仕様・業務ロジック・Navigation が変更されていない。
-  - UnitTest・Instrumented Test がすべて成功する。
-  - 初回作業で発生した不具合（画面遷移・写真保存等）が再発していない。
-  - 既存機能との互換性が維持されている。
-
-### ✅フェーズ 2-1: Dual-ViewModel 構造への回帰 (重要度: 中) ✅ 完了 (2026/07/14)
-
-現在継承によって実現されている ViewModel 構造を、設計原則（1.2.2項）通り、詳細画面共通（Detail）とカテゴリ専門の 2 つの ViewModel を協調させる構造に戻します。
-
-- **目的**：
-  - ViewModel の継承による肥大化を防ぎ、責務を明確に分離する。
-  - 詳細画面の共通フレームワーク（利用者情報の保持、カテゴリ切り替え）を独立させ、メンテナンス性を向上させる。
-- **具体的ルール**:
-  - **専門 ViewModel の独立**: `PersonHealthViewModel` 等が `PersonDetailUiStateViewModel` を継承するのをやめ、独立したクラスとする。
-  - **Screen での協調**: `*Screen.kt` が 2 つの ViewModel を受け取り、`loadPerson` 等の連携ロジックを Composable 側で記述する。
-- **実装対象**：
-  - `PersonHealthScreen`, `PersonConditionScreen`, `PersonMedicationScreen`
-
+## 🚀 改善ステップ (未完了)
 
 ### フェーズ 3: ＜少し慎重に＞UseCase 層の導入によるオーケストレーション (重要度: 中)
 複数のリポジトリを跨ぐ処理フローを UseCase に隠蔽します。
 *   **対象**: `BatchInputViewModel` (一括保存フロー), `PersonBaseViewModel` (基本情報+サマリー取得)
 *   **効果**: ViewModel の依存関係（Repository の数）の削減。
 *   **検討**: 今の規模なら、Repositoryが十分整理されているなら無理にUseCaseを入れなくても十分ではないか？
-
-### ✅フェーズ 4: 例外・キャンセル処理の標準化 (重要度: 高) ✅ 完了 (2026/07/15)
-`BaseViewModel` の機能を活用し、全画面で一貫した異常系・中断処理を実現しました。`project_TODO_ErrorHandling.md` に基づくリファクタリングにより、全 ViewModel への適用が完了しています。
-*   **具体的ルール**:
-    *   **エラーの峻別**:
-        *   **業務エラー**: 入力不正や重複など。`UiState` のエラー状態または `UiEvent` で個別に通知し、ユーザーに具体的な対処を促す。
-        *   **システム例外**: ネットワーク切断やDBクラッシュなど。`safeLaunch` の共通ハンドラ（`CoroutineErrorHandler`）でキャッチし、ログ記録と共通エラーUIを表示。
-    *   **キャンセルの自動制御**: `loadPersonJob?.cancel()` のような手動管理を減らし、`safeCollect` 等に「既存の処理があればキャンセルして開始する」モード（RESTART）を検討。
-    *   **重要処理の完遂**: 保存処理や監査ログ（AuditLog）の出力など、画面が閉じられても中断してはならない処理には `NonCancellable` コンテキストや、より長命な `CoroutineScope` の利用を検討する。
 
 ### フェーズ 5: 異常系テストの拡充 (重要度: 高)
 正常系だけでなく、エラー発生時やキャンセル時の挙動をテストコードで担保します。
@@ -146,15 +60,15 @@ ViewModel 内の純粋なロジックを Logic クラスに抽出しました。
 
 ## 📂 対象ファイルと優先度
 
-| ViewModel 名           | 優先度   | 主な課題                   | 適用推奨フェーズ   |
+| ViewModel 名           | 優先度   | 残された主な課題           | 適用推奨フェーズ |
 |:----------------------|:------|:-----------------------|:-----------|
-| `BatchInputViewModel` | 🔴 最高 | 個別 Flow が多すぎ、保存ロジックが複雑 | 1, 2, 3, 5 |
-| `PersonEditViewModel` | 🔴 高  | ロジックの混入、派生状態の算出が複雑     | 1, 2, 5    |
-| `PersonBaseViewModel` | 🟡 中  | 共通処理と独自処理の境界が曖昧        | 3, 4       |
-| `PersonListViewModel` | 🔵 低  | フィルタリングロジックの整理         | 1, 2       |
+| `BatchInputViewModel` | 🔴 最高 | 一括保存ロジックの整理、異常系テスト | 3, 5, 6    |
+| `PersonEditViewModel` | 🔴 高  | 異常系テストの拡充         | 5          |
+| `PersonBaseViewModel` | 🟡 中  | 共通処理の UseCase 化検討 | 3          |
+| `PersonListViewModel` | 🔵 低  | 異常系テストの拡充         | 5          |
 
 > [!NOTE]
-> 上記以外の ViewModel（`PersonHealthViewModel` 等）についても、これらの「パイロットケース」での改善成果を順次横展開し、最終的にはプロジェクト全体の ViewModel 構造を統一します。
+> フェーズ 1, 2, 2-1, 4 は完了済みです。現在は上記の未完了フェーズおよび個別課題に注力します。
 
 ---
 最終更新日: 2026/07/20

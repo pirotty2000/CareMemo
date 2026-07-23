@@ -145,6 +145,9 @@ class PersonEditViewModel(
                     PersonEditValidationResult.EMPTY_LAST_NAME -> R.string.main_err_edit_empty_last_name
                     PersonEditValidationResult.EMPTY_FIRST_NAME -> R.string.main_err_edit_empty_first_name
                     PersonEditValidationResult.INVALID_BIRTHDAY -> R.string.main_err_edit_invalid_birthday
+                    PersonEditValidationResult.NAME_TOO_LONG -> R.string.main_err_name_too_long
+                    PersonEditValidationResult.FURIGANA_TOO_LONG -> R.string.main_err_furigana_too_long
+                    PersonEditValidationResult.NOTE_TOO_LONG -> R.string.main_err_note_too_long
                     else -> R.string.common_error_save
                 }
                 throw AppValidationException(

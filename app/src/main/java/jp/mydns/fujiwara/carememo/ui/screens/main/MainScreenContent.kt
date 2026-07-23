@@ -72,7 +72,7 @@ fun MainScreenContent(
                 }
             },
             confirmButton = {
-                AppDialogConfirmButton(
+                AppDialogDismissButton(
                     text = stringResource(R.string.common_close),
                     onClick = { showVersionDialog = false }
                 )

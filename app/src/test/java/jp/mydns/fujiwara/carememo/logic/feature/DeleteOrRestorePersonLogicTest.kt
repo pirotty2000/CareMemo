@@ -99,4 +99,18 @@ class DeleteOrRestorePersonLogicTest {
         val result = DeleteOrRestorePersonLogic.selectAll(emptyList())
         assertTrue(result.isEmpty())
     }
+
+    @Test
+    fun lg_06_validate_success() {
+        val selectedIds = setOf(1)
+        val result = DeleteOrRestorePersonLogic.validate(selectedIds)
+        assertEquals(DeleteOrRestorePersonLogic.DeleteOrRestoreValidationResult.SUCCESS, result)
+    }
+
+    @Test
+    fun lg_07_validate_no_selection() {
+        val selectedIds = emptySet<Int>()
+        val result = DeleteOrRestorePersonLogic.validate(selectedIds)
+        assertEquals(DeleteOrRestorePersonLogic.DeleteOrRestoreValidationResult.NO_SELECTION, result)
+    }
 }

@@ -1,9 +1,10 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import android.net.Uri
-import jp.mydns.fujiwara.carememo.data.AppThresholds
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 
@@ -19,6 +20,7 @@ data class PersonConditionUiState(
 
     // --- 集約された状態 ---
     val personId: Int? = null,
+    override val currentCategory: Category = Category.CONDITION_AT_VISIT,
 
     val records: List<ConditionAtVisit> = emptyList(),
     val filteredRecords: List<ConditionAtVisit> = emptyList(),
@@ -50,7 +52,8 @@ enum class PersonConditionValidationResult {
     EMPTY_CONDITION,
     EMPTY_AUTHOR,
     INVALID_TIME,
-    CONDITION_TOO_LONG
+    CONDITION_TOO_LONG,
+    TITLE_TOO_LONG
 }
 
 /**
@@ -80,7 +83,8 @@ object PersonConditionLogic {
         if (current.condition.isBlank()) return PersonConditionValidationResult.EMPTY_CONDITION
         if (current.author.isBlank()) return PersonConditionValidationResult.EMPTY_AUTHOR
         if (current.recordTime == null) return PersonConditionValidationResult.INVALID_TIME
-        if (current.condition.length > AppThresholds.CONDITION_MAX_LENGTH) return PersonConditionValidationResult.CONDITION_TOO_LONG
+        if (current.condition.length > ConstraintSpecifications.Condition.Validation.MAX_LENGTH_MEMO) return PersonConditionValidationResult.CONDITION_TOO_LONG
+        if (current.title.length > ConstraintSpecifications.Condition.Validation.MAX_LENGTH_TITLE) return PersonConditionValidationResult.TITLE_TOO_LONG
 
         return PersonConditionValidationResult.SUCCESS
     }

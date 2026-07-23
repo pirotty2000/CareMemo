@@ -53,8 +53,9 @@ jp.mydns.fujiwara.carememo
 ├── logic/              # ドメインロジック（計算・判定・Entity変換等の純粋なロジック）
 │   ├── common/         #  ├─ アプリ全体で再利用可能な計算・変換ロジック
 │   └── feature/        #  └─ 特定の画面・ViewModelに密結合した判定・加工ロジック
-├── data/               # データレイヤー（Room Database / Repository / AppThresholds）
-│   └── repository/     #  └─ リポジトリ（純粋なデータCRUD操作に特化。業務ロジックを持たない）
+├── data/               # データレイヤー（Room Database / Repository / AppSpecifications）
+│   ├── repository/     #  ├─ リポジトリ（純粋なデータCRUD操作に特化。業務ロジックを持たない）
+│   └── spec/           #  └─ アプリの仕様定義（ドメイン別に分割された定数・バリデーション規則）
 ├── utils/              # ユーティリティ（日時操作、PDF生成、画像処理、ZIP圧縮）
 ├── MainActivity.kt     # アプリのエントリポイント、NavHostによる画面遷移定義
 └── CareMemoApplication.kt # Application クラス、リポジトリのDI（依存注入）管理
@@ -297,4 +298,4 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 
 ---
 
-最終更新日: 2026/07/13
+最終更新日: 2026/07/22

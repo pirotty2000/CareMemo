@@ -22,13 +22,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import jp.mydns.fujiwara.carememo.ui.mapping.BirthEraDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import java.time.Instant
-import java.time.LocalDate
-import java.time.YearMonth
 import java.time.ZoneOffset
 
 /**
@@ -44,34 +44,23 @@ class BirthdayInputState(
      * 入力内容を Instant に変換。不正な場合は null。
      */
     fun toInstant(): Instant? {
-        val yInput = year.value.toIntOrNull() ?: return null
+        val y = year.value.toIntOrNull() ?: return null
         val m = month.value.toIntOrNull() ?: return null
         val d = day.value.toIntOrNull() ?: return null
 
-        val westernYear = when (era.value) {
-            BirthEra.SHOWA -> yInput + 1925
-            BirthEra.HEISEI -> yInput + 1988
-            BirthEra.REIWA -> yInput + 2018
-            BirthEra.AD -> yInput
-        }
-
-        return try {
-            LocalDate.of(westernYear, m, d)
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-        } catch (_: Exception) {
-            null
-        }
+        return JapaneseDateLogic.toLocalDate(era.value, y, m, d)
+            ?.atStartOfDay(ZoneOffset.UTC)
+            ?.toInstant()
     }
 
     val isYearError: Boolean
         get() {
             val y = year.value.toIntOrNull() ?: return true
             return when (era.value) {
-                BirthEra.SHOWA -> y !in 1..64
-                BirthEra.HEISEI -> y !in 1..31
-                BirthEra.REIWA -> y !in 1..99
-                BirthEra.AD -> y !in 1900..2100
+                BirthEra.SHOWA -> y !in 1..CalendarSpecifications.Era.Showa.MAX_YEAR
+                BirthEra.HEISEI -> y !in 1..CalendarSpecifications.Era.Heisei.MAX_YEAR
+                BirthEra.REIWA -> y !in 1..CalendarSpecifications.Era.Reiwa.MAX_YEAR
+                BirthEra.AD -> y !in CalendarSpecifications.MIN_DATE.year..CalendarSpecifications.MAX_WESTERN_YEAR
             }
         }
 
@@ -86,17 +75,10 @@ class BirthdayInputState(
             val yInput = year.value.toIntOrNull() ?: return true
             val m = month.value.toIntOrNull() ?: return true
             val d = day.value.toIntOrNull() ?: return true
-            val westernYear = when (era.value) {
-                BirthEra.SHOWA -> yInput + 1925
-                BirthEra.HEISEI -> yInput + 1988
-                BirthEra.REIWA -> yInput + 2018
-                BirthEra.AD -> yInput
-            }
-            return try {
-                d < 1 || d > YearMonth.of(westernYear, m).lengthOfMonth()
-            } catch (_: Exception) {
-                true
-            }
+            
+            // LocalDate への変換（および物理的妥当性チェック）は JapaneseDateLogic に集約
+            val date = JapaneseDateLogic.toLocalDate(era.value, yInput, m, d)
+            return date == null
         }
 }
 

@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.YearMonth
@@ -9,6 +10,7 @@ import java.time.YearMonth
  */
 data class PersonMedicationUiState(
     val personId: Int? = null,
+    override val currentCategory: Category = Category.MEDICATION,
 
     val selectedMonth: YearMonth = YearMonth.now(),
     val monthlyRecords: List<MedicationRecord> = emptyList(),

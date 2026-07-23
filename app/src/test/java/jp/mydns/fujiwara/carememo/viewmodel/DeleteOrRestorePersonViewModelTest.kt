@@ -16,7 +16,8 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -39,7 +40,7 @@ class DeleteOrRestorePersonViewModelTest {
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private lateinit var viewModel: DeleteOrRestorePersonViewModel
-    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testPerson = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now())
 
@@ -62,15 +63,13 @@ class DeleteOrRestorePersonViewModelTest {
     }
 
     @Test
-    fun init_loadsArchivedPersons() = runTest {
-        advanceUntilIdle()
+    fun init_loadsArchivedPersons() = runTest(testDispatcher) {
         assertEquals(1, viewModel.uiState.value.archivedPersons.size)
         assertEquals(testPerson, viewModel.uiState.value.archivedPersons[0])
     }
 
     @Test
-    fun setMode_clearsSelection() = runTest {
-        advanceUntilIdle()
+    fun setMode_clearsSelection() = runTest(testDispatcher) {
         viewModel.toggleSelection(1)
         assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
 
@@ -80,8 +79,7 @@ class DeleteOrRestorePersonViewModelTest {
     }
 
     @Test
-    fun toggleSelection_updatesSelectedIds() = runTest {
-        advanceUntilIdle()
+    fun toggleSelection_updatesSelectedIds() = runTest(testDispatcher) {
         viewModel.toggleSelection(1)
         assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
 
@@ -90,8 +88,7 @@ class DeleteOrRestorePersonViewModelTest {
     }
 
     @Test
-    fun selectAll_clearSelection_updatesState() = runTest {
-        advanceUntilIdle()
+    fun selectAll_clearSelection_updatesState() = runTest(testDispatcher) {
         viewModel.selectAll(listOf(testPerson))
         assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
 
@@ -100,13 +97,11 @@ class DeleteOrRestorePersonViewModelTest {
     }
 
     @Test
-    fun lg_01_restoreFailure_safety() = runTest {
+    fun lg_01_restoreFailure_safety() = runTest(testDispatcher) {
         coEvery { repository.restorePerson(any(), any(), any()) } throws RuntimeException("Restore Error")
-        advanceUntilIdle()
         viewModel.toggleSelection(1)
 
         viewModel.restoreSelectedPersons(listOf(testPerson))
-        advanceUntilIdle()
 
         // Then: isLoading が false に戻ること
         assertEquals(false, viewModel.uiState.value.isLoading)
@@ -124,26 +119,58 @@ class DeleteOrRestorePersonViewModelTest {
     }
 
     @Test
-    fun lg_02_maskingSetting_syncsToUiState() = runTest {
+    fun lg_02_maskingSetting_syncsToUiState() = runTest(testDispatcher) {
         // 設定が ON の場合
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(true)
         
         // 新しく ViewModel を作成して Flow を購読させる
         val syncViewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository)
         
-        // TestDispatcher でコルーチンを回す
-        advanceUntilIdle()
-
         assertEquals(true, syncViewModel.uiState.value.isNameMaskingEnabled)
     }
 
     @Test
-    fun lg_03_atomicClearSelection() = runTest {
-        advanceUntilIdle()
+    fun lg_03_atomicClearSelection() = runTest(testDispatcher) {
         viewModel.toggleSelection(1)
         assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
 
         viewModel.clearSelection()
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun lg_04_restore_noSelection_showsError() = runTest(testDispatcher) {
+        val events = mutableListOf<BaseUiStateViewModel.UiEvent>()
+        val job = backgroundScope.launch {
+            viewModel.uiEventFlow.collect { events.add(it) }
+        }
+        
+        // 選択なしで呼び出し
+        viewModel.restoreSelectedPersons(listOf(testPerson))
+        
+        assertTrue(events.any { it is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes })
+        
+        val errorEvent = events.filterIsInstance<BaseUiStateViewModel.UiEvent.ShowErrorDialogRes>().first()
+        assertEquals(jp.mydns.fujiwara.carememo.R.string.archive_err_no_selection, errorEvent.messageResId)
+
+        job.cancel()
+    }
+
+    @Test
+    fun lg_05_delete_noSelection_showsError() = runTest(testDispatcher) {
+        val events = mutableListOf<BaseUiStateViewModel.UiEvent>()
+        val job = backgroundScope.launch {
+            viewModel.uiEventFlow.collect { events.add(it) }
+        }
+
+        // 選択なしで呼び出し
+        viewModel.deleteSelectedPersons(listOf(testPerson))
+
+        assertTrue(events.any { it is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes })
+
+        val errorEvent = events.filterIsInstance<BaseUiStateViewModel.UiEvent.ShowErrorDialogRes>().first()
+        assertEquals(jp.mydns.fujiwara.carememo.R.string.archive_err_no_selection, errorEvent.messageResId)
+
+        job.cancel()
     }
 }

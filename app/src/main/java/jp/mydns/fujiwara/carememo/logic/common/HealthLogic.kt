@@ -1,6 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
-import jp.mydns.fujiwara.carememo.data.AppThresholds
+import jp.mydns.fujiwara.carememo.data.spec.*
 import kotlin.math.pow
 
 /**
@@ -10,7 +10,8 @@ enum class HealthAlertLevel(val severity: Int) {
     NORMAL(0),
     WARNING(1),
     ALERT(2),
-    INFO(-1);
+    INFO(-1),
+    NONE(-2);
 
     companion object {
         /**
@@ -43,7 +44,7 @@ enum class HealthInputValidationResult {
 
 /**
  * 健康記録に関する純粋な計算・判定ロジック。
- * AppThresholds の定数を参照し、判定結果として Enum を返します。
+ * AppSpecifications の定数を参照し、判定結果として Enum を返します。
  */
 object HealthLogic {
 
@@ -59,13 +60,14 @@ object HealthLogic {
      * BMI値に基づきステータスとアラートレベルを判定します。
      */
     fun evaluateBMI(bmi: Double): Pair<BmiStatus?, HealthAlertLevel> {
+        val specs = HealthSpecifications.BodyMassIndex
         return when {
             bmi <= 0.0 -> null to HealthAlertLevel.NORMAL
-            bmi < AppThresholds.BMI_NORMAL_LOW -> BmiStatus.UNDERWEIGHT to HealthAlertLevel.INFO
-            bmi < AppThresholds.BMI_NORMAL_HIGH -> BmiStatus.NORMAL to HealthAlertLevel.NORMAL
-            bmi < AppThresholds.BMI_OBESITY_1 -> BmiStatus.OBESITY_1 to HealthAlertLevel.WARNING
-            bmi < AppThresholds.BMI_OBESITY_2 -> BmiStatus.OBESITY_2 to HealthAlertLevel.WARNING
-            bmi < AppThresholds.BMI_OBESITY_3 -> BmiStatus.OBESITY_3 to HealthAlertLevel.ALERT
+            bmi < specs.THRESHOLD_UNDERWEIGHT -> BmiStatus.UNDERWEIGHT to HealthAlertLevel.INFO
+            bmi < specs.THRESHOLD_NORMAL_UPPER -> BmiStatus.NORMAL to HealthAlertLevel.NORMAL
+            bmi < specs.THRESHOLD_OBESITY_1 -> BmiStatus.OBESITY_1 to HealthAlertLevel.WARNING
+            bmi < specs.THRESHOLD_OBESITY_2 -> BmiStatus.OBESITY_2 to HealthAlertLevel.WARNING
+            bmi < specs.THRESHOLD_OBESITY_3 -> BmiStatus.OBESITY_3 to HealthAlertLevel.ALERT
             else -> BmiStatus.OBESITY_4 to HealthAlertLevel.ALERT
         }
     }
@@ -83,23 +85,28 @@ object HealthLogic {
         val results = mutableListOf<Pair<VitalStatus, HealthAlertLevel>>()
 
         systolic?.let {
-            if (it >= AppThresholds.BP_HIGH_SYSTOLIC) results.add(VitalStatus.HIGH_BP to HealthAlertLevel.ALERT)
-            else if (it < AppThresholds.BP_LOW_SYSTOLIC) results.add(VitalStatus.LOW_BP to HealthAlertLevel.WARNING)
+            val spec = HealthSpecifications.BloodPressure
+            if (it >= spec.THRESHOLD_HIGH_SYSTOLIC) results.add(VitalStatus.HIGH_BP to HealthAlertLevel.ALERT)
+            else if (it < spec.THRESHOLD_LOW_SYSTOLIC) results.add(VitalStatus.LOW_BP to HealthAlertLevel.WARNING)
         }
         diastolic?.let {
-            if (it >= AppThresholds.BP_HIGH_DIASTOLIC) results.add(VitalStatus.HIGH_BP to HealthAlertLevel.ALERT)
-            else if (it < AppThresholds.BP_LOW_DIASTOLIC) results.add(VitalStatus.LOW_BP to HealthAlertLevel.WARNING)
+            val spec = HealthSpecifications.BloodPressure
+            if (it >= spec.THRESHOLD_HIGH_DIASTOLIC) results.add(VitalStatus.HIGH_BP to HealthAlertLevel.ALERT)
+            else if (it < spec.THRESHOLD_LOW_DIASTOLIC) results.add(VitalStatus.LOW_BP to HealthAlertLevel.WARNING)
         }
         sat?.let {
-            if (it <= AppThresholds.SAT_LOW) results.add(VitalStatus.LOW_SAT to HealthAlertLevel.ALERT)
+            val spec = HealthSpecifications.OxygenSaturation
+            if (it <= spec.THRESHOLD_LOW) results.add(VitalStatus.LOW_SAT to HealthAlertLevel.ALERT)
         }
         pulse?.let {
-            if (it >= AppThresholds.PULSE_HIGH) results.add(VitalStatus.TACHYCARDIA to HealthAlertLevel.ALERT)
-            else if (it <= AppThresholds.PULSE_LOW) results.add(VitalStatus.BRADYCARDIA to HealthAlertLevel.WARNING)
+            val spec = HealthSpecifications.Pulse
+            if (it >= spec.THRESHOLD_HIGH) results.add(VitalStatus.TACHYCARDIA to HealthAlertLevel.ALERT)
+            else if (it <= spec.THRESHOLD_LOW) results.add(VitalStatus.BRADYCARDIA to HealthAlertLevel.WARNING)
         }
         temp?.let {
-            if (it >= AppThresholds.TEMP_HIGH) results.add(VitalStatus.FEVER to HealthAlertLevel.ALERT)
-            else if (it < AppThresholds.TEMP_LOW) results.add(VitalStatus.HYPOTHERMIA to HealthAlertLevel.WARNING)
+            val spec = HealthSpecifications.BodyTemperature
+            if (it >= spec.THRESHOLD_HIGH) results.add(VitalStatus.FEVER to HealthAlertLevel.ALERT)
+            else if (it < spec.THRESHOLD_LOW) results.add(VitalStatus.HYPOTHERMIA to HealthAlertLevel.WARNING)
         }
 
         if (results.isEmpty()) return listOf(VitalStatus.NORMAL to HealthAlertLevel.NORMAL)
@@ -111,10 +118,11 @@ object HealthLogic {
      */
     fun evaluateGlucose(glucose: Int?): Pair<GlucoseStatus?, HealthAlertLevel> {
         val g = glucose ?: return null to HealthAlertLevel.NORMAL
+        val spec = HealthSpecifications.BloodGlucose
         return when {
-            g > AppThresholds.GLUCOSE_NORMAL_PREDIABETES -> GlucoseStatus.HIGH to HealthAlertLevel.ALERT
-            g >= AppThresholds.GLUCOSE_NORMAL_HIGH -> GlucoseStatus.WARNING to HealthAlertLevel.WARNING
-            g >= AppThresholds.GLUCOSE_NORMAL_LOW -> GlucoseStatus.NORMAL to HealthAlertLevel.NORMAL
+            g > spec.THRESHOLD_HIGH -> GlucoseStatus.HIGH to HealthAlertLevel.ALERT
+            g >= spec.THRESHOLD_NORMAL_UPPER -> GlucoseStatus.WARNING to HealthAlertLevel.WARNING
+            g >= spec.THRESHOLD_LOW -> GlucoseStatus.NORMAL to HealthAlertLevel.NORMAL
             else -> GlucoseStatus.LOW to HealthAlertLevel.ALERT
         }
     }
@@ -124,9 +132,10 @@ object HealthLogic {
      */
     fun evaluateHbA1c(hba1c: Double?): Pair<HbA1cStatus?, HealthAlertLevel> {
         val h = hba1c ?: return null to HealthAlertLevel.NORMAL
+        val spec = HealthSpecifications.HbA1c
         return when {
-            h >= AppThresholds.HBA1C_DIABETES -> HbA1cStatus.DIABETES to HealthAlertLevel.ALERT
-            h > AppThresholds.HBA1C_GOOD -> HbA1cStatus.WARNING to HealthAlertLevel.WARNING
+            h >= spec.THRESHOLD_DIABETES -> HbA1cStatus.DIABETES to HealthAlertLevel.ALERT
+            h > spec.THRESHOLD_NORMAL_UPPER -> HbA1cStatus.WARNING to HealthAlertLevel.WARNING
             else -> HbA1cStatus.NORMAL to HealthAlertLevel.NORMAL
         }
     }
@@ -142,10 +151,10 @@ object HealthLogic {
     ): HealthInputValidationResult {
         if (value.isBlank()) return HealthInputValidationResult.EMPTY
         
-        // 形式チェック (AppThresholds.isWithinFormat は Boolean なので、より詳細に判定)
+        // 形式チェック
         val num = value.toDoubleOrNull() ?: return HealthInputValidationResult.INVALID_FORMAT
         
-        if (!AppThresholds.isWithinFormat(value, intDigits, decDigits)) {
+        if (!isWithinFormat(value, intDigits, decDigits)) {
             return HealthInputValidationResult.INVALID_FORMAT
         }
 
@@ -156,11 +165,45 @@ object HealthLogic {
         }
     }
 
+    /**
+     * 文字列が指定された整数桁・小数桁の形式に合致し、かつ指定された範囲内にあるか判定する。
+     * (AppSpecifications を参照するように移行)
+     */
+    fun isWithinFormat(
+        value: String,
+        intDigits: Int,
+        decDigits: Int = 0,
+        min: Double? = null,
+        max: Double? = null
+    ): Boolean {
+        if (value.isBlank()) return true
+        val parts = value.split(".")
+        if (parts.size > 2) return false
+
+        val intPart = parts[0]
+        if (intPart.length > intDigits) return false
+
+        if (parts.size == 2) {
+            val decPart = parts[1]
+            if (decPart.length > decDigits) return false
+        }
+
+        val num = value.toDoubleOrNull() ?: return false
+        if (num < 0) return false
+
+        if (min != null && num < min) return false
+        if (max != null && num > max) return false
+
+        return true
+    }
+
     fun validateHeightAndWeight(height: String, weight: String): HealthInputValidationResult {
         if (height.isBlank() && weight.isBlank()) return HealthInputValidationResult.EMPTY
         
-        val hRes = if (height.isNotBlank()) validateValue(height, AppThresholds.DIGITS_HEIGHT_INT, AppThresholds.DIGITS_HEIGHT_DEC, AppThresholds.MIN_HEIGHT, AppThresholds.MAX_HEIGHT) else HealthInputValidationResult.SUCCESS
-        val wRes = validateValue(weight, AppThresholds.DIGITS_WEIGHT_INT, AppThresholds.DIGITS_WEIGHT_DEC, AppThresholds.MIN_WEIGHT, AppThresholds.MAX_WEIGHT)
+        val hSpec = HealthSpecifications.Height
+        val wSpec = HealthSpecifications.Weight
+        val hRes = if (height.isNotBlank()) validateValue(height, hSpec.DIGITS_INT, hSpec.DIGITS_DEC, hSpec.MIN_VALUE, hSpec.MAX_VALUE) else HealthInputValidationResult.SUCCESS
+        val wRes = validateValue(weight, wSpec.DIGITS_INT, wSpec.DIGITS_DEC, wSpec.MIN_VALUE, wSpec.MAX_VALUE)
 
         return when {
             hRes == HealthInputValidationResult.INVALID_FORMAT || wRes == HealthInputValidationResult.INVALID_FORMAT -> HealthInputValidationResult.INVALID_FORMAT
@@ -171,12 +214,17 @@ object HealthLogic {
     }
 
     fun validateBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String): HealthInputValidationResult {
+        val bpSpec = HealthSpecifications.BloodPressure
+        val satSpec = HealthSpecifications.OxygenSaturation
+        val pulseSpec = HealthSpecifications.Pulse
+        val tempSpec = HealthSpecifications.BodyTemperature
+        
         val inputs = listOf(
-            Triple(systolic, AppThresholds.DIGITS_BP_INT, 0 to (AppThresholds.MIN_BP to AppThresholds.MAX_BP)),
-            Triple(diastolic, AppThresholds.DIGITS_BP_INT, 0 to (AppThresholds.MIN_BP to AppThresholds.MAX_BP)),
-            Triple(sat, AppThresholds.DIGITS_SAT_INT, 0 to (AppThresholds.MIN_SAT to AppThresholds.MAX_SAT)),
-            Triple(pulse, AppThresholds.DIGITS_PULSE_INT, 0 to (AppThresholds.MIN_PULSE to AppThresholds.MAX_PULSE)),
-            Triple(temp, AppThresholds.DIGITS_TEMP_INT, AppThresholds.DIGITS_TEMP_DEC to (AppThresholds.MIN_TEMP to AppThresholds.MAX_TEMP))
+            Triple(systolic, bpSpec.DIGITS_INT, 0 to (bpSpec.MIN_VALUE to bpSpec.MAX_VALUE)),
+            Triple(diastolic, bpSpec.DIGITS_INT, 0 to (bpSpec.MIN_VALUE to bpSpec.MAX_VALUE)),
+            Triple(sat, satSpec.DIGITS_INT, 0 to (satSpec.MIN_VALUE to satSpec.MAX_VALUE)),
+            Triple(pulse, pulseSpec.DIGITS_INT, 0 to (pulseSpec.MIN_VALUE to pulseSpec.MAX_VALUE)),
+            Triple(temp, tempSpec.DIGITS_INT, tempSpec.DIGITS_DEC to (tempSpec.MIN_VALUE to tempSpec.MAX_VALUE))
         )
 
         val activeInputs = inputs.filter { it.first.isNotBlank() }
@@ -194,8 +242,10 @@ object HealthLogic {
     fun validateGlucoseAndHbA1c(glucose: String, hba1c: String): HealthInputValidationResult {
         if (glucose.isBlank() && hba1c.isBlank()) return HealthInputValidationResult.EMPTY
 
-        val gRes = if (glucose.isNotBlank()) validateValue(glucose, AppThresholds.DIGITS_GLUCOSE_INT, 0, AppThresholds.MIN_GLUCOSE, AppThresholds.MAX_GLUCOSE) else HealthInputValidationResult.SUCCESS
-        val hRes = if (hba1c.isNotBlank()) validateValue(hba1c, AppThresholds.DIGITS_HBA1C_INT, AppThresholds.DIGITS_HBA1C_DEC, AppThresholds.MIN_HBA1C, AppThresholds.MAX_HBA1C) else HealthInputValidationResult.SUCCESS
+        val gSpec = HealthSpecifications.BloodGlucose
+        val hSpec = HealthSpecifications.HbA1c
+        val gRes = if (glucose.isNotBlank()) validateValue(glucose, gSpec.DIGITS_INT, 0, gSpec.MIN_VALUE, gSpec.MAX_VALUE) else HealthInputValidationResult.SUCCESS
+        val hRes = if (hba1c.isNotBlank()) validateValue(hba1c, hSpec.DIGITS_INT, hSpec.DIGITS_DEC, hSpec.MIN_VALUE, hSpec.MAX_VALUE) else HealthInputValidationResult.SUCCESS
 
         return when {
             gRes == HealthInputValidationResult.INVALID_FORMAT || hRes == HealthInputValidationResult.INVALID_FORMAT -> HealthInputValidationResult.INVALID_FORMAT
@@ -208,4 +258,15 @@ object HealthLogic {
     fun isValidHeightAndWeight(height: String, weight: String) = validateHeightAndWeight(height, weight) == HealthInputValidationResult.SUCCESS
     fun isValidBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String) = validateBpAndPulse(systolic, diastolic, sat, pulse, temp) == HealthInputValidationResult.SUCCESS
     fun isValidGlucoseAndHbA1c(glucose: String, hba1c: String) = validateGlucoseAndHbA1c(glucose, hba1c) == HealthInputValidationResult.SUCCESS
+
+    // --- 表示用フォーマッタ (AppSpecifications への移行に伴い集約) ---
+    fun formatHeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatWeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatBodyTemp(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatSat(value: Int?): String = value?.toString() ?: "---"
+    fun formatHbA1c(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"
+    fun formatGlucose(value: Int?): String = value?.toString() ?: "---"
+    fun formatBpValue(value: Int?): String = value?.toString() ?: "---"
+    fun formatPulse(value: Int?): String = value?.toString() ?: "---"
+    fun formatBmi(value: Double?): String = if (value != null && value > 0) "%.1f".format(value) else "---"
 }

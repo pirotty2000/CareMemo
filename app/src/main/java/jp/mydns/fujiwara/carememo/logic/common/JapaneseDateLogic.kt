@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
+import jp.mydns.fujiwara.carememo.data.spec.*
 import java.time.DateTimeException
 import java.time.LocalDate
 
@@ -20,19 +21,24 @@ enum class DateValidationResult {
  */
 object JapaneseDateLogic {
 
+    private val calendarSpec = CalendarSpecifications
+    private val showaSpec = CalendarSpecifications.Era.Showa
+    private val heiseiSpec = CalendarSpecifications.Era.Heisei
+    private val reiwaSpec = CalendarSpecifications.Era.Reiwa
+
     /**
      * 西暦から和暦と年に変換します。
      */
     fun toJapaneseDate(date: LocalDate): Pair<BirthEra, Int> {
         return when {
-            date >= LocalDate.of(2019, 5, 1) ->
-                BirthEra.REIWA to (date.year - 2018)
+            date >= reiwaSpec.START_DATE ->
+                BirthEra.REIWA to (date.year - reiwaSpec.OFFSET_YEAR)
 
-            date >= LocalDate.of(1989, 1, 8) ->
-                BirthEra.HEISEI to (date.year - 1988)
+            date >= heiseiSpec.START_DATE ->
+                BirthEra.HEISEI to (date.year - heiseiSpec.OFFSET_YEAR)
 
-            date >= LocalDate.of(1926, 12, 25) ->
-                BirthEra.SHOWA to (date.year - 1925)
+            date >= showaSpec.START_DATE ->
+                BirthEra.SHOWA to (date.year - showaSpec.OFFSET_YEAR)
 
             else ->
                 BirthEra.AD to date.year
@@ -47,9 +53,9 @@ object JapaneseDateLogic {
         if (validate(era, year, month, day) != DateValidationResult.SUCCESS) return null
 
         val adYear = when (era) {
-            BirthEra.SHOWA -> year + 1925
-            BirthEra.HEISEI -> year + 1988
-            BirthEra.REIWA -> year + 2018
+            BirthEra.SHOWA -> year + showaSpec.OFFSET_YEAR
+            BirthEra.HEISEI -> year + heiseiSpec.OFFSET_YEAR
+            BirthEra.REIWA -> year + reiwaSpec.OFFSET_YEAR
             BirthEra.AD -> year
         }
 
@@ -69,9 +75,9 @@ object JapaneseDateLogic {
 
         // 1. 物理的な日付の存在チェック
         val adYear = when (era) {
-            BirthEra.SHOWA -> year + 1925
-            BirthEra.HEISEI -> year + 1988
-            BirthEra.REIWA -> year + 2018
+            BirthEra.SHOWA -> year + showaSpec.OFFSET_YEAR
+            BirthEra.HEISEI -> year + heiseiSpec.OFFSET_YEAR
+            BirthEra.REIWA -> year + reiwaSpec.OFFSET_YEAR
             BirthEra.AD -> year
         }
 
@@ -87,8 +93,8 @@ object JapaneseDateLogic {
             return DateValidationResult.INVALID_ERA_RANGE
         }
 
-        // 3. アプリの制限（1900年1月1日以降）
-        if (date.isBefore(LocalDate.of(1900, 1, 1))) {
+        // 3. アプリの制限（MIN_DATE 以降）
+        if (date.isBefore(calendarSpec.MIN_DATE)) {
             return DateValidationResult.OUT_OF_APP_RANGE
         }
 

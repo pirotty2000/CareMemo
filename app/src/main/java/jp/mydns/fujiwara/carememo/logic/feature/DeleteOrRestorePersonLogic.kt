@@ -61,4 +61,26 @@ object DeleteOrRestorePersonLogic {
     fun filterTargets(persons: List<Person>, selectedIds: Set<Int>): List<Person> {
         return persons.filter { selectedIds.contains(it.id) }
     }
+
+    /**
+     * バリデーション結果を示す Enum
+     */
+    enum class DeleteOrRestoreValidationResult {
+        SUCCESS,
+        NO_SELECTION
+    }
+
+    /**
+     * 選択状態のバリデーションを行います。
+     *
+     * @param selectedIds 選択されている ID のセット
+     * @return バリデーション結果
+     */
+    fun validate(selectedIds: Set<Int>): DeleteOrRestoreValidationResult {
+        return if (selectedIds.isEmpty()) {
+            DeleteOrRestoreValidationResult.NO_SELECTION
+        } else {
+            DeleteOrRestoreValidationResult.SUCCESS
+        }
+    }
 }

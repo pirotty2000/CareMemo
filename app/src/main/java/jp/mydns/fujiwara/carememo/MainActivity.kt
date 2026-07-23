@@ -302,10 +302,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 // --------------------------------------------------------
 
                 // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」 ----------
-                composable("detail/{personId}/{categoryName}?query={query}", arguments = listOf(
+                composable("detail/{personId}/{categoryName}", arguments = listOf(
                     navArgument("personId") { type = NavType.IntType },
-                    navArgument("categoryName") { type = NavType.StringType },
-                    navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" })) { backStackEntry ->
+                    navArgument("categoryName") { type = NavType.StringType }
+                )) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getInt("personId") ?: 0
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
                     val category = Category.valueOf(categoryName)

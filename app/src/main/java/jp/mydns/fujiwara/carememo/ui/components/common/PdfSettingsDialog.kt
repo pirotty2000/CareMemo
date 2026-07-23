@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import java.time.Instant
 import java.time.ZoneId
@@ -79,7 +80,7 @@ fun PdfSettingsDialog(
     var protectWithPassword by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
-    val isPasswordValid = password.length >= 6
+    val isPasswordValid = password.length >= ConstraintSpecifications.System.Security.MIN_PASSWORD_LENGTH
 
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDate ?: endDate ?: System.currentTimeMillis())

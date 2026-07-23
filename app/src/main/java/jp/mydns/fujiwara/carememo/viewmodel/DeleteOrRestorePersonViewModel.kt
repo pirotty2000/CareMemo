@@ -119,6 +119,15 @@ class DeleteOrRestorePersonViewModel(
                 tableName = TABLE_PERSON
             }
         ) {
+            // バリデーション
+            val validationResult = DeleteOrRestorePersonLogic.validate(currentState.selectedIds)
+            if (validationResult != DeleteOrRestorePersonLogic.DeleteOrRestoreValidationResult.SUCCESS) {
+                throw AppValidationException(
+                    messageResId = R.string.archive_err_no_selection,
+                    logMessage = "No persons selected for restore"
+                )
+            }
+
             val targets = DeleteOrRestorePersonLogic.filterTargets(persons, currentState.selectedIds)
             targets.forEach { 
                 repository.restorePerson(it.id, featureName, OP_RESTORE) 
@@ -140,6 +149,15 @@ class DeleteOrRestorePersonViewModel(
                 tableName = TABLE_PERSON
             }
         ) {
+            // バリデーション
+            val validationResult = DeleteOrRestorePersonLogic.validate(currentState.selectedIds)
+            if (validationResult != DeleteOrRestorePersonLogic.DeleteOrRestoreValidationResult.SUCCESS) {
+                throw AppValidationException(
+                    messageResId = R.string.archive_err_no_selection,
+                    logMessage = "No persons selected for delete"
+                )
+            }
+
             val targets = DeleteOrRestorePersonLogic.filterTargets(persons, currentState.selectedIds)
             targets.forEach { 
                 repository.permanentlyDeletePerson(it.id, featureName, OP_DELETE)

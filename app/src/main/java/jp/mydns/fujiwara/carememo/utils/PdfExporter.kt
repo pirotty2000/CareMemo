@@ -13,6 +13,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.*
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
@@ -40,11 +41,10 @@ import kotlin.math.floor
  * アプリ内の各種データをA4サイズのPDFとして出力・共有するためのユーティリティ。
  */
 object PdfExporter {
-    private const val PAGE_WIDTH = 595 // A4 width in points
-    private const val PAGE_HEIGHT = 842 // A4 height in points
-    private const val MARGIN = 50f
-    private const val HEADER_HEIGHT = 125f
-    private const val SINGLE_GRAPH_HEIGHT = 130f
+    private val layoutSpec = ExportSpecifications.Pdf.Layout
+    private val styleSpec = ExportSpecifications.Pdf.Style
+    private val colorSpec = ExportSpecifications.Pdf.Colors
+    private val tableSpec = ExportSpecifications.Pdf.TableConfig
 
     /**
      * PDF作成時の描画コンテキストを保持する内部クラス。
@@ -67,7 +67,7 @@ object PdfExporter {
         fun nextPage() {
             finishPage()
             pageNumber++
-            val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create()
+            val pageInfo = PdfDocument.PageInfo.Builder(layoutSpec.PAGE_WIDTH.toInt(), layoutSpec.PAGE_HEIGHT.toInt(), pageNumber).create()
             val page = document.startPage(pageInfo)
             currentPage = page
             canvas = page.canvas
@@ -86,7 +86,7 @@ object PdfExporter {
          * 指定された高さが現在のページに収まるか確認し、不足していれば改ページする。
          */
         fun ensureSpace(neededHeight: Float) {
-            if (currentY + neededHeight > PAGE_HEIGHT - MARGIN) {
+            if (currentY + neededHeight > layoutSpec.PAGE_HEIGHT - layoutSpec.MARGIN) {
                 nextPage()
             }
         }
@@ -174,7 +174,7 @@ object PdfExporter {
             repeat(HealthChartHelper.getGraphCount(category)) { index ->
                 val config = HealthChartHelper.getChartConfig(pageContext.context, category, index, records)
                 if (config != null && config.dataList.any { it.points.isNotEmpty() }) {
-                    val graphHeight = if (category == Category.BP_AND_PULSE && index == 0) 170f else SINGLE_GRAPH_HEIGHT
+                    val graphHeight = if (category == Category.BP_AND_PULSE && index == 0) 170f else layoutSpec.SINGLE_GRAPH_HEIGHT
                     pageContext.ensureSpace(graphHeight + 30f)
                     pageContext.currentY = drawSingleGraphFromConfig(pageContext, config, graphHeight, globalMinX, globalMaxX)
                     pageContext.currentY += 15f
@@ -206,42 +206,41 @@ object PdfExporter {
         records: List<ConditionAtVisit>,
         allPhotos: List<ConditionPhoto>
     ) {
-        val attrPaint = Paint().apply { color = Color.BLACK; textSize = 10f; isFakeBoldText = true; isAntiAlias = true }
-        val bodyPaint = Paint().apply { color = Color.BLACK; textSize = 10f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
-        val captionPaint = Paint().apply { color = Color.DKGRAY; textSize = 7f; isAntiAlias = true; textAlign = Paint.Align.CENTER }
-        val bgPaint = Paint().apply { color = Color.rgb(245, 245, 245); style = Paint.Style.FILL }
+        val attrPaint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_BODY; isFakeBoldText = true; isAntiAlias = true }
+        val bodyPaint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_BODY; isAntiAlias = true; typeface = Typeface.MONOSPACE }
+        val captionPaint = Paint().apply { color = Color.DKGRAY; textSize = styleSpec.FONT_SIZE_CAPTION; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+        val bgPaint = Paint().apply { color = colorSpec.BACKGROUND_LIGHT; style = Paint.Style.FILL }
         
-        val contentWidth = PAGE_WIDTH - (MARGIN * 2)
-        val photoSize = (contentWidth - 20f) / AppThresholds.CONDITION_PHOTO_MAX_COUNT.toFloat()
+        val contentWidth = layoutSpec.PAGE_WIDTH - (layoutSpec.MARGIN * 2)
+        val photoMaxCount = ConstraintSpecifications.Condition.Photo.MAX_COUNT
+        val photoSize = (contentWidth - 20f) / photoMaxCount.toFloat()
 
         records.forEach { record ->
-            val photos = allPhotos.filter { it.conditionId == record.id }.take(AppThresholds.CONDITION_PHOTO_MAX_COUNT)
+            val photos = allPhotos.filter { it.conditionId == record.id }.take(photoMaxCount)
             val memoLines = splitTextIntoLines(record.condition ?: "", bodyPaint, contentWidth - 10f)
             
             // ブロックの高さを計算
-            var blockHeight = 25f + (memoLines.size * 15f)
-            if (photos.isNotEmpty()) blockHeight += photoSize + 25f
-            blockHeight += 15f
+            val blockHeight = 25f + (memoLines.size * layoutSpec.LINE_SPACING) + (if (photos.isNotEmpty()) photoSize + 25f else 0f) + 15f
 
             pageContext.ensureSpace(blockHeight)
 
             // ヘッダー（属性行）
-            pageContext.canvas.drawRect(MARGIN, pageContext.currentY - 12f, PAGE_WIDTH - MARGIN, pageContext.currentY + 4f, bgPaint)
+            pageContext.canvas.drawRect(layoutSpec.MARGIN, pageContext.currentY - 12f, layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN, pageContext.currentY + 4f, bgPaint)
             val dateStr = formatRecordTime(record.recordTime)
             val attrText = "$dateStr (${record.author}) : ${record.title ?: ""}"
-            pageContext.canvas.drawText(attrText, MARGIN + 5f, pageContext.currentY, attrPaint)
+            pageContext.canvas.drawText(attrText, layoutSpec.MARGIN + 5f, pageContext.currentY, attrPaint)
             pageContext.currentY += 20f
 
             // 本文
             memoLines.forEach { line ->
-                pageContext.canvas.drawText(line, MARGIN + 10f, pageContext.currentY, bodyPaint)
-                pageContext.currentY += 15f
+                pageContext.canvas.drawText(line, layoutSpec.MARGIN + 10f, pageContext.currentY, bodyPaint)
+                pageContext.currentY += layoutSpec.LINE_SPACING
             }
 
             // 写真
             if (photos.isNotEmpty()) {
                 pageContext.currentY += 10f
-                var currentX = MARGIN + 5f
+                var currentX = layoutSpec.MARGIN + 5f
                 photos.forEach { photo ->
                     val photoFile = ImageUtils.getPhotoFile(pageContext.context, photo.photoFileName)
                     if (photoFile.exists()) {
@@ -268,17 +267,18 @@ object PdfExporter {
         pageContext: PdfPageContext,
         records: List<MedicationRecord>
     ) {
-        val titlePaint = Paint().apply { color = Color.BLACK; textSize = 12f; isFakeBoldText = true; isAntiAlias = true }
+        val titlePaint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_HEADER; isFakeBoldText = true; isAntiAlias = true }
         val headerPaint = Paint().apply { color = Color.BLACK; textSize = 8f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
-        val bodyPaint = Paint().apply { color = Color.BLACK; textSize = 9f; isAntiAlias = true; textAlign = Paint.Align.CENTER }
-        val labelPaint = Paint().apply { color = Color.BLACK; textSize = 9f; isFakeBoldText = true; isAntiAlias = true }
-        val linePaint = Paint().apply { color = Color.LTGRAY; strokeWidth = 0.5f; style = Paint.Style.STROKE }
+        val bodyPaint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_TABLE_BODY; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+        val labelPaint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_TABLE_BODY; isFakeBoldText = true; isAntiAlias = true }
+        val linePaint = Paint().apply { color = colorSpec.TABLE_LINE; strokeWidth = 0.5f; style = Paint.Style.STROKE }
 
         // ステータス記号
+        val medColors = ExportSpecifications.Pdf.Colors.Medication
         val statusPaints = mapOf(
-            2 to Paint().apply { color = Color.rgb(103, 58, 183); textSize = 10f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
-            1 to Paint().apply { color = Color.rgb(126, 87, 194); textSize = 10f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
-            0 to Paint().apply { color = Color.rgb(211, 47, 47); textSize = 11f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+            2 to Paint().apply { color = medColors.STATUS_TAKEN; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
+            1 to Paint().apply { color = medColors.STATUS_ASSIST; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
+            0 to Paint().apply { color = medColors.STATUS_NONE; textSize = styleSpec.FONT_SIZE_MED_STATUS + 1f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
         )
 
         val recordsByMonth = records.groupBy {
@@ -292,25 +292,25 @@ object PdfExporter {
             pageContext.context.getString(R.string.slot_dinner),
             pageContext.context.getString(R.string.slot_bedtime)
         )
-        val labelWidth = 60f
-        val colWidth = (PAGE_WIDTH - MARGIN * 2 - labelWidth) / 31f
-        val rowHeight = 22f
+        val labelWidth = ExportSpecifications.Pdf.TableConfig.Medication.LABEL_WIDTH
+        val colWidth = (layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN * 2 - labelWidth) / 31f
+        val rowHeight = ExportSpecifications.Pdf.TableConfig.Medication.ROW_HEIGHT
         val tableHeight = rowHeight * 6 + 40f
 
         recordsByMonth.forEach { (yearMonth, monthRecords) ->
             pageContext.ensureSpace(tableHeight)
 
             // 月タイトル
-            pageContext.canvas.drawText(formatYearMonthHeader(yearMonth), MARGIN, pageContext.currentY, titlePaint)
+            pageContext.canvas.drawText(formatYearMonthHeader(yearMonth), layoutSpec.MARGIN, pageContext.currentY, titlePaint)
             pageContext.currentY += 15f
 
-            val startX = MARGIN
+            val startX = layoutSpec.MARGIN
             val tableTop = pageContext.currentY
             val daysInMonth = yearMonth.lengthOfMonth()
             
             // 土日背景
-            val sunBg = Paint().apply { color = Color.rgb(255, 240, 240); style = Paint.Style.FILL }
-            val satBg = Paint().apply { color = Color.rgb(240, 248, 255); style = Paint.Style.FILL }
+            val sunBg = Paint().apply { color = colorSpec.SUN_BACKGROUND; style = Paint.Style.FILL }
+            val satBg = Paint().apply { color = colorSpec.SAT_BACKGROUND; style = Paint.Style.FILL }
             for (day in 1..daysInMonth) {
                 val date = yearMonth.atDay(day)
                 if (date.dayOfWeek == java.time.DayOfWeek.SUNDAY || date.dayOfWeek == java.time.DayOfWeek.SATURDAY) {
@@ -334,8 +334,8 @@ object PdfExporter {
                 pageContext.canvas.drawText(day.toString(), x, tableTop + rowHeight * 0.65f, headerPaint)
                 val date = yearMonth.atDay(day)
                 val color = when(date.dayOfWeek) {
-                    java.time.DayOfWeek.SUNDAY -> Color.rgb(211, 47, 47)
-                    java.time.DayOfWeek.SATURDAY -> Color.rgb(25, 118, 210)
+                    java.time.DayOfWeek.SUNDAY -> colorSpec.SUN_TEXT
+                    java.time.DayOfWeek.SATURDAY -> colorSpec.SAT_TEXT
                     else -> Color.BLACK
                 }
                 pageContext.canvas.drawText(formatShortDayOfWeek(date), x, tableTop + rowHeight * 1.65f, Paint(headerPaint).apply { this.color = color })
@@ -360,12 +360,13 @@ object PdfExporter {
     // --- テーブル描画の各論 (Health) ---
 
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
+        val hwSpec = ExportSpecifications.Pdf.TableConfig.HeightWeight
         val columns = listOf(
-            TableColumn<HeightAndWeight>("日付", 110f) { rec, _ ->
+            TableColumn<HeightAndWeight>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
-            TableColumn("${ctx.context.getString(R.string.health_label_height)}(cm)", 75f) { rec, _ -> rec.height?.toString() ?: "---" },
-            TableColumn("${ctx.context.getString(R.string.health_label_weight)}(kg)", 100f) { rec, idx ->
+            TableColumn("${ctx.context.getString(R.string.health_label_height)}(cm)", hwSpec.HEIGHT_WIDTH) { rec, _ -> rec.height?.toString() ?: "---" },
+            TableColumn("${ctx.context.getString(R.string.health_label_weight)}(kg)", hwSpec.WEIGHT_WIDTH) { rec, idx ->
                 val prev = if (idx < records.size - 1) records[idx + 1] else null
                 rec.weight?.let { cur ->
                     prev?.weight?.let { p ->
@@ -374,13 +375,13 @@ object PdfExporter {
                     } ?: cur.toString()
                 } ?: "---"
             },
-            TableColumn(ctx.context.getString(R.string.health_label_bmi), 65f) { rec, _ ->
+            TableColumn(ctx.context.getString(R.string.health_label_bmi), hwSpec.BMI_WIDTH) { rec, _ ->
                 val bmi = rec.calculateBMI()
                 if (bmi > 0) "%.1f".format(bmi) else "---"
             },
             TableColumn(
                 header = ctx.context.getString(R.string.health_label_status),
-                width = 145f,
+                width = tableSpec.STATUS_COL_WIDTH_BASE,
                 getBackgroundColor = { rec -> HealthDisplayMapper.getPdfBgColor(rec.getBmiResult(ctx.context).second) }
             ) { rec, _ -> rec.getBmiResult(ctx.context).first }
         )
@@ -388,15 +389,16 @@ object PdfExporter {
     }
 
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
+        val bpSpec = ExportSpecifications.Pdf.TableConfig.BpPulse
         val columns = listOf(
-            TableColumn<BpAndPulse>("日付", 110f) { rec, _ ->
+            TableColumn<BpAndPulse>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
-            TableColumn(ctx.context.getString(R.string.health_label_systolic_short), 45f) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(R.string.health_label_diastolic_short), 45f) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
-            TableColumn("SAT", 40f) { rec, _ -> rec.sat?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(R.string.health_label_pulse_short), 40f) { rec, _ -> rec.pulse?.toString() ?: "---" },
-            TableColumn(ctx.context.getString(R.string.health_label_body_temp), 45f) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_systolic_short), bpSpec.SYS_WIDTH) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_diastolic_short), bpSpec.DIA_WIDTH) { rec, _ -> rec.bpDiastolic?.toString() ?: "---" },
+            TableColumn("SAT", bpSpec.SAT_WIDTH) { rec, _ -> rec.sat?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_pulse_short), bpSpec.PULSE_WIDTH) { rec, _ -> rec.pulse?.toString() ?: "---" },
+            TableColumn(ctx.context.getString(R.string.health_label_body_temp), bpSpec.TEMP_WIDTH) { rec, _ -> rec.bodyTemperature?.let { "%.1f".format(it) } ?: "---" },
             TableColumn(
                 header = ctx.context.getString(R.string.health_label_status),
                 width = 170f,
@@ -411,15 +413,16 @@ object PdfExporter {
     }
 
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
+        val glSpec = ExportSpecifications.Pdf.TableConfig.Glucose
         val columns = listOf(
-            TableColumn<GlucoseAndHbA1c>("日付", 110f) { rec, _ ->
+            TableColumn<GlucoseAndHbA1c>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
-            TableColumn("${ctx.context.getString(R.string.health_label_glucose)}(mg/dL)", 115f) { rec, idx ->
+            TableColumn("${ctx.context.getString(R.string.health_label_glucose)}(mg/dL)", glSpec.GLUCOSE_WIDTH) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 rec.glucose?.let { cur -> pr?.glucose?.let { p -> "$cur(${if (cur-p >= 0) "+${cur-p}" else cur-p})" } ?: cur.toString() } ?: "---"
             },
-            TableColumn("${ctx.context.getString(R.string.health_label_hba1c)}(%)", 115f) { rec, idx ->
+            TableColumn("${ctx.context.getString(R.string.health_label_hba1c)}(%)", glSpec.HBA1C_WIDTH) { rec, idx ->
                 val pr = if (idx < records.size - 1) records[idx + 1] else null
                 rec.hba1c?.let { cur -> pr?.hba1c?.let { p -> val df = cur-p; "%.1f(%s)".format(cur, if (df >= 0) "+%.1f".format(df) else "%.1f".format(df)) } ?: "%.1f".format(cur) } ?: "---"
             },
@@ -436,68 +439,65 @@ object PdfExporter {
 
     @Suppress("SameReturnValue")
     private fun drawHeader(ctx: PdfPageContext): Float {
-        val paint = Paint().apply { color = Color.BLACK; textSize = 18f; isFakeBoldText = true }
+        val paint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_PAGE_TITLE; isFakeBoldText = true }
         
         // PDFは外部共有前提のため、アプリの設定に関わらず常にマスキングを適用する
         val name = ctx.person.getMaskedName(isEnabled = true)
 
         val date = DateTimeUtils.getCurrentPhotoCaption()
-        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_title, ctx.context.getString(ctx.category.displayNameRes)), MARGIN, 50f, paint)
-        paint.textSize = 12f; paint.isFakeBoldText = false
-        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_user_name, name), MARGIN, 80f, paint)
-        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_output_date, date), MARGIN, 100f, paint)
-        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_page_number, ctx.pageNumber), PAGE_WIDTH - MARGIN - 50f, 100f, paint)
-        ctx.canvas.drawLine(MARGIN, 110f, PAGE_WIDTH - MARGIN, 110f, paint)
-        return HEADER_HEIGHT
+        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_title, ctx.context.getString(ctx.category.displayNameRes)), layoutSpec.MARGIN, 50f, paint)
+        paint.textSize = styleSpec.FONT_SIZE_HEADER; paint.isFakeBoldText = false
+        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_user_name, name), layoutSpec.MARGIN, 80f, paint)
+        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_output_date, date), layoutSpec.MARGIN, 100f, paint)
+        ctx.canvas.drawText(ctx.context.getString(R.string.pdf_page_number, ctx.pageNumber), layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN - 50f, 100f, paint)
+        ctx.canvas.drawLine(layoutSpec.MARGIN, 110f, layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN, 110f, paint)
+        return layoutSpec.HEADER_HEIGHT
     }
 
     private data class TableColumn<T>(val header: String, val width: Float, val getBackgroundColor: ((T) -> Int?)? = null, val getValue: (T, Int) -> String)
 
     private fun <T> drawGenericTable(ctx: PdfPageContext, records: List<T>, columns: List<TableColumn<T>>) {
-        val paint = Paint().apply { color = Color.BLACK; textSize = 9f; isAntiAlias = true; typeface = Typeface.MONOSPACE }
-        val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = 10f; isAntiAlias = true }
+        val paint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_TABLE_BODY; isAntiAlias = true; typeface = Typeface.MONOSPACE }
+        val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = styleSpec.FONT_SIZE_TABLE_HEADER; isAntiAlias = true }
 
         fun drawHeaderRow() {
-            var cx = MARGIN
+            var cx = layoutSpec.MARGIN
             columns.forEach { col -> ctx.canvas.drawText(col.header, cx, ctx.currentY, hp); cx += col.width }
             ctx.currentY += 5f
-            ctx.canvas.drawLine(MARGIN, ctx.currentY, PAGE_WIDTH - MARGIN, ctx.currentY, paint)
+            ctx.canvas.drawLine(layoutSpec.MARGIN, ctx.currentY, layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN, ctx.currentY, paint)
             ctx.currentY += 20f
         }
 
         drawHeaderRow()
         records.forEachIndexed { index, record ->
             ctx.ensureSpace(20f)
-            if (ctx.currentY < HEADER_HEIGHT + 10f) drawHeaderRow() // 改ページ直後の場合ヘッダー再描画
+            if (ctx.currentY < layoutSpec.HEADER_HEIGHT + 10f) drawHeaderRow() // 改ページ直後の場合ヘッダー再描画
 
             columns.firstNotNullOfOrNull { it.getBackgroundColor?.invoke(record) }?.let { color ->
-                ctx.canvas.drawRect(RectF(MARGIN, ctx.currentY - 12f, PAGE_WIDTH - MARGIN, ctx.currentY + 4f), Paint().apply { this.color = color })
+                ctx.canvas.drawRect(RectF(layoutSpec.MARGIN, ctx.currentY - 12f, layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN, ctx.currentY + 4f), Paint().apply { this.color = color })
             }
-            var cx = MARGIN
+            var cx = layoutSpec.MARGIN
             columns.forEach { col -> ctx.canvas.drawText(col.getValue(record, index), cx, ctx.currentY, paint); cx += col.width }
             ctx.currentY += 20f
         }
     }
 
     private fun drawSingleGraphFromConfig(ctx: PdfPageContext, config: HealthChartConfig, height: Float, minX: Double?, maxX: Double?): Float {
-        val lineDataList = config.dataList.map { line -> line.points.map { it.x.toLong() to it.y } to line.color.toArgb() }
+        val lineDataList = config.dataList.map { line -> (line.points.map { it.x.toLong() to it.y }) to line.color.toArgb() }
         val ranges = config.ranges.map { (it.startValue to it.endValue) to it.color.toArgb() }
         val limits = config.limits.map { Triple(it.value, DashPathEffect(floatArrayOf(5f, 5f), 0f), it.label) }
         return drawSingleGraph(ctx.canvas, "${config.title} 推移", lineDataList, ctx.currentY, height, config.stepY, ranges, limits, !config.showDecimal, config.getSubtitleLines(), config.dataList.firstOrNull()?.unit ?: "", minX, maxX)
     }
 
-    // (既存の drawSingleGraph, loadOptimizedBitmap, drawBitmapCenterInside, splitTextIntoLines 等は PdfPageContext を使わない独立した描画ユーティリティとして維持)
-    // ※ exportAndShare から呼び出される際に currentY を適切に更新して返すように調整済み
-
     private fun drawSingleGraph(canvas: Canvas, title: String, lineDataList: List<Pair<List<Pair<Long, Double>>, Int>>, startY: Float, height: Float, yStep: Double, ranges: List<Pair<Pair<Double, Double>, Int>>, limitLines: List<Triple<Double, DashPathEffect, String>>, isInteger: Boolean, subtitles: List<String>, unit: String, fixedMinX: Double?, fixedMaxX: Double?): Float {
         val paint = Paint().apply { isAntiAlias = true }
         paint.color = Color.BLACK; paint.textSize = 10f; paint.isFakeBoldText = true
-        canvas.drawText(if (unit.isNotEmpty()) "$title ($unit)" else title, MARGIN, startY + 10f, paint)
+        canvas.drawText(if (unit.isNotEmpty()) "$title ($unit)" else title, layoutSpec.MARGIN, startY + 10f, paint)
         var currentSubY = startY + 22f
         paint.isFakeBoldText = false; paint.textSize = 8f; paint.color = Color.DKGRAY
-        subtitles.forEach { canvas.drawText(it, MARGIN, currentSubY, paint); currentSubY += 12f }
+        subtitles.forEach { canvas.drawText(it, layoutSpec.MARGIN, currentSubY, paint); currentSubY += 12f }
         val graphTop = if (subtitles.isEmpty()) startY + 20f else currentSubY + 5f
-        val graphArea = RectF(MARGIN + 35f, graphTop, PAGE_WIDTH - MARGIN - 10f, graphTop + height - 20f)
+        val graphArea = RectF(layoutSpec.MARGIN + 35f, graphTop, layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN - 10f, graphTop + height - 20f)
         paint.color = Color.rgb(240, 240, 240); paint.style = Paint.Style.FILL
         canvas.drawRect(graphArea, paint)
         if (lineDataList.all { it.first.isEmpty() } && (fixedMinX == null || fixedMaxX == null)) {
@@ -527,7 +527,7 @@ object PdfExporter {
         for (i in 0..4) {
             val yVal = minYVal + (yRange / 4) * i
             val yPos = graphArea.bottom - (i.toFloat() / 4) * graphArea.height()
-            canvas.drawText(if (isInteger) yVal.toInt().toString() else "%.1f".format(yVal), MARGIN, yPos + 3f, paint)
+            canvas.drawText(if (isInteger) yVal.toInt().toString() else "%.1f".format(yVal), layoutSpec.MARGIN, yPos + 3f, paint)
             paint.style = Paint.Style.STROKE; paint.strokeWidth = 0.5f; paint.alpha = 40
             canvas.drawLine(graphArea.left, yPos, graphArea.right, yPos, paint)
             paint.alpha = 255; paint.style = Paint.Style.FILL

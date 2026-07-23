@@ -37,6 +37,7 @@ import androidx.navigation.NavController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -80,7 +81,7 @@ fun SettingsScreen(
     }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
-    val isPasswordValid = uiState.backupPassword.length >= 6
+    val isPasswordValid = uiState.backupPassword.length >= ConstraintSpecifications.System.Security.MIN_PASSWORD_LENGTH
 
     var showImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportUri by rememberSaveable { mutableStateOf<android.net.Uri?>(null) }
@@ -284,7 +285,7 @@ fun SettingsScreen(
     }
 
     if (showTimeoutDialog) {
-        val options = listOf(0 to "即時", 1 to "1分", 5 to "5分", 10 to "10分", 30 to "30分", -1 to "ロックしない")
+        val options = SettingsSpecifications.LOCK_TIMEOUT_OPTIONS
         AppDialog(
             onDismissRequest = { showTimeoutDialog = false },
             title = { Text("再ロックまでの時間") },
@@ -365,7 +366,7 @@ fun SettingsScreen(
     }
 
     if (showRetentionDialog) {
-        val options = listOf(7 to "1週間", 14 to "2週間", 30 to "1ヶ月", 90 to "3ヶ月", 180 to "半年", 365 to "1年", 0 to "残さない")
+        val options = SettingsSpecifications.AUDIT_LOG_RETENTION_OPTIONS
         AppDialog(
             onDismissRequest = { showRetentionDialog = false },
             title = { Text(context.getString(R.string.audit_log_label_retention)) },
@@ -485,7 +486,7 @@ fun SettingsScreen(
             isChangedByMe = true
         },
         onBackupPasswordChange = {
-            if (it.length >= 6 || it.isEmpty()) viewModel.setBackupPassword(it)
+            if (it.length >= ConstraintSpecifications.System.Security.MIN_PASSWORD_LENGTH || it.isEmpty()) viewModel.setBackupPassword(it)
             isChangedByMe = true
         },
         onPasswordVisibilityToggle = {
@@ -841,13 +842,14 @@ private fun DataManagementSection(
                 onValueChange = onBackupPasswordChange,
                 type = AppTextFieldType.PASSWORD,
                 label = { Text("デフォルトのパスワード") },
-                placeholder = { Text("6桁以上の数字を推奨") },
+                placeholder = { Text("${ConstraintSpecifications.System.Security.MIN_PASSWORD_LENGTH}桁以上の数字を推奨") },
                 supportingText = { 
                     if (!isPasswordValid && backupPassword.isNotEmpty()) 
-                        Text("6文字以上で入力してください", color = MaterialTheme.colorScheme.error) 
+                        Text("${ConstraintSpecifications.System.Security.MIN_PASSWORD_LENGTH}文字以上で入力してください", color = MaterialTheme.colorScheme.error) 
                     else Text("バックアップ作成時に使用されます") 
                 },
                 isError = !isPasswordValid && backupPassword.isNotEmpty(),
+                maxLength = ConstraintSpecifications.System.Security.MAX_PASSWORD_LENGTH,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("Settings_BackupPasswordInput"),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = { 

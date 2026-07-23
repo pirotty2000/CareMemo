@@ -64,7 +64,7 @@ fun HealthGraphView(
                 AppDialogContent(text = showHelpDialog!!)
             },
             confirmButton = {
-                AppDialogConfirmButton(
+                AppDialogDismissButton(
                     text = stringResource(R.string.common_close),
                     onClick = { showHelpDialog = null }
                 )

@@ -59,7 +59,7 @@ enum class Category(
         return when (this) {
             MEDICATION -> "medication/$personId"
             CONDITION_AT_VISIT -> "condition/$personId?query=$query"
-            else -> "detail/$personId/${this.name}?query=$query"
+            else -> "detail/$personId/${this.name}"
         }
     }
 }

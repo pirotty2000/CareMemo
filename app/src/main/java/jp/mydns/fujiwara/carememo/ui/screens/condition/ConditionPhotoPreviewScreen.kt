@@ -15,9 +15,9 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.testTag
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
-import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
-import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
@@ -144,48 +144,37 @@ fun ConditionPhotoPreviewScreen(
 
     // 削除確認ダイアログ
     if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("確認") },
-            text = { Text("写真を削除しますか？") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        onBack()
-                    }
-                ) {
-                    Text("削除")
-                }
+        AppDeleteConfirmDialog(
+            onDismiss = { showDeleteConfirmDialog = false },
+            onDelete = {
+                showDeleteConfirmDialog = false
+                onBack()
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("キャンセル")
-                }
-            }
+            message = "写真を削除しますか？"
         )
     }
 
     // 変更破棄確認ダイアログ
     if (showDiscardConfirmDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showDiscardConfirmDialog = false },
-            title = { Text("確認") },
-            text = { Text("変更を破棄しますか？") },
+            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
+            text = { AppDialogContent(text = stringResource(R.string.common_confirm_discard_message)) },
             confirmButton = {
-                TextButton(
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_discard),
                     onClick = {
                         showDiscardConfirmDialog = false
                         onBack()
-                    }
-                ) {
-                    Text("破棄")
-                }
+                    },
+                    type = AppDialogActionType.DELETE
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showDiscardConfirmDialog = false }) {
-                    Text("キャンセル")
-                }
+                AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { showDiscardConfirmDialog = false }
+                )
             }
         )
     }

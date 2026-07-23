@@ -47,6 +47,9 @@ class PersonConditionViewModel(
         private const val OP_DELETE = "deleteRecord"
         private const val OP_SAVE_PHOTO = "processAndSavePhoto"
         private const val OP_DELETE_PHOTO = "deletePhoto"
+        private const val OP_RECORDS_FLOW = "recordsFlow"
+        private const val OP_PHOTO_MAP_FLOW = "photoMapFlow"
+        private const val OP_PHOTOS_FLOW = "photosFlow"
         private const val TABLE_CONDITION = "condition_db"
     }
 
@@ -85,7 +88,7 @@ class PersonConditionViewModel(
         val personId = state.personId ?: return
         recordsJob?.cancel()
         recordsJob = safeCollect(
-            operation = "recordsFlow",
+            operation = OP_RECORDS_FLOW,
             mode = CollectMode.INITIAL,
             loadingState = loadingStateProxy,
             contextBuilder = { tableName = TABLE_CONDITION },
@@ -104,7 +107,7 @@ class PersonConditionViewModel(
         val personId = state.personId ?: return
         photoMapJob?.cancel()
         photoMapJob = safeCollect(
-            operation = "photoMapFlow",
+            operation = OP_PHOTO_MAP_FLOW,
             mode = CollectMode.INITIAL,
             contextBuilder = { tableName = TABLE_CONDITION },
             flowProvider = { conditionRepository.getAllPhotosByPersonIdFlow(personId) }
@@ -124,7 +127,7 @@ class PersonConditionViewModel(
         photoJob?.cancel()
         if (id != null) {
             photoJob = safeCollect(
-                operation = "photosFlow",
+                operation = OP_PHOTOS_FLOW,
                 mode = CollectMode.INITIAL,
                 contextBuilder = { tableName = TABLE_CONDITION },
                 flowProvider = { conditionRepository.getConditionPhotosByConditionId(id) }
@@ -200,15 +203,15 @@ class PersonConditionViewModel(
 
     private fun translateValidationResult(result: PersonConditionValidationResult) {
         if (result == PersonConditionValidationResult.SUCCESS) return
-        val messageRes = R.string.common_error_save
-        val args = when (result) {
-            PersonConditionValidationResult.EMPTY_CONDITION -> listOf("内容を入力してください")
-            PersonConditionValidationResult.EMPTY_AUTHOR -> listOf("記録者を入力してください")
-            PersonConditionValidationResult.CONDITION_TOO_LONG -> listOf("内容が長すぎます")
-            PersonConditionValidationResult.INVALID_TIME -> listOf("日時を正しく入力してください")
-            else -> emptyList()
+        val messageRes = when (result) {
+            PersonConditionValidationResult.EMPTY_CONDITION -> R.string.p_cond_err_empty_condition
+            PersonConditionValidationResult.EMPTY_AUTHOR -> R.string.p_cond_err_empty_author
+            PersonConditionValidationResult.CONDITION_TOO_LONG -> R.string.p_cond_err_condition_too_long
+            PersonConditionValidationResult.TITLE_TOO_LONG -> R.string.p_cond_err_title_too_long
+            PersonConditionValidationResult.INVALID_TIME -> R.string.main_err_edit_invalid_birthday
+            else -> R.string.common_error_save
         }
-        throw AppValidationException(R.string.common_error_title_save, messageRes, args, "Validation failed: $result")
+        throw AppValidationException(R.string.common_error_title_save, messageRes, emptyList(), "Validation failed: $result")
     }
 
     private fun translateValidationResult(result: ConditionValidationResult) {

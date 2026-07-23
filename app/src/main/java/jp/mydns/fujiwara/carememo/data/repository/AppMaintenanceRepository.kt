@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
@@ -13,6 +14,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
+import java.time.ZoneOffset
+import java.util.UUID
 
 /**
  * システムメンテナンス（バックアップ、リストア、全消去）を担当するリポジトリ
@@ -46,7 +49,10 @@ class AppMaintenanceRepository(
             // バックアップからの復元時、操作ログは保持したまま臨床データのみを差し替える
             clearClinicalData()
             
-            personDao.insertAll(backup.persons)
+            // 利用者データのクレンジング（生年月日の正規化と重複回避）
+            val cleansedPersons = cleansePersonData(backup.persons)
+            personDao.insertAll(cleansedPersons)
+
             heightAndWeightDao.insertAll(backup.heightAndWeights)
             bpAndPulseDao.insertAll(backup.bpAndPulses)
             glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
@@ -80,6 +86,42 @@ class AppMaintenanceRepository(
         bpAndPulseDao.deleteAll()
         heightAndWeightDao.deleteAll()
         personDao.deleteAll()
+    }
+
+    /**
+     * 利用者データのクレンジングを行います。
+     * 1. 生年月日の時分秒を 00:00:00 (UTC) に正規化
+     * 2. 正規化の結果、一意制約に違反するデータが発生した場合、識別用メモを自動設定して救済
+     */
+    private fun cleansePersonData(persons: List<Person>): List<Person> {
+        val seen = mutableSetOf<String>()
+        return persons.map { p ->
+            // 1. 生年月日の正規化 (UTC 00:00:00)
+            val normalizedBirthday = p.birthday.atZone(ZoneOffset.UTC)
+                .toLocalDate()
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+
+            // 2. ユニーク制約 (姓, 名, 生年月日, メモ) の重複チェック
+            var finalNote = p.note
+            var key = "${p.lastName}|${p.firstName}|${normalizedBirthday.toEpochMilli()}|$finalNote"
+
+            if (seen.contains(key)) {
+                // 重複が発生した場合、救済措置としてメモに識別子を付記
+                val identifier = UUID.randomUUID().toString().take(4)
+                val suffix = " [識別子:$identifier]"
+                finalNote = if (finalNote.length + suffix.length <= 255) {
+                    finalNote + suffix
+                } else {
+                    // 万が一メモが長すぎる場合は末尾を削って付記
+                    finalNote.take(255 - suffix.length) + suffix
+                }
+                key = "${p.lastName}|${p.firstName}|${normalizedBirthday.toEpochMilli()}|$finalNote"
+            }
+
+            seen.add(key)
+            p.copy(birthday = normalizedBirthday, note = finalNote)
+        }
     }
 
     /**
@@ -242,7 +284,7 @@ class AppMaintenanceRepository(
             // 写真の差し替え
             val photosDir = ImageUtils.getPhotosDirPublic(context)
             // JSONファイルと同じ階層にある photos ディレクトリを探す
-            val importedPhotosDir = File(dataFile.parentFile, AppThresholds.PHOTOS_DIR_NAME)
+            val importedPhotosDir = File(dataFile.parentFile, ConstraintSpecifications.Condition.Photo.DIR_NAME)
             
             if (importedPhotosDir.exists()) {
                 ImageUtils.clearPhotosDir(context)

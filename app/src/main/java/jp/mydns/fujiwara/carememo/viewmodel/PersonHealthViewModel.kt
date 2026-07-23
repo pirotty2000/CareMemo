@@ -20,13 +20,9 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -58,22 +54,8 @@ class PersonHealthViewModel(
     override val featureName: String = FEATURE_NAME
 
     private var recordsJob: Job? = null
-    private val _currentCategory = MutableStateFlow<Category?>(null)
 
     init {
-        // PersonId または Category が変更されたら自動的にレコードを再ロードする
-        scope.launch {
-            combine(
-                uiState.map { it.personId }.distinctUntilChanged(),
-                _currentCategory
-            ) { personId, category ->
-                personId to category
-            }.collect { (personId, category) ->
-                if (personId != null && category != null) {
-                    refreshRecords(personId, category)
-                }
-            }
-        }
         // 表示モードの永続化設定を購読 (案Aの追加)
         scope.launch {
             userSettingsRepository.healthDisplayModeIsHistory.collect { isHistory ->
@@ -95,7 +77,9 @@ class PersonHealthViewModel(
         person: Person,
         summary: PersonCategorySummary?
     ): PersonHealthUiState {
-        return state.copy(personId = person.id)
+        val next = state.copy(personId = person.id)
+        refreshRecords(next.personId, next.currentCategory)
+        return next
     }
 
     override fun onPrepareLoadPerson(state: PersonHealthUiState): PersonHealthUiState {
@@ -116,13 +100,18 @@ class PersonHealthViewModel(
      * 表示カテゴリを設定します。
      */
     fun setCategory(category: Category) {
-        _currentCategory.value = category
+        if (currentState.currentCategory != category) {
+            updateUiState { it.copy(currentCategory = category) }
+            refreshRecords(currentState.personId, category)
+        }
     }
 
     /**
      * 指定されたカテゴリと人物に基づき、履歴データを購読します。
      */
-    private fun refreshRecords(personId: Int, category: Category) {
+    private fun refreshRecords(personId: Int?, category: Category) {
+        if (personId == null) return
+
         recordsJob?.cancel()
         recordsJob = safeCollect(
             operation = OP_RECORDS_FLOW,

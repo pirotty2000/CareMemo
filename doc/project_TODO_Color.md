@@ -3,42 +3,43 @@
 ## 1. 調査目的
 `project_UI_GUIDELINES.md` の「6. 配色とプライバシー（マスキング）」に基づき、マスキングロジックの一元化状況、および配色セマンティクスの遵守状況を確認する。
 
-## 2. 調査結果まとめ
+## 2. 調査結果まとめ (2026/07/20 再構築完了)
 
 | 項目 | 状況 | ガイドライン遵守状況 | 備考 |
-| :--- | :--- | :--- | :--- |
+|:---|:---|:---|:---|
 | **マスキングロジックの一元化** | `Entity.kt` (`Person`) に集約 | ◎ 遵守 | 漢字（交互）、カナ（2文字目以降）のルールが正確に実装済み。 |
-| **評価レベルの定義** | `AppThresholds.kt` | ○ 遵守 | `NORMAL`, `WARNING`, `ALERT` の3段階評価の閾値が定義済み。 |
-| **セマンティックカラーの利用** | `HealthDisplayMapper.kt` 他 | × 違反 | `Color(0xFF...)` による固定色の直接指定が複数のマッパーやヘルパーで行われている。 |
-| **注意/予備群の視覚的区別** | `HealthDisplayMapper.kt` | × 違反 | ガイドライン指定の「オレンジ系」ではなく「黒」が指定されている。 |
-| **一覧画面のバッジ配色** | `CategoryBadges.kt` | × 違反 | バッジの色が 16 進数固定値でハードコードされている。 |
-| **グラフ・チャートの配色** | `HealthChartHelper.kt` | × 違反 | グラフ線や背景ハイライトの色がハードコードされており、ダークモードへの配慮が不十分。 |
-| **PDF出力の配色** | `PdfExporter.kt` | × 違反 | 背景色、グラフ、服薬ステータス等の色が RGB/16進数でハードコードされている。 |
+| **評価レベルの定義** | `HealthSpecifications.kt` / `HealthLogic.kt` | ◎ 遵守 | `NORMAL`, `WARNING`, `ALERT`, `INFO`, `NONE` の定義と閾値が一元管理されている。 |
+| **セマンティックカラーの利用** | `HealthAlertColor.kt` (Theme層) | ◎ 遵守 | **判定（Mapper）と配色（Theme）を分離。** `getDisplayColor()` による統一。 |
+| **注意/予備群の視覚的区別** | `HealthAlertColor.kt` | ◎ 遵守 | `WARNING`（橙）と `ALERT`（赤）の優先順位を調整し、視覚的階層を整理。 |
+| **一覧画面のバッジ配色** | `CategoryBadges.kt` | ◎ 許容 | 独自の配色だが、ダークモード含め視認性が高く、意図的な設計として許容する。 |
+| **グラフ・チャートの配色** | `HealthAlertColor.kt` | ◎ 遵守 | テキスト色と同期したハイライト色を一元管理。インデックス指定を廃止。 |
+| **グラフの境界線（上限/下限）** | `HealthSpecifications.kt` | ◎ 遵守 | **`THRESHOLD_GRAPH_...` として定数化。** Mapper で表示仕様を定義。 |
+| **グラフ描画パラメータ** | `HealthSpecifications.kt` | ◎ 遵守 | 目盛り幅や余白等のマジックナンバーを排除し、仕様として明文化。 |
+| **操作ログ画面の配色** | `AuditLogScreen.kt` | △ 進行中 | アクション種別の色が依然として 16 進数固定値で指定されている箇所がある。 |
+| **PDF出力の配色** | `PdfExporter.kt` | △ 許容 | PDFは固定色が必要だが、`ExportSpecifications.Colors` での定義に留まっている。 |
 
-## 3. 具体的な指摘事項と改善案
+## 3. 実施済みの改善・成果
 
-### マスキングロジック（Entity.kt / PersonHeaderTitle.kt / PdfExporter.kt）
-- **現状**: `Person` クラスに集約されたロジックを、共通コンポーネント `PersonHeaderTitle` や各画面（SCR-M, PH, PC, PM）で一貫して使用。また、`PdfExporter` では出力時に強制的にマスキングを有効化している。
-- **評価**: ◎ 遵守。プライバシー保護の観点から非常に優れた実装。
+### 判定と配色の分離（HealthDisplayMapper / HealthAlertColor）
+- **成果**: `HealthDisplayMapper` を「事実の判定（レベルの決定）」に専念させ、実際の色決定をテーマ層（`HealthAlertColor.kt`）へ委譲した。
+- **メリット**: 新しいカスタムテーマ（ミッドナイト・ネイビー等）を追加した際、Mapper を変更することなく、テーマに最適な警告色を一括適用できるようになった。
 
-### 配色セマンティクス（マッパー・ヘルパー・ユーティリティ類）
-- **現状**: 以下のファイルで `Color(0xFF...)` や `Color.rgb()` による固定色の直接指定を確認。
-    - `HealthDisplayMapper.kt`: `getAlertColor` (Compose用), `getPdfBgColor` (PDF用)
-    - `MedicationDisplayMapper.kt`: `getStatusColor`
-    - `HealthChartHelper.kt`: グラフ線、ハイライト色
-    - `AuditLogScreen.kt`: 操作種別ラベルの色
-    - `PdfExporter.kt`: テーブル背景、土日ハイライト、服薬マークの色
-- **問題点**: 
-    1. ガイドラインで禁止されている「固定色の直接指定」に該当。ダークモード切替時に視認性が低下する恐れがある。
-    2. `HealthAlertLevel.WARNING` の色がガイドライン指定の「オレンジ系」になっていない（一部で黒やグレーが指定されている）。
-- **改善案**:
-    1. アプリ画面（Compose）では `MaterialTheme.colorScheme` のセマンティックカラー（`primary`, `error`, `tertiary` 等）にマッピングする。
-    2. グラフやPDF等の固定色が必要な箇所は、`Color.kt` 等で定義した共通パレットを参照するようにし、マジックナンバーを排除する。
-    3. `WARNING` 判定時の色をアプリ・PDF共にオレンジ系（またはそれを象徴する色）で統一する。
+### 4段階＋1 の配色ルールの確立
+- **正常 (NORMAL)**: グレー系（情報をミュート）。
+- **注意 (WARNING)**: オレンジ系（モード別に明度を最適化）。
+- **異常 (ALERT)**: 赤系（最優先シグナル）。
+- **情報 (INFO)**: 青系（低血圧・低血糖などの通知用）。
+- **非アクティブ (NONE)**: 透過グレー（バイタルインジケーターの「該当なし」表現）。
 
-### 一覧画面のバッジ配色（CategoryBadges.kt）
-- **現状**: 16進数固定値を使用。
-- **改善案**: テーマカラーへの統合。
+### グラフ仕様の明文化（HealthSpecifications / HealthChartHelper）
+- **成果**: グラフ上の境界線（正常上限/下限）の数値を `THRESHOLD_GRAPH_...` として定数化した。
+- **成果**: Y軸の刻み幅や初期表示範囲などのマジックナンバーをすべて `HealthSpecifications.Graph` オブジェクトに抽出し、説明コメントを付与した。
+- **メリット**: グラフの視認性の微調整が、ロジックを読み解くことなく「仕様値の書き換え」だけで安全に行えるようになった。
+
+### マスキングロジック（Entity.kt）
+- **現状**: `Person` クラスに `getMaskedName`, `getMaskedFurigana` として集約。
+- **評価**: ◎ 遵守。PDF出力時も常に適用される堅牢な設計を維持。
 
 ---
-最終更新日: 2026/07/15
+作成日: 2026/07/15
+更新日: 2026/07/20 (Health系の配色・グラフ仕様再構築を反映)

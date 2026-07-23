@@ -8,7 +8,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
-import jp.mydns.fujiwara.carememo.data.AppThresholds
+import jp.mydns.fujiwara.carememo.data.spec.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -26,7 +26,7 @@ object ImageUtils {
      * 写真を保存するディレクトリを取得する（遅延初期化的に振る舞う）
      */
     private fun getPhotosDir(context: Context): File {
-        return File(context.filesDir, AppThresholds.PHOTOS_DIR_NAME).apply {
+        return File(context.filesDir, ConstraintSpecifications.Condition.Photo.DIR_NAME).apply {
             if (!exists()) mkdirs()
         }
     }
@@ -66,7 +66,7 @@ object ImageUtils {
             saveBitmapToFile(rotatedBitmap, originalFile, 85)
 
             // 5. サムネイルを作成して保存
-            thumbBitmap = createScaledBitmap(rotatedBitmap, AppThresholds.IMAGE_THUMBNAIL_SIZE)
+            thumbBitmap = createScaledBitmap(rotatedBitmap, ConstraintSpecifications.Condition.Photo.THUMBNAIL_SIZE_PX)
             saveBitmapToFile(thumbBitmap, thumbFile, 75)
 
             Pair(originalFileName, thumbFileName)
@@ -95,7 +95,7 @@ object ImageUtils {
     }
 
     private fun loadResizedBitmap(context: Context, uri: Uri): Bitmap? {
-        val maxSize = AppThresholds.IMAGE_MAX_SIZE
+        val maxSize = ConstraintSpecifications.Condition.Photo.MAX_SIZE_KB
         // サイズ計測
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(uri)?.use { inputStream ->

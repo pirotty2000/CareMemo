@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
@@ -212,11 +213,13 @@ fun PersonEditScreenContent(
                 ) {
                     // --- 入力フィールド群 ---
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val nameSpec = ConstraintSpecifications.Person.Validation
                         AppTextField(
                             value = lastName,
                             onValueChange = onLastNameChange,
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_last_name)) },
+                            maxLength = nameSpec.MAX_LENGTH_LAST_NAME,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_LastName")
                         )
                         AppTextField(
@@ -224,16 +227,19 @@ fun PersonEditScreenContent(
                             onValueChange = onFirstNameChange,
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_first_name)) },
+                            maxLength = nameSpec.MAX_LENGTH_FIRST_NAME,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_FirstName")
                         )
                     }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val kanaSpec = ConstraintSpecifications.Person.Validation
                         AppTextField(
                             value = lastNameFurigana,
                             onValueChange = onLastNameFuriganaChange,
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_last_name_furigana)) },
+                            maxLength = kanaSpec.MAX_LENGTH_LAST_NAME_FURIGANA,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_LastNameKana")
                         )
                         AppTextField(
@@ -241,6 +247,7 @@ fun PersonEditScreenContent(
                             onValueChange = onFirstNameFuriganaChange,
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_first_name_furigana)) },
+                            maxLength = kanaSpec.MAX_LENGTH_FIRST_NAME_FURIGANA,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_FirstNameKana")
                         )
                     }
@@ -250,6 +257,7 @@ fun PersonEditScreenContent(
                         onValueChange = onNoteChange,
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.main_label_note)) },
+                        maxLength = ConstraintSpecifications.Person.Validation.MAX_LENGTH_NOTE,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(noteFocusRequester)

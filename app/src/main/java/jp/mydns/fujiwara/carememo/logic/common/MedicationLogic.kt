@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
+import jp.mydns.fujiwara.carememo.data.spec.MedicationSpecifications
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -117,7 +118,7 @@ object MedicationLogic {
         }
 
         // ステータスの範囲チェック
-        if (record.status !in 0..2) {
+        if (record.status !in MedicationSpecifications.Status.VALID_RANGE) {
             return MedicationValidationResult.INVALID_STATUS
         }
 
@@ -128,6 +129,6 @@ object MedicationLogic {
      * 不正なステータスを持つレコードを除外します（インポート時などのクレンジング）。
      */
     fun filterValidRecords(records: List<MedicationRecord>): List<MedicationRecord> {
-        return records.filter { it.status in 0..2 }
+        return records.filter { it.status in MedicationSpecifications.Status.VALID_RANGE }
     }
 }

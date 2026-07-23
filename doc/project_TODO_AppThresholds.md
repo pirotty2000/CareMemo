@@ -1,81 +1,67 @@
-# 定数・バリデーションの集約（AppThresholds）調査結果と修正タスク
+# 定数・バリデーションの集約（AppSpecifications）調査結果と修正タスク
 
-このドキュメントは、`project_RULES.md` の「3.2. 定数・バリデーションの集約（AppThresholds）」に基づいた調査結果と、今後実施すべき修正内容をまとめたものです。
+このドキュメントは、`project_RULES.md` の「3.2. 定数・バリデーションの集約（AppSpecifications）」に基づいた調査結果と、実施した修正内容をまとめたものです。
 
 ---
 
-## 0. 根本的な設計指針の検討（はじめに検討すべき事項）
+## 0. 根本的な設計指針（2026/07/22 確定）
 
-本修正を進めるにあたり、以下のトレードオフについて方針を決定する必要があります。
+本修正にあたり、以下の通り方針を決定し、実施しました。
+
+### 名称の変更と構造の再編
+- **結論**: `AppThresholds`（しきい値）という名称は実態に対して限定的すぎるため、アプリのあらゆる仕様を包含する **`AppSpecifications`** へ改名し、ドメインごとに構造化（nested object）した。
+- **物理構造**: ファイルの肥大化を防ぐため、`data/spec/` パッケージへドメインごとに分割して配置した。 `AppSpecifications.kt` はそれらへの窓口（Facade）として機能する。
 
 ### 「再利用性の有無」か「仕様の所在」か
-- **論点**: 現状、特定のロジックや画面でしか使われていない定数や定義（Enum）を、わざわざ共通の `AppThresholds` に集約すべきか。
-- **検討案**: **「再利用性の有無」よりも「仕様の所在」を優先して集約すべき** と考える。
-    - **理由1（仕様の可視化）**: 「このアプリの入力制限やビジネスルールはどこに定義されているか？」という問いに対し、常に `AppThresholds` を見れば完結する状態（プロジェクトの辞書）を作る。
-    - **理由2（不整合の防止）**: 現在は1箇所でしか使われていなくても、将来的にPDF出力や一括入力などで同じ「仕様」が参照される際、定義が分散していると不整合（デグレード）の原因となる。
-    - **理由3（カプセル化の解釈）**: ロジックの実装詳細は隠蔽すべきだが、ビジネスルール（閾値、文字数制限、カテゴリ定義等）は「概念」として公開されている方が、テストや仕様変更の際の保守性が高まる。
-- **結論（仮）**: 単なる実装の都合（中間値など）を除き、**アプリの仕様（ルール・制約・言葉の定義）に該当するものは、利用箇所が1箇所であっても `AppThresholds` または `data/` 層へ集約する**方向で検討する。
+- **方針**: **「再利用性の有無」よりも「仕様の所在」を優先して集約する。**
+- **理由**: プロジェクトの辞書としての機能を重視し、不整合の防止と保守性の向上を図る。
 
 ---
 
-## 1. 調査結果サマリー
+## 1. 修正完了サマリー (2026/07/22 完了)
 
-SCR-PH/PC/PM系、`logic/common`、`logic/feature` および `utils/PdfExporter` を調査した結果、設計思想は概ね浸透していますが、多くの「仕様」がロジック層に閉じ込められている状況が確認されました。
+全主要ドメインの移行、および「アプリの辞書」としての構造化が完了しました。
 
-### 適合状況の詳細
+### 実施内容の詳細
 
-| 項目 | 対象ファイル | 適合状況 | 備考 |
-| :--- | :--- | :--- | :--- |
-| **健康管理定義** | `HealthLogic.kt` | **要改善** | `HealthAlertLevel` や各種ステータス Enum がロジック層に定義されている。 |
-| **服薬管理定義** | `MedicationLogic.kt` | **要改善** | `TimeSlot` や `Status` の定義が Logic 内にあり、辞書として集約されていない。 |
-| **日付仕様** | `JapaneseDateLogic.kt` | **要改善** | 元号の切り替わり日やアプリのサポート範囲（1900年〜）がハードコードされている。 |
-| **設定仕様** | `SettingsLogic.kt` | **要改善** | ログ保持期間やロック時間の選択肢（7日、30日等）が直接記述されている。 |
-| **利用者管理** | `PersonListLogic.kt` | **要改善** | 五十音の「行」判定基準がロジック内に閉じている。 |
-| **ViewModel** | 各 ViewModel | **不十分** | エラーメッセージ（args）内のリテラル、最大文字数チェックの分散。 |
-| **PDF出力** | `PdfExporter.kt` | **要改善** | 配色（Color.rgb）や期間計算ロジックが直接記述されている。 |
-
----
-
-## 2. 具体的な課題と乖離点
-
-### ドメイン定義の「ロジック層」への固着
-- `HealthAlertLevel`, `MedicationStatus`, `BirthEra` などの「言葉の定義（Enum）」がロジッククラス内に定義されている。
-- これにより、`PdfExporter` などの別レイヤーからこれらの定義を参照する際に、計算ロジックまで引き連れてしまう依存関係の逆転が生じている。
-
-### ビジネスルールのハードコード
-- **日付の境界値**: `JapaneseDateLogic` 内の和暦定義や「1900年制限」。
-- **設定の選択肢**: `SettingsLogic` 内の「保持期間：1ヶ月、3ヶ月...」という選択リスト。
-- **文字数制限**: `PersonConditionLogic` は `AppThresholds` を見ているが、`PersonEditLogic`（利用者名）などは独自の空チェックのみで、最大長定数が見当たらない。
-
-### ViewModel：エラーメッセージのリテラル
-- 各 ViewModel の `translateValidationResult` において、`args = listOf("...")` と直接文字列が指定されている。
-- メッセージに含めるべき「仕様上の数値（例：1000文字以内）」を辞書から動的に取得する構成にすべきである。
+| 項目           | 適合状況   | 備考                                                                            |
+|:-------------|:-------|:------------------------------------------------------------------------------|
+| **健康管理定義**   | **遵守** | `HealthSpecifications.kt` へ移行。血圧、血糖、BMI等の閾値・単位・精度を定義。                         |
+| **業務仕様の明文化** | **遵守** | `MedicationSpecifications.kt` にて、服薬管理の「時間枠」と「ステータス」の業務上の意味（呼称）を定義。            |
+| **アプリ制約の分離** | **遵守** | `ConstraintSpecifications.kt` を新設。文字数制限や写真枚数など、実装上の制限事項を集約。                   |
+| **日本の暦定義**   | **遵守** | `CalendarSpecifications.kt` へ移行。和暦のエポック、オフセット、最大年数、西暦上限を定義。                   |
+| **帳票・出力定義**  | **遵守** | `ExportSpecifications.kt` へ移行。PDFのA4レイアウト、マージン、フォントサイズ、配色、テーブル幅を定義。           |
+| **設定・検索定義**  | **遵守** | `SettingsSpecifications` (選択肢リスト), `SearchSpecifications` (五十音インデックス) を整理。    |
+| **ロジックの分離**  | **遵守** | `isWithinFormat` や数値フォーマッタなどの「振る舞い」を `HealthLogic` へ移動。                       |
+| **参照の全面刷新**  | **遵守** | UI層の `TextField.maxLength` や Logic層の比較処理からマジックナンバーを排除し、辞書参照に統一。               |
+| **データの整合性**  | **遵守** | 生年月日の「時分秒なし(00:00:00)」の仕様を徹底。インポート時も `AppMaintenanceRepository` で強制正規化するよう強化。 |
 
 ---
 
-## 3. 今後の修正タスク (TODO)
+## 2. 最終的なパッケージ構造 (`data/spec/` 配下)
 
-### [ ] 0. 設計指針の確定と AppThresholds の構造再編
-- [ ] 「仕様の所在」優先の方針を確定させる。
-- [ ] `AppThresholds.kt` をカテゴリごとに nested object 等で整理し、巨大化に備える。
+```kotlin
+// 各ドメインごとの物理ファイル
+- data/spec/HealthSpecifications.kt     // 健康指標の閾値・単位
+- data/spec/MedicationSpecifications.kt // 服薬管理の業務定義
+- data/spec/CalendarSpecifications.kt   // 和暦・西暦の定義
+- data/spec/ExportSpecifications.kt     // PDF帳票のレイアウト・配色
+- data/spec/ConstraintSpecifications.kt // 文字数制限などのアプリ制約
+- data/spec/SearchSpecifications.kt     // 五十音インデックス定義
+- data/spec/SettingsSpecifications.kt   // 設定画面の選択肢リスト
 
-### [ ] 1. ドメイン定義（Enum）の移譲
-- [ ] `HealthAlertLevel`, `BmiStatus`, `VitalStatus` 等を `data/` 配下または `AppThresholds` へ移動。
-- [ ] `MedicationTimeSlot`, `MedicationStatus` を移動。
-- [ ] `BirthEra` を移動。
-
-### [ ] 2. ロジック層からの定数抽出
-- [ ] `JapaneseDateLogic` から日付境界値を抽出。
-- [ ] `SettingsLogic` から設定選択肢を抽出。
-- [ ] `PersonListLogic` から五十音判定基準を抽出。
-
-### [ ] 3. ViewModel / UI の共通修正
-- [ ] ハードコードされたエラーメッセージを、`AppThresholds` の定数を参照して組み立てる方式に変更。
-- [ ] 各種 `TextField` の `maxLength` 指定を `AppThresholds` の定数に統一。
-
-### [ ] 4. PdfExporter の修正
-- [ ] 配色定義の抽出と `AppThresholds` または Mapper への集約。
-- [ ] 期間計算ロジック（1ヶ月、3ヶ月）の共通化。
+// AppSpecifications.kt (各ファイルへの参照を保持する窓口)
+object AppSpecifications {
+    val Health = HealthSpecifications
+    val Condition = ConstraintSpecifications.Condition
+    val Medication = MedicationSpecifications
+    val JapaneseCalendar = CalendarSpecifications
+    val Export = ExportSpecifications
+    val Constraints = ConstraintSpecifications
+    val Search = SearchSpecifications
+    val Settings = SettingsSpecifications
+}
+```
 
 ---
-作成日: 2026/07/19
+最終更新日: 2026/07/22

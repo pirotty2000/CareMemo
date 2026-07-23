@@ -34,8 +34,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.*
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
+import jp.mydns.fujiwara.carememo.ui.theme.getDisplayColor
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
@@ -89,22 +91,23 @@ private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
         // --- 身長セクション ---
         Icon(Icons.Rounded.Height, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text = record.height?.let { "${AppThresholds.formatHeight(it)}${AppThresholds.UNIT_HEIGHT}" } ?: "---", style = textStyle)
+        Text(text = record.height?.let { "${HealthLogic.formatHeight(it)}${HealthSpecifications.Height.UNIT}" } ?: "---", style = textStyle)
         Spacer(modifier = Modifier.width(8.dp))
 
         // --- 体重セクション ---
         Icon(Icons.Rounded.Scale, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(4.dp))
-        Text(text = record.weight?.let { "${AppThresholds.formatWeight(it)}${AppThresholds.UNIT_WEIGHT}" } ?: "---", style = textStyle)
+        Text(text = record.weight?.let { "${HealthLogic.formatWeight(it)}${HealthSpecifications.Weight.UNIT}" } ?: "---", style = textStyle)
         Spacer(modifier = Modifier.width(8.dp))
 
         // --- BMIセクション ---
-        Text(text = "${stringResource(R.string.health_label_bmi)}: ${AppThresholds.formatBmi(bmi)}", style = textStyle)
+        Text(text = "${stringResource(R.string.health_label_bmi)}: ${HealthLogic.formatBmi(bmi)}", style = textStyle)
         if (bmi > 0) {
-            val (status, alertLevel) = HealthLogic.evaluateBMI(bmi)
+            val (status, _) = HealthLogic.evaluateBMI(bmi)
+            val alertLevel = HealthDisplayMapper.getBmiLevel(status)
             val bmiLabel = status?.let { stringResource(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
             Spacer(modifier = Modifier.width(2.dp))
-            val bmiColor = HealthDisplayMapper.getAlertColor(alertLevel)
+            val bmiColor = alertLevel.getDisplayColor()
             
             Text(text = "($bmiLabel)", style = bmiLabelStyle, color = bmiColor, fontWeight = if (alertLevel != HealthAlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal)
         }
@@ -113,26 +116,28 @@ private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
 
 @Composable
 private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
-    val (gStatus, gLevel) = HealthLogic.evaluateGlucose(record.glucose)
-    val (hStatus, hLevel) = HealthLogic.evaluateHbA1c(record.hba1c)
+    val (gStatus, _) = HealthLogic.evaluateGlucose(record.glucose)
+    val (hStatus, _) = HealthLogic.evaluateHbA1c(record.hba1c)
     val textStyle = MaterialTheme.typography.labelMedium
     val statusLabelStyle = MaterialTheme.typography.labelMedium
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "${stringResource(R.string.health_label_glucose)}: ${record.glucose?.let { "${AppThresholds.formatGlucose(it)} ${AppThresholds.UNIT_GLUCOSE}" } ?: "---"}", style = textStyle)
+        Text(text = "${stringResource(R.string.health_label_glucose)}: ${record.glucose?.let { "${HealthLogic.formatGlucose(it)} ${HealthSpecifications.BloodGlucose.UNIT}" } ?: "---"}", style = textStyle)
         if (record.glucose != null) {
-            val gColor = HealthDisplayMapper.getAlertColor(gLevel)
+            val alertLevel = HealthDisplayMapper.getGlucoseLevel(gStatus)
+            val gColor = alertLevel.getDisplayColor()
             val gLabel = gStatus?.let { stringResource(HealthDisplayMapper.getGlucoseLabel(it)!!) } ?: ""
             Spacer(modifier = Modifier.width(2.dp))
-            Text(text = "($gLabel)", style = statusLabelStyle, color = gColor, fontWeight = if (gLevel != HealthAlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal)
+            Text(text = "($gLabel)", style = statusLabelStyle, color = gColor, fontWeight = if (alertLevel != HealthAlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal)
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "${stringResource(R.string.health_label_hba1c)}: ${record.hba1c?.let { "${AppThresholds.formatHbA1c(it)}${AppThresholds.UNIT_HBA1C}" } ?: "---"}", style = textStyle)
+        Text(text = "${stringResource(R.string.health_label_hba1c)}: ${record.hba1c?.let { "${HealthLogic.formatHbA1c(it)}${HealthSpecifications.HbA1c.UNIT}" } ?: "---"}", style = textStyle)
         if (record.hba1c != null) {
-            val hColor = HealthDisplayMapper.getAlertColor(hLevel)
+            val alertLevel = HealthDisplayMapper.getHbA1cLevel(hStatus)
+            val hColor = alertLevel.getDisplayColor()
             val hLabel = hStatus?.let { stringResource(HealthDisplayMapper.getHbA1cLabel(it)!!) } ?: ""
             Spacer(modifier = Modifier.width(2.dp))
-            Text(text = "($hLabel)", style = statusLabelStyle, color = hColor, fontWeight = if (hLevel != HealthAlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal)
+            Text(text = "($hLabel)", style = statusLabelStyle, color = hColor, fontWeight = if (alertLevel != HealthAlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal)
         }
     }
 }
@@ -155,20 +160,20 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "${AppThresholds.formatBpValue(record.bpSystolic)}/${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}", style = textStyle)
+            Text(text = "${HealthLogic.formatBpValue(record.bpSystolic)}/${HealthLogic.formatBpValue(record.bpDiastolic)} ${HealthSpecifications.BloodPressure.UNIT}", style = textStyle)
             Spacer(modifier = Modifier.width(8.dp))
             
             // SATセクション（アイコンなし）
-            Text(text = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}", style = textStyle)
+            Text(text = "${HealthLogic.formatSat(record.sat)} ${HealthSpecifications.OxygenSaturation.UNIT}", style = textStyle)
             Spacer(modifier = Modifier.width(8.dp))
 
             Icon(Icons.Rounded.MonitorHeart, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}", style = textStyle)
+            Text(text = "${HealthLogic.formatPulse(record.pulse)} ${HealthSpecifications.Pulse.UNIT}", style = textStyle)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.Rounded.Thermostat, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "${AppThresholds.formatBodyTemp(record.bodyTemperature)} ${AppThresholds.UNIT_BODY_TEMP}", style = textStyle)
+            Text(text = "${HealthLogic.formatBodyTemp(record.bodyTemperature)} ${HealthSpecifications.BodyTemperature.UNIT}", style = textStyle)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             VitalStatusIndicator(label = highBpLabel, isActive = results.any { it.first == VitalStatus.HIGH_BP }, style = statusLabelStyle)
@@ -184,7 +189,16 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
 
 @Composable
 private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall) {
-    Text(text = label, style = style.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal), color = if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+    val level = HealthDisplayMapper.getVitalIndicatorLevel(isActive)
+    val color = level.getDisplayColor()
+    Text(
+        text = label, 
+        style = style.copy(
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, 
+            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal
+        ), 
+        color = color
+    )
 }
 
 
@@ -387,8 +401,8 @@ private fun HealthRecordEditForm(
                     when (category) {
                         Category.HEIGHT_AND_WEIGHT -> {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                AppCompactTextField(value = heightText, onValueChange = onHeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_height)) }, suffix = { Text(AppThresholds.UNIT_HEIGHT) }, modifier = Modifier.weight(1f))
-                                AppCompactTextField(value = weightText, onValueChange = onWeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_weight)) }, suffix = { Text(AppThresholds.UNIT_WEIGHT) }, modifier = Modifier.weight(1f), imeAction = ImeAction.Done)
+                                AppCompactTextField(value = heightText, onValueChange = onHeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_height)) }, suffix = { Text(HealthSpecifications.Height.UNIT) }, modifier = Modifier.weight(1f))
+                                AppCompactTextField(value = weightText, onValueChange = onWeightChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_weight)) }, suffix = { Text(HealthSpecifications.Weight.UNIT) }, modifier = Modifier.weight(1f), imeAction = ImeAction.Done)
                             }
                         }
                         Category.BP_AND_PULSE -> {
@@ -397,14 +411,14 @@ private fun HealthRecordEditForm(
                                 AppCompactTextField(value = bpDiastolicText, onValueChange = onBpDiastolicChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_bp_diastolic)) }, modifier = Modifier.weight(1f).testTag("HealthField_BpDiastolic"))
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_sat)) }, suffix = { Text(AppThresholds.UNIT_SAT) }, modifier = Modifier.weight(1f).testTag("HealthField_Sat"))
-                                AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_pulse)) }, suffix = { Text(AppThresholds.UNIT_PULSE) }, modifier = Modifier.weight(1f).testTag("HealthField_Pulse"))
+                                AppCompactTextField(value = satText, onValueChange = onSatChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_sat)) }, suffix = { Text(HealthSpecifications.OxygenSaturation.UNIT) }, modifier = Modifier.weight(1f).testTag("HealthField_Sat"))
+                                AppCompactTextField(value = pulseText, onValueChange = onPulseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_pulse)) }, suffix = { Text(HealthSpecifications.Pulse.UNIT) }, modifier = Modifier.weight(1f).testTag("HealthField_Pulse"))
                             }
-                            AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_body_temp)) }, suffix = { Text(AppThresholds.UNIT_BODY_TEMP) }, modifier = Modifier.fillMaxWidth().testTag("HealthField_Temp"), imeAction = ImeAction.Done)
+                            AppCompactTextField(value = bodyTemperatureText, onValueChange = onBodyTemperatureChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_body_temp)) }, suffix = { Text(HealthSpecifications.BodyTemperature.UNIT) }, modifier = Modifier.fillMaxWidth().testTag("HealthField_Temp"), imeAction = ImeAction.Done)
                         }
                         Category.GLUCOSE_AND_HBA1C -> {
-                            AppCompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_glucose)) }, suffix = { Text(AppThresholds.UNIT_GLUCOSE) }, modifier = Modifier.fillMaxWidth())
-                            AppCompactTextField(value = hba1cText, onValueChange = onHba1cChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_hba1c)) }, suffix = { Text(AppThresholds.UNIT_HBA1C) }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
+                            AppCompactTextField(value = glucoseText, onValueChange = onGlucoseChange, type = AppTextFieldType.INTEGER, label = { Text(stringResource(R.string.health_label_glucose)) }, suffix = { Text(HealthSpecifications.BloodGlucose.UNIT) }, modifier = Modifier.fillMaxWidth())
+                            AppCompactTextField(value = hba1cText, onValueChange = onHba1cChange, type = AppTextFieldType.DECIMAL, label = { Text(stringResource(R.string.health_label_hba1c)) }, suffix = { Text(HealthSpecifications.HbA1c.UNIT) }, modifier = Modifier.fillMaxWidth(), imeAction = ImeAction.Done)
                         }
                         else -> {}
                     }
@@ -482,11 +496,11 @@ private fun HealthRecordDisplayCard(record: Any, onBack: () -> Unit, onEditClick
                     is HeightAndWeight -> {
                         DetailItem(
                             label = stringResource(R.string.health_label_height),
-                            value = "${AppThresholds.formatHeight(record.height)} ${AppThresholds.UNIT_HEIGHT}"
+                            value = "${HealthLogic.formatHeight(record.height)} ${HealthSpecifications.Height.UNIT}"
                         )
                         DetailItem(
                             label = stringResource(R.string.health_label_weight),
-                            value = "${AppThresholds.formatWeight(record.weight)} ${AppThresholds.UNIT_WEIGHT}"
+                            value = "${HealthLogic.formatWeight(record.weight)} ${HealthSpecifications.Weight.UNIT}"
                         )
                         val bmi = record.calculateBMI()
                         if (bmi > 0) {
@@ -494,7 +508,7 @@ private fun HealthRecordDisplayCard(record: Any, onBack: () -> Unit, onEditClick
                             val label = status?.let { stringResource(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
                             DetailItem(
                                 label = stringResource(R.string.health_label_bmi),
-                                value = "${AppThresholds.formatBmi(bmi)} ($label)"
+                                value = "${HealthLogic.formatBmi(bmi)} ($label)"
                             )
                         }
                     }
@@ -502,19 +516,19 @@ private fun HealthRecordDisplayCard(record: Any, onBack: () -> Unit, onEditClick
                     is BpAndPulse -> {
                         DetailItem(
                             label = stringResource(R.string.health_label_bp),
-                            value = "${AppThresholds.formatBpValue(record.bpSystolic)} / ${AppThresholds.formatBpValue(record.bpDiastolic)} ${AppThresholds.UNIT_BP}"
+                            value = "${HealthLogic.formatBpValue(record.bpSystolic)} / ${HealthLogic.formatBpValue(record.bpDiastolic)} ${HealthSpecifications.BloodPressure.UNIT}"
                         )
                         DetailItem(
                             label = stringResource(R.string.health_label_sat),
-                            value = "${AppThresholds.formatSat(record.sat)} ${AppThresholds.UNIT_SAT}"
+                            value = "${HealthLogic.formatSat(record.sat)} ${HealthSpecifications.OxygenSaturation.UNIT}"
                         )
                         DetailItem(
                             label = stringResource(R.string.health_label_pulse),
-                            value = "${AppThresholds.formatPulse(record.pulse)} ${AppThresholds.UNIT_PULSE}"
+                            value = "${HealthLogic.formatPulse(record.pulse)} ${HealthSpecifications.Pulse.UNIT}"
                         )
                         DetailItem(
                             label = stringResource(R.string.health_label_body_temp),
-                            value = "${AppThresholds.formatBodyTemp(record.bodyTemperature)} ${AppThresholds.UNIT_BODY_TEMP}"
+                            value = "${HealthLogic.formatBodyTemp(record.bodyTemperature)} ${HealthSpecifications.BodyTemperature.UNIT}"
                         )
                         val statusText = HealthDisplayMapper.formatVitalResults(
                             context,
@@ -532,11 +546,11 @@ private fun HealthRecordDisplayCard(record: Any, onBack: () -> Unit, onEditClick
                     is GlucoseAndHbA1c -> {
                         DetailItem(
                             label = stringResource(R.string.health_label_glucose),
-                            value = "${AppThresholds.formatGlucose(record.glucose)} ${AppThresholds.UNIT_GLUCOSE}"
+                            value = "${HealthLogic.formatGlucose(record.glucose)} ${HealthSpecifications.BloodGlucose.UNIT}"
                         )
                         DetailItem(
                             label = stringResource(R.string.health_label_hba1c),
-                            value = "${AppThresholds.formatHbA1c(record.hba1c)} ${AppThresholds.UNIT_HBA1C}"
+                            value = "${HealthLogic.formatHbA1c(record.hba1c)} ${HealthSpecifications.HbA1c.UNIT}"
                         )
                         val statusText = record.getCombinedResultText(context)
                         DetailItem(label = stringResource(R.string.health_label_status), value = statusText)

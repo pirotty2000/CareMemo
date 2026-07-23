@@ -1,6 +1,8 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
@@ -176,6 +178,48 @@ class HealthLogicTest {
     @Test
     fun VLD_05_validateInput_outOfRangeMin() {
         assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("170", "0"))
+    }
+
+    // endregion
+
+    // region 6. 形式チェック・フォーマッタテスト
+
+    @Test
+    fun FMT_01_isWithinFormat_valid() {
+        // 整数3桁、小数なし
+        assertTrue(HealthLogic.isWithinFormat("123", 3, 0))
+        assertTrue(HealthLogic.isWithinFormat("0", 3, 0))
+        assertTrue(HealthLogic.isWithinFormat("", 3, 0))
+
+        // 整数3桁、小数1桁
+        assertTrue(HealthLogic.isWithinFormat("123.4", 3, 1))
+        assertTrue(HealthLogic.isWithinFormat("12.3", 3, 1))
+        assertTrue(HealthLogic.isWithinFormat("1", 3, 1))
+    }
+
+    @Test
+    fun FMT_02_isWithinFormat_invalid() {
+        // 桁数オーバー
+        assertFalse(HealthLogic.isWithinFormat("1234", 3, 0))
+        assertFalse(HealthLogic.isWithinFormat("123.45", 3, 1))
+
+        // 記号・文字
+        assertFalse(HealthLogic.isWithinFormat("1.2.3", 3, 1))
+        assertFalse(HealthLogic.isWithinFormat("12a", 3, 0))
+        assertFalse(HealthLogic.isWithinFormat("-10", 3, 0))
+    }
+
+    @Test
+    fun FMT_03_formatHeight() {
+        assertEquals("170.0", HealthLogic.formatHeight(170.0))
+        assertEquals("---", HealthLogic.formatHeight(null))
+    }
+
+    @Test
+    fun FMT_04_formatBmi() {
+        assertEquals("22.5", HealthLogic.formatBmi(22.49))
+        assertEquals("---", HealthLogic.formatBmi(0.0))
+        assertEquals("---", HealthLogic.formatBmi(null))
     }
 
     // endregion

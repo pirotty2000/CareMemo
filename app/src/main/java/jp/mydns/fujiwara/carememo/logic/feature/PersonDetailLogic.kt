@@ -12,7 +12,7 @@ data class PersonDetailUiState(
     val personId: Int? = null,
     val person: Person? = null,
     val personSummary: PersonCategorySummary? = null,
-    val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
+    override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     override val isLoading: Boolean = false
 ) : PersonAwareState
 

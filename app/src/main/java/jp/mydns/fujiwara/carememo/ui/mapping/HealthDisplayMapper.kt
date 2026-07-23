@@ -1,15 +1,30 @@
 package jp.mydns.fujiwara.carememo.ui.mapping
 
 import android.content.Context
-import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.AppThresholds
+import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.*
 
 /**
- * 健康記録の判定結果(Enum)を表示用の資源(リソースID、色)に変換するマッパー。
+ * 健康記録の判定結果(Enum)を、表示用の資源（リソースID）や
+ * セマンティックな警告レベル（HealthAlertLevel）に変換するマッパー。
+ *
+ * 【設計方針】
+ * ・本クラスは「表示内容（何を表示するか）」の決定に専念します。
+ * ・具体的な「色（Color）」の決定は行わず、HealthAlertLevel を返すに留めます。
+ * ・色は UI 層で HealthAlertLevel.getDisplayColor() を使用して取得してください。
  */
 object HealthDisplayMapper {
+
+    /**
+     * グラフに表示する境界線の定義
+     */
+    data class GraphLimit(val label: String, val value: Double)
+
+    //////////////////////////////////////////////////////////////////////
+    // 「身長・体重」：BMI
+    //////////////////////////////////////////////////////////////////////
 
     /**
      * BMIステータスに対応する文字列リソースIDを返します。
@@ -23,6 +38,32 @@ object HealthDisplayMapper {
         BmiStatus.OBESITY_4 -> R.string.bmi_label_obesity_4 // 肥満(4度)
         null -> null
     }
+
+    /**
+     * BMIステータスに対応する警告レベルを返します。
+     */
+    fun getBmiLevel(status: BmiStatus?): HealthAlertLevel = when (status) {
+        BmiStatus.UNDERWEIGHT -> HealthAlertLevel.INFO
+        BmiStatus.NORMAL -> HealthAlertLevel.NORMAL
+        BmiStatus.OBESITY_1 -> HealthAlertLevel.WARNING
+        BmiStatus.OBESITY_2, BmiStatus.OBESITY_3, BmiStatus.OBESITY_4 -> HealthAlertLevel.ALERT
+        null -> HealthAlertLevel.NORMAL
+    }
+
+    /**
+     * BMIグラフに表示する境界線のリストを返します。
+     */
+    fun getBmiGraphLimits(context: Context): List<GraphLimit> {
+        val spec = HealthSpecifications.BodyMassIndex
+        return listOf(
+            GraphLimit(context.getString(R.string.health_graph_limit_lower), spec.THRESHOLD_GRAPH_NORMAL_LOWER),
+            GraphLimit(context.getString(R.string.health_graph_limit_upper), spec.THRESHOLD_GRAPH_NORMAL_UPPER)
+        )
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // 「バイタル」
+    //////////////////////////////////////////////////////////////////////
 
     /**
      * バイタルステータスに対応する文字列リソースIDを返します。
@@ -39,6 +80,50 @@ object HealthDisplayMapper {
     }
 
     /**
+     * 複数のバイタル判定結果を「・」で連結した文字列を生成します。
+     */
+    fun formatVitalResults(context: Context, results: List<Pair<VitalStatus, HealthAlertLevel>>): String {
+        if (results.all { it.second == HealthAlertLevel.NORMAL }) {
+            return context.getString(R.string.vital_label_normal)
+        }
+        return results
+            .filter { it.second != HealthAlertLevel.NORMAL }
+            .joinToString("・") { context.getString(getVitalLabel(it.first)) }
+    }
+
+    /**
+     * バイタルインジケーターのアラートレベルを決定します（On/Off判定）。
+     */
+    fun getVitalIndicatorLevel(isActive: Boolean): HealthAlertLevel {
+        return if (isActive) HealthAlertLevel.ALERT else HealthAlertLevel.NONE
+    }
+
+    /**
+     * 脈拍グラフに表示する境界線のリストを返します。
+     */
+    fun getPulseGraphLimits(context: Context): List<GraphLimit> {
+        val spec = HealthSpecifications.Pulse
+        return listOf(
+            GraphLimit(context.getString(R.string.health_graph_limit_lower), spec.THRESHOLD_GRAPH_NORMAL_LOWER),
+            GraphLimit(context.getString(R.string.health_graph_limit_upper), spec.THRESHOLD_GRAPH_NORMAL_UPPER)
+        )
+    }
+
+    /**
+     * 酸素飽和度グラフに表示する境界線のリストを返します。
+     */
+    fun getSatGraphLimits(context: Context): List<GraphLimit> {
+        val spec = HealthSpecifications.OxygenSaturation
+        return listOf(
+            GraphLimit(context.getString(R.string.health_graph_limit_lower), spec.THRESHOLD_GRAPH_NORMAL_LOWER)
+        )
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // 「血糖値・HbA1c」
+    //////////////////////////////////////////////////////////////////////
+
+    /**
      * 血糖値ステータスに対応する文字列リソースIDを返します。
      */
     fun getGlucoseLabel(status: GlucoseStatus?): Int? = when (status) {
@@ -47,6 +132,17 @@ object HealthDisplayMapper {
         GlucoseStatus.WARNING -> R.string.hba1c_label_prediabetes // 予備群
         GlucoseStatus.HIGH -> R.string.glucose_label_high // 高血糖
         null -> null
+    }
+
+    /**
+     * 血糖値ステータスに対応する警告レベルを返します。
+     */
+    fun getGlucoseLevel(status: GlucoseStatus?): HealthAlertLevel = when (status) {
+        GlucoseStatus.LOW -> HealthAlertLevel.INFO
+        GlucoseStatus.NORMAL -> HealthAlertLevel.NORMAL
+        GlucoseStatus.WARNING -> HealthAlertLevel.WARNING
+        GlucoseStatus.HIGH -> HealthAlertLevel.ALERT
+        null -> HealthAlertLevel.NORMAL
     }
 
     /**
@@ -60,17 +156,43 @@ object HealthDisplayMapper {
     }
 
     /**
-     * アラートレベルに対応する Compose 用のカラーを返します。
+     * HbA1cステータスに対応する警告レベルを返します。
      */
-    fun getAlertColor(level: HealthAlertLevel): Color = when (level) {
-        HealthAlertLevel.NORMAL -> Color(0xFF2196F3) // Blue
-        HealthAlertLevel.WARNING -> Color(0xFF000000) // Black (テキスト用)
-        HealthAlertLevel.ALERT -> Color(0xFFF44336) // Red
-        HealthAlertLevel.INFO -> Color(0xFF00BCD4) // Cyan
+    fun getHbA1cLevel(status: HbA1cStatus?): HealthAlertLevel = when (status) {
+        HbA1cStatus.NORMAL -> HealthAlertLevel.NORMAL
+        HbA1cStatus.WARNING -> HealthAlertLevel.WARNING
+        HbA1cStatus.DIABETES -> HealthAlertLevel.ALERT
+        null -> HealthAlertLevel.NORMAL
     }
 
     /**
+     * 血糖値グラフに表示する境界線のリストを返します。
+     */
+    fun getGlucoseGraphLimits(context: Context): List<GraphLimit> {
+        val spec = HealthSpecifications.BloodGlucose
+        return listOf(
+            GraphLimit(context.getString(R.string.health_graph_limit_lower), spec.THRESHOLD_GRAPH_NORMAL_LOWER),
+            GraphLimit(context.getString(R.string.health_graph_limit_upper), spec.THRESHOLD_GRAPH_NORMAL_UPPER)
+        )
+    }
+
+    /**
+     * HbA1cグラフに表示する境界線のリストを返します。
+     */
+    fun getHbA1cGraphLimits(context: Context): List<GraphLimit> {
+        val spec = HealthSpecifications.HbA1c
+        return listOf(
+            GraphLimit(context.getString(R.string.health_graph_limit_upper), spec.THRESHOLD_GRAPH_NORMAL_UPPER)
+        )
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // PDF用設定
+    //////////////////////////////////////////////////////////////////////
+
+    /**
      * アラートレベルに対応する PDF 用の背景色(android.graphics.Color)を返します。
+     * ※PDF出力は Android View システム(Canvas)を使用するため、固定値を維持します。
      */
     fun getPdfBgColor(level: HealthAlertLevel): Int? = when (level) {
         HealthAlertLevel.WARNING -> 0xFFF0F0F0.toInt()
@@ -78,42 +200,44 @@ object HealthDisplayMapper {
         else -> null
     }
 
-    /**
-     * 複数のバイタル判定結果を「・」で連結した文字列を生成します。
-     */
-    fun formatVitalResults(context: Context, results: List<Pair<VitalStatus, HealthAlertLevel>>): String {
-        if (results.all { it.second == HealthAlertLevel.NORMAL }) {
-            return context.getString(R.string.vital_label_normal)
-        }
-        return results
-            .filter { it.second != HealthAlertLevel.NORMAL }
-            .joinToString("・") { context.getString(getVitalLabel(it.first)) }
+    //////////////////////////////////////////////////////////////////////
+    // 説明文（グラフ補助用）
+    //////////////////////////////////////////////////////////////////////
+
+    fun getBpExplanation(context: Context): String {
+        val spec = HealthSpecifications.BloodPressure
+        return context.getString(
+            R.string.bp_explanation,
+            spec.THRESHOLD_LOW_SYSTOLIC.toInt(),
+            spec.THRESHOLD_HIGH_SYSTOLIC.toInt(),
+            spec.THRESHOLD_LOW_DIASTOLIC.toInt(),
+            spec.THRESHOLD_HIGH_DIASTOLIC.toInt()
+        )
     }
 
-    // --- 説明文（グラフ補助用） ---
-
-    fun getBpExplanation(context: Context): String =
-        context.getString(R.string.bp_explanation, 
-            AppThresholds.BP_LOW_SYSTOLIC.toInt(), 
-            AppThresholds.BP_HIGH_SYSTOLIC.toInt(), 
-            AppThresholds.BP_LOW_DIASTOLIC.toInt(), 
-            AppThresholds.BP_HIGH_DIASTOLIC.toInt())
-
     fun getSatExplanation(context: Context): String =
-        context.getString(R.string.sat_explanation, AppThresholds.SAT_LOW.toInt())
+        context.getString(R.string.sat_explanation, HealthSpecifications.OxygenSaturation.THRESHOLD_LOW.toInt())
 
-    fun getPulseExplanation(context: Context): String =
-        context.getString(R.string.pulse_explanation, AppThresholds.PULSE_LOW.toInt(), AppThresholds.PULSE_HIGH.toInt())
+    fun getPulseExplanation(context: Context): String {
+        val spec = HealthSpecifications.Pulse
+        return context.getString(R.string.pulse_explanation, spec.THRESHOLD_LOW.toInt(), spec.THRESHOLD_HIGH.toInt())
+    }
 
-    fun getTempExplanation(context: Context): String =
-        context.getString(R.string.temp_explanation, AppThresholds.TEMP_LOW, AppThresholds.TEMP_HIGH)
+    fun getTempExplanation(context: Context): String {
+        val spec = HealthSpecifications.BodyTemperature
+        return context.getString(R.string.temp_explanation, spec.THRESHOLD_LOW, spec.THRESHOLD_HIGH)
+    }
 
-    fun getGlucoseExplanation(context: Context): String =
-        context.getString(R.string.glucose_explanation, AppThresholds.GLUCOSE_NORMAL_LOW.toInt(), 99)
+    fun getGlucoseExplanation(context: Context): String {
+        val spec = HealthSpecifications.BloodGlucose
+        return context.getString(R.string.glucose_explanation, spec.THRESHOLD_LOW.toInt(), spec.THRESHOLD_NORMAL_UPPER.toInt())
+    }
 
     fun getHbA1cExplanation(context: Context): String =
-        context.getString(R.string.hba1c_explanation, AppThresholds.HBA1C_GOOD)
+        context.getString(R.string.hba1c_explanation, HealthSpecifications.HbA1c.THRESHOLD_NORMAL_UPPER)
 
-    fun getBmiExplanation(context: Context): String =
-        context.getString(R.string.bmi_explanation, AppThresholds.BMI_NORMAL_LOW, AppThresholds.BMI_NORMAL_HIGH)
+    fun getBmiExplanation(context: Context): String {
+        val spec = HealthSpecifications.BodyMassIndex
+        return context.getString(R.string.bmi_explanation, spec.THRESHOLD_UNDERWEIGHT, spec.THRESHOLD_NORMAL_UPPER)
+    }
 }

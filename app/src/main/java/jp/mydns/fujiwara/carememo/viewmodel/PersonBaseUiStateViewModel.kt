@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.first
  * 利用者コンテキストを持つ UiState が実装すべきインターフェース
  */
 interface PersonAwareState {
+    val currentCategory: Category? get() = null
     val isLoading: Boolean
 }
 
@@ -86,6 +88,11 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
      * 二重ロード防止判定に使用します。
      */
     protected abstract fun getPersonId(state: S): Int?
+
+    /**
+     * UiState から現在のカテゴリを抽出します。
+     */
+    protected fun getCurrentCategory(state: S): Category? = state.currentCategory
 
     /**
      * ロードした利用者データを UiState に反映した新しい状態を返します。
