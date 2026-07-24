@@ -12,7 +12,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
+import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
 
 /**
@@ -25,6 +30,15 @@ fun OrphanedPhotoManagementScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var photoToDelete by remember { mutableStateOf<OrphanedPhotoInfo?>(null) }
+
+    // 削除確認ダイアログ
+    photoToDelete?.let { info ->
+        AppDeleteConfirmDialog(
+            onDismiss = { photoToDelete = null },
+            onDelete = { viewModel.deletePhoto(info) }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -40,7 +54,7 @@ fun OrphanedPhotoManagementScreen(
     ) { paddingValues ->
         OrphanedPhotoManagementContent(
             uiState = uiState,
-            onDelete = viewModel::deletePhoto,
+            onDelete = { photoToDelete = it },
             modifier = Modifier.padding(paddingValues)
         )
     }
