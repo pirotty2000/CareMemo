@@ -399,7 +399,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(
                         factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context))
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
 
                     // 初期データのロード
                     LaunchedEffect(personId) {
@@ -445,7 +445,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(
                         factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context))
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
 
                     // 利用者情報のロード
                     LaunchedEffect(personId) {
@@ -474,7 +474,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 ) { backStackEntry ->
                     val conditionId = backStackEntry.arguments?.getString("conditionId") ?: ""
                     val initialPhotoId = backStackEntry.arguments?.getString("initialPhotoId") ?: ""
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context))
+                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
 
                     ConditionPhotoFullScreen(
                         conditionId = conditionId,
@@ -570,7 +570,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                             @Suppress("UNCHECKED_CAST")
                             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                                return OrphanedPhotoViewModel(userSettingsRepository, conditionRepository, context) as T
+                                return OrphanedPhotoViewModel(userSettingsRepository, conditionRepository, context.applicationContext) as T
                             }
                         }
                     )

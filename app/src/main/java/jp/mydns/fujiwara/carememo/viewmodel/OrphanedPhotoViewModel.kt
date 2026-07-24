@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.annotation.SuppressLint
 import android.content.Context
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -21,7 +22,7 @@ data class OrphanedPhotoUiState(
 class OrphanedPhotoViewModel(
     userSettingsRepository: UserSettingsRepository,
     private val conditionRepository: ConditionRepository,
-    private val context: Context // ファイル操作のために必要
+    @SuppressLint("StaticFieldLeak") private val context: Context // アプリケーションコンテキストを想定
 ) : BaseUiStateViewModel<OrphanedPhotoUiState, Unit>(userSettingsRepository, OrphanedPhotoUiState()) {
 
     override val featureName: String = "OrphanedPhotoManagement"
