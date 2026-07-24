@@ -1,10 +1,10 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import android.net.Uri
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
-import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 
@@ -83,8 +83,8 @@ object PersonConditionLogic {
         if (current.condition.isBlank()) return PersonConditionValidationResult.EMPTY_CONDITION
         if (current.author.isBlank()) return PersonConditionValidationResult.EMPTY_AUTHOR
         if (current.recordTime == null) return PersonConditionValidationResult.INVALID_TIME
-        if (current.condition.length > ConstraintSpecifications.Condition.Validation.MAX_LENGTH_MEMO) return PersonConditionValidationResult.CONDITION_TOO_LONG
-        if (current.title.length > ConstraintSpecifications.Condition.Validation.MAX_LENGTH_TITLE) return PersonConditionValidationResult.TITLE_TOO_LONG
+        if (current.condition.length > AppSpecifications.Condition.Validation.MAX_LENGTH_MEMO) return PersonConditionValidationResult.CONDITION_TOO_LONG
+        if (current.title.length > AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE) return PersonConditionValidationResult.TITLE_TOO_LONG
 
         return PersonConditionValidationResult.SUCCESS
     }

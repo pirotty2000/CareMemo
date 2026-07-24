@@ -16,7 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.spec.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
@@ -213,7 +213,7 @@ fun PersonEditScreenContent(
                 ) {
                     // --- 入力フィールド群 ---
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val nameSpec = ConstraintSpecifications.Person.Validation
+                        val nameSpec = AppSpecifications.Constraints.Person.Validation
                         AppTextField(
                             value = lastName,
                             onValueChange = onLastNameChange,
@@ -233,7 +233,7 @@ fun PersonEditScreenContent(
                     }
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val kanaSpec = ConstraintSpecifications.Person.Validation
+                        val kanaSpec = AppSpecifications.Constraints.Person.Validation
                         AppTextField(
                             value = lastNameFurigana,
                             onValueChange = onLastNameFuriganaChange,
@@ -257,7 +257,7 @@ fun PersonEditScreenContent(
                         onValueChange = onNoteChange,
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.main_label_note)) },
-                        maxLength = ConstraintSpecifications.Person.Validation.MAX_LENGTH_NOTE,
+                        maxLength = AppSpecifications.Constraints.Person.Validation.MAX_LENGTH_NOTE,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(noteFocusRequester)

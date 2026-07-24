@@ -59,7 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import java.time.Instant
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.spec.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -382,7 +382,7 @@ private fun ConditionRecordDisplayCard(
             ) {
                 Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size),
                     style = MaterialTheme.typography.titleMedium)
-                if (photos.size < ConstraintSpecifications.Condition.Photo.MAX_COUNT) {
+                if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
                     IconButton(
                         onClick = onAddPhotoClick,
                         enabled = !isProcessing
@@ -466,7 +466,7 @@ private fun ConditionRecordEditForm(
                         onValueChange = onTitleChange,
                         type = AppTextFieldType.TEXT,
                         label = { Text("タイトル (任意)") },
-                        maxLength = ConstraintSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
+                        maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
                         modifier = Modifier.fillMaxWidth()
                     )
                     AppTextField(
@@ -516,7 +516,7 @@ private fun ConditionRecordEditForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size), style = MaterialTheme.typography.titleMedium)
-                if (photos.size < ConstraintSpecifications.Condition.Photo.MAX_COUNT && conditionId != 0) {
+                if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != 0) {
                     IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
                         Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
                     }
@@ -535,7 +535,7 @@ private fun ConditionRecordEditForm(
                 PhotoGrid(photos = photos, isEditable = true, onPhotoClick = {}, onDeletePhoto = onDeletePhoto)
             }
 
-            if (photos.size < ConstraintSpecifications.Condition.Photo.MAX_COUNT && conditionId != 0) {
+            if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != 0) {
                 Button(onClick = onAddPhotoClick, enabled = !isProcessing, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))

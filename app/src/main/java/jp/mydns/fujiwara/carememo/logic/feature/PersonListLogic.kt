@@ -1,8 +1,8 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
-import jp.mydns.fujiwara.carememo.data.spec.SearchSpecifications
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
@@ -10,7 +10,7 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
  */
 data class PersonListUiState(
     val isLoading: Boolean = true,
-    val selectedSection: String = SearchSpecifications.SECTION_ALL,
+    val selectedSection: String = AppSpecifications.Search.SECTION_ALL,
     val searchQuery: String = "",
     val userList: List<PersonUiState> = emptyList(),
     val isNameMaskingEnabled: Boolean = true
@@ -53,7 +53,7 @@ object PersonListLogic {
      * ふりがなから、所属する五十音行（あ、か、さ...）を判定します。
      */
     fun getSection(furigana: String): String {
-        val firstChar = furigana.firstOrNull() ?: return SearchSpecifications.SECTION_OTHER
+        val firstChar = furigana.firstOrNull() ?: return AppSpecifications.Search.SECTION_OTHER
         return when (firstChar) {
             in 'あ'..'お' -> "あ"
             in 'か'..'こ', in 'が'..'ご' -> "か"
@@ -65,7 +65,7 @@ object PersonListLogic {
             in 'や'..'よ' -> "や"
             in 'ら'..'ろ' -> "ら"
             in 'わ'..'ん' -> "わ"
-            else -> SearchSpecifications.SECTION_OTHER
+            else -> AppSpecifications.Search.SECTION_OTHER
         }
     }
 
@@ -80,7 +80,7 @@ object PersonListLogic {
         var filtered = allPersons
         
         // 五五十音フィルタ
-        if (section != SearchSpecifications.SECTION_ALL) {
+        if (section != AppSpecifications.Search.SECTION_ALL) {
             filtered = filtered.filter { person ->
                 getSection(person.lastNameFurigana) == section
             }

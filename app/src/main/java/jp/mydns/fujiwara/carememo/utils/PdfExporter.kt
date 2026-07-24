@@ -13,7 +13,6 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.*
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
@@ -41,10 +40,10 @@ import kotlin.math.floor
  * アプリ内の各種データをA4サイズのPDFとして出力・共有するためのユーティリティ。
  */
 object PdfExporter {
-    private val layoutSpec = ExportSpecifications.Pdf.Layout
-    private val styleSpec = ExportSpecifications.Pdf.Style
-    private val colorSpec = ExportSpecifications.Pdf.Colors
-    private val tableSpec = ExportSpecifications.Pdf.TableConfig
+    private val layoutSpec = AppSpecifications.Export.Pdf.Layout
+    private val styleSpec = AppSpecifications.Export.Pdf.Style
+    private val colorSpec = AppSpecifications.Export.Pdf.Colors
+    private val tableSpec = AppSpecifications.Export.Pdf.TableConfig
 
     /**
      * PDF作成時の描画コンテキストを保持する内部クラス。
@@ -212,7 +211,7 @@ object PdfExporter {
         val bgPaint = Paint().apply { color = colorSpec.BACKGROUND_LIGHT; style = Paint.Style.FILL }
         
         val contentWidth = layoutSpec.PAGE_WIDTH - (layoutSpec.MARGIN * 2)
-        val photoMaxCount = ConstraintSpecifications.Condition.Photo.MAX_COUNT
+        val photoMaxCount = AppSpecifications.Condition.Photo.MAX_COUNT
         val photoSize = (contentWidth - 20f) / photoMaxCount.toFloat()
 
         records.forEach { record ->
@@ -274,11 +273,11 @@ object PdfExporter {
         val linePaint = Paint().apply { color = colorSpec.TABLE_LINE; strokeWidth = 0.5f; style = Paint.Style.STROKE }
 
         // ステータス記号
-        val medColors = ExportSpecifications.Pdf.Colors.Medication
+        val medColors = AppSpecifications.Export.Pdf.Colors.Medication
         val statusPaints = mapOf(
-            2 to Paint().apply { color = medColors.STATUS_TAKEN; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
-            1 to Paint().apply { color = medColors.STATUS_ASSIST; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
-            0 to Paint().apply { color = medColors.STATUS_NONE; textSize = styleSpec.FONT_SIZE_MED_STATUS + 1f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
+            AppSpecifications.Medication.Status.CODE_TAKEN to Paint().apply { color = medColors.STATUS_TAKEN; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
+            AppSpecifications.Medication.Status.CODE_ASSIST to Paint().apply { color = medColors.STATUS_ASSIST; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
+            AppSpecifications.Medication.Status.CODE_NONE to Paint().apply { color = medColors.STATUS_NONE; textSize = styleSpec.FONT_SIZE_MED_STATUS + 1f; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER }
         )
 
         val recordsByMonth = records.groupBy {
@@ -292,9 +291,9 @@ object PdfExporter {
             pageContext.context.getString(R.string.slot_dinner),
             pageContext.context.getString(R.string.slot_bedtime)
         )
-        val labelWidth = ExportSpecifications.Pdf.TableConfig.Medication.LABEL_WIDTH
+        val labelWidth = AppSpecifications.Export.Pdf.TableConfig.Medication.LABEL_WIDTH
         val colWidth = (layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN * 2 - labelWidth) / 31f
-        val rowHeight = ExportSpecifications.Pdf.TableConfig.Medication.ROW_HEIGHT
+        val rowHeight = AppSpecifications.Export.Pdf.TableConfig.Medication.ROW_HEIGHT
         val tableHeight = rowHeight * 6 + 40f
 
         recordsByMonth.forEach { (yearMonth, monthRecords) ->
@@ -349,7 +348,12 @@ object PdfExporter {
                 for (day in 1..daysInMonth) {
                     val rec = mapped[yearMonth.atDay(day).toString() to rowIndex]
                     val x = startX + labelWidth + (day - 0.5f) * colWidth
-                    val mark = when (rec?.status) { 2 -> "〇"; 1 -> "△"; 0 -> "×"; else -> "－" }
+                    val mark = when (rec?.status) {
+                        AppSpecifications.Medication.Status.CODE_TAKEN -> "〇"
+                        AppSpecifications.Medication.Status.CODE_ASSIST -> "△"
+                        AppSpecifications.Medication.Status.CODE_NONE -> "×"
+                        else -> "－"
+                    }
                     pageContext.canvas.drawText(mark, x, y + rowHeight * 0.7f, statusPaints[rec?.status] ?: bodyPaint)
                 }
             }
@@ -360,7 +364,7 @@ object PdfExporter {
     // --- テーブル描画の各論 (Health) ---
 
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
-        val hwSpec = ExportSpecifications.Pdf.TableConfig.HeightWeight
+        val hwSpec = AppSpecifications.Export.Pdf.TableConfig.HeightWeight
         val columns = listOf(
             TableColumn<HeightAndWeight>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
@@ -389,7 +393,7 @@ object PdfExporter {
     }
 
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
-        val bpSpec = ExportSpecifications.Pdf.TableConfig.BpPulse
+        val bpSpec = AppSpecifications.Export.Pdf.TableConfig.BpPulse
         val columns = listOf(
             TableColumn<BpAndPulse>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
@@ -413,7 +417,7 @@ object PdfExporter {
     }
 
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
-        val glSpec = ExportSpecifications.Pdf.TableConfig.Glucose
+        val glSpec = AppSpecifications.Export.Pdf.TableConfig.Glucose
         val columns = listOf(
             TableColumn<GlucoseAndHbA1c>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"

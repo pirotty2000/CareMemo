@@ -1,7 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import java.time.ZoneOffset
@@ -89,7 +89,7 @@ object PersonEditLogic {
      * 入力内容の妥当性を判定します。
      */
     fun validate(current: PersonEditUiState): PersonEditValidationResult {
-        val spec = ConstraintSpecifications.Person.Validation
+        val spec = AppSpecifications.Constraints.Person.Validation
         
         if (current.lastName.isBlank()) return PersonEditValidationResult.EMPTY_LAST_NAME
         if (current.firstName.isBlank()) return PersonEditValidationResult.EMPTY_FIRST_NAME

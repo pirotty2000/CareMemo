@@ -1,8 +1,8 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
-import jp.mydns.fujiwara.carememo.data.spec.*
 
 /**
  * インポートデータの検証結果（事実）
@@ -35,7 +35,7 @@ data class SettingsUiState(
     val themeSetting: ThemeSetting = ThemeSetting.SYSTEM,
 
     // 2. 管理情報（各 Repository からの統計）
-    val auditLogRetentionDays: Int = ConstraintSpecifications.System.AuditLog.DEFAULT_RETENTION_DAYS,
+    val auditLogRetentionDays: Int = AppSpecifications.Constraints.System.AuditLog.DEFAULT_RETENTION_DAYS,
     val auditLogCount: Int = 0,
     val endedUserCount: Int = 0,
     val inconsistencies: List<DatabaseInconsistency> = emptyList(),
@@ -106,14 +106,14 @@ object SettingsLogic {
      * 開発者モードを有効にすべきか判定します。
      */
     fun shouldEnableDeveloperMode(tapCount: Int): Boolean {
-        return tapCount >= ConstraintSpecifications.System.Security.DEVELOPER_MODE_TAP_COUNT
+        return tapCount >= AppSpecifications.Constraints.System.Security.DEVELOPER_MODE_TAP_COUNT
     }
 
     /**
      * 再ロック時間の表示用ラベルを取得します。
      */
     fun getTimeoutLabel(minutes: Int): String {
-        return SettingsSpecifications.LOCK_TIMEOUT_OPTIONS.find { it.first == minutes }?.second
+        return AppSpecifications.Settings.LOCK_TIMEOUT_OPTIONS.find { it.first == minutes }?.second
             ?: "${minutes}分"
     }
 
@@ -121,7 +121,7 @@ object SettingsLogic {
      * 監査ログ保持期間の表示用ラベルを取得します。
      */
     fun getRetentionLabel(days: Int): String {
-        return SettingsSpecifications.AUDIT_LOG_RETENTION_OPTIONS.find { it.first == days }?.second
+        return AppSpecifications.Settings.AUDIT_LOG_RETENTION_OPTIONS.find { it.first == days }?.second
             ?: "${days}日間"
     }
 }

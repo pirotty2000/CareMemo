@@ -1,6 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
-import jp.mydns.fujiwara.carememo.data.spec.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import java.time.DateTimeException
 import java.time.LocalDate
 
@@ -21,10 +21,10 @@ enum class DateValidationResult {
  */
 object JapaneseDateLogic {
 
-    private val calendarSpec = CalendarSpecifications
-    private val showaSpec = CalendarSpecifications.Era.Showa
-    private val heiseiSpec = CalendarSpecifications.Era.Heisei
-    private val reiwaSpec = CalendarSpecifications.Era.Reiwa
+    private val calendarSpec = AppSpecifications.JapaneseCalendar
+    private val showaSpec = AppSpecifications.JapaneseCalendar.Era.Showa
+    private val heiseiSpec = AppSpecifications.JapaneseCalendar.Era.Heisei
+    private val reiwaSpec = AppSpecifications.JapaneseCalendar.Era.Reiwa
 
     /**
      * 西暦から和暦と年に変換します。

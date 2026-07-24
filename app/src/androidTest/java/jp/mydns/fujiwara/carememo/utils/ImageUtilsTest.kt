@@ -10,7 +10,7 @@ import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import jp.mydns.fujiwara.carememo.data.spec.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -93,7 +93,7 @@ class ImageUtilsTest {
     fun IMG_03_processAndSaveImage_resize() = runBlocking {
         val dummyFile = File(context.cacheDir, "dummy_03.jpg")
         // 上限を超える大きな画像を作成
-        val maxSpec = ConstraintSpecifications.Condition.Photo.MAX_SIZE_KB
+        val maxSpec = AppSpecifications.Condition.Photo.MAX_SIZE_KB
         val largeSize = maxSpec + 500
         createDummyImageFile(dummyFile, largeSize, largeSize)
         

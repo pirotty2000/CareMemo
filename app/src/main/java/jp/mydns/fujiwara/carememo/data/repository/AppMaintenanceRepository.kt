@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
@@ -284,7 +283,7 @@ class AppMaintenanceRepository(
             // 写真の差し替え
             val photosDir = ImageUtils.getPhotosDirPublic(context)
             // JSONファイルと同じ階層にある photos ディレクトリを探す
-            val importedPhotosDir = File(dataFile.parentFile, ConstraintSpecifications.Condition.Photo.DIR_NAME)
+            val importedPhotosDir = File(dataFile.parentFile, AppSpecifications.Condition.Photo.DIR_NAME)
             
             if (importedPhotosDir.exists()) {
                 ImageUtils.clearPhotosDir(context)

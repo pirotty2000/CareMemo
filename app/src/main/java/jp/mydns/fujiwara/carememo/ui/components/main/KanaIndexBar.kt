@@ -36,7 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.data.spec.SearchSpecifications
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 
 /**
  * 五十音（カナ）インデックス選択バー
@@ -47,7 +47,7 @@ fun KanaIndexBar(
     onSectionSelect: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val kanaGroups = SearchSpecifications.KANA_GROUPS
+    val kanaGroups = AppSpecifications.Search.KANA_GROUPS
     val listState = rememberLazyListState()
 
     // 選択されたセクションが画面外にある場合、自動スクロールして表示

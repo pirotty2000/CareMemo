@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
 import jp.mydns.fujiwara.carememo.logic.common.MedicationTimeSlot
 
@@ -20,7 +21,14 @@ object MedicationDisplayMapper {
         MedicationStatus.NONE -> "×"
         MedicationStatus.ASSIST -> "△"
         MedicationStatus.TAKEN -> "○"
-        null -> "ー"
+        null -> "－"
+    }
+
+    /**
+     * ステータスに対応する業務上の呼称を返します。
+     */
+    fun getStatusLabel(status: MedicationStatus): String {
+        return AppSpecifications.Medication.Status.LABELS[status.code] ?: ""
     }
 
     /**

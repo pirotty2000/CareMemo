@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.logic.common.*
 import jp.mydns.fujiwara.carememo.ui.mapping.MedicationDisplayMapper
@@ -77,6 +78,7 @@ fun MedicationHistoryTable(
     lazyListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
+    val slotLabels = AppSpecifications.Medication.TimeSlot.LABELS
 
     Column(
         modifier = Modifier
@@ -93,10 +95,16 @@ fun MedicationHistoryTable(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(stringResource(R.string.p_med_history_table_day), modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.slot_morning), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.slot_lunch), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.slot_dinner), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.slot_bedtime), modifier = Modifier.weight(1.2f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            slotLabels.forEachIndexed { index, label ->
+                val weight = if (index == AppSpecifications.Medication.TimeSlot.INDEX_BEDTIME) 1.2f else 1f
+                Text(
+                    text = label, 
+                    modifier = Modifier.weight(weight), 
+                    textAlign = TextAlign.Center, 
+                    fontWeight = FontWeight.Bold, 
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

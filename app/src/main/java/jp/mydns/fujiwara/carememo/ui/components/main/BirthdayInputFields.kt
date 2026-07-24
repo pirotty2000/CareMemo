@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.spec.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import jp.mydns.fujiwara.carememo.ui.mapping.BirthEraDisplayMapper
@@ -57,10 +57,10 @@ class BirthdayInputState(
         get() {
             val y = year.value.toIntOrNull() ?: return true
             return when (era.value) {
-                BirthEra.SHOWA -> y !in 1..CalendarSpecifications.Era.Showa.MAX_YEAR
-                BirthEra.HEISEI -> y !in 1..CalendarSpecifications.Era.Heisei.MAX_YEAR
-                BirthEra.REIWA -> y !in 1..CalendarSpecifications.Era.Reiwa.MAX_YEAR
-                BirthEra.AD -> y !in CalendarSpecifications.MIN_DATE.year..CalendarSpecifications.MAX_WESTERN_YEAR
+                BirthEra.SHOWA -> y !in 1..AppSpecifications.JapaneseCalendar.Era.Showa.MAX_YEAR
+                BirthEra.HEISEI -> y !in 1..AppSpecifications.JapaneseCalendar.Era.Heisei.MAX_YEAR
+                BirthEra.REIWA -> y !in 1..AppSpecifications.JapaneseCalendar.Era.Reiwa.MAX_YEAR
+                BirthEra.AD -> y !in AppSpecifications.JapaneseCalendar.MIN_DATE.year..AppSpecifications.JapaneseCalendar.MAX_WESTERN_YEAR
             }
         }
 

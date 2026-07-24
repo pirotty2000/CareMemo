@@ -1,7 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
-import jp.mydns.fujiwara.carememo.data.spec.MedicationSpecifications
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -9,19 +9,19 @@ import java.time.YearMonth
  * 服薬の時間枠（スロット）定義
  */
 enum class MedicationTimeSlot(val index: Int) {
-    MORNING(0),
-    LUNCH(1),
-    DINNER(2),
-    BEDTIME(3)
+    MORNING(AppSpecifications.Medication.TimeSlot.INDEX_MORNING),
+    LUNCH(AppSpecifications.Medication.TimeSlot.INDEX_LUNCH),
+    DINNER(AppSpecifications.Medication.TimeSlot.INDEX_DINNER),
+    BEDTIME(AppSpecifications.Medication.TimeSlot.INDEX_BEDTIME)
 }
 
 /**
  * 服薬のステータス定義
  */
 enum class MedicationStatus(val code: Int) {
-    NONE(0),   // 未服用（×）
-    ASSIST(1), // 服薬介助（△）
-    TAKEN(2);  // 服用（○）
+    NONE(AppSpecifications.Medication.Status.CODE_NONE),     // 未服用
+    ASSIST(AppSpecifications.Medication.Status.CODE_ASSIST), // 服薬介助
+    TAKEN(AppSpecifications.Medication.Status.CODE_TAKEN);   // 服用
 
     companion object {
         fun fromCode(code: Int?): MedicationStatus? = entries.find { it.code == code }
@@ -118,7 +118,7 @@ object MedicationLogic {
         }
 
         // ステータスの範囲チェック
-        if (record.status !in MedicationSpecifications.Status.VALID_RANGE) {
+        if (record.status !in AppSpecifications.Medication.Status.VALID_RANGE) {
             return MedicationValidationResult.INVALID_STATUS
         }
 
@@ -129,6 +129,6 @@ object MedicationLogic {
      * 不正なステータスを持つレコードを除外します（インポート時などのクレンジング）。
      */
     fun filterValidRecords(records: List<MedicationRecord>): List<MedicationRecord> {
-        return records.filter { it.status in MedicationSpecifications.Status.VALID_RANGE }
+        return records.filter { it.status in AppSpecifications.Medication.Status.VALID_RANGE }
     }
 }

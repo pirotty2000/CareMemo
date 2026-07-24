@@ -26,9 +26,9 @@ import android.content.Context
 import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.theme.getHighlightColor
 
@@ -118,20 +118,20 @@ object HealthChartHelper {
     }
 
     private fun getBpRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.BloodPressure
-        val graph = HealthSpecifications.BloodPressure.Graph
+        val spec = AppSpecifications.Health.BloodPressure
+        val graph = AppSpecifications.Health.BloodPressure.Graph
         return listOf(
             VisualRange(spec.THRESHOLD_HIGH_SYSTOLIC, graph.RANGE_MAX, HealthAlertLevel.ALERT),
             VisualRange(100.0, spec.THRESHOLD_HIGH_SYSTOLIC, HealthAlertLevel.NORMAL),
-            VisualRange(90.0, 100.0, HealthAlertLevel.WARNING),
+            VisualRange(90.0, spec.THRESHOLD_LOW_SYSTOLIC, HealthAlertLevel.WARNING),
             VisualRange(spec.THRESHOLD_LOW_DIASTOLIC, 90.0, HealthAlertLevel.NORMAL),
             VisualRange(graph.RANGE_MIN, spec.THRESHOLD_LOW_DIASTOLIC, HealthAlertLevel.INFO)
         )
     }
 
     private fun getPulseRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.Pulse
-        val graph = HealthSpecifications.Pulse.Graph
+        val spec = AppSpecifications.Health.Pulse
+        val graph = AppSpecifications.Health.Pulse.Graph
         return listOf(
             VisualRange(spec.THRESHOLD_HIGH, graph.RANGE_MAX, HealthAlertLevel.ALERT),
             VisualRange(spec.THRESHOLD_LOW, spec.THRESHOLD_HIGH, HealthAlertLevel.NORMAL),
@@ -140,8 +140,8 @@ object HealthChartHelper {
     }
 
     private fun getSatRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.OxygenSaturation
-        val graph = HealthSpecifications.OxygenSaturation.Graph
+        val spec = AppSpecifications.Health.OxygenSaturation
+        val graph = AppSpecifications.Health.OxygenSaturation.Graph
         return listOf(
             VisualRange(graph.RANGE_MIN, spec.THRESHOLD_LOW, HealthAlertLevel.ALERT),
             VisualRange(spec.THRESHOLD_LOW + 0.1, graph.RANGE_MAX, HealthAlertLevel.NORMAL)
@@ -149,8 +149,8 @@ object HealthChartHelper {
     }
 
     private fun getTempRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.BodyTemperature
-        val graph = HealthSpecifications.BodyTemperature.Graph
+        val spec = AppSpecifications.Health.BodyTemperature
+        val graph = AppSpecifications.Health.BodyTemperature.Graph
         return listOf(
             VisualRange(spec.THRESHOLD_HIGH, graph.RANGE_MAX, HealthAlertLevel.ALERT),
             VisualRange(spec.THRESHOLD_LOW, spec.THRESHOLD_HIGH, HealthAlertLevel.NORMAL),
@@ -159,8 +159,8 @@ object HealthChartHelper {
     }
 
     private fun getGlucoseRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.BloodGlucose
-        val graph = HealthSpecifications.BloodGlucose.Graph
+        val spec = AppSpecifications.Health.BloodGlucose
+        val graph = AppSpecifications.Health.BloodGlucose.Graph
         return listOf(
             VisualRange(graph.RANGE_MIN, spec.THRESHOLD_LOW, HealthAlertLevel.INFO),
             VisualRange(spec.THRESHOLD_LOW, spec.THRESHOLD_NORMAL_UPPER, HealthAlertLevel.NORMAL),
@@ -170,8 +170,8 @@ object HealthChartHelper {
     }
 
     private fun getHbA1cRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.HbA1c
-        val graph = HealthSpecifications.HbA1c.Graph
+        val spec = AppSpecifications.Health.HbA1c
+        val graph = AppSpecifications.Health.HbA1c.Graph
         return listOf(
             VisualRange(graph.RANGE_MIN, spec.THRESHOLD_NORMAL_UPPER, HealthAlertLevel.NORMAL),
             VisualRange(spec.THRESHOLD_NORMAL_UPPER + 0.01, spec.THRESHOLD_DIABETES - 0.01, HealthAlertLevel.WARNING),
@@ -180,8 +180,8 @@ object HealthChartHelper {
     }
 
     private fun getBmiRanges(): List<VisualRange> {
-        val spec = HealthSpecifications.BodyMassIndex
-        val graph = HealthSpecifications.BodyMassIndex.Graph
+        val spec = AppSpecifications.Health.BodyMassIndex
+        val graph = AppSpecifications.Health.BodyMassIndex.Graph
         return listOf(
             VisualRange(graph.RANGE_MIN, spec.THRESHOLD_UNDERWEIGHT, HealthAlertLevel.INFO),
             VisualRange(spec.THRESHOLD_UNDERWEIGHT, spec.THRESHOLD_NORMAL_UPPER, HealthAlertLevel.NORMAL),
@@ -197,8 +197,8 @@ object HealthChartHelper {
 
         return when (index) {
             0 -> { // 血圧
-                val spec = HealthSpecifications.BloodPressure
-                val graph = HealthSpecifications.BloodPressure.Graph
+                val spec = AppSpecifications.Health.BloodPressure
+                val graph = AppSpecifications.Health.BloodPressure.Graph
                 val sysPoints = sortedData.filter { it.bpSystolic != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(it.bpSystolic, null, null, null, null)
                         .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
@@ -231,8 +231,8 @@ object HealthChartHelper {
                 )
             }
             1 -> { // 酸素飽和度(SAT)
-                val spec = HealthSpecifications.OxygenSaturation
-                val graph = HealthSpecifications.OxygenSaturation.Graph
+                val spec = AppSpecifications.Health.OxygenSaturation
+                val graph = AppSpecifications.Health.OxygenSaturation.Graph
                 val satPoints = sortedData.filter { it.sat != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(null, null, it.sat, null, null)
                         .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
@@ -254,8 +254,8 @@ object HealthChartHelper {
                 )
             }
             2 -> { // 脈拍
-                val spec = HealthSpecifications.Pulse
-                val graph = HealthSpecifications.Pulse.Graph
+                val spec = AppSpecifications.Health.Pulse
+                val graph = AppSpecifications.Health.Pulse.Graph
                 val pulsePoints = sortedData.filter { it.pulse != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(null, null, null, it.pulse, null)
                         .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
@@ -277,8 +277,8 @@ object HealthChartHelper {
                 )
             }
             3 -> { // 体温
-                val spec = HealthSpecifications.BodyTemperature
-                val graph = HealthSpecifications.BodyTemperature.Graph
+                val spec = AppSpecifications.Health.BodyTemperature
+                val graph = AppSpecifications.Health.BodyTemperature.Graph
                 val tempPoints = sortedData.filter { it.bodyTemperature != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(null, null, null, null, it.bodyTemperature)
                         .firstOrNull { r -> r.second != HealthAlertLevel.NORMAL }?.first
@@ -308,8 +308,8 @@ object HealthChartHelper {
         
         return when (index) {
             0 -> { // 血糖値
-                val spec = HealthSpecifications.BloodGlucose
-                val graph = HealthSpecifications.BloodGlucose.Graph
+                val spec = AppSpecifications.Health.BloodGlucose
+                val graph = AppSpecifications.Health.BloodGlucose.Graph
                 val glucoses = sortedData.mapNotNull { it.glucose?.toDouble() }
                 val glucosePoints = sortedData.filter { it.glucose != null }.map { 
                     val (status, level) = HealthLogic.evaluateGlucose(it.glucose)
@@ -333,8 +333,8 @@ object HealthChartHelper {
                 )
             }
             1 -> { // HbA1c
-                val spec = HealthSpecifications.HbA1c
-                val graph = HealthSpecifications.HbA1c.Graph
+                val spec = AppSpecifications.Health.HbA1c
+                val graph = AppSpecifications.Health.HbA1c.Graph
                 val hba1cs = sortedData.mapNotNull { it.hba1c }
                 val hba1cPoints = sortedData.filter { it.hba1c != null }.map { 
                     val (status, level) = HealthLogic.evaluateHbA1c(it.hba1c)
@@ -367,8 +367,7 @@ object HealthChartHelper {
 
         return when (index) {
             0 -> { // 体重
-                val spec = HealthSpecifications.Weight
-                val graph = HealthSpecifications.Weight.Graph
+                val graph = AppSpecifications.Health.Weight.Graph
                 val weights = sortedData.mapNotNull { it.weight }
                 val weightPoints = sortedData.filter { it.weight != null }.map { 
                     ChartPoint(
@@ -389,8 +388,8 @@ object HealthChartHelper {
                 )
             }
             1 -> { // BMI
-                val spec = HealthSpecifications.BodyMassIndex
-                val graph = HealthSpecifications.BodyMassIndex.Graph
+                val spec = AppSpecifications.Health.BodyMassIndex
+                val graph = AppSpecifications.Health.BodyMassIndex.Graph
                 val bmis = sortedData.map { it.calculateBMI() }.filter { it > 0.0 }
                 val bmiPoints = sortedData.map { 
                     val bmi = it.calculateBMI()

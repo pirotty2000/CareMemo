@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.data.spec.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 
 /**
@@ -57,16 +56,16 @@ object PersonHealthLogic {
         // 2. 数値の範囲確認
         val isValid = when (record) {
             is HeightAndWeight -> {
-                val hSpec = HealthSpecifications.Height
-                val wSpec = HealthSpecifications.Weight
+                val hSpec = AppSpecifications.Health.Height
+                val wSpec = AppSpecifications.Health.Weight
                 (record.height == null || record.height in hSpec.MIN_VALUE..hSpec.MAX_VALUE) &&
                 (record.weight == null || record.weight in wSpec.MIN_VALUE..wSpec.MAX_VALUE)
             }
             is BpAndPulse -> {
-                val bpSpec = HealthSpecifications.BloodPressure
-                val pulseSpec = HealthSpecifications.Pulse
-                val satSpec = HealthSpecifications.OxygenSaturation
-                val tempSpec = HealthSpecifications.BodyTemperature
+                val bpSpec = AppSpecifications.Health.BloodPressure
+                val pulseSpec = AppSpecifications.Health.Pulse
+                val satSpec = AppSpecifications.Health.OxygenSaturation
+                val tempSpec = AppSpecifications.Health.BodyTemperature
                 (record.bpSystolic == null || record.bpSystolic.toDouble() in bpSpec.MIN_VALUE..bpSpec.MAX_VALUE) &&
                 (record.bpDiastolic == null || record.bpDiastolic.toDouble() in bpSpec.MIN_VALUE..bpSpec.MAX_VALUE) &&
                 (record.pulse == null || record.pulse.toDouble() in pulseSpec.MIN_VALUE..pulseSpec.MAX_VALUE) &&
@@ -74,8 +73,8 @@ object PersonHealthLogic {
                 (record.bodyTemperature == null || record.bodyTemperature in tempSpec.MIN_VALUE..tempSpec.MAX_VALUE)
             }
             is GlucoseAndHbA1c -> {
-                val gSpec = HealthSpecifications.BloodGlucose
-                val hSpec = HealthSpecifications.HbA1c
+                val gSpec = AppSpecifications.Health.BloodGlucose
+                val hSpec = AppSpecifications.Health.HbA1c
                 (record.glucose == null || record.glucose.toDouble() in gSpec.MIN_VALUE..gSpec.MAX_VALUE) &&
                 (record.hba1c == null || record.hba1c in hSpec.MIN_VALUE..hSpec.MAX_VALUE)
             }
