@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.data.repository
 
 import jp.mydns.fujiwara.carememo.data.*
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
 
 /**
  * (C)系統: 服薬管理のデータ管理を担当するリポジトリ
@@ -10,21 +11,22 @@ class MedicationRepository(
     private val medicationRecordDao: MedicationRecordDao,
     private val auditLogRepository: AuditLogRepository? = null
 ) {
-    fun getMedicationRecords(personId: Int): Flow<List<MedicationRecord>> =
+    fun getMedicationRecords(personId: String): Flow<List<MedicationRecord>> =
         medicationRecordDao.getByPersonId(personId)
 
-    fun getMedicationRecordsByMonth(personId: Int, month: String): Flow<List<MedicationRecord>> =
-        medicationRecordDao.getByMonth(personId, month)
+    fun getMedicationRecordsByMonth(personId: String, month: String): Flow<List<MedicationRecord>> =
+         medicationRecordDao.getByMonth(personId, month)
 
-    suspend fun insertMedicationRecord(item: MedicationRecord, featureName: String = "", operation: String = "") {
-        val id = medicationRecordDao.insert(item)
+    suspend fun insertMedicationRecord(item: MedicationRecord, featureName: String = "", operation: String = "", isUpdate: Boolean = false) {
+        val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
+        medicationRecordDao.insert(itemToSave)
         auditLogRepository?.log(
             featureName = featureName,
             operation = operation,
             tableName = "medication_record_db",
-            actionType = if (item.id == 0) "INSERT" else "UPDATE",
-            affectedId = if (item.id == 0) id.toString() else item.id.toString(),
-            details = "PersonId: ${item.personId}, Date: ${item.dosageDate}, Slot: ${item.timeSlot}, Status: ${item.status}",
+            actionType = if (isUpdate) "UPDATE" else "INSERT",
+            affectedId = itemToSave.id,
+            details = "PersonId: ${itemToSave.personId}, Date: ${itemToSave.dosageDate}, Slot: ${itemToSave.timeSlot}, Status: ${itemToSave.status}",
             resultType = "SUCCESS"
         )
     }
@@ -36,7 +38,7 @@ class MedicationRepository(
             operation = operation,
             tableName = "medication_record_db",
             actionType = "DELETE",
-            affectedId = item.id.toString(),
+            affectedId = item.id,
             details = "PersonId: ${item.personId}",
             resultType = "SUCCESS"
         )

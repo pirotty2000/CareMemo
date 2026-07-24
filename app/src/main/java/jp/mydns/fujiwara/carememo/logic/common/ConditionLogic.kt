@@ -33,13 +33,8 @@ object ConditionLogic {
     fun validateDuplicate(current: ConditionAtVisit, existing: ConditionAtVisit?): ConditionValidationResult {
         if (existing == null) return ConditionValidationResult.SUCCESS
         
-        val isDuplicate = if (current.id == 0) {
-            // 新規なら、同じ時間のデータが存在する時点で重複
-            true
-        } else {
-            // 更新なら、取得されたデータのIDが自分と異なれば重複
-            current.id != existing.id
-        }
+        // 取得されたデータのIDが自分と異なれば、別のレコードが存在するため重複とみなす
+        val isDuplicate = current.id != existing.id
 
         return if (isDuplicate) ConditionValidationResult.DUPLICATE_TIME else ConditionValidationResult.SUCCESS
     }

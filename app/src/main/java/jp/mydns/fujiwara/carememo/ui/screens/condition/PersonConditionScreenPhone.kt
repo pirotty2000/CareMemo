@@ -22,7 +22,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenPhone(
-    personId: Int,
+    personId: String,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
@@ -30,20 +30,20 @@ fun PersonConditionScreenPhone(
     isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    conditionPhotoMap: Map<Int, Boolean>,
+    conditionPhotoMap: Map<String, Boolean>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
-    selectedId: Int,
-    onSelectedIdChange: (Int) -> Unit,
+    selectedId: String,
+    onSelectedIdChange: (String) -> Unit,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onNavigateToFullScreen: (Int, Int) -> Unit,
+    onNavigateToFullScreen: (String, String) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
+    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -62,7 +62,7 @@ fun PersonConditionScreenPhone(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (selectedId != -1) onSelectedIdChange(-1) else onBack() },
+                            onClick = { if (selectedId.isNotEmpty()) onSelectedIdChange("") else onBack() },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
@@ -87,9 +87,9 @@ fun PersonConditionScreenPhone(
             }
         },
         floatingActionButton = {
-            if (selectedId == -1) {
+            if (selectedId.isEmpty()) {
                 FloatingActionButton(
-                    onClick = { onSelectedIdChange(0) },
+                    onClick = { onSelectedIdChange("0") },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "新規追加")

@@ -19,6 +19,9 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  *
  * 【備考】
  * 広い画面領域を活用し、記録作業と分析作業を同一画面内で完結させることで操作ステップを削減している。
+ * 
+ * ---
+ * 最終更新日: 2026/07/20 (UUID対応)
  */
 
 import androidx.compose.foundation.layout.*
@@ -52,17 +55,17 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenTablet(
-    personId: Int,
+    personId: String,
     currentCategory: Category,
     records: List<Any>,
     isLoading: Boolean,
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    selectedRecordId: Int,
-    onSelectedRecordIdChange: (Int) -> Unit,
+    selectedRecordId: String,
+    onSelectedRecordIdChange: (String) -> Unit,
     onBack: () -> Unit,
-    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
+    onNavigateToGraphExpansion: (String, Category, Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
@@ -94,7 +97,7 @@ fun PersonHealthScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedRecordIdChange(0) }) {
+                        IconButton(onClick = { onSelectedRecordIdChange("0") }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
                         IconButton(
@@ -123,7 +126,7 @@ fun PersonHealthScreenTablet(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {
-                        if (selectedRecordId == it.id) onSelectedRecordIdChange(-1)
+                        if (selectedRecordId == it.id) onSelectedRecordIdChange("")
                         onDeleteRecord(it)
                     }
                 }
@@ -136,7 +139,7 @@ fun PersonHealthScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId == -1 && !isLoading) {
+            if (records.isEmpty() && selectedRecordId.isEmpty() && !isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
@@ -173,10 +176,10 @@ fun PersonHealthScreenTablet(
 fun PersonHealthScreenTabletPreview() {
     CareMemoTheme {
         PersonHealthScreenTablet(
-            personId = 1,
+            personId = "person-1",
             currentCategory = Category.BP_AND_PULSE,
             records = listOf(
-                BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+                BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
             ),
             isLoading = false,
             currentPerson = Person(
@@ -188,7 +191,7 @@ fun PersonHealthScreenTabletPreview() {
             ),
             personCategorySummary = null,
             isNameMaskingEnabled = false,
-            selectedRecordId = -1,
+            selectedRecordId = "",
             onSelectedRecordIdChange = {},
             onBack = {},
             onNavigateToGraphExpansion = { _, _, _ -> },

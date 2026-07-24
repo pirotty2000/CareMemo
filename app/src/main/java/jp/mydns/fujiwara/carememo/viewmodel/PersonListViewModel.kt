@@ -54,7 +54,7 @@ class PersonListViewModel(
     val searchQuery: StateFlow<String> get() = kotlinx.coroutines.flow.MutableStateFlow(currentState.searchQuery).asStateFlow() // 実際には UI 側は uiState を見るべき
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val personsWithMatchedConditions: StateFlow<List<Int>?> = uiState
+    private val personsWithMatchedConditions: StateFlow<List<String>?> = uiState
         .flatMapLatest { state ->
             val query = state.searchQuery
             if (query.isBlank()) flowOf(null)
@@ -62,7 +62,7 @@ class PersonListViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val categorySummaries: StateFlow<Map<Int, PersonCategorySummary>> = summaryRepository.getPersonCategorySummaries()
+    private val categorySummaries: StateFlow<Map<String, PersonCategorySummary>> = summaryRepository.getPersonCategorySummaries()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -175,7 +175,7 @@ class PersonListViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
-                affectedId = person.id.toString()
+                affectedId = person.id
             }
         ) {
             archivedRepository.logicalDeletePerson(person.id, featureName, OP_DELETE)
@@ -189,7 +189,7 @@ class PersonListViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
-                affectedId = person.id.toString()
+                affectedId = person.id
             }
         ) {
             archivedRepository.restorePerson(person.id, featureName, OP_RESTORE)

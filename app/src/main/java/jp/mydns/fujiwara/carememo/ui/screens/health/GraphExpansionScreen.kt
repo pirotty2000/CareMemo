@@ -43,7 +43,7 @@ import kotlin.time.Duration.Companion.milliseconds
 fun GraphExpansionScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     healthViewModel: PersonHealthViewModel,
-    personId: Int,
+    personId: String,
     category: Category,
     initialGraphIndex: Int,
     onBack: () -> Unit

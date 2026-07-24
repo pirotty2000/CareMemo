@@ -350,7 +350,7 @@ private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationSta
 @Composable
 fun MedicationInputDialog(
     date: LocalDate,
-    personId: Int,
+    personId: String,
     records: List<MedicationRecord>,
     onDismiss: () -> Unit,
     onConfirm: (List<MedicationRecord?>) -> Unit
@@ -426,15 +426,19 @@ fun MedicationInputDialog(
                                     // 新規またはステータス変更
                                     syncCurrentTimeFieldsToTemp()
                                     val instant = current?.recordTime ?: Instant.now()
-                                    tempRecords = tempRecords.toMutableList().apply {
-                                        set(slot.index, MedicationRecord(
-                                            id = current?.id ?: 0,
+                                    val newRecord = if (current != null) {
+                                        current.copy(status = status.code, recordTime = instant)
+                                    } else {
+                                        MedicationRecord(
                                             personId = personId,
                                             dosageDate = date.toString(),
                                             timeSlot = slot.index,
                                             status = status.code,
                                             recordTime = instant
-                                        ))
+                                        )
+                                    }
+                                    tempRecords = tempRecords.toMutableList().apply {
+                                        set(slot.index, newRecord)
                                     }
                                     startEditingSlot(slot.index)
                                 }

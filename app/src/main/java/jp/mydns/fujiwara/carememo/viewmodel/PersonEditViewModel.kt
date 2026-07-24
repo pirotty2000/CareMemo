@@ -22,13 +22,13 @@ import java.time.ZoneOffset
  * 利用者の新規登録・編集画面用の ViewModel
  */
 class PersonEditViewModel(
-    private val personId: Int,
+    private val personId: String?,
     private val repository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository
 ) : BaseUiStateViewModel<PersonEditUiState, PersonEditViewEvent>(
     userSettingsRepository,
-    PersonEditUiState(isNew = personId == -1)
+    PersonEditUiState(isNew = personId == null)
 ) {
 
     companion object {
@@ -52,7 +52,7 @@ class PersonEditViewModel(
             }
         }
 
-        if (personId != -1) {
+        if (personId != null) {
             loadPerson(personId)
         }
     }
@@ -64,13 +64,13 @@ class PersonEditViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    private fun loadPerson(id: Int) {
+    private fun loadPerson(id: String) {
         safeLaunch(
             operation = OP_LOAD,
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
-                affectedId = id.toString()
+                affectedId = id
             }
         ) {
             repository.getPersonById(id).filterNotNull().first().let { person ->
@@ -131,7 +131,7 @@ class PersonEditViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
-                affectedId = personId.toString()
+                affectedId = personId ?: ""
             }
         ) {
             val state = currentState
@@ -162,11 +162,11 @@ class PersonEditViewModel(
 
             // 重複チェック
             val existing = repository.findExistingPerson(person)
-            if (existing != null && (personId == -1 || existing.id != personId)) {
-                handleDuplicateError(existing, person, isUpdate = personId != -1)
+            if (existing != null && (personId == null || existing.id != personId)) {
+                handleDuplicateError(existing, person, isUpdate = personId != null)
             }
 
-            if (personId == -1) {
+            if (personId == null) {
                 repository.insertPerson(person, featureName, OP_SAVE)
                 showSnackbar(R.string.main_msg_user_added, person.getMaskedName(state.isNameMaskingEnabled))
             } else {
@@ -196,7 +196,7 @@ class PersonEditViewModel(
     }
 
     class Factory(
-        private val personId: Int,
+        private val personId: String?,
         private val repository: PersonRepository,
         private val userSettingsRepository: UserSettingsRepository,
         private val auditLogRepository: AuditLogRepository

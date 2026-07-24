@@ -65,7 +65,7 @@ class PersonConditionViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonConditionUiState): Int? = state.personId
+    override fun getPersonId(state: PersonConditionUiState): String? = state.personId
 
     override fun updateWithPersonData(
         state: PersonConditionUiState,
@@ -121,7 +121,7 @@ class PersonConditionViewModel(
         }
     }
 
-    fun setSelectedConditionId(id: Int?) {
+    fun setSelectedConditionId(id: String?) {
         updateUiState { it.copy(selectedConditionId = id) }
         
         photoJob?.cancel()
@@ -154,13 +154,13 @@ class PersonConditionViewModel(
      * 所見メモを保存または更新します。
      */
     fun saveRecord(
-        personId: Int,
-        conditionId: Int,
+        personId: String,
+        conditionId: String,
         title: String,
         condition: String,
         author: String,
         recordTime: Instant,
-        onSuccess: (Int) -> Unit = {}
+        onSuccess: (String) -> Unit = {}
     ) {
         val inputState = PersonConditionUiState(title, condition, author, recordTime)
         
@@ -169,7 +169,7 @@ class PersonConditionViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
-                affectedId = conditionId.toString()
+                affectedId = conditionId
             }
         ) {
             // 1. バリデーション
@@ -178,7 +178,7 @@ class PersonConditionViewModel(
 
             // 2. Entity 構築
             val record = PersonConditionLogic.createRecord(personId, conditionId, inputState)
-            val isUpdate = record.id != 0
+            val isUpdate = conditionId.isNotEmpty() && conditionId != "0"
 
             // 3. 重複チェック
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
@@ -186,16 +186,16 @@ class PersonConditionViewModel(
             translateValidationResult(duplicateResult)
 
             // 4. 保存実行
-            val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE)
+            val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE, isUpdate)
             
             if (!isUpdate) {
-                conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId.toInt(), featureName, "${OP_SAVE}(link)")
+                conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId, featureName, "${OP_SAVE}(link)")
             }
 
             showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
             sendUiEvent(UiEvent.SaveSuccess)
             
-            val finalId = if (isUpdate) record.id else newId.toInt()
+            val finalId = if (isUpdate) record.id else newId
             setSelectedConditionId(finalId)
             onSuccess(finalId)
         }
@@ -226,7 +226,7 @@ class PersonConditionViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
-                affectedId = record.id.toString()
+                affectedId = record.id
             }
         ) {
             conditionRepository.deleteConditionAtVisit(record, featureName, OP_DELETE)
@@ -234,17 +234,17 @@ class PersonConditionViewModel(
         }
     }
 
-    fun onPhotoCaptured(uri: Uri, personId: Int, conditionId: Int) {
+    fun onPhotoCaptured(uri: Uri, personId: String, conditionId: String) {
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, personId, conditionId))
     }
 
-    fun processAndSavePhoto(context: Context, uri: Uri, personId: Int, conditionId: Int, caption: String) {
+    fun processAndSavePhoto(context: Context, uri: Uri, personId: String, conditionId: String, caption: String) {
         safeLaunch(
             operation = OP_SAVE_PHOTO,
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
-                affectedId = conditionId.toString()
+                affectedId = conditionId
                 errorMessageRes = R.string.p_cond_err_photo_process_failure
             }
         ) {
@@ -272,7 +272,7 @@ class PersonConditionViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
-                affectedId = photo.id.toString()
+                affectedId = photo.id
             }
         ) {
             conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, featureName, OP_DELETE_PHOTO)
@@ -286,7 +286,7 @@ class PersonConditionViewModel(
         showError(message)
     }
 
-    suspend fun getAllPhotosForPerson(personId: Int): List<ConditionPhoto> {
+    suspend fun getAllPhotosForPerson(personId: String): List<ConditionPhoto> {
         return conditionRepository.getAllPhotosByPersonId(personId)
     }
 

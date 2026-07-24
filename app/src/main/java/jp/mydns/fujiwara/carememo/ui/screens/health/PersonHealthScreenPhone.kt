@@ -35,7 +35,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  * このコンポーネント自体は状態を持たず、UIの構造定義と親画面へのイベント伝達に特化している。
  *
  * ---
- * 最終更新日: 2026/07/04
+ * 最終更新日: 2026/07/20 (UUID対応)
  */
 
 import androidx.compose.foundation.layout.*
@@ -68,7 +68,7 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenPhone(
-    personId: Int,
+    personId: String,
     currentCategory: Category,
     records: List<Any>,
     isLoading: Boolean,
@@ -77,10 +77,10 @@ fun PersonHealthScreenPhone(
     isNameMaskingEnabled: Boolean,
     preferredShowHistory: Boolean,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
-    selectedRecordId: Int,
-    onSelectedRecordIdChange: (Int) -> Unit,
+    selectedRecordId: String,
+    onSelectedRecordIdChange: (String) -> Unit,
     onBack: () -> Unit,
-    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit,
+    onNavigateToGraphExpansion: (String, Category, Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
@@ -104,7 +104,7 @@ fun PersonHealthScreenPhone(
                     // 戻る（←）アイコン
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (selectedRecordId != -1) onSelectedRecordIdChange(-1) else onBack() },
+                            onClick = { if (selectedRecordId.isNotEmpty()) onSelectedRecordIdChange("") else onBack() },
                             modifier = Modifier.testTag("HealthScreen_BackButton")
                         ) {
                             Icon(
@@ -116,7 +116,7 @@ fun PersonHealthScreenPhone(
                     colors = appTopAppBarColors(),
                     // PDF出力
                     actions = {
-                        if (selectedRecordId == -1) {
+                        if (selectedRecordId.isEmpty()) {
                             IconButton(
                                 onClick = onShowPdfSettings,
                                 modifier = Modifier.testTag("HealthScreen_PdfButton")
@@ -139,10 +139,10 @@ fun PersonHealthScreenPhone(
         },
         // 右下の「＋」
         floatingActionButton = {
-            if (selectedRecordId == -1) {
+            if (selectedRecordId.isEmpty()) {
                 FloatingActionButton(
                     onClick = {
-                        onSelectedRecordIdChange(0)
+                        onSelectedRecordIdChange("0") // "0" は新規作成を意味する特別な ID (UUID化後も互換性のために暫定使用)
                     },
                     modifier = Modifier.testTag("HealthScreen_AddButton")
                 ) {
@@ -164,9 +164,9 @@ fun PersonHealthScreenPhone(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = if (selectedRecordId == -1) 16.dp else 0.dp)
+                .padding(horizontal = if (selectedRecordId.isEmpty()) 16.dp else 0.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId == -1 && !isLoading) {
+            if (records.isEmpty() && selectedRecordId.isEmpty() && !isLoading) {
                 EmptyState(
                     message = stringResource(R.string.p_detail_empty_records),
                     description = stringResource(R.string.p_detail_empty_records_desc),
@@ -201,10 +201,10 @@ fun PersonHealthScreenPhone(
 fun PersonHealthScreenPhonePreview() {
     CareMemoTheme {
         PersonHealthScreenPhone(
-            personId = 1,
+            personId = "person-1",
             currentCategory = Category.BP_AND_PULSE,
             records = listOf(
-                BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+                BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
             ),
             isLoading = false,
             currentPerson = Person(
@@ -218,7 +218,7 @@ fun PersonHealthScreenPhonePreview() {
             isNameMaskingEnabled = false,
             preferredShowHistory = true,
             onPreferredShowHistoryChange = {},
-            selectedRecordId = -1,
+            selectedRecordId = "",
             onSelectedRecordIdChange = {},
             onBack = {},
             onNavigateToGraphExpansion = { _, _, _ -> },

@@ -54,7 +54,7 @@ class PersonMedicationViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonMedicationUiState): Int? = state.personId
+    override fun getPersonId(state: PersonMedicationUiState): String? = state.personId
 
     override fun updateWithPersonData(
         state: PersonMedicationUiState,
@@ -129,7 +129,7 @@ class PersonMedicationViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_MEDICATION
-                affectedId = personId.toString()
+                affectedId = personId
             }
         ) {
             // 1. バリデーション

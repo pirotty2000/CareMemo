@@ -14,7 +14,7 @@ import java.time.Instant
  * 一括入力画面用の UI 状態
  */
 data class BatchInputUiState(
-    val personId: Int? = null,
+    val personId: String? = null,
     val person: Person? = null, // 追加
     val currentPersonName: String = "",
     val personSummary: PersonCategorySummary? = null,
@@ -155,7 +155,7 @@ object BatchInputLogic {
     /**
      * UI状態から保存対象となる Entity のリストを生成します。
      */
-    fun createEntities(personId: Int, time: Instant, state: BatchInputUiState): List<Any> {
+    fun createEntities(personId: String, time: Instant, state: BatchInputUiState): List<Any> {
         if (!isValid(state)) throw IllegalArgumentException("Invalid input state")
 
         val entities = mutableListOf<Any>()

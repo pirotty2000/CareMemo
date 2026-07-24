@@ -9,7 +9,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
  * 利用者詳細画面（共通フレームワーク）用の UI 状態
  */
 data class PersonDetailUiState(
-    val personId: Int? = null,
+    val personId: String? = null,
     val person: Person? = null,
     val personSummary: PersonCategorySummary? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,

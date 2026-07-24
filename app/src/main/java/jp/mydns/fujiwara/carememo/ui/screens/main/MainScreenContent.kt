@@ -191,15 +191,15 @@ fun MainScreenPreview() {
     val today = LocalDate.now(zoneId)
     
     // 通常の利用者
-    val person1 = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(zoneId).toInstant())
+    val person1 = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(zoneId).toInstant())
     
     // もうすぐ誕生日の利用者 (明日が誕生日と仮定)
     val birthdaySoon = today.plusDays(1).minusYears(70)
-    val person2 = Person(id = 2, lastName = "佐藤", firstName = "花子", lastNameFurigana = "サトウ", firstNameFurigana = "ハナコ", birthday = birthdaySoon.atStartOfDay(zoneId).toInstant())
+    val person2 = Person(id = "2", lastName = "佐藤", firstName = "花子", lastNameFurigana = "サトウ", firstNameFurigana = "ハナコ", birthday = birthdaySoon.atStartOfDay(zoneId).toInstant())
     
     // 今日が誕生日の利用者
     val birthdayToday = today.minusYears(80)
-    val person3 = Person(id = 3, lastName = "田中", firstName = "梅", lastNameFurigana = "タナカ", firstNameFurigana = "ウメ", birthday = birthdayToday.atStartOfDay(zoneId).toInstant())
+    val person3 = Person(id = "3", lastName = "田中", firstName = "梅", lastNameFurigana = "タナカ", firstNameFurigana = "ウメ", birthday = birthdayToday.atStartOfDay(zoneId).toInstant())
 
     val mockUserList = listOf(
         PersonUiState(

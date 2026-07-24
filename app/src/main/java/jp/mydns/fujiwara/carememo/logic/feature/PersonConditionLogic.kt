@@ -19,15 +19,15 @@ data class PersonConditionUiState(
     val recordTime: Instant? = null,
 
     // --- 集約された状態 ---
-    val personId: Int? = null,
+    val personId: String? = null,
     override val currentCategory: Category = Category.CONDITION_AT_VISIT,
 
     val records: List<ConditionAtVisit> = emptyList(),
     val filteredRecords: List<ConditionAtVisit> = emptyList(),
     val searchQuery: String = "",
-    val selectedConditionId: Int? = null,
+    val selectedConditionId: String? = null,
     val currentConditionPhotos: List<ConditionPhoto> = emptyList(),
-    val conditionPhotoMap: Map<Int, Boolean> = emptyMap(),
+    val conditionPhotoMap: Map<String, Boolean> = emptyMap(),
 
     val isProcessing: Boolean = false,
     val errorMessage: String? = null,
@@ -39,9 +39,9 @@ data class PersonConditionUiState(
  */
 sealed interface PersonConditionViewEvent {
     /** 写真撮影後のプレビュー遷移 (NAV-PC-002) */
-    data class NavigateToPhotoPreview(val uri: Uri, val personId: Int, val conditionId: Int) : PersonConditionViewEvent
+    data class NavigateToPhotoPreview(val uri: Uri, val personId: String, val conditionId: String) : PersonConditionViewEvent
     /** 写真タップ時の全画面表示遷移 (NAV-PC-004) */
-    data class NavigateToPhotoFullScreen(val photoId: Int, val conditionId: Int) : PersonConditionViewEvent
+    data class NavigateToPhotoFullScreen(val photoId: String, val conditionId: String) : PersonConditionViewEvent
 }
 
 /**
@@ -99,15 +99,25 @@ object PersonConditionLogic {
     /**
      * Entity を構築します。
      */
-    fun createRecord(personId: Int, conditionId: Int, state: PersonConditionUiState): ConditionAtVisit {
+    fun createRecord(personId: String, conditionId: String, state: PersonConditionUiState): ConditionAtVisit {
         val time = state.recordTime ?: throw IllegalArgumentException("Invalid record time")
-        return ConditionAtVisit(
-            id = conditionId,
-            personId = personId,
-            title = state.title.trim(),
-            condition = state.condition.trim(),
-            author = state.author.trim(),
-            recordTime = time
-        )
+        return if (conditionId.isEmpty() || conditionId == "0") {
+            ConditionAtVisit(
+                personId = personId,
+                title = state.title.trim(),
+                condition = state.condition.trim(),
+                author = state.author.trim(),
+                recordTime = time
+            )
+        } else {
+            ConditionAtVisit(
+                id = conditionId,
+                personId = personId,
+                title = state.title.trim(),
+                condition = state.condition.trim(),
+                author = state.author.trim(),
+                recordTime = time
+            )
+        }
     }
 }

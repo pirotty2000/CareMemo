@@ -40,8 +40,8 @@ import kotlin.math.abs
 
 @Composable
 fun ConditionPhotoFullScreen(
-    conditionId: Int,
-    initialPhotoId: Int,
+    conditionId: String,
+    initialPhotoId: String,
     viewModel: PersonConditionViewModel,
     onBack: () -> Unit,
 ) {

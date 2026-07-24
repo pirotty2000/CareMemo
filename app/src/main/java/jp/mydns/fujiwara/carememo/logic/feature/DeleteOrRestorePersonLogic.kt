@@ -10,7 +10,7 @@ data class DeleteOrRestorePersonUiState(
     val isLoading: Boolean = false,
     val mode: DeleteOrRestorePersonViewModel.OperationMode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE,
     val archivedPersons: List<Person> = emptyList(),
-    val selectedIds: Set<Int> = emptySet(),
+    val selectedIds: Set<String> = emptySet(),
     val isNameMaskingEnabled: Boolean = true
 )
 
@@ -33,7 +33,7 @@ object DeleteOrRestorePersonLogic {
      * @param personId 切り替え対象の利用者 ID
      * @return 新しい選択 ID のセット
      */
-    fun toggleSelection(currentIds: Set<Int>, personId: Int): Set<Int> {
+    fun toggleSelection(currentIds: Set<String>, personId: String): Set<String> {
         return if (currentIds.contains(personId)) {
             currentIds - personId
         } else {
@@ -47,7 +47,7 @@ object DeleteOrRestorePersonLogic {
      * @param persons 利用者リスト
      * @return すべての ID を含むセット
      */
-    fun selectAll(persons: List<Person>): Set<Int> {
+    fun selectAll(persons: List<Person>): Set<String> {
         return persons.map { it.id }.toSet()
     }
 
@@ -58,7 +58,7 @@ object DeleteOrRestorePersonLogic {
      * @param selectedIds 選択されている ID のセット
      * @return 処理対象の利用者リスト
      */
-    fun filterTargets(persons: List<Person>, selectedIds: Set<Int>): List<Person> {
+    fun filterTargets(persons: List<Person>, selectedIds: Set<String>): List<Person> {
         return persons.filter { selectedIds.contains(it.id) }
     }
 
@@ -76,7 +76,7 @@ object DeleteOrRestorePersonLogic {
      * @param selectedIds 選択されている ID のセット
      * @return バリデーション結果
      */
-    fun validate(selectedIds: Set<Int>): DeleteOrRestoreValidationResult {
+    fun validate(selectedIds: Set<String>): DeleteOrRestoreValidationResult {
         return if (selectedIds.isEmpty()) {
             DeleteOrRestoreValidationResult.NO_SELECTION
         } else {

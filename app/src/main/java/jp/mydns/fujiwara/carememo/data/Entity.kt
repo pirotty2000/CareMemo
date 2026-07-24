@@ -17,6 +17,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.time.Instant
+import java.util.UUID
 
 /**********************************************************************
  * <care_memo_database>
@@ -42,8 +43,8 @@ object InstantSerializer : KSerializer<Instant> {
  * すべての履歴データの基底インターフェース
  */
 interface HistoryRecord {
-    val id: Int
-    val personId: Int
+    val id: String
+    val personId: String
     val recordTime: Instant
 }
 
@@ -53,7 +54,7 @@ interface HistoryRecord {
     indices = [Index(value = ["last_name", "first_name", "birthday", "note"], unique = true)],
 )
 data class Person(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "last_name") val lastName: String,
     @ColumnInfo(name = "first_name") val firstName: String,
     @ColumnInfo(name = "last_name_furigana") val lastNameFurigana: String,
@@ -61,7 +62,10 @@ data class Person(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "birthday") val birthday: Instant,
     @ColumnInfo(name = "note") val note: String = "", // 同姓同名識別用メモ
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null // ヌルなら有効、値があれば削除日時（論理削除用）
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null, // ヌルなら有効、値があれば削除日時（論理削除用）
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) {
     /**
      * 伏せ字を適用した氏名を返す（漢字氏名用：交互にマスク）
@@ -123,13 +127,16 @@ fun String.maskStartOnly(): String {
     ]
 )
 data class HeightAndWeight(
-    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
-    @ColumnInfo(name = "person_id") override val personId: Int,
+    @PrimaryKey override val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "person_id") override val personId: String,
     @ColumnInfo(name = "height") val height: Double?,
     @ColumnInfo(name = "weight") val weight: Double? = null,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "record_time") override val recordTime: Instant,
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) : HistoryRecord
 
 @Serializable
@@ -149,8 +156,8 @@ data class HeightAndWeight(
     ]
 )
 data class BpAndPulse(
-    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
-    @ColumnInfo(name = "person_id") override val personId: Int,
+    @PrimaryKey override val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "person_id") override val personId: String,
     @ColumnInfo(name = "bp_systolic") val bpSystolic: Int? = null,
     @ColumnInfo(name = "bp_diastolic") val bpDiastolic: Int? = null,
     @ColumnInfo(name = "sat") val sat: Int? = null,
@@ -158,7 +165,10 @@ data class BpAndPulse(
     @ColumnInfo(name = "body_temperature") val bodyTemperature: Double? = null,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "record_time") override val recordTime: Instant,
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) : HistoryRecord
 
 @Serializable
@@ -178,13 +188,16 @@ data class BpAndPulse(
     ]
 )
 data class GlucoseAndHbA1c(
-    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
-    @ColumnInfo(name = "person_id") override val personId: Int,
+    @PrimaryKey override val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "person_id") override val personId: String,
     @ColumnInfo(name = "glucose") val glucose: Int? = null,
     @ColumnInfo(name = "hba1c") val hba1c: Double? = null,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "record_time") override val recordTime: Instant,
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) : HistoryRecord
 
 @Serializable
@@ -204,14 +217,17 @@ data class GlucoseAndHbA1c(
     ]
 )
 data class ConditionAtVisit(
-    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
-    @ColumnInfo(name = "person_id") override val personId: Int,
+    @PrimaryKey override val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "person_id") override val personId: String,
     @ColumnInfo(name = "title") val title: String?,
     @ColumnInfo(name = "condition") val condition: String?,
     @ColumnInfo(name = "author") val author: String,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "record_time") override val recordTime: Instant,
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) : HistoryRecord
 
 @Serializable
@@ -231,15 +247,18 @@ data class ConditionAtVisit(
     ]
 )
 data class ConditionPhoto(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "condition_id") val conditionId: Int,
-    @ColumnInfo(name = "person_id") val personId: Int,
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "condition_id") val conditionId: String,
+    @ColumnInfo(name = "person_id") val personId: String,
     @ColumnInfo(name = "photo_file_name") val photoFileName: String,      // リサイズ済み画像
     @ColumnInfo(name = "thumbnail_file_name") val thumbnailFileName: String, // サムネイル画像
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "captured_at") val capturedAt: Instant,           // 撮影日時
     @ColumnInfo(name = "caption") val caption: String = "",              // キャプション
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 )
 
 @Serializable
@@ -260,8 +279,8 @@ data class ConditionPhoto(
     ]
 )
 data class MedicationRecord(
-    @PrimaryKey(autoGenerate = true) override val id: Int = 0,
-    @ColumnInfo(name = "person_id") override val personId: Int,
+    @PrimaryKey override val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "person_id") override val personId: String,
 
     /**
      * 服用対象日 (例: "2023-10-27")
@@ -290,7 +309,10 @@ data class MedicationRecord(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "record_time") override val recordTime: Instant,
 
-    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) : HistoryRecord
 
 /**
@@ -300,13 +322,13 @@ data class MedicationRecord(
 data class CareMemoBackup(
     val version: Int = 4,
     val appVersionCode: Int = 0, // エクスポート時のアプリバージョンコード
-    val persons: List<Person>,
-    val heightAndWeights: List<HeightAndWeight>,
-    val bpAndPulses: List<BpAndPulse>,
-    val glucoseAndHbA1cs: List<GlucoseAndHbA1c>,
-    val conditionAtVisits: List<ConditionAtVisit>,
-    val conditionPhotos: List<ConditionPhoto> = emptyList(),
-    val medicationRecords: List<MedicationRecord> = emptyList()
+    val persons: List<PersonBackupDto>,
+    val heightAndWeights: List<HeightAndWeightBackupDto>,
+    val bpAndPulses: List<BpAndPulseBackupDto>,
+    val glucoseAndHbA1cs: List<GlucoseAndHbA1cBackupDto>,
+    val conditionAtVisits: List<ConditionAtVisitBackupDto>,
+    val conditionPhotos: List<ConditionPhotoBackupDto> = emptyList(),
+    val medicationRecords: List<MedicationRecordBackupDto> = emptyList()
 )
 
 /**
@@ -384,7 +406,7 @@ data class PersonCategorySummary(
  * データベースクエリから直接サマリーを取得するための射影クラス
  */
 data class PersonSummaryQueryResult(
-    val id: Int,
+    val id: String,
     val hasHeightWeight: Boolean,
     val hasBpAndPulse: Boolean,
     val hasGlucoseAndHbA1c: Boolean,
@@ -397,8 +419,8 @@ data class PersonSummaryQueryResult(
  */
 data class DatabaseInconsistency(
     val tableName: String,
-    val recordId: Int,
-    val personId: Int?,
+    val recordId: String,
+    val personId: String?,
     val recordTime: Instant?,
     val description: String
 )

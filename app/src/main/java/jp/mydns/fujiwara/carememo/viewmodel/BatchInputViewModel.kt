@@ -63,7 +63,7 @@ class BatchInputViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: BatchInputUiState): Int? = state.personId
+    override fun getPersonId(state: BatchInputUiState): String? = state.personId
 
     override fun updateWithPersonData(
         state: BatchInputUiState,
@@ -134,7 +134,7 @@ class BatchInputViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = personId.toString()
+                affectedId = personId
             }
         ) {
             // 1. バリデーション（事実の判定）

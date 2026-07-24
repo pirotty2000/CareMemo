@@ -27,9 +27,12 @@ class DeleteOrRestorePersonRepository(
      * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
      * ※現在は主にSettingsScreenなどから利用されます。
      */
-    suspend fun logicalDeletePerson(personId: Int, featureName: String = "", operation: String = "") {
+    suspend fun logicalDeletePerson(personId: String, featureName: String = "", operation: String = "") {
         database.withTransaction {
             val timestamp = System.currentTimeMillis()
+            // ここで本来は各テーブルの updatedAt も更新すべきだが、
+            // 現状の DAO は ID での更新 (deleted_at のセット) のみを行っている。
+            // 将来的なサーバー同期の厳密性を期すならば、DAO 側に updatedAt を更新する SQL も追加検討が必要。
             personDao.logicalDelete(personId, timestamp)
             heightAndWeightDao.logicalDeleteByPersonId(personId, timestamp)
             bpAndPulseDao.logicalDeleteByPersonId(personId, timestamp)
@@ -53,7 +56,7 @@ class DeleteOrRestorePersonRepository(
     /**
      * 論理削除された利用者と、紐づくすべての記録を復帰させます。
      */
-    suspend fun restorePerson(personId: Int, featureName: String = "", operation: String = "") {
+    suspend fun restorePerson(personId: String, featureName: String = "", operation: String = "") {
         database.withTransaction {
             personDao.restore(personId)
             heightAndWeightDao.restoreByPersonId(personId)
@@ -78,7 +81,7 @@ class DeleteOrRestorePersonRepository(
     /**
      * 指定された利用者を完全に抹消（物理削除）します。
      */
-    suspend fun permanentlyDeletePerson(personId: Int, featureName: String = "", operation: String = "") {
+    suspend fun permanentlyDeletePerson(personId: String, featureName: String = "", operation: String = "") {
         personDao.deletePersonPhysically(personId)
         auditLogRepository?.log(
             featureName = featureName,

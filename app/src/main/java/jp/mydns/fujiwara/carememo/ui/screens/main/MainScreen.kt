@@ -32,7 +32,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.main
  * 実際のUIレイアウトは MainScreenContent.kt に委譲。
  *
  * ---
- * 最終更新日: 2026/07/15
+ * 最終更新日: 2026/07/20 (UUID対応)
  */
 
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -57,10 +57,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     viewModel: PersonListViewModel,
-    onNavigateToDetail: (Int, Category) -> Unit,    // 各カテゴリ
-    onNavigateToBatchInput: (Int) -> Unit,          // 一括入力画面
+    onNavigateToDetail: (String, Category) -> Unit,    // 各カテゴリ
+    onNavigateToBatchInput: (String) -> Unit,          // 一括入力画面
     onNavigateToAddPerson: () -> Unit,              // 利用者の新規登録
-    onNavigateToEditPerson: (Int) -> Unit,          // 利用者の編集
+    onNavigateToEditPerson: (String) -> Unit,          // 利用者の編集
     onNavigateToSettings: () -> Unit                // 設定・管理画面
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

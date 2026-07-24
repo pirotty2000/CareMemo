@@ -54,7 +54,7 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
      *
      * @param personId ロード対象の利用者ID
      */
-    open fun loadPerson(personId: Int) {
+    open fun loadPerson(personId: String) {
         // 現在ロードされている利用者と同じならスキップ
         if (getPersonId(currentState) == personId) return
 
@@ -67,7 +67,7 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_PERSON
-                affectedId = personId.toString()
+                affectedId = personId
             }
         ) {
             // 利用者基本情報の取得（Flowの最新値を取得）
@@ -87,7 +87,7 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
      * UiState から現在の利用者IDを抽出します。
      * 二重ロード防止判定に使用します。
      */
-    protected abstract fun getPersonId(state: S): Int?
+    protected abstract fun getPersonId(state: S): String?
 
 
     /**

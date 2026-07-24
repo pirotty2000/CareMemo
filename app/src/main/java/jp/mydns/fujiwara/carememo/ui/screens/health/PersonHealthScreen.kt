@@ -25,7 +25,7 @@ fun PersonHealthScreen(
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
-    onNavigateToGraphExpansion: (Int, Category, Int) -> Unit
+    onNavigateToGraphExpansion: (String, Category, Int) -> Unit
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val healthState by healthViewModel.uiState.collectAsStateWithLifecycle()
@@ -46,7 +46,7 @@ fun PersonHealthScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 画面状態の管理
-    var selectedRecordId by rememberSaveable { mutableIntStateOf(-1) }
+    var selectedRecordId by rememberSaveable { mutableStateOf("") }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
@@ -68,7 +68,7 @@ fun PersonHealthScreen(
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
-                    selectedRecordId = -1
+                    selectedRecordId = ""
                 }
                 else -> {}
             }
@@ -77,7 +77,7 @@ fun PersonHealthScreen(
 
     if (isExpanded) {
         PersonHealthScreenTablet(
-            personId = detailState.personId ?: 0,
+            personId = detailState.personId ?: "",
             currentCategory = detailState.currentCategory,
             records = healthState.records,
             isLoading = healthState.isLoading,
@@ -96,7 +96,7 @@ fun PersonHealthScreen(
         )
     } else {
         PersonHealthScreenPhone(
-            personId = detailState.personId ?: 0,
+            personId = detailState.personId ?: "",
             currentCategory = detailState.currentCategory,
             records = healthState.records,
             isLoading = healthState.isLoading,

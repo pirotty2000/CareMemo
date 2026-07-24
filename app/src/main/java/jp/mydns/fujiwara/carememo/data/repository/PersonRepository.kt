@@ -13,30 +13,32 @@ class PersonRepository(
 ) {
     fun getAllPersons(): Flow<List<Person>> = personDao.getAllPersons()
     
-    fun getPersonById(id: Int): Flow<Person?> = personDao.getPersonById(id)
+    fun getPersonById(id: String): Flow<Person?> = personDao.getPersonById(id)
     
     suspend fun insertPerson(person: Person, featureName: String = "", operation: String = "") {
-        val id = personDao.insert(person)
+        val itemToSave = person.copy(updatedAt = java.time.Instant.now(), isSynced = false)
+        personDao.insert(itemToSave)
         auditLogRepository?.log(
             featureName = featureName,
             operation = operation,
             tableName = "person_db",
             actionType = "INSERT",
-            affectedId = id.toString(),
-            details = "Name: ${person.lastName} ${person.firstName}",
+            affectedId = itemToSave.id,
+            details = "Name: ${itemToSave.lastName} ${itemToSave.firstName}",
             resultType = "SUCCESS"
         )
     }
     
     suspend fun updatePerson(person: Person, featureName: String = "", operation: String = "") {
-        personDao.update(person)
+        val itemToUpdate = person.copy(updatedAt = java.time.Instant.now(), isSynced = false)
+        personDao.update(itemToUpdate)
         auditLogRepository?.log(
             featureName = featureName,
             operation = operation,
             tableName = "person_db",
             actionType = "UPDATE",
-            affectedId = person.id.toString(),
-            details = "Name: ${person.lastName} ${person.firstName}",
+            affectedId = itemToUpdate.id,
+            details = "Name: ${itemToUpdate.lastName} ${itemToUpdate.firstName}",
             resultType = "SUCCESS"
         )
     }

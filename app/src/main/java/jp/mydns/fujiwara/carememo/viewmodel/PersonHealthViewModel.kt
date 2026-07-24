@@ -70,7 +70,7 @@ class PersonHealthViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonHealthUiState): Int? = state.personId
+    override fun getPersonId(state: PersonHealthUiState): String? = state.personId
 
     override fun updateWithPersonData(
         state: PersonHealthUiState,
@@ -109,7 +109,7 @@ class PersonHealthViewModel(
     /**
      * 指定されたカテゴリと人物に基づき、履歴データを購読します。
      */
-    private fun refreshRecords(personId: Int?, category: Category) {
+    private fun refreshRecords(personId: String?, category: Category) {
         if (personId == null) return
 
         recordsJob?.cancel()
@@ -156,7 +156,7 @@ class PersonHealthViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = record.id.toString()
+                affectedId = record.id
             }
         ) {
             // 1. バリデーション
@@ -177,7 +177,7 @@ class PersonHealthViewModel(
             translateValidationResult(duplicateResult)
 
             // 3. 保存実行
-            performSave(record)
+            performSave(record, isUpdate)
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
         }
@@ -205,10 +205,10 @@ class PersonHealthViewModel(
         )
     }
 
-    private suspend fun performSave(record: Any) = when (record) {
-        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record, featureName, OP_SAVE)
-        is BpAndPulse -> healthRepository.insertBpAndPulse(record, featureName, OP_SAVE)
-        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record, featureName, OP_SAVE)
+    private suspend fun performSave(record: Any, isUpdate: Boolean) = when (record) {
+        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record, featureName, OP_SAVE, isUpdate)
+        is BpAndPulse -> healthRepository.insertBpAndPulse(record, featureName, OP_SAVE, isUpdate)
+        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record, featureName, OP_SAVE, isUpdate)
         else -> {}
     }
 
@@ -221,7 +221,7 @@ class PersonHealthViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = (record as? HistoryRecord)?.id?.toString()
+                affectedId = (record as? HistoryRecord)?.id
             }
         ) {
             performDelete(record)

@@ -75,7 +75,7 @@ object PersonListLogic {
     fun filterPersons(
         allPersons: List<Person>,
         section: String,
-        matchedIds: List<Int>?
+        matchedIds: List<String>?
     ): List<Person> {
         var filtered = allPersons
         
@@ -121,7 +121,7 @@ object PersonListLogic {
         if (existing == null) return PersonDuplicateResult.SUCCESS
         
         // 更新時、自分自身（ID一致）であれば重複とはみなさない
-        if (input.id != 0 && input.id == existing.id) return PersonDuplicateResult.SUCCESS
+        if (input.id == existing.id) return PersonDuplicateResult.SUCCESS
 
         return if (existing.deletedAt == null) {
             PersonDuplicateResult.DUPLICATE_ACTIVE

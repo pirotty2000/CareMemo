@@ -33,7 +33,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  * このコンポーネントをStatelessに保つことで、Phone/Tabletの両レイアウトでのプレビュー表示とロジックの共通化を両立している。
  *
  * ---
- * 最終更新日: 2026/07/04
+ * 最終更新日: 2026/07/20 (UUID対応)
  */
 
 import androidx.compose.foundation.layout.*
@@ -61,23 +61,23 @@ import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
-    personId: Int,
+    personId: String,
     records: List<Any>,
     isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    selectedId: Int,
-    onSelectedIdChange: (Int) -> Unit,
-    conditionPhotoMap: Map<Int, Boolean>,
+    selectedId: String,
+    onSelectedIdChange: (String) -> Unit,
+    conditionPhotoMap: Map<String, Boolean>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
+    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onNavigateToFullScreen: (Int, Int) -> Unit,
+    onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
@@ -144,7 +144,7 @@ fun PersonConditionScreenContent(
                     onSaveRecord = onSaveRecord,
                     onDeletePhoto = onDeletePhoto,
                     onSelectedIdChange = { onSelectedIdChange(it) },
-                    onCancel = { onSelectedIdChange(-1) },
+                    onCancel = { onSelectedIdChange("") },
                     onAddPhotoClick = onAddPhotoClick,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = onMicClick

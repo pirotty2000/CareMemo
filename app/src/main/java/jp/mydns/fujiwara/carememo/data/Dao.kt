@@ -12,7 +12,7 @@ interface PersonDao {
     fun getDeletedPersons(): Flow<List<Person>>
 
     @Query("SELECT * FROM person_db WHERE id = :id")
-    fun getPersonById(id: Int): Flow<Person?>
+    fun getPersonById(id: String): Flow<Person?>
 
     @Query("""
         SELECT * FROM person_db 
@@ -38,16 +38,16 @@ interface PersonDao {
     suspend fun update(person: Person)
 
     @Query("UPDATE person_db SET deleted_at = :timestamp WHERE id = :id")
-    suspend fun logicalDelete(id: Int, timestamp: Long)
+    suspend fun logicalDelete(id: String, timestamp: Long)
 
     @Query("UPDATE person_db SET deleted_at = NULL WHERE id = :id")
-    suspend fun restore(id: Int)
+    suspend fun restore(id: String)
 
     @Delete
     suspend fun delete(person: Person)
 
     @Query("DELETE FROM person_db WHERE id = :id")
-    suspend fun deletePersonPhysically(id: Int)
+    suspend fun deletePersonPhysically(id: String)
 
     @Query("DELETE FROM person_db WHERE deleted_at IS NOT NULL")
     suspend fun deleteEndedPersons()
@@ -79,16 +79,16 @@ interface PersonDao {
 @Dao
 interface HeightAndWeightDao {
     @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
-    fun getByPersonId(personId: Int): Flow<List<HeightAndWeight>>
+    fun getByPersonId(personId: String): Flow<List<HeightAndWeight>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: HeightAndWeight): Long
 
     @Query("UPDATE height_and_weight_db SET deleted_at = :timestamp WHERE person_id = :personId")
-    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
 
     @Query("UPDATE height_and_weight_db SET deleted_at = NULL WHERE person_id = :personId")
-    suspend fun restoreByPersonId(personId: Int)
+    suspend fun restoreByPersonId(personId: String)
 
     @Delete
     suspend fun delete(item: HeightAndWeight)
@@ -112,28 +112,28 @@ interface HeightAndWeightDao {
     suspend fun getOrphanedRecords(): List<HeightAndWeight>
 
     @Query("SELECT EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL)")
-    fun hasDataForPerson(personId: Int): Flow<Boolean>
+    fun hasDataForPerson(personId: String): Flow<Boolean>
 
     @Query("DELETE FROM height_and_weight_db WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: String)
 
     @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
-    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): HeightAndWeight?
+    suspend fun findAtTime(personId: String, recordTime: java.time.Instant): HeightAndWeight?
 }
 
 @Dao
 interface BpAndPulseDao {
     @Query("SELECT * FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
-    fun getByPersonId(personId: Int): Flow<List<BpAndPulse>>
+    fun getByPersonId(personId: String): Flow<List<BpAndPulse>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: BpAndPulse): Long
 
     @Query("UPDATE bp_and_pulse_db SET deleted_at = :timestamp WHERE person_id = :personId")
-    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
 
     @Query("UPDATE bp_and_pulse_db SET deleted_at = NULL WHERE person_id = :personId")
-    suspend fun restoreByPersonId(personId: Int)
+    suspend fun restoreByPersonId(personId: String)
 
     @Delete
     suspend fun delete(item: BpAndPulse)
@@ -157,28 +157,28 @@ interface BpAndPulseDao {
     suspend fun getOrphanedRecords(): List<BpAndPulse>
 
     @Query("SELECT EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL)")
-    fun hasDataForPerson(personId: Int): Flow<Boolean>
+    fun hasDataForPerson(personId: String): Flow<Boolean>
 
     @Query("DELETE FROM bp_and_pulse_db WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: String)
 
     @Query("SELECT * FROM bp_and_pulse_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
-    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): BpAndPulse?
+    suspend fun findAtTime(personId: String, recordTime: java.time.Instant): BpAndPulse?
 }
 
 @Dao
 interface GlucoseAndHbA1cDao {
     @Query("SELECT * FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
-    fun getByPersonId(personId: Int): Flow<List<GlucoseAndHbA1c>>
+    fun getByPersonId(personId: String): Flow<List<GlucoseAndHbA1c>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: GlucoseAndHbA1c): Long
 
     @Query("UPDATE glucose_and_hba1c_db SET deleted_at = :timestamp WHERE person_id = :personId")
-    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
 
     @Query("UPDATE glucose_and_hba1c_db SET deleted_at = NULL WHERE person_id = :personId")
-    suspend fun restoreByPersonId(personId: Int)
+    suspend fun restoreByPersonId(personId: String)
 
     @Delete
     suspend fun delete(item: GlucoseAndHbA1c)
@@ -202,28 +202,28 @@ interface GlucoseAndHbA1cDao {
     suspend fun getOrphanedRecords(): List<GlucoseAndHbA1c>
 
     @Query("SELECT EXISTS(SELECT 1 FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL)")
-    fun hasDataForPerson(personId: Int): Flow<Boolean>
+    fun hasDataForPerson(personId: String): Flow<Boolean>
 
     @Query("DELETE FROM glucose_and_hba1c_db WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: String)
 
     @Query("SELECT * FROM glucose_and_hba1c_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
-    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): GlucoseAndHbA1c?
+    suspend fun findAtTime(personId: String, recordTime: java.time.Instant): GlucoseAndHbA1c?
 }
 
 @Dao
 interface ConditionAtVisitDao {
     @Query("SELECT * FROM condition_at_visit_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
-    fun getByPersonId(personId: Int): Flow<List<ConditionAtVisit>>
+    fun getByPersonId(personId: String): Flow<List<ConditionAtVisit>>
 
     @Upsert
     suspend fun insert(item: ConditionAtVisit): Long
 
     @Query("UPDATE condition_at_visit_db SET deleted_at = :timestamp WHERE person_id = :personId")
-    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
 
     @Query("UPDATE condition_at_visit_db SET deleted_at = NULL WHERE person_id = :personId")
-    suspend fun restoreByPersonId(personId: Int)
+    suspend fun restoreByPersonId(personId: String)
 
     @Delete
     suspend fun delete(item: ConditionAtVisit)
@@ -251,49 +251,43 @@ interface ConditionAtVisitDao {
         WHERE deleted_at IS NULL 
         AND (title LIKE '%' || :query || '%' OR condition LIKE '%' || :query || '%')
     """)
-    fun getPersonIdsByConditionKeyword(query: String): Flow<List<Int>>
+    fun getPersonIdsByConditionKeyword(query: String): Flow<List<String>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM condition_at_visit_db WHERE person_id = :personId AND deleted_at IS NULL)")
-    fun hasDataForPerson(personId: Int): Flow<Boolean>
+    fun hasDataForPerson(personId: String): Flow<Boolean>
 
     @Query("DELETE FROM condition_at_visit_db WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: String)
 
     @Query("SELECT * FROM condition_at_visit_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
-    suspend fun findAtTime(personId: Int, recordTime: java.time.Instant): ConditionAtVisit?
+    suspend fun findAtTime(personId: String, recordTime: java.time.Instant): ConditionAtVisit?
 }
 
 @Dao
 interface ConditionPhotoDao {
     @Query("SELECT * FROM condition_photo_db WHERE condition_id = :conditionId AND deleted_at IS NULL ORDER BY captured_at ASC")
-    fun getByConditionId(conditionId: Int): Flow<List<ConditionPhoto>>
+    fun getByConditionId(conditionId: String): Flow<List<ConditionPhoto>>
 
     @Upsert
     suspend fun insert(item: ConditionPhoto): Long
 
-    @Query("UPDATE condition_photo_db SET condition_id = :newConditionId WHERE condition_id = 0 AND person_id = :personId")
-    suspend fun linkTemporaryPhotosToRecord(personId: Int, newConditionId: Int)
+    @Query("UPDATE condition_photo_db SET condition_id = :newConditionId WHERE condition_id = '' AND person_id = :personId")
+    suspend fun linkTemporaryPhotosToRecord(personId: String, newConditionId: String)
 
     @Query("DELETE FROM condition_photo_db WHERE id = :id")
-    suspend fun deleteById(id: Int)
-
-//    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE id = :id")
-//    suspend fun logicalDelete(id: Int, timestamp: Long)
-
-//    @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE condition_id = :conditionId")
-//    suspend fun logicalDeleteByConditionId(conditionId: Int, timestamp: Long)
+    suspend fun deleteById(id: String)
 
     @Query("UPDATE condition_photo_db SET deleted_at = :timestamp WHERE person_id = :personId")
-    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
 
     @Query("UPDATE condition_photo_db SET deleted_at = NULL WHERE person_id = :personId")
-    suspend fun restoreByPersonId(personId: Int)
+    suspend fun restoreByPersonId(personId: String)
 
     @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId AND deleted_at IS NULL")
-    fun getAllByPersonIdFlow(personId: Int): Flow<List<ConditionPhoto>>
+    fun getAllByPersonIdFlow(personId: String): Flow<List<ConditionPhoto>>
 
     @Query("SELECT * FROM condition_photo_db WHERE person_id = :personId")
-    suspend fun getAllByPersonId(personId: Int): List<ConditionPhoto>
+    suspend fun getAllByPersonId(personId: String): List<ConditionPhoto>
 
     // --- バックアップ・インポート用 ---
     @Query("SELECT * FROM condition_photo_db")
@@ -317,22 +311,19 @@ interface ConditionPhotoDao {
 @Dao
 interface MedicationRecordDao {
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL")
-    fun getByPersonId(personId: Int): Flow<List<MedicationRecord>>
-
-//    @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date = :dosageDate AND deleted_at IS NULL")
-//    fun getByDate(personId: Int, dosageDate: String): Flow<List<MedicationRecord>>
+    fun getByPersonId(personId: String): Flow<List<MedicationRecord>>
 
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date LIKE :month || '%' AND deleted_at IS NULL")
-    fun getByMonth(personId: Int, month: String): Flow<List<MedicationRecord>>
+    fun getByMonth(personId: String, month: String): Flow<List<MedicationRecord>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: MedicationRecord): Long
 
     @Query("UPDATE medication_record_db SET deleted_at = :timestamp WHERE person_id = :personId")
-    suspend fun logicalDeleteByPersonId(personId: Int, timestamp: Long)
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
 
     @Query("UPDATE medication_record_db SET deleted_at = NULL WHERE person_id = :personId")
-    suspend fun restoreByPersonId(personId: Int)
+    suspend fun restoreByPersonId(personId: String)
 
     @Delete
     suspend fun delete(item: MedicationRecord)
@@ -356,10 +347,10 @@ interface MedicationRecordDao {
     suspend fun getOrphanedRecords(): List<MedicationRecord>
 
     @Query("SELECT EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL)")
-    fun hasDataForPerson(personId: Int): Flow<Boolean>
+    fun hasDataForPerson(personId: String): Flow<Boolean>
 
     @Query("DELETE FROM medication_record_db WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: String)
 }
 
 @Dao
@@ -370,10 +361,6 @@ interface AuditLogDao {
     @Query("SELECT * FROM audit_log_db ORDER BY timestamp DESC")
     fun getAllLogs(): Flow<List<AuditLog>>
 
-    /**
-     * 指定された日時より古いログを削除する（ローテーション用）
-     * @param threshold 削除のしきい値となる Instant
-     */
     @Query("DELETE FROM audit_log_db WHERE timestamp < :threshold")
     suspend fun deleteOldLogs(threshold: java.time.Instant)
 

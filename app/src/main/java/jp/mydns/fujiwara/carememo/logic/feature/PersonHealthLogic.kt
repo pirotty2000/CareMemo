@@ -7,7 +7,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
  * 健康記録画面用の UI 状態
  */
 data class PersonHealthUiState(
-    val personId: Int? = null,
+    val personId: String? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     val records: List<HistoryRecord> = emptyList(),
     val preferredShowHistory: Boolean = true, // 追加: 履歴/グラフの選択状態
@@ -37,10 +37,12 @@ enum class HealthValidationResult {
 object PersonHealthLogic {
 
     /**
-     * レコードが新規登録（ID=0）かどうかを判定します。
+     * レコードが新規登録かどうかを判定します。
+     * IDが空または初期値であれば新規とみなします。
      */
     fun isNew(record: Any?): Boolean {
-        return (record as? HistoryRecord)?.id == 0
+        val id = (record as? HistoryRecord)?.id ?: return true
+        return id.isEmpty() || id == "0" // "0" は Int 時代からの移行用 ID
     }
 
     /**
@@ -90,13 +92,8 @@ object PersonHealthLogic {
     fun validateDuplicate(current: HistoryRecord, existing: HistoryRecord?): HealthValidationResult {
         if (existing == null) return HealthValidationResult.SUCCESS
 
-        val isDuplicate = if (current.id == 0) {
-            // 新規なら、同じ時間のデータが存在する時点で重複
-            true
-        } else {
-            // 更新なら、取得されたデータのIDが自分と異なれば重複
-            current.id != existing.id
-        }
+        // 取得されたデータのIDが自分と異なれば重複
+        val isDuplicate = current.id != existing.id
 
         return if (isDuplicate) HealthValidationResult.DUPLICATE_TIME else HealthValidationResult.SUCCESS
     }

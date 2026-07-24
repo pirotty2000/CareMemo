@@ -26,7 +26,7 @@ package jp.mydns.fujiwara.carememo.ui.components.condition
  * ・ConditionDetailPane
  *
  * ---
- * 最終更新日: 2026/07/04
+ * 最終更新日: 2026/07/20 (UUID対応)
  */
 
 import android.app.Activity
@@ -128,10 +128,10 @@ private fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
 @Composable
 fun ConditionList(
     records: List<ConditionAtVisit>,
-    selectedId: Int,
-    conditionPhotoMap: Map<Int, Boolean>,
+    selectedId: String,
+    conditionPhotoMap: Map<String, Boolean>,
     isAnyDialogOpen: Boolean,
-    onSelect: (Int) -> Unit,
+    onSelect: (String) -> Unit,
     onDelete: (HistoryRecord) -> Unit,
     lazyListState: LazyListState = rememberLazyListState()
 ) {
@@ -154,30 +154,31 @@ fun ConditionList(
  */
 @Composable
 fun ConditionDetailPane(
-    personId: Int,
-    conditionId: Int,
+    personId: String,
+    conditionId: String,
     records: List<ConditionAtVisit>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     defaultRecorderName: String,
-    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
+    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
-    onSelectedIdChange: (Int) -> Unit,
-    onCancel: () -> Unit, // 追加
+    onSelectedIdChange: (String) -> Unit,
+    onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
-    onNavigateToFullScreen: (Int, Int) -> Unit,
+    onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
     val memo = remember(records, conditionId) {
         records.find { it.id == conditionId }
     }
 
-    if (memo == null && conditionId > 0) {
+    // conditionId が "0" の場合は新規作成モード
+    if (memo == null && conditionId.isNotEmpty() && conditionId != "0") {
         LoadingScreen()
         return
     }
 
-    var isEditing by remember(conditionId) { mutableStateOf(conditionId == 0) }
+    var isEditing by remember(conditionId) { mutableStateOf(conditionId == "0") }
     val dateTimeState = rememberDateTimeInputState(initialInstant = memo?.recordTime)
     
     var title by remember(conditionId) { mutableStateOf(memo?.title ?: "") }
@@ -221,7 +222,7 @@ fun ConditionDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        if (conditionId == 0) onSelectedIdChange(-1) else isEditing = false
+                        if (conditionId == "0") onSelectedIdChange("") else isEditing = false
                     }
                 )
             },
@@ -236,7 +237,7 @@ fun ConditionDetailPane(
 
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
 
-    if (conditionId == -1) {
+    if (conditionId.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
@@ -276,7 +277,7 @@ fun ConditionDetailPane(
                 if (isChanged) {
                     showDiscardDialog = true
                 } else {
-                    if (conditionId != 0) isEditing = false else onSelectedIdChange(-1)
+                    if (conditionId != "0") isEditing = false else onSelectedIdChange("")
                 }
             },
             onAddPhotoClick = onAddPhotoClick,
@@ -413,7 +414,7 @@ private fun ConditionRecordDisplayCard(
 
 @Composable
 private fun ConditionRecordEditForm(
-    conditionId: Int,
+    conditionId: String,
     dateTimeState: DateTimeInputState,
     title: String,
     onTitleChange: (String) -> Unit,
@@ -452,7 +453,7 @@ private fun ConditionRecordEditForm(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (conditionId == 0) "新規作成" else "記録の編集",
+                text = if (conditionId == "0") "新規作成" else "記録の編集",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -516,13 +517,13 @@ private fun ConditionRecordEditForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size), style = MaterialTheme.typography.titleMedium)
-                if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != 0) {
+                if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
                     IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
                         Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-            if (conditionId == 0) {
+            if (conditionId == "0") {
                 Text(
                     text = stringResource(R.string.condition_photo_add_guide),
                     style = MaterialTheme.typography.bodySmall,
@@ -535,7 +536,7 @@ private fun ConditionRecordEditForm(
                 PhotoGrid(photos = photos, isEditable = true, onPhotoClick = {}, onDeletePhoto = onDeletePhoto)
             }
 
-            if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != 0) {
+            if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
                 Button(onClick = onAddPhotoClick, enabled = !isProcessing, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -594,9 +595,9 @@ private fun PhotoGrid(
 private fun PreviewConditionDetailPane() {
     MaterialTheme {
         ConditionDetailPane(
-            personId = 1,
-            conditionId = 1,
-            records = listOf(ConditionAtVisit(id = 1, personId = 1, title = "サンプル", condition = "内容", author = "A", recordTime = Instant.now())),
+            personId = "1",
+            conditionId = "1",
+            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "サンプル", condition = "内容", author = "A", recordTime = Instant.now())),
             photos = emptyList(),
             isProcessing = false,
             defaultRecorderName = "A",

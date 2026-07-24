@@ -204,9 +204,9 @@ private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androi
  */
 @Composable
 fun HealthRecordDetailPane(
-    personId: Int,
+    personId: String,
     category: Category,
-    recordId: Int,
+    recordId: String,
     records: List<HistoryRecord>,
     onCancel: () -> Unit,
     onSaveRecord: (Any) -> Unit,
@@ -220,18 +220,18 @@ fun HealthRecordDetailPane(
         }
     }
 
-    if (record == null && recordId != 0) {
+    if (record == null && recordId.isNotEmpty() && recordId != "0") {
         LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         return
     }
 
-    var isEditing by remember(recordId) { mutableStateOf(recordId == 0) }
+    var isEditing by remember(recordId) { mutableStateOf(recordId.isEmpty() || recordId == "0") }
     val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
     var heightText by remember(recordId, category, records) {
         val initialValue = if (record is HeightAndWeight) {
             record.height?.toString() ?: ""
-        } else if (recordId == 0 && category == Category.HEIGHT_AND_WEIGHT) {
+        } else if ((recordId.isEmpty() || recordId == "0") && category == Category.HEIGHT_AND_WEIGHT) {
             records.filterIsInstance<HeightAndWeight>()
                 .filter { it.height != null }
                 .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
@@ -292,7 +292,7 @@ fun HealthRecordDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        if (recordId == 0) onCancel() else isEditing = false
+                        if (recordId.isEmpty() || recordId == "0") onCancel() else isEditing = false
                     }
                 )
             },
@@ -332,7 +332,7 @@ fun HealthRecordDetailPane(
                         if (isChanged) {
                             showDiscardDialog = true
                         } else {
-                            if (recordId == 0) onCancel() else isEditing = false
+                            if (recordId.isEmpty() || recordId == "0") onCancel() else isEditing = false
                         }
                     },
                     onSave = {
@@ -366,7 +366,7 @@ fun HealthRecordDetailPane(
 @Composable
 private fun HealthRecordEditForm(
     category: Category,
-    recordId: Int,
+    recordId: String,
     dateTimeState: DateTimeInputState,
     heightText: String, onHeightChange: (String) -> Unit,
     weightText: String, onWeightChange: (String) -> Unit,
@@ -384,7 +384,7 @@ private fun HealthRecordEditForm(
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = if (recordId == 0) "新規作成" else "記録の編集",
+            text = if (recordId.isEmpty() || recordId == "0") "新規作成" else "記録の編集",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )

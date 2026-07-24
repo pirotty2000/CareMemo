@@ -19,7 +19,7 @@ class PersonSummaryRepository(
     /**
      * 特定の利用者の各カテゴリー記録の有無サマリーを返します。
      */
-    fun getPersonCategorySummaryById(personId: Int): Flow<PersonCategorySummary> {
+    fun getPersonCategorySummaryById(personId: String): Flow<PersonCategorySummary> {
         return combine(
             heightAndWeightDao.hasDataForPerson(personId),
             bpAndPulseDao.hasDataForPerson(personId),
@@ -40,7 +40,7 @@ class PersonSummaryRepository(
     /**
      * 全利用者のサマリー情報を取得します。
      */
-    fun getPersonCategorySummaries(): Flow<Map<Int, PersonCategorySummary>> {
+    fun getPersonCategorySummaries(): Flow<Map<String, PersonCategorySummary>> {
         return personDao.getPersonCategorySummaries().map { list ->
             list.associate { result ->
                 result.id to PersonCategorySummary(

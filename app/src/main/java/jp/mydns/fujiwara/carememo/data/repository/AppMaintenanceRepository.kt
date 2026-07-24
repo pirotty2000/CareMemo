@@ -32,34 +32,49 @@ class AppMaintenanceRepository(
 ) {
     suspend fun getBackupData(): CareMemoBackup {
         return CareMemoBackup(
+            version = 5, // UUID化に伴いバージョンアップ
             appVersionCode = BuildConfig.VERSION_CODE,
-            persons = personDao.getAllRaw(),
-            heightAndWeights = heightAndWeightDao.getAllRaw(),
-            bpAndPulses = bpAndPulseDao.getAllRaw(),
-            glucoseAndHbA1cs = glucoseAndHbA1cDao.getAllRaw(),
-            conditionAtVisits = conditionAtVisitDao.getAllRaw(),
-            conditionPhotos = conditionPhotoDao.getAllRaw(),
-            medicationRecords = medicationRecordDao.getAllRaw(),
+            persons = personDao.getAllRaw().map { it.toBackupDto() },
+            heightAndWeights = heightAndWeightDao.getAllRaw().map { it.toBackupDto() },
+            bpAndPulses = bpAndPulseDao.getAllRaw().map { it.toBackupDto() },
+            glucoseAndHbA1cs = glucoseAndHbA1cDao.getAllRaw().map { it.toBackupDto() },
+            conditionAtVisits = conditionAtVisitDao.getAllRaw().map { it.toBackupDto() },
+            conditionPhotos = conditionPhotoDao.getAllRaw().map { it.toBackupDto() },
+            medicationRecords = medicationRecordDao.getAllRaw().map { it.toBackupDto() },
         )
     }
 
+    /**
+     * バックアップデータをデータベースへ復元します。
+     * UUID化された新形式 (Version 5+) を前提としますが、クレンジング処理を継続して適用します。
+     */
     suspend fun replaceAllData(backup: CareMemoBackup) {
         database.withTransaction {
-            // バックアップからの復元時、操作ログは保持したまま臨床データのみを差し替える
+            // 1. 既存データをクリア
             clearClinicalData()
             
-            // 利用者データのクレンジング（生年月日の正規化と重複回避）
-            val cleansedPersons = cleansePersonData(backup.persons)
+            // 2. DTO から Entity への単純マッピング（UUID をそのまま維持）
+            val persons = backup.persons.map { it.toEntity() }
+            val heightAndWeights = backup.heightAndWeights.map { it.toEntity() }
+            val bpAndPulses = backup.bpAndPulses.map { it.toEntity() }
+            val glucoseAndHbA1cs = backup.glucoseAndHbA1cs.map { it.toEntity() }
+            val conditionAtVisits = backup.conditionAtVisits.map { it.toEntity() }
+            val conditionPhotos = backup.conditionPhotos.map { it.toEntity() }
+            val medicationRecords = backup.medicationRecords.map { it.toEntity() }
+
+            // 3. 利用者データのクレンジング（生年月日の正規化と重複回避）
+            val cleansedPersons = cleansePersonData(persons)
             personDao.insertAll(cleansedPersons)
 
-            heightAndWeightDao.insertAll(backup.heightAndWeights)
-            bpAndPulseDao.insertAll(backup.bpAndPulses)
-            glucoseAndHbA1cDao.insertAll(backup.glucoseAndHbA1cs)
-            conditionAtVisitDao.insertAll(backup.conditionAtVisits)
-            conditionPhotoDao.insertAll(backup.conditionPhotos)
+            // 4. 各データの保存
+            heightAndWeightDao.insertAll(heightAndWeights)
+            bpAndPulseDao.insertAll(bpAndPulses)
+            glucoseAndHbA1cDao.insertAll(glucoseAndHbA1cs)
+            conditionAtVisitDao.insertAll(conditionAtVisits)
+            conditionPhotoDao.insertAll(conditionPhotos)
 
-            // 服薬記録のインポート（クレンジングを Logic へ委譲）
-            val validMedicationRecords = MedicationLogic.filterValidRecords(backup.medicationRecords)
+            // 5. 服薬記録のインポート（クレンジングを Logic へ委譲）
+            val validMedicationRecords = MedicationLogic.filterValidRecords(medicationRecords)
             medicationRecordDao.insertAll(validMedicationRecords)
         }
     }
@@ -183,10 +198,10 @@ class AppMaintenanceRepository(
             // 一時的に外部キー制約を無効化
             db.execSQL("PRAGMA foreign_keys = OFF")
             
-            // 存在しない personId = -999 を使ってレコードを挿入
+            // 存在しない personId = 'invalid-uuid' を使ってレコードを挿入
             db.execSQL(
-                "INSERT INTO bp_and_pulse_db (person_id, bp_systolic, bp_diastolic, sat, pulse, record_time, deleted_at) VALUES (-999, 120, 80, 98, 70, ?, NULL)",
-                arrayOf(now),
+                "INSERT INTO bp_and_pulse_db (id, person_id, bp_systolic, bp_diastolic, sat, pulse, record_time, deleted_at) VALUES (?, ?, 120, 80, 98, 70, ?, NULL)",
+                arrayOf<Any>(UUID.randomUUID().toString(), "invalid-uuid", now),
             )
         } finally {
             // 制約を必ず元に戻す
@@ -194,7 +209,11 @@ class AppMaintenanceRepository(
         }
     }
 
-    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+    private val json = Json { 
+        ignoreUnknownKeys = true 
+        prettyPrint = true
+        encodeDefaults = true // デフォルト値（false等）も明示的に出力する
+    }
 
     /**
      * アプリ全体のデータをZIP形式でエクスポートします。

@@ -20,7 +20,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         MedicationRecord::class,
         AuditLog::class,
     ],
-    version = 12,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

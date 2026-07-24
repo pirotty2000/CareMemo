@@ -25,7 +25,7 @@ import java.time.LocalDate
 fun PersonMedicationScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     medicationViewModel: PersonMedicationViewModel,
-    personId: Int,
+    personId: String,
     widthSizeClass: WindowWidthSizeClass,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,

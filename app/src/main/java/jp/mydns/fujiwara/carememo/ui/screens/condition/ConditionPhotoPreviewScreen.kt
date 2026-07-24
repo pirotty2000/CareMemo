@@ -29,8 +29,8 @@ fun ConditionPhotoPreviewScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
     uri: Uri,
-    personId: Int,
-    conditionId: Int,
+    personId: String,
+    conditionId: String,
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {

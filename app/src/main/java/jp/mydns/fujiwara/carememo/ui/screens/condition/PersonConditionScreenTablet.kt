@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -22,7 +23,7 @@ import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenTablet(
-    personId: Int,
+    personId: String,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
@@ -30,20 +31,20 @@ fun PersonConditionScreenTablet(
     isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    conditionPhotoMap: Map<Int, Boolean>,
+    conditionPhotoMap: Map<String, Boolean>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
-    selectedId: Int,
-    onSelectedIdChange: (Int) -> Unit,
+    selectedId: String,
+    onSelectedIdChange: (String) -> Unit,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onNavigateToFullScreen: (Int, Int) -> Unit,
+    onNavigateToFullScreen: (String, String) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Int, Int, PersonConditionUiState, (Int) -> Unit) -> Unit,
+    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -71,7 +72,7 @@ fun PersonConditionScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedIdChange(0) }) {
+                        IconButton(onClick = { onSelectedIdChange("0") }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
                         IconButton(

@@ -85,7 +85,7 @@ class DeleteOrRestorePersonViewModel(
     /**
      * 利用者の選択状態を切り替えます。
      */
-    fun toggleSelection(personId: Int) {
+    fun toggleSelection(personId: String) {
         updateUiState { current ->
             val nextIds = DeleteOrRestorePersonLogic.toggleSelection(current.selectedIds, personId)
             current.copy(selectedIds = nextIds)

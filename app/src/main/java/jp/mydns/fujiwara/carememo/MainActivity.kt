@@ -274,7 +274,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             navController.navigate("batch_input/$personId")
                         },
                         onNavigateToAddPerson = {
-                            navController.navigate("person_edit/-1")
+                            navController.navigate("person_edit/_new")
                         },
                         onNavigateToEditPerson = { personId ->
                             navController.navigate("person_edit/$personId")
@@ -285,9 +285,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
                 // ---------- 「利用者情報の登録・編集」 ----------
                 composable("person_edit/{personId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.IntType }
+                    navArgument("personId") { type = NavType.StringType }
                 )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: -1
+                    val personIdRaw = backStackEntry.arguments?.getString("personId") ?: "_new"
+                    val personId = if (personIdRaw == "_new") null else personIdRaw
                     val editViewModel: PersonEditViewModel = viewModel(
                         factory = PersonEditViewModel.Factory(
                             personId, personRepository, userSettingsRepository, auditLogRepository))
@@ -303,10 +304,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
                 // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」 ----------
                 composable("detail/{personId}/{categoryName}", arguments = listOf(
-                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("personId") { type = NavType.StringType },
                     navArgument("categoryName") { type = NavType.StringType }
                 )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
                     val category = Category.valueOf(categoryName)
                     
@@ -342,10 +343,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
                 // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」のグラフ拡大 ----------
                 composable("graphExpansion/{personId}/{categoryName}/{initialIndex}", arguments = listOf(
-                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("personId") { type = NavType.StringType },
                     navArgument("categoryName") { type = NavType.StringType },
                     navArgument("initialIndex") { type = NavType.IntType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
                     val category = Category.valueOf(categoryName)
                     val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
@@ -368,8 +369,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
                 // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」の一括入力 ----------
                 composable("batch_input/{personId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     val batchViewModel: BatchInputViewModel = viewModel(
                         factory = BatchInputViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
@@ -384,10 +385,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
 
                 // ---------- 「所見メモ」 ----------
                 composable("condition/{personId}?query={query}", arguments = listOf(
-                    navArgument("personId") { type = NavType.IntType },
+                    navArgument("personId") { type = NavType.StringType },
                     navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }
                 )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     val initialQuery = backStackEntry.arguments?.getString("query")?.let {
                         if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
                     
@@ -431,11 +432,11 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 // ---------- 「所見メモ」の写真プレビュー ----------
                 composable("photoPreview/{uri}/{personId}/{conditionId}", arguments = listOf(
                     navArgument("uri") { type = NavType.StringType },
-                    navArgument("personId") { type = NavType.IntType },
-                    navArgument("conditionId") { type = NavType.IntType })) { backStackEntry ->
+                    navArgument("personId") { type = NavType.StringType },
+                    navArgument("conditionId") { type = NavType.StringType })) { backStackEntry ->
                     val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
-                    val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
+                    val conditionId = backStackEntry.arguments?.getString("conditionId") ?: ""
                     
                     val detailViewModel: PersonDetailUiStateViewModel = viewModel(
                         factory = PersonDetailUiStateViewModel.Factory(
@@ -465,12 +466,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 composable(
                     "photoFull/{conditionId}/{initialPhotoId}",
                     arguments = listOf(
-                        navArgument("conditionId") { type = NavType.IntType },
-                        navArgument("initialPhotoId") { type = NavType.IntType }
+                        navArgument("conditionId") { type = NavType.StringType },
+                        navArgument("initialPhotoId") { type = NavType.StringType }
                     )
                 ) { backStackEntry ->
-                    val conditionId = backStackEntry.arguments?.getInt("conditionId") ?: 0
-                    val initialPhotoId = backStackEntry.arguments?.getInt("initialPhotoId") ?: 0
+                    val conditionId = backStackEntry.arguments?.getString("conditionId") ?: ""
+                    val initialPhotoId = backStackEntry.arguments?.getString("initialPhotoId") ?: ""
                     val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
 
                     ConditionPhotoFullScreen(
@@ -482,8 +483,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
 
                 // ---------- 「服薬管理」 ----------
-                composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.IntType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getInt("personId") ?: 0
+                composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     
                     val detailViewModel: PersonDetailUiStateViewModel = viewModel(
                         factory = PersonDetailUiStateViewModel.Factory(

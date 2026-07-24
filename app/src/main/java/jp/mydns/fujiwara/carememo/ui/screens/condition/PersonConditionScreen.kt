@@ -36,13 +36,13 @@ import java.time.Instant
 fun PersonConditionScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
-    personId: Int,
+    personId: String,
     initialQuery: String = "",
     widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
-    onNavigateToPhotoPreview: (Uri, Int, Int) -> Unit,
-    onNavigateToFullScreen: (Int, Int) -> Unit,
+    onNavigateToPhotoPreview: (Uri, String, String) -> Unit,
+    onNavigateToFullScreen: (String, String) -> Unit,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
@@ -115,7 +115,7 @@ fun PersonConditionScreen(
     ) { success ->
         if (success && tempPhotoUri != null) {
             val pid = detailState.personId ?: return@rememberLauncherForActivityResult
-            val cid = conditionState.selectedConditionId ?: 0
+            val cid = conditionState.selectedConditionId ?: ""
             conditionViewModel.onPhotoCaptured(tempPhotoUri!!, pid, cid)
         } else {
             if (!success && tempPhotoUri != null) {
@@ -142,8 +142,8 @@ fun PersonConditionScreen(
             isProcessing = conditionState.isProcessing,
             isAnyDialogOpen = isAnyDialogOpen,
             defaultRecorderName = defaultRecorderName,
-            selectedId = conditionState.selectedConditionId ?: -1,
-            onSelectedIdChange = { conditionViewModel.setSelectedConditionId(if (it == -1) null else it) },
+            selectedId = conditionState.selectedConditionId ?: "",
+            onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(if (id.isEmpty()) null else id) },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onAddPhotoClick = {
@@ -189,8 +189,8 @@ fun PersonConditionScreen(
             isProcessing = conditionState.isProcessing,
             isAnyDialogOpen = isAnyDialogOpen,
             defaultRecorderName = defaultRecorderName,
-            selectedId = conditionState.selectedConditionId ?: -1,
-            onSelectedIdChange = { conditionViewModel.setSelectedConditionId(if (it == -1) null else it) },
+            selectedId = conditionState.selectedConditionId ?: "",
+            onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(if (id.isEmpty()) null else id) },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onAddPhotoClick = {
@@ -309,11 +309,11 @@ fun PersonConditionScreen(
                     photos = conditionState.currentConditionPhotos,
                     isProcessing = conditionState.isProcessing,
                     defaultRecorderName = defaultRecorderName,
-                    onSaveRecord = { pId, cId, s, onSuccess -> 
+                    onSaveRecord = { pId: String, cId: String, s, onSuccess -> 
                         conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess)
                     },
                     onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
-                    onSelectedIdChange = { conditionViewModel.setSelectedConditionId(if (it == -1) null else it) },
+                    onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(if (id.isEmpty()) null else id) },
                     onCancel = { conditionViewModel.setSelectedConditionId(null) },
                     onAddPhotoClick = {
                         try {
