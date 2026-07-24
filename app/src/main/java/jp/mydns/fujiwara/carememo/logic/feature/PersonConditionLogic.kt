@@ -28,6 +28,8 @@ data class PersonConditionUiState(
     val selectedConditionId: String? = null,
     val currentConditionPhotos: List<ConditionPhoto> = emptyList(),
     val conditionPhotoMap: Map<String, Boolean> = emptyMap(),
+    val orphanedPhotoCount: Int = 0,
+    val availableOrphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo> = emptyList(),
 
     val isProcessing: Boolean = false,
     val errorMessage: String? = null,

@@ -120,6 +120,7 @@ jp.mydns.fujiwara.carememo
 | SCR-S-001  | Settings   | SettingsScreen              | -             | `settings/SettingsScreen.kt`                  | 設定          |
 | SCR-S-002  | Settings   | AuditLogScreen              | -             | `settings/AuditLogScreen.kt`                  | 監査ログ        |
 | SCR-S-003  | Settings   | DeleteOrRestorePerson       | -             | `settings/DeleteOrRestorePerson.kt`           | 利用者管理       |
+| SCR-S-004  | Settings   | OrphanedPhotoManagementScreen | -             | `settings/OrphanedPhotoManagementScreen.kt`   | 迷子写真の確認     |
 
 ---
 # ViewModel一覧
@@ -132,6 +133,7 @@ ViewModel (androidx.lifecycle.ViewModel)
     ├── SettingsViewModel (設定・保守)
     ├── AuditLogViewModel (操作ログ参照)
     ├── DeleteOrRestorePersonViewModel (利用修了者管理)
+    ├── OrphanedPhotoViewModel (迷子写真確認)
     │
     └── PersonBaseUiStateViewModel<S, E> (B系統: 新利用者コンテキスト基盤)
         ├── PersonDetailUiStateViewModel (詳細画面共通: ヘッダー、カテゴリ管理)
@@ -171,6 +173,7 @@ ViewModel (androidx.lifecycle.ViewModel)
 | 利用者管理    | `DeleteOrRestorePerson`            | `DeleteOrRestorePersonViewModel`                              | `DeleteOrRestorePersonLogic`                                  | `DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                    |
 | アプリ設定    | `SettingsScreen`                   | `SettingsViewModel`                                           | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                      |
 | 操作ログ     | `AuditLogScreen`                   | `AuditLogViewModel`                                           | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                         |
+| 迷子写真確認   | `OrphanedPhotoManagementScreen`    | `OrphanedPhotoViewModel`                                      | `ConditionMaintenanceLogic`                                   | `ConditionRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                |
 | 共通基盤     | (詳細画面全体)                           | `PersonDetailUiStateViewModel`                                | -                                                             | `PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                      |
 
 ---
@@ -208,6 +211,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | `DeleteOrRestorePersonLogic.kt` | 利用者管理（復帰・抹消）画面の表示状態定義。                                   |
 | `SettingsLogic.kt`              | ZIP検証、バージョン互換性、空き容量チェック、開発者モード有効化判定。                     |
 | `AuditLogLogic.kt`              | 監査ログのフィルタリング、並び替え、選択肢の抽出。                                |
+| `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、迷子写真の分類。                                |
 
 ### **表示用マッピングロジック (ui/mapping)**
 判定結果（Enum）を日本語のラベルやテーマに合わせた色へ変換するロジックです。
@@ -245,6 +249,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                         |
 | 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/AppDeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                           |
 | 10. 操作ログ             | `AuditLogScreen`                                                         | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                   |
+| 11. 迷子写真確認          | `OrphanedPhotoManagementScreen`                                          | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示                                                                                                                                                                                                                                                                             |
 
 ---
 
@@ -326,6 +331,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | **NAV-S-001**          | SCR-M-001  | SCR-S-001  | ドロワー（ハンバーガーメニュー）を開き、「設定」をタップする。   | 設定画面が表示される。              |
 | **NAV-S-002**          | SCR-S-001  | SCR-S-002  | 設定画面で「操作ログの参照」をタップする。             | 監査ログ画面が表示される。            |
 | **NAV-S-003**          | SCR-S-001  | SCR-S-003  | 設定画面で「利用終了者の管理」をタップする。            | 利用者管理（復帰・抹消）画面が表示される。    |
+| **NAV-S-004**          | SCR-S-001  | SCR-S-004  | 設定画面で「迷子写真の確認」をタップする。            | 迷子写真確認画面が表示される。          |
 | **[Common: 詳細画面間遷移]**  |            |            |                                   |                          |
 | **NAV-COM-001**        | SCR-PH-001 | SCR-PC-001 | 詳細画面のカテゴリバーで「所見」をタップする。           | 所見メモ画面に切り替わる（スタックは積まない）。 |
 | **NAV-COM-002**        | SCR-PC-001 | SCR-PM-001 | 詳細画面のカテゴリバーで「服薬」をタップする。           | 服薬管理画面に切り替わる（スタックは積まない）。 |

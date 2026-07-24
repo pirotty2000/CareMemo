@@ -32,7 +32,8 @@ class PersonConditionViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
-    auditLogRepository: AuditLogRepository
+    auditLogRepository: AuditLogRepository,
+    private val context: Context // ファイルスキャンのために追加
 ) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
     personRepository,
     summaryRepository,
@@ -112,11 +113,33 @@ class PersonConditionViewModel(
             contextBuilder = { tableName = TABLE_CONDITION },
             flowProvider = { conditionRepository.getAllPhotosByPersonIdFlow(personId) }
         ) { photos ->
+            // --- 迷子写真（ファイル・DB両方）の特定 ---
+            val dbPhotos = conditionRepository.getAllConditionPhotosRaw()
+            val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
+            val physicalFiles = ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
+
+            val allOrphaned = jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic.identifyOrphanedPhotos(
+                dbPhotos = dbPhotos,
+                existingConditionIds = existingConditionIds,
+                physicalFiles = physicalFiles
+            )
+
+            // この利用者が再登録可能なもの:
+            // (A) personIdが一致しているDB孤立レコード
+            // (B) 物理ファイルのみでDBレコードがないもの
+            val adoptableOrphans = allOrphaned.filter { 
+                it.personId == personId || it.type == jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoType.FILE_ONLY 
+            }
+
             updateUiState { current ->
                 val map = current.records.associate { memo ->
                     memo.id to photos.any { it.conditionId == memo.id }
                 }
-                current.copy(conditionPhotoMap = map)
+                current.copy(
+                    conditionPhotoMap = map, 
+                    orphanedPhotoCount = adoptableOrphans.size,
+                    availableOrphanedPhotos = adoptableOrphans
+                )
             }
         }
     }
@@ -238,6 +261,39 @@ class PersonConditionViewModel(
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, personId, conditionId))
     }
 
+    /**
+     * 選択された迷子写真を現在のレコードに紐付けます。
+     */
+    fun reattachOrphanedPhoto(personId: String, conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
+        if (conditionId.isEmpty() || conditionId == "0") return
+
+        safeLaunch(
+            operation = "reattachOrphanedPhoto",
+            loadingState = loadingStateProxy,
+            contextBuilder = {
+                tableName = TABLE_CONDITION
+                affectedId = conditionId
+            }
+        ) {
+            if (photoInfo.photoId != null) {
+                // DBにレコードがある場合 (TEMPORARY, ORPHANED_RECORD)
+                conditionRepository.reattachPhotoToRecord(photoInfo.photoId, conditionId, featureName, "reattachOrphanedPhoto")
+            } else {
+                // ファイルのみの場合
+                conditionRepository.adoptFileAsPhoto(
+                    personId = personId,
+                    conditionId = conditionId,
+                    photoFileName = photoInfo.photoFileName,
+                    thumbnailFileName = photoInfo.thumbnailFileName,
+                    capturedAt = photoInfo.capturedAt,
+                    featureName = featureName,
+                    operation = "adoptFileAsPhoto"
+                )
+            }
+            showSnackbar(R.string.p_cond_msg_photo_save_success)
+        }
+    }
+
     fun processAndSavePhoto(context: Context, uri: Uri, personId: String, conditionId: String, caption: String) {
         safeLaunch(
             operation = OP_SAVE_PHOTO,
@@ -295,7 +351,8 @@ class PersonConditionViewModel(
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository,
-        private val auditLogRepository: AuditLogRepository
+        private val auditLogRepository: AuditLogRepository,
+        private val context: Context
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -304,7 +361,8 @@ class PersonConditionViewModel(
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
-                auditLogRepository
+                auditLogRepository,
+                context
             ) as T
         }
     }

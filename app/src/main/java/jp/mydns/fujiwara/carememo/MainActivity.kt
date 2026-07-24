@@ -49,6 +49,7 @@ import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoPreviewScre
 import jp.mydns.fujiwara.carememo.ui.screens.medication.PersonMedicationScreen
 import jp.mydns.fujiwara.carememo.ui.screens.settings.AuditLogScreen
 import jp.mydns.fujiwara.carememo.ui.screens.settings.DeleteOrRestorePersonScreen
+import jp.mydns.fujiwara.carememo.ui.screens.settings.OrphanedPhotoManagementScreen
 import jp.mydns.fujiwara.carememo.ui.screens.settings.SettingsScreen
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
@@ -62,6 +63,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
 import java.net.URLEncoder
 
 class MainActivity : FragmentActivity() {
@@ -397,7 +399,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(
                         factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context))
 
                     // 初期データのロード
                     LaunchedEffect(personId) {
@@ -443,7 +445,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
                     val conditionViewModel: PersonConditionViewModel = viewModel(
                         factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
+                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context))
 
                     // 利用者情報のロード
                     LaunchedEffect(personId) {
@@ -472,7 +474,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 ) { backStackEntry ->
                     val conditionId = backStackEntry.arguments?.getString("conditionId") ?: ""
                     val initialPhotoId = backStackEntry.arguments?.getString("initialPhotoId") ?: ""
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository))
+                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context))
 
                     ConditionPhotoFullScreen(
                         conditionId = conditionId,
@@ -528,6 +530,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onNavigateToAuditLog = {
                             navController.navigate("audit_log")
                         },
+                        onNavigateToOrphanedPhotos = {
+                            navController.navigate("orphaned_photos")
+                        },
                         onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack() }
                     )
@@ -555,6 +560,22 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         viewModel = archiveViewModel,
                         navController = navController,
                         mode = mode,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ---------- 設定：迷子写真の管理 (SCR-S-004) ----------
+                composable("orphaned_photos") {
+                    val orphanedViewModel: OrphanedPhotoViewModel = viewModel(
+                        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                            @Suppress("UNCHECKED_CAST")
+                            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                return OrphanedPhotoViewModel(userSettingsRepository, conditionRepository, context) as T
+                            }
+                        }
+                    )
+                    OrphanedPhotoManagementScreen(
+                        viewModel = orphanedViewModel,
                         onBack = { navController.popBackStack() }
                     )
                 }

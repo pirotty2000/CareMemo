@@ -81,6 +81,54 @@ class ConditionRepository(
         )
     }
 
+    /**
+     * 特定の写真を所見メモに紐付けます（迷子写真の再登録用）。
+     */
+    suspend fun reattachPhotoToRecord(photoId: String, conditionId: String, featureName: String = "", operation: String = "") {
+        conditionPhotoDao.updateConditionId(photoId, conditionId)
+        auditLogRepository?.log(
+            featureName = featureName,
+            operation = operation,
+            tableName = "condition_photo_db",
+            actionType = "UPDATE",
+            affectedId = photoId,
+            details = "Re-attached photo to conditionId: $conditionId",
+            resultType = "SUCCESS"
+        )
+    }
+
+    /**
+     * 物理ファイルのみ存在していた写真を、特定の利用者の記録として登録します（迷子写真の救済）。
+     */
+    suspend fun adoptFileAsPhoto(
+        personId: String,
+        conditionId: String,
+        photoFileName: String,
+        thumbnailFileName: String?,
+        capturedAt: Instant,
+        featureName: String = "",
+        operation: String = ""
+    ) {
+        val photo = ConditionPhoto(
+            conditionId = conditionId,
+            personId = personId,
+            photoFileName = photoFileName,
+            thumbnailFileName = thumbnailFileName ?: "",
+            capturedAt = capturedAt,
+            updatedAt = Instant.now()
+        )
+        conditionPhotoDao.insert(photo)
+        auditLogRepository?.log(
+            featureName = featureName,
+            operation = operation,
+            tableName = "condition_photo_db",
+            actionType = "INSERT",
+            affectedId = photo.id,
+            details = "Adopted orphaned file: $photoFileName into person: $personId",
+            resultType = "SUCCESS"
+        )
+    }
+
     suspend fun deleteConditionPhotoById(id: String, personId: String = "", featureName: String = "", operation: String = "") {
         conditionPhotoDao.deleteById(id)
         auditLogRepository?.log(
@@ -101,4 +149,8 @@ class ConditionRepository(
 
     fun getPersonIdsByConditionKeyword(query: String): Flow<List<String>> =
         conditionAtVisitDao.getPersonIdsByConditionKeyword(query)
+
+    // --- メンテナンス用 ---
+    suspend fun getAllConditionPhotosRaw(): List<ConditionPhoto> = conditionPhotoDao.getAllRaw()
+    suspend fun getAllConditionAtVisitIds(): Set<String> = conditionAtVisitDao.getAllIds().toSet()
 }

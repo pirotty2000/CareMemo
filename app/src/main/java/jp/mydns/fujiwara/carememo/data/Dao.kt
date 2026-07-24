@@ -261,6 +261,9 @@ interface ConditionAtVisitDao {
 
     @Query("SELECT * FROM condition_at_visit_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
     suspend fun findAtTime(personId: String, recordTime: java.time.Instant): ConditionAtVisit?
+
+    @Query("SELECT id FROM condition_at_visit_db")
+    suspend fun getAllIds(): List<String>
 }
 
 @Dao
@@ -298,6 +301,9 @@ interface ConditionPhotoDao {
 
     @Upsert
     suspend fun insertAll(items: List<ConditionPhoto>)
+
+    @Query("UPDATE condition_photo_db SET condition_id = :conditionId WHERE id = :photoId")
+    suspend fun updateConditionId(photoId: String, conditionId: String)
 
     // --- 整合性チェック用 ---
     @Query("""

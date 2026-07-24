@@ -45,6 +45,8 @@ fun PersonConditionScreenPhone(
     onDeleteRecord: (HistoryRecord) -> Unit,
     onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
+    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
+    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
@@ -120,6 +122,8 @@ fun PersonConditionScreenPhone(
                     onSaveRecord = onSaveRecord,
                     onDeletePhoto = onDeletePhoto,
                     onAddPhotoClick = onAddPhotoClick,
+                    onReattachPhoto = onReattachPhoto,
+                    orphanedPhotos = orphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = onMicClick
                 )

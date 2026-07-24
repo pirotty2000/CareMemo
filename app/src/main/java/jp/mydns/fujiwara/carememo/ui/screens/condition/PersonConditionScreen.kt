@@ -171,6 +171,13 @@ fun PersonConditionScreen(
                 conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onReattachPhoto = { info ->
+                detailState.personId?.let { pid ->
+                    val cid = conditionState.selectedConditionId ?: ""
+                    conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
+                }
+            },
+            orphanedPhotos = conditionState.availableOrphanedPhotos,
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
         )
@@ -218,6 +225,13 @@ fun PersonConditionScreen(
                 conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onReattachPhoto = { info ->
+                detailState.personId?.let { pid ->
+                    val cid = conditionState.selectedConditionId ?: ""
+                    conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
+                }
+            },
+            orphanedPhotos = conditionState.availableOrphanedPhotos,
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
         )
@@ -325,6 +339,13 @@ fun PersonConditionScreen(
                             conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                         }
                     },
+                    onReattachPhoto = { info ->
+                        detailState.personId?.let { pid ->
+                            val cid = conditionState.selectedConditionId ?: ""
+                            conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
+                        }
+                    },
+                    orphanedPhotos = conditionState.availableOrphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = { conditionViewModel.setLockBypassEnabled(true) }
                 )

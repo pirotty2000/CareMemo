@@ -77,6 +77,8 @@ fun PersonConditionScreenContent(
     onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
+    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
+    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
@@ -146,6 +148,8 @@ fun PersonConditionScreenContent(
                     onSelectedIdChange = { onSelectedIdChange(it) },
                     onCancel = { onSelectedIdChange("") },
                     onAddPhotoClick = onAddPhotoClick,
+                    onReattachPhoto = onReattachPhoto,
+                    orphanedPhotos = orphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = onMicClick
                 )

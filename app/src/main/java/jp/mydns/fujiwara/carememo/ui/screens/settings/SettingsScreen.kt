@@ -53,6 +53,7 @@ fun SettingsScreen(
     navController: NavController,
     onNavigateToArchiveManagement: (DeleteOrRestorePersonViewModel.OperationMode) -> Unit,
     onNavigateToAuditLog: () -> Unit,
+    onNavigateToOrphanedPhotos: () -> Unit,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -556,6 +557,7 @@ fun SettingsScreen(
         auditLogCount = uiState.auditLogCount,
         onRetentionClick = { showRetentionDialog = true },
         onViewLogsClick = onNavigateToAuditLog,
+        onOrphanedPhotosClick = onNavigateToOrphanedPhotos,
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
         isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
@@ -602,6 +604,7 @@ fun SettingsScreenContent(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
+    onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     isDeveloperModeEnabled: Boolean,
@@ -686,6 +689,7 @@ fun SettingsScreenContent(
                         auditLogCount = auditLogCount,
                         onRetentionClick = onRetentionClick,
                         onViewLogsClick = onViewLogsClick,
+                        onOrphanedPhotosClick = onOrphanedPhotosClick,
                         onRotateLogsClick = onRotateLogsClick,
                         onClearLogsClick = onClearLogsClick
                     )
@@ -963,6 +967,7 @@ private fun ResetSection(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
+    onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit
 ) {
@@ -1012,6 +1017,14 @@ private fun ResetSection(
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
         Text(text = "※ データベースの状態チェックと修復を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        
+        ListItem(
+            headlineContent = { Text("迷子写真の確認") },
+            supportingContent = { Text("紐付けが途切れた写真の確認と削除") },
+            leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
+            modifier = Modifier.clickable { onOrphanedPhotosClick() }.testTag("Settings_OrphanedPhotosButton")
+        )
+
         ListItem(
             headlineContent = { Text("データベース整合性チェック") },
             supportingContent = { Text("孤立したデータの検出とレポート作成") },
@@ -1081,6 +1094,7 @@ fun SettingsScreenPreview() {
             auditLogCount = 120,
             onRetentionClick = {},
             onViewLogsClick = {},
+            onOrphanedPhotosClick = {},
             onRotateLogsClick = {},
             onClearLogsClick = {},
             isDeveloperModeEnabled = true,

@@ -165,6 +165,8 @@ fun ConditionDetailPane(
     onSelectedIdChange: (String) -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
+    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit = {},
+    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo> = emptyList(),
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
@@ -203,6 +205,7 @@ fun ConditionDetailPane(
     }
 
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showOrphanedSelectDialog by remember { mutableStateOf(false) }
 
     // システム戻るボタンの制御
     androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
@@ -281,6 +284,8 @@ fun ConditionDetailPane(
                 }
             },
             onAddPhotoClick = onAddPhotoClick,
+            onReattachClick = { showOrphanedSelectDialog = true },
+            orphanedPhotoCount = orphanedPhotos.size,
             onDeletePhoto = { photoToDelete = it },
             onMicClick = onMicClick
         )
@@ -289,10 +294,23 @@ fun ConditionDetailPane(
             memo = memo,
             photos = photos,
             isProcessing = isProcessing,
-            onBack = onCancel, // ダイアログを閉じる/戻る
+            onCancel = onCancel,
             onEditClick = { isEditing = true },
             onPhotoClick = { onNavigateToFullScreen(it.conditionId, it.id) },
-            onAddPhotoClick = onAddPhotoClick
+            onAddPhotoClick = onAddPhotoClick,
+            onReattachClick = { showOrphanedSelectDialog = true },
+            orphanedPhotoCount = orphanedPhotos.size
+        )
+    }
+
+    if (showOrphanedSelectDialog) {
+        OrphanedPhotoSelectionDialog(
+            orphanedPhotos = orphanedPhotos,
+            onDismiss = { showOrphanedSelectDialog = false },
+            onSelect = { info -> 
+                onReattachPhoto(info)
+                showOrphanedSelectDialog = false
+            }
         )
     }
 
@@ -314,10 +332,12 @@ private fun ConditionRecordDisplayCard(
     memo: ConditionAtVisit?,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
-    onBack: () -> Unit, // 追加
+    onCancel: () -> Unit,
     onEditClick: () -> Unit,
     onPhotoClick: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
+    onReattachClick: () -> Unit = {},
+    orphanedPhotoCount: Int = 0,
 ) {
     val scrollState = rememberScrollState()
     Box(modifier = Modifier.fillMaxSize().testTag("ConditionDetailPane")) {
@@ -336,7 +356,7 @@ private fun ConditionRecordDisplayCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = onBack,
+                        onClick = onCancel,
                         modifier = Modifier.offset(x = (-12).dp) // 左端に寄せるためのオフセットを追加
                     ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
@@ -383,16 +403,30 @@ private fun ConditionRecordDisplayCard(
             ) {
                 Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size),
                     style = MaterialTheme.typography.titleMedium)
-                if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
-                    IconButton(
-                        onClick = onAddPhotoClick,
-                        enabled = !isProcessing
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.AddAPhoto,
-                            contentDescription = "写真を撮影",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+
+                Row {
+                    // 迷子写真の再登録ボタン
+                    if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
+                        IconButton(onClick = onReattachClick, enabled = !isProcessing) {
+                            Icon(
+                                imageVector = Icons.Rounded.CloudDownload,
+                                contentDescription = "迷子写真を再登録",
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+
+                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
+                        IconButton(
+                            onClick = onAddPhotoClick,
+                            enabled = !isProcessing
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.AddAPhoto,
+                                contentDescription = "写真を撮影",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
@@ -427,6 +461,8 @@ private fun ConditionRecordEditForm(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
+    onReattachClick: () -> Unit = {},
+    orphanedPhotoCount: Int = 0,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
 ) {
@@ -517,9 +553,23 @@ private fun ConditionRecordEditForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size), style = MaterialTheme.typography.titleMedium)
-                if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
-                    IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
-                        Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
+                
+                Row {
+                    // 迷子写真の再登録ボタン (動的表示)
+                    if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+                        IconButton(onClick = onReattachClick, enabled = !isProcessing) {
+                            Icon(
+                                imageVector = Icons.Rounded.CloudDownload, // フォルダに矢印的なものを期待
+                                contentDescription = "迷子写真を再登録",
+                                tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+
+                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+                        IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
+                            Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             }
@@ -590,7 +640,63 @@ private fun PhotoGrid(
     }
 }
 
-@Preview(showBackground = true)
+@Composable
+private fun OrphanedPhotoSelectionDialog(
+    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
+    onDismiss: () -> Unit,
+    onSelect: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit
+) {
+    val context = LocalContext.current
+    AppDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("迷子写真の再登録") },
+        text = {
+            AppDialogContent {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("再登録する写真を選択してください。", style = MaterialTheme.typography.bodySmall)
+                    
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                        modifier = Modifier.heightIn(max = 400.dp),
+                        contentPadding = PaddingValues(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(orphanedPhotos.size) { index ->
+                            val info = orphanedPhotos[index]
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelect(info) }
+                            ) {
+                                Box(modifier = Modifier.aspectRatio(1f)) {
+                                    AsyncImage(
+                                        model = info.thumbnailFileName?.let { ImageUtils.getPhotoFile(context, it) },
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                                Text(
+                                    text = info.description,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            AppDialogDismissButton(text = "キャンセル", onClick = onDismiss)
+        }
+    )
+}
+
+@Preview(showBackground = true, widthDp = 400)
 @Composable
 private fun PreviewConditionDetailPane() {
     MaterialTheme {
@@ -606,7 +712,35 @@ private fun PreviewConditionDetailPane() {
             onSelectedIdChange = {},
             onCancel = {},
             onAddPhotoClick = {},
+            onReattachPhoto = {},
+            orphanedPhotos = emptyList(),
             onNavigateToFullScreen = { _, _ -> },
+            onMicClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400, name = "編集フォーム - 迷子写真あり")
+@Composable
+private fun PreviewConditionRecordEditFormDirect() {
+    MaterialTheme {
+        ConditionRecordEditForm(
+            conditionId = "1",
+            dateTimeState = rememberDateTimeInputState(),
+            title = "サンプル所見",
+            onTitleChange = {},
+            author = "記録 太郎",
+            onAuthorChange = {},
+            condition = "経過良好です。",
+            onConditionChange = {},
+            photos = emptyList(),
+            isProcessing = false,
+            orphanedPhotoCount = 2, // 迷子写真あり
+            onSave = {},
+            onCancel = {},
+            onAddPhotoClick = {},
+            onReattachClick = {},
+            onDeletePhoto = {},
             onMicClick = {}
         )
     }
