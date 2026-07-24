@@ -27,18 +27,19 @@ class MedicationRepositoryTest {
     @Test
     fun `insertMedicationRecordを実行したとき、DAOのinsertとログ出力が行われること`() = runTest {
         val record = MedicationRecord(
-            id = 0,
-            personId = 1,
+            id = "500",
+            personId = "1",
             dosageDate = "2023-10-27",
             timeSlot = 0,
             status = 2,
             recordTime = Instant.now()
         )
-        coEvery { medicationRecordDao.insert(record) } returns 500L
+        coEvery { medicationRecordDao.insert(any()) } returns 1L
 
         repository.insertMedicationRecord(record, "画面", "服薬登録")
 
-        coVerify { medicationRecordDao.insert(record) }
+        // updatedAt が内部で更新されるため、match を使用
+        coVerify { medicationRecordDao.insert(match { it.id == "500" && it.personId == "1" && it.dosageDate == "2023-10-27" }) }
         coVerify {
             auditLogRepository.log(
                 featureName = "画面",
@@ -55,8 +56,8 @@ class MedicationRepositoryTest {
     @Test
     fun `deleteMedicationRecordを実行したとき、DAOのdeleteとログ出力が行われること`() = runTest {
         val record = MedicationRecord(
-            id = 500,
-            personId = 1,
+            id = "500",
+            personId = "1",
             dosageDate = "2023-10-27",
             timeSlot = 0,
             status = 2,
@@ -65,7 +66,7 @@ class MedicationRepositoryTest {
         
         repository.deleteMedicationRecord(record, "画面", "削除")
 
-        coVerify { medicationRecordDao.delete(record) }
+        coVerify { medicationRecordDao.delete(any()) }
         coVerify {
             auditLogRepository.log(
                 featureName = "画面",

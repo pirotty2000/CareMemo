@@ -36,23 +36,23 @@ class CareMemoBackupTest {
         val now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
         
         val backup = CareMemoBackup(
-            version = 4,
+            version = 5,
             appVersionCode = 100,
             persons = listOf(
-                Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = now, note = "備考")
+                PersonBackupDto(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = now, note = "備考")
             ),
             heightAndWeights = listOf(
-                HeightAndWeight(id = 1, personId = 1, height = 170.5, weight = 60.0, recordTime = now)
+                HeightAndWeightBackupDto(id = "1", personId = "1", height = 170.5, weight = 60.0, recordTime = now)
             ),
             bpAndPulses = listOf(
-                BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, recordTime = now)
+                BpAndPulseBackupDto(id = "1", personId = "1", bpSystolic = 120, bpDiastolic = 80, recordTime = now)
             ),
             glucoseAndHbA1cs = emptyList(),
             conditionAtVisits = listOf(
-                ConditionAtVisit(id = 1, personId = 1, title = "タイトル", condition = "内容", author = "記録者", recordTime = now)
+                ConditionAtVisitBackupDto(id = "1", personId = "1", title = "タイトル", condition = "内容", author = "記録者", recordTime = now)
             ),
             medicationRecords = listOf(
-                MedicationRecord(id = 1, personId = 1, dosageDate = "2023-10-27", timeSlot = 0, status = 2, recordTime = now)
+                MedicationRecordBackupDto(id = "1", personId = "1", dosageDate = "2023-10-27", timeSlot = 0, status = 2, recordTime = now)
             )
         )
 

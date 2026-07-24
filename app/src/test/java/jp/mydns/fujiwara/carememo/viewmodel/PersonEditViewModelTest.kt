@@ -61,7 +61,7 @@ class PersonEditViewModelTest {
 
     @Test
     fun lg01_loadFailure_safety() = runTest {
-        val personId = 1
+        val personId = "1"
         // 既存データのロード中に例外が発生した際
         coEvery { personRepository.getPersonById(personId) } returns flow { throw RuntimeException("Load Error") }
 
@@ -76,7 +76,7 @@ class PersonEditViewModelTest {
                 operation = "loadPerson",
                 tableName = "person_db",
                 actionType = "ERROR",
-                affectedId = personId.toString(),
+                affectedId = personId,
                 details = match { it.contains("Load Error") },
                 resultType = "OTHER_ERROR"
             )
@@ -85,7 +85,7 @@ class PersonEditViewModelTest {
 
     @Test
     fun lg02_saveFailure_safety() = runTest {
-        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonEditViewModel(null, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
         // 必須項目入力
@@ -112,7 +112,7 @@ class PersonEditViewModelTest {
                 operation = "save",
                 tableName = "person_db",
                 actionType = "ERROR",
-                affectedId = "-1",
+                affectedId = "",
                 details = match { it.contains("Save Error") },
                 resultType = "OTHER_ERROR"
             )
@@ -121,7 +121,7 @@ class PersonEditViewModelTest {
 
     @Test
     fun lg03_validationFailure_translation() = runTest {
-        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonEditViewModel(null, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
         // 必須項目（苗字）を空にする。他の必須項目（ふりがな等）は埋める。
@@ -143,7 +143,7 @@ class PersonEditViewModelTest {
                 operation = "save",
                 tableName = "person_db",
                 actionType = "ERROR",
-                affectedId = "-1",
+                affectedId = "",
                 details = match { it.contains("EMPTY_LAST_NAME") },
                 resultType = "VALIDATION_ERROR"
             )
@@ -152,7 +152,7 @@ class PersonEditViewModelTest {
 
     @Test
     fun lg04_uiState_atomicity() = runTest {
-        val viewModel = PersonEditViewModel(-1, personRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonEditViewModel(null, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
         // 初期状態の確認

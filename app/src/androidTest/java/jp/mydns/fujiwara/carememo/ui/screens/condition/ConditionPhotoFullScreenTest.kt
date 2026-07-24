@@ -30,9 +30,9 @@ class ConditionPhotoFullScreenTest {
     private val uiState = MutableStateFlow(PersonConditionUiState())
 
     private val testPhotos = listOf(
-        ConditionPhoto(id = 1, conditionId = 100, personId = 1, photoFileName = "photo1.jpg", thumbnailFileName = "thumb1.jpg", capturedAt = Instant.now(), caption = "キャプション1"),
-        ConditionPhoto(id = 2, conditionId = 100, personId = 1, photoFileName = "photo2.jpg", thumbnailFileName = "thumb2.jpg", capturedAt = Instant.now(), caption = ""),
-        ConditionPhoto(id = 3, conditionId = 100, personId = 1, photoFileName = "photo3.jpg", thumbnailFileName = "thumb3.jpg", capturedAt = Instant.now(), caption = "キャプション3")
+        ConditionPhoto(id = "1", conditionId = "100", personId = "1", photoFileName = "photo1.jpg", thumbnailFileName = "thumb1.jpg", capturedAt = Instant.now(), caption = "キャプション1"),
+        ConditionPhoto(id = "2", conditionId = "100", personId = "1", photoFileName = "photo2.jpg", thumbnailFileName = "thumb2.jpg", capturedAt = Instant.now(), caption = ""),
+        ConditionPhoto(id = "3", conditionId = "100", personId = "1", photoFileName = "photo3.jpg", thumbnailFileName = "thumb3.jpg", capturedAt = Instant.now(), caption = "キャプション3")
     )
 
     @Before
@@ -43,7 +43,7 @@ class ConditionPhotoFullScreenTest {
         uiState.value = PersonConditionUiState(currentConditionPhotos = testPhotos)
     }
 
-    private fun setContent(conditionId: Int = 100, initialPhotoId: Int = 1, onBack: () -> Unit = {}) {
+    private fun setContent(conditionId: String = "100", initialPhotoId: String = "1", onBack: () -> Unit = {}) {
         composeTestRule.setContent {
             CareMemoTheme {
                 ConditionPhotoFullScreen(
@@ -70,21 +70,21 @@ class ConditionPhotoFullScreenTest {
 
     @Test
     fun cp02_initial_display_id_consistency() {
-        setContent(initialPhotoId = 3)
+        setContent(initialPhotoId = "3")
         composeTestRule.onNodeWithTag("PhotoFullScreen_Image_3").assertIsDisplayed()
         composeTestRule.onNodeWithText("キャプション3").assertIsDisplayed()
     }
 
     @Test
     fun cp03_caption_display_when_exists() {
-        setContent(initialPhotoId = 1)
+        setContent(initialPhotoId = "1")
         composeTestRule.onNodeWithTag("PhotoFullScreen_Caption").assertIsDisplayed()
         composeTestRule.onNodeWithText("キャプション1").assertIsDisplayed()
     }
 
     @Test
     fun cp04_no_caption_display_when_empty() {
-        setContent(initialPhotoId = 2)
+        setContent(initialPhotoId = "2")
         composeTestRule.onNodeWithTag("PhotoFullScreen_Caption").assertDoesNotExist()
     }
 
@@ -101,7 +101,7 @@ class ConditionPhotoFullScreenTest {
 
     @Test
     fun bh01_swipe_switching_works() {
-        setContent(initialPhotoId = 1)
+        setContent(initialPhotoId = "1")
         
         // 標準的なスワイプ操作を実行
         composeTestRule.onNodeWithTag("PhotoFullScreen_Pager").performTouchInput {
@@ -114,7 +114,7 @@ class ConditionPhotoFullScreenTest {
 
     @Test
     fun bh02_double_tap_zoom_works() {
-        setContent(initialPhotoId = 1)
+        setContent(initialPhotoId = "1")
         val imageNode = composeTestRule.onNodeWithTag("PhotoFullScreen_Image_1")
         
         imageNode.performTouchInput {
@@ -131,7 +131,7 @@ class ConditionPhotoFullScreenTest {
 
     @Test
     fun bh03_swipe_disabled_during_zoom() {
-        setContent(initialPhotoId = 1)
+        setContent(initialPhotoId = "1")
         
         composeTestRule.onNodeWithTag("PhotoFullScreen_Image_1").performTouchInput {
             doubleClick()
@@ -155,7 +155,7 @@ class ConditionPhotoFullScreenTest {
 
     @Test
     fun bh05_pager_id_follow_up_updates_caption() {
-        setContent(initialPhotoId = 1)
+        setContent(initialPhotoId = "1")
         
         // 1枚目から2枚目へ (キャプションあり -> なし)
         composeTestRule.onNodeWithTag("PhotoFullScreen_Pager").performTouchInput {

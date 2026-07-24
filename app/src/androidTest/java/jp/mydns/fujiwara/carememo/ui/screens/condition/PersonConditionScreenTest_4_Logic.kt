@@ -43,7 +43,7 @@ class PersonConditionScreenTest_4_Logic {
     private val defaultRecorderName = MutableStateFlow("記録者A")
 
     private val testPerson = Person(
-        id = 1, lastName = "山田", firstName = "太郎",
+        id = "1", lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
@@ -64,18 +64,18 @@ class PersonConditionScreenTest_4_Logic {
 
         // 状態更新の stub
         every { conditionViewModel.setSelectedConditionId(any()) } answers {
-            val id = it.invocation.args[0] as Int?
+            val id = it.invocation.args[0] as String?
             conditionUiState.value = conditionUiState.value.copy(selectedConditionId = id)
         }
 
         // 基本的な状態の初期化
         detailUiState.value = PersonDetailUiState(
-            personId = 1,
+            personId = "1",
             person = testPerson
         )
         conditionUiState.value = PersonConditionUiState(
-            personId = 1,
-            records = listOf(ConditionAtVisit(id = 1, personId = 1, title = "A", condition = "B", author = "C", recordTime = Instant.now())),
+            personId = "1",
+            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now())),
             isLoading = false
         )
     }
@@ -86,7 +86,7 @@ class PersonConditionScreenTest_4_Logic {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    personId = 1,
+                    personId = "1",
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
                     onNavigateToCategory = {},

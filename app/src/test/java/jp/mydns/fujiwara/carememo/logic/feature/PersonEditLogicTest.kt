@@ -19,7 +19,7 @@ import java.time.ZoneOffset
 class PersonEditLogicTest {
 
     private val sampleInitialPerson = Person(
-        id = 10,
+        id = "10",
         lastName = "山田",
         firstName = "太郎",
         lastNameFurigana = "ヤマダ",
@@ -158,7 +158,7 @@ class PersonEditLogicTest {
     @Test
     fun crt_03_IDの維持() {
         val entity = PersonEditLogic.createPerson(sampleValidState, sampleInitialPerson)
-        assertEquals(10, entity.id) // initialPerson の ID 10 が維持されること
+        assertEquals("10", entity.id) // initialPerson の ID "10" が維持されること
     }
 
     @Test(expected = IllegalArgumentException::class)

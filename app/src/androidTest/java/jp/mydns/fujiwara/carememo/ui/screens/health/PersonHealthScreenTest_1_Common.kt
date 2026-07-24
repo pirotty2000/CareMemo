@@ -36,13 +36,13 @@ class PersonHealthScreenTest_1_Common {
     private lateinit var healthViewModel: PersonHealthViewModel
 
     private val testPerson = Person(
-        id = 1, lastName = "山田", firstName = "太郎",
+        id = "1", lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
 
-    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = 1))
-    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(personId = 1))
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = "1"))
+    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(personId = "1"))
 
     @Before
     fun setup() {
@@ -69,7 +69,7 @@ class PersonHealthScreenTest_1_Common {
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = onBack,
                     onNavigateToCategory = onNavigateToCategory,
-                    onNavigateToGraphExpansion = { _: Int, _: Category, _: Int -> }
+                    onNavigateToGraphExpansion = { _: String, _: Category, _: Int -> }
                 )
             }
         }

@@ -19,13 +19,13 @@ class PersonHealthLogicTest {
 
     @Test
     fun NEW_01_isNew_newRecord_returnsTrue() {
-        val record = HeightAndWeight(id = 0, personId = 1, height = 170.0, weight = 60.0, recordTime = now)
+        val record = HeightAndWeight(id = "", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
         assertTrue(PersonHealthLogic.isNew(record))
     }
 
     @Test
     fun NEW_02_isNew_existingRecord_returnsFalse() {
-        val record = HeightAndWeight(id = 100, personId = 1, height = 170.0, weight = 60.0, recordTime = now)
+        val record = HeightAndWeight(id = "100", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
         assertFalse(PersonHealthLogic.isNew(record))
     }
 
@@ -41,28 +41,28 @@ class PersonHealthLogicTest {
 
     @Test
     fun DUP_01_validateDuplicate_noExisting_returnsSuccess() {
-        val current = HeightAndWeight(id = 0, personId = 1, height = null, weight = null, recordTime = now)
+        val current = HeightAndWeight(id = "", personId = "1", height = null, weight = null, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, null))
     }
 
     @Test
     fun DUP_02_validateDuplicate_newRecordCollision_returnsDuplicate() {
-        val current = HeightAndWeight(id = 0, personId = 1, height = null, weight = null, recordTime = now)
-        val existing = HeightAndWeight(id = 1, personId = 1, height = null, weight = null, recordTime = now)
+        val current = HeightAndWeight(id = "", personId = "1", height = null, weight = null, recordTime = now)
+        val existing = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
         assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
     }
 
     @Test
     fun DUP_03_validateDuplicate_updateSameRecord_returnsSuccess() {
-        val current = HeightAndWeight(id = 1, personId = 1, height = null, weight = null, recordTime = now)
-        val existing = HeightAndWeight(id = 1, personId = 1, height = null, weight = null, recordTime = now)
+        val current = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
+        val existing = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, existing))
     }
 
     @Test
     fun DUP_04_validateDuplicate_updateDifferentRecordCollision_returnsDuplicate() {
-        val current = HeightAndWeight(id = 1, personId = 1, height = null, weight = null, recordTime = now)
-        val existing = HeightAndWeight(id = 2, personId = 1, height = null, weight = null, recordTime = now)
+        val current = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
+        val existing = HeightAndWeight(id = "2", personId = "1", height = null, weight = null, recordTime = now)
         assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
     }
 
@@ -72,25 +72,25 @@ class PersonHealthLogicTest {
 
     @Test
     fun VAL_01_validate_validHeightAndWeight_returnsSuccess() {
-        val record = HeightAndWeight(id = 0, personId = 1, height = 170.0, weight = 60.0, recordTime = now)
+        val record = HeightAndWeight(id = "", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
     }
 
     @Test
     fun VAL_02_validate_invalidHeight_returnsInvalidValue() {
-        val record = HeightAndWeight(id = 0, personId = 1, height = 300.0, weight = 60.0, recordTime = now)
+        val record = HeightAndWeight(id = "", personId = "1", height = 300.0, weight = 60.0, recordTime = now)
         assertEquals(HealthValidationResult.INVALID_VALUE, PersonHealthLogic.validate(record))
     }
 
     @Test
     fun VAL_03_validate_validBpAndPulse_returnsSuccess() {
-        val record = BpAndPulse(id = 0, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = now)
+        val record = BpAndPulse(id = "", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
     }
 
     @Test
     fun VAL_04_validate_validGlucoseAndHbA1c_returnsSuccess() {
-        val record = GlucoseAndHbA1c(id = 0, personId = 1, glucose = 100, hba1c = 5.5, recordTime = now)
+        val record = GlucoseAndHbA1c(id = "", personId = "1", glucose = 100, hba1c = 5.5, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
     }
 
@@ -103,8 +103,8 @@ class PersonHealthLogicTest {
         ) { _, method, _ ->
             when (method.name) {
                 "getRecordTime" -> null // recordTime プロパティのゲッター
-                "getId" -> 0
-                "getPersonId" -> 1
+                "getId" -> ""
+                "getPersonId" -> "1"
                 else -> null
             }
         } as HistoryRecord

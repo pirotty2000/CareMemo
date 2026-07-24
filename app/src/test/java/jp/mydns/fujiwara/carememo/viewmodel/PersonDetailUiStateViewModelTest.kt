@@ -41,7 +41,7 @@ class PersonDetailUiStateViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testPerson = Person(
-        id = 1,
+        id = "1",
         lastName = "詳細",
         firstName = "太郎",
         lastNameFurigana = "しょうさい",
@@ -70,7 +70,7 @@ class PersonDetailUiStateViewModelTest {
 
     @Test
     fun `loadPersonを実行したとき、指定したIDの利用者が取得できること`() = runTest(testDispatcher) {
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
 
         viewModel.uiState.test {
             assertEquals(testPerson, awaitItem().person)
@@ -90,7 +90,7 @@ class PersonDetailUiStateViewModelTest {
             throw RuntimeException("Load error")
         }
 
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
 
         assertEquals(false, viewModel.uiState.value.isLoading)
         coVerify {

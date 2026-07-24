@@ -18,8 +18,8 @@ class PersonConditionLogicTest {
     private val defaultAuthor = "記録者"
 
     private val sampleRecord = ConditionAtVisit(
-        id = 1,
-        personId = 1,
+        id = "1",
+        personId = "1",
         title = "タイトル",
         condition = "内容",
         author = "記録者",

@@ -12,8 +12,8 @@ class ConditionLogicTest {
 
     private val now = Instant.now()
     private val mockRecords = listOf(
-        ConditionAtVisit(id = 1, personId = 1, title = "朝の様子", condition = "元気です", author = "担当A", recordTime = now),
-        ConditionAtVisit(id = 2, personId = 1, title = "昼の訪問", condition = "test message", author = "担当B", recordTime = now.plusSeconds(3600))
+        ConditionAtVisit(id = "1", personId = "1", title = "朝の様子", condition = "元気です", author = "担当A", recordTime = now),
+        ConditionAtVisit(id = "2", personId = "1", title = "昼の訪問", condition = "test message", author = "担当B", recordTime = now.plusSeconds(3600))
     )
 
     // region 2. 検索フィルタリングテスト (filterRecords)
@@ -28,21 +28,21 @@ class ConditionLogicTest {
     fun FLT_02_filterRecords_titleMatch() {
         val result = ConditionLogic.filterRecords(mockRecords, "朝の様子")
         assertEquals(1, result.size)
-        assertEquals(1, result[0].id)
+        assertEquals("1", result[0].id)
     }
 
     @Test
     fun FLT_03_filterRecords_conditionMatch() {
         val result = ConditionLogic.filterRecords(mockRecords, "元気です")
         assertEquals(1, result.size)
-        assertEquals(1, result[0].id)
+        assertEquals("1", result[0].id)
     }
 
     @Test
     fun FLT_04_filterRecords_ignoreCase() {
         val result = ConditionLogic.filterRecords(mockRecords, "TEST")
         assertEquals(1, result.size)
-        assertEquals(2, result[0].id)
+        assertEquals("2", result[0].id)
     }
 
     @Test
@@ -57,28 +57,28 @@ class ConditionLogicTest {
 
     @Test
     fun DUP_01_validateDuplicate_newNoExisting() {
-        val current = ConditionAtVisit(id = 0, personId = 1, title = "", condition = "", author = "", recordTime = now)
+        val current = ConditionAtVisit(id = "", personId = "1", title = "", condition = "", author = "", recordTime = now)
         assertEquals(ConditionValidationResult.SUCCESS, ConditionLogic.validateDuplicate(current, null))
     }
 
     @Test
     fun DUP_02_validateDuplicate_newWithExisting() {
-        val current = ConditionAtVisit(id = 0, personId = 1, title = "", condition = "", author = "", recordTime = now)
-        val existing = ConditionAtVisit(id = 10, personId = 1, title = "", condition = "", author = "", recordTime = now)
+        val current = ConditionAtVisit(id = "", personId = "1", title = "", condition = "", author = "", recordTime = now)
+        val existing = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "", recordTime = now)
         assertEquals(ConditionValidationResult.DUPLICATE_TIME, ConditionLogic.validateDuplicate(current, existing))
     }
 
     @Test
     fun DUP_03_validateDuplicate_updateSame() {
-        val current = ConditionAtVisit(id = 10, personId = 1, title = "", condition = "", author = "", recordTime = now)
-        val existing = ConditionAtVisit(id = 10, personId = 1, title = "", condition = "", author = "", recordTime = now)
+        val current = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "", recordTime = now)
+        val existing = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "", recordTime = now)
         assertEquals(ConditionValidationResult.SUCCESS, ConditionLogic.validateDuplicate(current, existing))
     }
 
     @Test
     fun DUP_04_validateDuplicate_updateDifferent() {
-        val current = ConditionAtVisit(id = 10, personId = 1, title = "", condition = "", author = "", recordTime = now)
-        val existing = ConditionAtVisit(id = 20, personId = 1, title = "", condition = "", author = "", recordTime = now)
+        val current = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "", recordTime = now)
+        val existing = ConditionAtVisit(id = "20", personId = "1", title = "", condition = "", author = "", recordTime = now)
         assertEquals(ConditionValidationResult.DUPLICATE_TIME, ConditionLogic.validateDuplicate(current, existing))
     }
 

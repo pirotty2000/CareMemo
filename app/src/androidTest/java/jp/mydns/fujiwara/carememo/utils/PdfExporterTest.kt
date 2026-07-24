@@ -34,7 +34,7 @@ import java.time.Instant
 class PdfExporterTest {
     private lateinit var context: Context
     private val testPerson = Person(
-        id = 1,
+        id = "1",
         lastName = "テスト",
         firstName = "太郎",
         lastNameFurigana = "てすと",
@@ -63,7 +63,7 @@ class PdfExporterTest {
     fun PDF_01_exportAndShare_health_success() {
         runBlocking {
             val records = listOf(
-                BpAndPulse(personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+                BpAndPulse(personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
             )
             PdfExporter.exportAndShare(context, testPerson, Category.BP_AND_PULSE, records)
             
@@ -76,7 +76,7 @@ class PdfExporterTest {
     fun PDF_02_exportAndShare_condition_success() {
         runBlocking {
             val records = listOf(
-                ConditionAtVisit(personId = 1, title = "Title", condition = "Memo", author = "Author", recordTime = Instant.now())
+                ConditionAtVisit(personId = "1", title = "Title", condition = "Memo", author = "Author", recordTime = Instant.now())
             )
             PdfExporter.exportAndShare(context, testPerson, Category.CONDITION_AT_VISIT, records)
             
@@ -89,7 +89,7 @@ class PdfExporterTest {
     fun PDF_03_exportAndShare_medication_success() {
         runBlocking {
             val records = listOf(
-                MedicationRecord(personId = 1, dosageDate = "2023-10-01", timeSlot = 0, status = 2, recordTime = Instant.now())
+                MedicationRecord(personId = "1", dosageDate = "2023-10-01", timeSlot = 0, status = 2, recordTime = Instant.now())
             )
             PdfExporter.exportAndShare(context, testPerson, Category.MEDICATION, records)
             
@@ -104,8 +104,8 @@ class PdfExporterTest {
             val now = Instant.now()
             val old = now.minus(java.time.Duration.ofDays(60))
             val records = listOf(
-                BpAndPulse(personId = 1, bpSystolic = 120, recordTime = now),
-                BpAndPulse(personId = 1, bpSystolic = 110, recordTime = old)
+                BpAndPulse(personId = "1", bpSystolic = 120, recordTime = now),
+                BpAndPulse(personId = "1", bpSystolic = 110, recordTime = old)
             )
             PdfExporter.exportAndShare(context, testPerson, Category.BP_AND_PULSE, records, range = ExportRange.ONE_MONTH)
             
@@ -118,7 +118,7 @@ class PdfExporterTest {
     fun PDF_05_exportAndShare_password_protected() {
         runBlocking {
             val records = listOf(
-                BpAndPulse(personId = 1, bpSystolic = 120, recordTime = Instant.now())
+                BpAndPulse(personId = "1", bpSystolic = 120, recordTime = Instant.now())
             )
             PdfExporter.exportAndShare(context, testPerson, Category.BP_AND_PULSE, records, password = "password123")
             

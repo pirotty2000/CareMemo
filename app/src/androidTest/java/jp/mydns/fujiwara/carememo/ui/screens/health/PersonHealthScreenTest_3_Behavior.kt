@@ -36,21 +36,21 @@ class PersonHealthScreenTest_3_Behavior {
 
     private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
     private val testPerson = Person(
-        id = 1, lastName = "山田", firstName = "太郎",
+        id = "1", lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
     private val testRecords = listOf(
-        BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+        BpAndPulse(id = "1", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
     )
 
     private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(
         person = testPerson,
-        personId = 1,
+        personId = "1",
         currentCategory = Category.BP_AND_PULSE
     ))
     private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(
-        personId = 1,
+        personId = "1",
         records = emptyList()
     ))
 
@@ -73,7 +73,7 @@ class PersonHealthScreenTest_3_Behavior {
     }
 
     private fun setContent(
-        onNavigateToGraphExpansion: (Int, Category, Int) -> Unit = { _, _, _ -> }
+        onNavigateToGraphExpansion: (String, Category, Int) -> Unit = { _, _, _ -> }
     ) {
         composeTestRule.setContent {
             CareMemoTheme {
@@ -113,7 +113,7 @@ class PersonHealthScreenTest_3_Behavior {
 
     @Test
     fun bh02_graph_expansion_navigation() {
-        var expandedPersonId = -1
+        var expandedPersonId = ""
         var expandedCategory: Category? = null
         healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
         setContent(onNavigateToGraphExpansion = { pid, cat, _ ->
@@ -126,7 +126,7 @@ class PersonHealthScreenTest_3_Behavior {
         // 拡大表示アイコンをタップ
         composeTestRule.onAllNodesWithContentDescription("拡大表示").onFirst().performClick()
         
-        assert(expandedPersonId == 1)
+        assert(expandedPersonId == "1")
         assert(expandedCategory == Category.BP_AND_PULSE)
     }
 

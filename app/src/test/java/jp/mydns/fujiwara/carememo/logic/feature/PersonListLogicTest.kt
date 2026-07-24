@@ -78,9 +78,9 @@ class PersonListLogicTest {
     // region 2. リストフィルタリングテスト (filterPersons)
 
     private val testPersons = listOf(
-        Person(id = 1, lastName = "浅井", firstName = "太郎", lastNameFurigana = "あさい", firstNameFurigana = "たろう", birthday = defaultBirthday),
-        Person(id = 2, lastName = "加藤", firstName = "次郎", lastNameFurigana = "かとう", firstNameFurigana = "じろう", birthday = defaultBirthday),
-        Person(id = 3, lastName = "佐藤", firstName = "三郎", lastNameFurigana = "さとう", firstNameFurigana = "さぶろう", birthday = defaultBirthday)
+        Person(id = "1", lastName = "浅井", firstName = "太郎", lastNameFurigana = "あさい", firstNameFurigana = "たろう", birthday = defaultBirthday),
+        Person(id = "2", lastName = "加藤", firstName = "次郎", lastNameFurigana = "かとう", firstNameFurigana = "じろう", birthday = defaultBirthday),
+        Person(id = "3", lastName = "佐藤", firstName = "三郎", lastNameFurigana = "さとう", firstNameFurigana = "さぶろう", birthday = defaultBirthday)
     )
 
     @Test
@@ -98,17 +98,17 @@ class PersonListLogicTest {
 
     @Test
     fun FLT_03_filterPersons_search() {
-        val result = PersonListLogic.filterPersons(testPersons, "全", listOf(1, 3))
+        val result = PersonListLogic.filterPersons(testPersons, "全", listOf("1", "3"))
         assertEquals(2, result.size)
-        assertTrue(result.any { it.id == 1 })
-        assertTrue(result.any { it.id == 3 })
+        assertTrue(result.any { it.id == "1" })
+        assertTrue(result.any { it.id == "3" })
     }
 
     @Test
     fun FLT_04_filterPersons_combined() {
-        val result = PersonListLogic.filterPersons(testPersons, "あ", listOf(1, 10))
+        val result = PersonListLogic.filterPersons(testPersons, "あ", listOf("1", "10"))
         assertEquals(1, result.size)
-        assertEquals(1, result[0].id)
+        assertEquals("1", result[0].id)
     }
 
     @Test
@@ -123,7 +123,7 @@ class PersonListLogicTest {
 
     @Test
     fun UI_01_createPersonUiState_masking() {
-        val person = Person(id = 1, lastName = "田中", firstName = "太郎", lastNameFurigana = "たなか", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val person = Person(id = "1", lastName = "田中", firstName = "太郎", lastNameFurigana = "たなか", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val state = PersonListLogic.createPersonUiState(person, true, null)
         
         assertEquals("田○\u3000太○", state.maskedName)
@@ -132,7 +132,7 @@ class PersonListLogicTest {
 
     @Test
     fun UI_04_createPersonUiState_summary() {
-        val person = Person(id = 1, lastName = "田中", firstName = "太郎", lastNameFurigana = "たなか", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val person = Person(id = "1", lastName = "田中", firstName = "太郎", lastNameFurigana = "たなか", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val summary = PersonCategorySummary(hasHeightWeight = true)
         val state = PersonListLogic.createPersonUiState(person, false, summary)
         
@@ -142,7 +142,7 @@ class PersonListLogicTest {
 
     @Test
     fun UI_05_createPersonUiState_nullSummary() {
-        val person = Person(id = 1, lastName = "田中", firstName = "太郎", lastNameFurigana = "たなか", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val person = Person(id = "1", lastName = "田中", firstName = "太郎", lastNameFurigana = "たなか", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val state = PersonListLogic.createPersonUiState(person, false, null)
         
         assertNotNull(state.summary)
@@ -155,31 +155,31 @@ class PersonListLogicTest {
 
     @Test
     fun DUP_01_validateDuplicate_noDuplicate() {
-        val input = Person(id = 0, lastName = "新規", firstName = "太郎", lastNameFurigana = "しんき", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val input = Person(id = "", lastName = "新規", firstName = "太郎", lastNameFurigana = "しんき", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val result = PersonListLogic.validateDuplicate(input, null)
         assertEquals(PersonDuplicateResult.SUCCESS, result)
     }
 
     @Test
     fun DUP_02_validateDuplicate_active() {
-        val input = Person(id = 0, lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
-        val existing = Person(id = 1, lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday, deletedAt = null)
+        val input = Person(id = "", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val existing = Person(id = "1", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday, deletedAt = null)
         val result = PersonListLogic.validateDuplicate(input, existing)
         assertEquals(PersonDuplicateResult.DUPLICATE_ACTIVE, result)
     }
 
     @Test
     fun DUP_03_validateDuplicate_archived() {
-        val input = Person(id = 0, lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
-        val existing = Person(id = 1, lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday, deletedAt = 12345L)
+        val input = Person(id = "", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val existing = Person(id = "1", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday, deletedAt = 12345L)
         val result = PersonListLogic.validateDuplicate(input, existing)
         assertEquals(PersonDuplicateResult.DUPLICATE_ARCHIVED, result)
     }
 
     @Test
     fun DUP_04_validateDuplicate_selfUpdate() {
-        val input = Person(id = 1, lastName = "自分", firstName = "太郎", lastNameFurigana = "じぶん", firstNameFurigana = "たろう", birthday = defaultBirthday)
-        val existing = Person(id = 1, lastName = "自分", firstName = "太郎", lastNameFurigana = "じぶん", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val input = Person(id = "1", lastName = "自分", firstName = "太郎", lastNameFurigana = "じぶん", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val existing = Person(id = "1", lastName = "自分", firstName = "太郎", lastNameFurigana = "じぶん", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val result = PersonListLogic.validateDuplicate(input, existing)
         assertEquals(PersonDuplicateResult.SUCCESS, result)
     }

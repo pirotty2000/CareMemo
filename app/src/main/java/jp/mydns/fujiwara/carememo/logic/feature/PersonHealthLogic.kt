@@ -41,7 +41,7 @@ object PersonHealthLogic {
      * IDが空または初期値であれば新規とみなします。
      */
     fun isNew(record: Any?): Boolean {
-        val id = (record as? HistoryRecord)?.id ?: return true
+        val id = (record as? HistoryRecord)?.id ?: return false
         return id.isEmpty() || id == "0" // "0" は Int 時代からの移行用 ID
     }
 

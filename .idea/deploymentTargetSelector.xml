@@ -39,17 +39,6 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonConditionScreenTest_3_Behavior">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\pirotty.galaxy\.android\avd\TORQUE_G06_KYG03_2.avd" />
-            </handle>
-          </Target>
-        </DropdownSelection>
-        <DialogSelection />
-      </SelectionState>
       <SelectionState runConfigName="All Tests">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
@@ -61,7 +50,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="bh01_data_save_action()">
+      <SelectionState runConfigName="PersonHealthScreenTest_2_Component">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">
@@ -72,7 +61,18 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="PersonHealthScreenTest_2_Component">
+      <SelectionState runConfigName="AppMaintenanceRepositoryTest">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\pirotty.galaxy\.android\avd\TORQUE_G06_KYG03_2.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="ImageUtilsTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-13T21:18:49.190856200Z">
           <Target type="DEFAULT_BOOT">

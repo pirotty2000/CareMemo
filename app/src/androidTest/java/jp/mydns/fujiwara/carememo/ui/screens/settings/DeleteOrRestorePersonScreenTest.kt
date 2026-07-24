@@ -31,8 +31,8 @@ class DeleteOrRestorePersonScreenTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private val mockPersons = listOf(
-        Person(id = 1, lastName = "利用終了", firstName = "太郎", lastNameFurigana = "りようしゅうりょう", firstNameFurigana = "たろう", birthday = Instant.now()),
-        Person(id = 2, lastName = "アーカイブ", firstName = "次郎", lastNameFurigana = "あーかいぶ", firstNameFurigana = "じろう", birthday = Instant.now())
+        Person(id = "1", lastName = "利用終了", firstName = "太郎", lastNameFurigana = "りようしゅうりょう", firstNameFurigana = "たろう", birthday = Instant.now()),
+        Person(id = "2", lastName = "アーカイブ", firstName = "次郎", lastNameFurigana = "あーかいぶ", firstNameFurigana = "じろう", birthday = Instant.now())
     )
 
     private val uiStateFlow = MutableStateFlow(DeleteOrRestorePersonUiState())
@@ -109,7 +109,7 @@ class DeleteOrRestorePersonScreenTest {
     @Test
     fun cp03_veryLongName_doesNotBreakLayout() {
         val longNamePerson = Person(
-            id = 99, 
+            id = "99", 
             lastName = "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末食う寝る処に住む処", 
             firstName = "太郎", 
             lastNameFurigana = "じゅげむじゅげむ", 
@@ -144,7 +144,7 @@ class DeleteOrRestorePersonScreenTest {
     fun bh01_restoreOperation_showsConfirmDialog() {
         val viewModel = setupMockViewModel()
         // 項目1を選択済みにする
-        uiStateFlow.value = uiStateFlow.value.copy(selectedIds = setOf(1))
+        uiStateFlow.value = uiStateFlow.value.copy(selectedIds = setOf("1"))
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {
@@ -170,7 +170,7 @@ class DeleteOrRestorePersonScreenTest {
     @Test
     fun bh02_deleteOperation_showsWarningDialog() {
         val viewModel = setupMockViewModel()
-        uiStateFlow.value = uiStateFlow.value.copy(selectedIds = setOf(1), mode = DeleteOrRestorePersonViewModel.OperationMode.DELETE)
+        uiStateFlow.value = uiStateFlow.value.copy(selectedIds = setOf("1"), mode = DeleteOrRestorePersonViewModel.OperationMode.DELETE)
         val navController = mockk<NavController>(relaxed = true)
 
         composeTestRule.setContent {

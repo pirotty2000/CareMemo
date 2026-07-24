@@ -200,8 +200,8 @@ class AppMaintenanceRepository(
             
             // 存在しない personId = 'invalid-uuid' を使ってレコードを挿入
             db.execSQL(
-                "INSERT INTO bp_and_pulse_db (id, person_id, bp_systolic, bp_diastolic, sat, pulse, record_time, deleted_at) VALUES (?, ?, 120, 80, 98, 70, ?, NULL)",
-                arrayOf<Any>(UUID.randomUUID().toString(), "invalid-uuid", now),
+                "INSERT INTO bp_and_pulse_db (id, person_id, bp_systolic, bp_diastolic, sat, pulse, record_time, deleted_at, updated_at, is_synced) VALUES (?, ?, 120, 80, 98, 70, ?, NULL, ?, 0)",
+                arrayOf<Any>(UUID.randomUUID().toString(), "invalid-uuid", now, now),
             )
         } finally {
             // 制約を必ず元に戻す

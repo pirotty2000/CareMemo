@@ -85,7 +85,7 @@ class BatchInputLogicTest {
     @Test
     fun cp_01_体重と血圧を入力() {
         val state = BatchInputUiState(weight = "60.0", bpSystolic = "120")
-        val entities = BatchInputLogic.createEntities(1, Instant.now(), state)
+        val entities = BatchInputLogic.createEntities("1", Instant.now(), state)
         
         assertEquals(2, entities.size)
         assertTrue(entities.any { it is HeightAndWeight })
@@ -95,7 +95,7 @@ class BatchInputLogicTest {
     @Test
     fun cp_02_血糖値のみ入力() {
         val state = BatchInputUiState(glucose = "100")
-        val entities = BatchInputLogic.createEntities(1, Instant.now(), state)
+        val entities = BatchInputLogic.createEntities("1", Instant.now(), state)
         
         assertEquals(1, entities.size)
         assertTrue(entities[0] is GlucoseAndHbA1c)
@@ -104,7 +104,7 @@ class BatchInputLogicTest {
     @Test(expected = IllegalArgumentException::class)
     fun cp_03_不正な値を含む() {
         val state = BatchInputUiState(height = "abc")
-        BatchInputLogic.createEntities(1, Instant.now(), state)
+        BatchInputLogic.createEntities("1", Instant.now(), state)
     }
 
     // ======================================================================================

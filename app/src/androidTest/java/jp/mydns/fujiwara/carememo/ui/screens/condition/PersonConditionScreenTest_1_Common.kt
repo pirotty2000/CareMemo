@@ -25,7 +25,7 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * UI層テスト：PersonConditionScreen (共通コンポーネント)
+ * UI層テスト：PersonConditionScreen (1. 共通コンポーネント)
  */
 class PersonConditionScreenTest_1_Common {
 
@@ -36,13 +36,13 @@ class PersonConditionScreenTest_1_Common {
     private lateinit var conditionViewModel: PersonConditionViewModel
 
     private val testPerson = Person(
-        id = 1, lastName = "山田", firstName = "太郎",
+        id = "1", lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
 
-    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = 1))
-    private val conditionUiStateFlow = MutableStateFlow(PersonConditionUiState(personId = 1))
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = "1"))
+    private val conditionUiStateFlow = MutableStateFlow(PersonConditionUiState(personId = "1"))
 
     @Before
     fun setup() {
@@ -61,7 +61,7 @@ class PersonConditionScreenTest_1_Common {
 
         // 状態更新の stub
         every { conditionViewModel.setSelectedConditionId(any()) } answers {
-            val id = it.invocation.args[0] as Int?
+            val id = it.invocation.args[0] as String?
             conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = id)
         }
     }
@@ -72,7 +72,7 @@ class PersonConditionScreenTest_1_Common {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    personId = 1,
+                    personId = "1",
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = onBack,
                     onNavigateToCategory = onNavigateToCategory,

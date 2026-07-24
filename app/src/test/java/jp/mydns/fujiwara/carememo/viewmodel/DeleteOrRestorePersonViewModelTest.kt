@@ -41,7 +41,7 @@ class DeleteOrRestorePersonViewModelTest {
     private lateinit var viewModel: DeleteOrRestorePersonViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    private val testPerson = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now())
+    private val testPerson = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = Instant.now())
 
     @Before
     fun setup() {
@@ -69,8 +69,8 @@ class DeleteOrRestorePersonViewModelTest {
 
     @Test
     fun setMode_clearsSelection() = runTest(testDispatcher) {
-        viewModel.toggleSelection(1)
-        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+        viewModel.toggleSelection("1")
+        assertEquals(setOf("1"), viewModel.uiState.value.selectedIds)
 
         viewModel.setMode(DeleteOrRestorePersonViewModel.OperationMode.DELETE)
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
@@ -79,17 +79,17 @@ class DeleteOrRestorePersonViewModelTest {
 
     @Test
     fun toggleSelection_updatesSelectedIds() = runTest(testDispatcher) {
-        viewModel.toggleSelection(1)
-        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+        viewModel.toggleSelection("1")
+        assertEquals(setOf("1"), viewModel.uiState.value.selectedIds)
 
-        viewModel.toggleSelection(1)
+        viewModel.toggleSelection("1")
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
     }
 
     @Test
     fun selectAll_clearSelection_updatesState() = runTest(testDispatcher) {
         viewModel.selectAll(listOf(testPerson))
-        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+        assertEquals(setOf("1"), viewModel.uiState.value.selectedIds)
 
         viewModel.clearSelection()
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
@@ -98,7 +98,7 @@ class DeleteOrRestorePersonViewModelTest {
     @Test
     fun lg_01_restoreFailure_safety() = runTest(testDispatcher) {
         coEvery { repository.restorePerson(any(), any(), any()) } throws RuntimeException("Restore Error")
-        viewModel.toggleSelection(1)
+        viewModel.toggleSelection("1")
 
         viewModel.restoreSelectedPersons(listOf(testPerson))
 
@@ -130,8 +130,8 @@ class DeleteOrRestorePersonViewModelTest {
 
     @Test
     fun lg_03_atomicClearSelection() = runTest(testDispatcher) {
-        viewModel.toggleSelection(1)
-        assertEquals(setOf(1), viewModel.uiState.value.selectedIds)
+        viewModel.toggleSelection("1")
+        assertEquals(setOf("1"), viewModel.uiState.value.selectedIds)
 
         viewModel.clearSelection()
         assertTrue(viewModel.uiState.value.selectedIds.isEmpty())

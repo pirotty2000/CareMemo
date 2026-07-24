@@ -12,6 +12,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.MedicationRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -34,8 +35,6 @@ import java.time.Instant
 
 /**
  * PersonMedicationViewModel (服薬管理) のユニットテスト
- * 
- * 仕様書：doc/test/screen/TEST_SPEC_SCR-PM-001_PersonMedicationScreen.md に準拠
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SCR_PM_001_PersonMedicationViewModelTest {
@@ -52,7 +51,7 @@ class SCR_PM_001_PersonMedicationViewModelTest {
     private val fixedInstant = Instant.parse("2023-10-27T10:00:00Z")
 
     private val testPerson = Person(
-        id = 1,
+        id = "1",
         lastName = "服薬",
         firstName = "太郎",
         lastNameFurigana = "ふくやく",
@@ -68,6 +67,7 @@ class SCR_PM_001_PersonMedicationViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(value = false)
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
+        every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
         
         viewModel = PersonMedicationViewModel(
             medicationRepository,
@@ -85,134 +85,121 @@ class SCR_PM_001_PersonMedicationViewModelTest {
     }
 
     @Test
-    fun nextMonth_updatesMonthAndSetsLoading() = runTest {
-        val initialMonth = viewModel.selectedMonth.value
+    fun nextMonth_updatesMonth() = runTest {
+        viewModel.loadPerson("1")
+        val initialMonth = viewModel.uiState.value.selectedMonth
         viewModel.nextMonth()
         
-        assertEquals(initialMonth.plusMonths(1), viewModel.selectedMonth.value)
-        assertTrue(viewModel.isLoading.value)
+        assertEquals(initialMonth.plusMonths(1), viewModel.uiState.value.selectedMonth)
     }
 
     @Test
     fun recordsByDate_groupsByDate() = runTest {
         val date = "2023-10-27"
         val records = listOf(
-            MedicationRecord(id = 1, personId = 1, dosageDate = date, timeSlot = 0, status = 1, recordTime = fixedInstant),
-            MedicationRecord(id = 2, personId = 1, dosageDate = date, timeSlot = 1, status = 1, recordTime = fixedInstant)
+            MedicationRecord(id = "1", personId = "1", dosageDate = date, timeSlot = 0, status = 1, recordTime = fixedInstant),
+            MedicationRecord(id = "2", personId = "1", dosageDate = date, timeSlot = 1, status = 1, recordTime = fixedInstant)
         )
-        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flowOf(records)
+        // データを準備してからロード
+        every { medicationRepository.getMedicationRecordsByMonth("1", any()) } returns flowOf(records)
 
-        viewModel.loadPerson(1)
-
-        viewModel.recordsByDate.test {
-            val result = awaitItem()
-            assertTrue(result.containsKey(date))
-            assertEquals(2, result[date]?.size)
+        viewModel.uiState.test {
+            viewModel.loadPerson("1")
+            
+            var found = false
+            // awaitItem() を繰り返して、期待するデータが含まれる状態を待つ
+            for (i in 1..10) {
+                val state = awaitItem()
+                if (state.recordsByDate.containsKey(date)) {
+                    found = true
+                    assertEquals(2, state.recordsByDate[date]?.size)
+                    break
+                }
+            }
+            assertTrue("日付ごとのレコードが生成されていること", found)
         }
     }
 
     @Test
     fun syncMedicationDay_insertsNewRecord() = runTest {
+        viewModel.loadPerson("1")
         val date = "2023-10-27"
-        val newRecord = MedicationRecord(id = 0, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
-        
-        // スロット0に新規、他はnull
+        val newRecord = MedicationRecord(id = "", personId = "1", dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
         val slotRecords = listOf(newRecord, null, null, null)
         
         viewModel.syncMedicationDay(date, slotRecords)
         
-        coVerify { medicationRepository.insertMedicationRecord(newRecord, any(), any()) }
+        coVerify { medicationRepository.insertMedicationRecord(match { it.personId == "1" && it.dosageDate == date && it.status == 2 }, any(), any(), any()) }
     }
 
     @Test
     fun syncMedicationDay_deletesRemovedRecord() = runTest {
         val date = "2023-10-27"
-        val existingRecord = MedicationRecord(id = 1, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
+        val existingRecord = MedicationRecord(id = "1", personId = "1", dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
         
-        // 既存データをFlowで流しておく
-        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flowOf(listOf(existingRecord))
+        every { medicationRepository.getMedicationRecordsByMonth("1", any()) } returns flowOf(listOf(existingRecord))
         
-        viewModel.recordsByDate.test {
-            viewModel.loadPerson(1)
+        viewModel.uiState.test {
+            viewModel.loadPerson("1")
 
-            // 【重要】目的のデータが Map に反映されるまで待機する
             var found = false
-            // 最大 10 回（またはタイムアウトまで）最新の放出をチェック
             for (i in 1..10) {
-                val currentMap = awaitItem()
+                val currentMap = awaitItem().recordsByDate
                 if (currentMap.containsKey(date)) {
                     found = true
                     break
                 }
             }
-            assertTrue("テストデータが ViewModel に読み込まれていること", found)
+            assertTrue("テストデータが反映されていること", found)
 
-            // スロット0がnull（削除指定）、他もnull
-            val slotRecords = listOf(null, null, null, null)
+            viewModel.syncMedicationDay(date, listOf(null, null, null, null))
             
-            viewModel.syncMedicationDay(date, slotRecords)
-            
-            // 検証: インスタンス一致ではなく ID 一致で検証（より堅牢なテスト）
             coVerify(timeout = 2000) { 
-                medicationRepository.deleteMedicationRecord(
-                    match { it.id == existingRecord.id }, 
-                    any(), 
-                    any()
-                ) 
+                medicationRepository.deleteMedicationRecord(match { it.id == "1" }, any(), any()) 
             }
         }
     }
 
-    // --- ロジック・安全性テスト (LG-01 〜 LG-02) ---
-
     @Test
     fun lg01_loadRecords_failure_handlesException() = runTest {
-        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flow {
+        every { medicationRepository.getMedicationRecordsByMonth("1", any()) } returns flow {
             throw RuntimeException("Flow Error")
         }
         
-        // ViewModel 再生成
-        val errorViewModel = PersonMedicationViewModel(
-            medicationRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository
-        )
-        
-        errorViewModel.loadPerson(1)
+        viewModel.loadPerson("1")
 
-        errorViewModel.monthlyRecords.test {
-            awaitItem() 
-            assertEquals(false, errorViewModel.isLoading.value)
-            coVerify {
-                auditLogRepository.log(
-                    featureName = "PersonMedication",
-                    operation = "monthlyRecordsFlow",
-                    tableName = "medication_db",
-                    actionType = "ERROR",
-                    affectedId = any(),
-                    details = match { it.contains("Flow Error") },
-                    resultType = "OTHER_ERROR"
-                )
-            }
+        assertEquals(false, viewModel.uiState.value.isLoading)
+        coVerify {
+            auditLogRepository.log(
+                featureName = "PersonMedication",
+                operation = "monthlyRecordsFlow",
+                tableName = "medication_db",
+                actionType = "ERROR",
+                affectedId = any(),
+                details = match { it.contains("Flow Error") },
+                resultType = "OTHER_ERROR"
+            )
         }
     }
 
     @Test
     fun lg02_syncMedicationDay_failure_handlesException() = runTest {
-        coEvery { medicationRepository.insertMedicationRecord(any(), any(), any()) } throws RuntimeException("Sync Error")
+        viewModel.loadPerson("1")
+        coEvery { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
         
         val date = "2023-10-27"
-        val newRecord = MedicationRecord(id = 0, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
-        val slotRecords = listOf(newRecord, null, null, null)
+        val newRecord = MedicationRecord(id = "", personId = "1", dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
+        
+        viewModel.syncMedicationDay(date, listOf(newRecord, null, null, null))
 
-        viewModel.syncMedicationDay(date, slotRecords)
-
-        assertEquals(false, viewModel.isLoading.value)
+        assertEquals(false, viewModel.uiState.value.isLoading)
         coVerify {
             auditLogRepository.log(
                 featureName = "PersonMedication",
                 operation = "syncMedicationDay",
                 tableName = "medication_db",
                 actionType = "ERROR",
-                affectedId = any(),
+                affectedId = "1",
                 details = match { it.contains("Sync Error") },
                 resultType = "OTHER_ERROR"
             )

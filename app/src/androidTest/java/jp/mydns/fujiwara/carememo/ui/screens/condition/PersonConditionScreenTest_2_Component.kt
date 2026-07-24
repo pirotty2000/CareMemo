@@ -37,16 +37,16 @@ class PersonConditionScreenTest_2_Component {
     private lateinit var conditionViewModel: PersonConditionViewModel
 
     private val testPerson = Person(
-        id = 1, lastName = "山田", firstName = "太郎",
+        id = "1", lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
     private val testRecords = listOf(
-        ConditionAtVisit(id = 1, personId = 1, title = "記録", condition = "内容", author = "A", recordTime = Instant.now())
+        ConditionAtVisit(id = "1", personId = "1", title = "記録", condition = "内容", author = "A", recordTime = Instant.now())
     )
 
-    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = 1))
-    private val conditionUiStateFlow = MutableStateFlow(PersonConditionUiState(personId = 1))
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = "1"))
+    private val conditionUiStateFlow = MutableStateFlow(PersonConditionUiState(personId = "1"))
 
     @Before
     fun setup() {
@@ -65,7 +65,7 @@ class PersonConditionScreenTest_2_Component {
 
         // 状態更新の stub
         every { conditionViewModel.setSelectedConditionId(any()) } answers {
-            val id = it.invocation.args[0] as Int?
+            val id = it.invocation.args[0] as String?
             conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = id)
         }
     }
@@ -76,7 +76,7 @@ class PersonConditionScreenTest_2_Component {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    personId = 1,
+                    personId = "1",
                     widthSizeClass = widthSizeClass,
                     onBack = {},
                     onNavigateToCategory = {},
@@ -97,8 +97,8 @@ class PersonConditionScreenTest_2_Component {
 
     @Test
     fun cp06_search_box_updates_viewmodel() {
-        // 一覧画面が表示されるように、selectedConditionId を明示的に -1 にする
-        conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = -1)
+        // 一覧画面が表示されるように、selectedConditionId を明示的に "" にする
+        conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = "")
         setContent()
         
         // 検索ボックスを特定して入力する

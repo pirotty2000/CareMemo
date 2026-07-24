@@ -26,12 +26,12 @@ class PersonRepositoryTest {
 
     @Test
     fun `insertPersonを実行したとき、DAOのinsertとログ出力が行われること`() = runTest {
-        val person = Person(id = 0, lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
-        coEvery { personDao.insert(person) } returns 1L
+        val person = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
+        coEvery { personDao.insert(any()) } returns 1L
 
         repository.insertPerson(person, "画面", "登録")
 
-        coVerify { personDao.insert(person) }
+        coVerify { personDao.insert(match { it.id == "1" && it.lastName == "山田" }) }
         coVerify {
             auditLogRepository.log(
                 featureName = "画面",
@@ -47,11 +47,11 @@ class PersonRepositoryTest {
 
     @Test
     fun `updatePersonを実行したとき、DAOのupdateとログ出力が行われること`() = runTest {
-        val person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
+        val person = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
 
         repository.updatePerson(person, "画面", "更新")
 
-        coVerify { personDao.update(person) }
+        coVerify { personDao.update(match { it.id == "1" && it.lastName == "山田" }) }
         coVerify {
             auditLogRepository.log(
                 featureName = "画面",

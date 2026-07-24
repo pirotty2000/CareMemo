@@ -40,7 +40,7 @@ class GraphExpansionScreenTest {
     private lateinit var healthViewModel: PersonHealthViewModel
 
     private val mockPerson = Person(
-        id = 1, 
+        id = "1", 
         lastName = "山田", 
         firstName = "太郎", 
         lastNameFurigana = "ヤマダ", 
@@ -51,12 +51,12 @@ class GraphExpansionScreenTest {
     private val baseTime = Instant.parse("2023-10-01T10:00:00Z")
 
     private val mockRecords = listOf(
-        BpAndPulse(id = 1, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = baseTime),
-        BpAndPulse(id = 2, personId = 1, bpSystolic = 130, bpDiastolic = 85, pulse = 75, recordTime = baseTime.plus(1, ChronoUnit.DAYS))
+        BpAndPulse(id = "1", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = baseTime),
+        BpAndPulse(id = "2", personId = "1", bpSystolic = 130, bpDiastolic = 85, pulse = 75, recordTime = baseTime.plus(1, ChronoUnit.DAYS))
     )
 
-    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = mockPerson, personId = 1, currentCategory = Category.BP_AND_PULSE))
-    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(personId = 1))
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = mockPerson, personId = "1", currentCategory = Category.BP_AND_PULSE))
+    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(personId = "1"))
     private val recordsFlow = MutableStateFlow<List<HistoryRecord>>(emptyList())
 
     @Before
@@ -81,7 +81,7 @@ class GraphExpansionScreenTest {
                     GraphExpansionScreen(
                         detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
-                        personId = 1,
+                        personId = "1",
                         category = category,
                         initialGraphIndex = initialIndex,
                         onBack = onBack

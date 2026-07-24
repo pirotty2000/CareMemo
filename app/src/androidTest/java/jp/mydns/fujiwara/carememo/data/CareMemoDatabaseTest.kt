@@ -60,7 +60,9 @@ class CareMemoDatabaseTest {
     @Test
     fun 外部キー制約_利用者を物理削除したら紐付く記録も自動で消えること() = runBlocking {
         // 1. 利用者作成
-        val personId = personDao.insert(createTestPerson()).toInt()
+        val person = createTestPerson()
+        personDao.insert(person)
+        val personId = person.id
 
         // 2. 紐付く記録を作成
         val now = Instant.now().truncatedTo(ChronoUnit.MINUTES)
@@ -77,7 +79,9 @@ class CareMemoDatabaseTest {
 
     @Test
     fun 一意制約_同じ利用者の同じ日時の記録は重複せず上書きされること() = runBlocking {
-        val personId = personDao.insert(createTestPerson()).toInt()
+        val person = createTestPerson()
+        personDao.insert(person)
+        val personId = person.id
         val sameTime = Instant.now().truncatedTo(ChronoUnit.MINUTES)
 
         // 1回目の挿入
@@ -94,7 +98,9 @@ class CareMemoDatabaseTest {
 
     @Test
     fun 服薬記録の一意制約_同じ日同じ時間枠は重複せず上書きされること() = runBlocking {
-        val personId = personDao.insert(createTestPerson()).toInt()
+        val person = createTestPerson()
+        personDao.insert(person)
+        val personId = person.id
         val date = "2023-10-27"
         val slot = 0 // 朝
 
@@ -111,7 +117,9 @@ class CareMemoDatabaseTest {
 
     @Test
     fun サマリー集計_論理削除された記録はカウントに含まれないこと() = runBlocking {
-        val personId = personDao.insert(createTestPerson()).toInt()
+        val person = createTestPerson()
+        personDao.insert(person)
+        val personId = person.id
         val now = Instant.now()
 
         // 1. 記録を挿入
@@ -160,8 +168,13 @@ class CareMemoDatabaseTest {
 
     @Test
     fun 写真の外部キー制約_所見メモを物理削除したら紐付く写真データも自動で消えること() = runBlocking {
-        val personId = personDao.insert(createTestPerson()).toInt()
-        val conditionId = conditionDao.insert(ConditionAtVisit(personId = personId, title = "T", condition = "C", author = "A", recordTime = Instant.now())).toInt()
+        val person = createTestPerson()
+        personDao.insert(person)
+        val personId = person.id
+
+        val condition = ConditionAtVisit(personId = personId, title = "T", condition = "C", author = "A", recordTime = Instant.now())
+        conditionDao.insert(condition)
+        val conditionId = condition.id
         
         val photoDao = db.conditionPhotoDao()
         photoDao.insert(ConditionPhoto(conditionId = conditionId, personId = personId, photoFileName = "p.jpg", thumbnailFileName = "t.jpg", capturedAt = Instant.now()))
@@ -175,7 +188,10 @@ class CareMemoDatabaseTest {
 
     @Test
     fun カスケード論理削除_利用者を論理削除したときに関連レコードも全て論理削除されること() = runBlocking {
-        val personId = personDao.insert(createTestPerson()).toInt()
+        val person = createTestPerson()
+        personDao.insert(person)
+        val personId = person.id
+        
         val now = Instant.now()
         hwDao.insert(HeightAndWeight(personId = personId, height = 170.0, recordTime = now))
         medicationDao.insert(MedicationRecord(personId = personId, dosageDate = "2023-10-27", timeSlot = 0, status = 2, recordTime = now))
@@ -189,8 +205,8 @@ class CareMemoDatabaseTest {
         repo.logicalDeletePerson(personId, "Test", "Delete")
 
         // 各テーブルで deleted_at がセットされていることを確認
-        val person = personDao.getDeletedPersons().first().find { it.id == personId }
-        assertNotNull("利用者が論理削除されていること", person?.deletedAt)
+        val personResult = personDao.getDeletedPersons().first().find { it.id == personId }
+        assertNotNull("利用者が論理削除されていること", personResult?.deletedAt)
 
         val hw = hwDao.getAllRaw().find { it.personId == personId }
         assertNotNull("身長体重が論理削除されていること", hw?.deletedAt)

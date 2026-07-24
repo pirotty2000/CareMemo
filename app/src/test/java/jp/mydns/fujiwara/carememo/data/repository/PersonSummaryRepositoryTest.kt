@@ -42,7 +42,7 @@ class PersonSummaryRepositoryTest {
 
     @Test
     fun `getPersonCategorySummaryByIdを実行したとき、各DAOの記録有無が統合されること`() = runTest {
-        val personId = 1
+        val personId = "1"
         every { heightAndWeightDao.hasDataForPerson(personId) } returns flowOf(true)
         every { bpAndPulseDao.hasDataForPerson(personId) } returns flowOf(false)
         every { glucoseAndHbA1cDao.hasDataForPerson(personId) } returns flowOf(true)

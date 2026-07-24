@@ -67,28 +67,28 @@ class PersonLifecycleTest {
     @Test
     fun `loadPersonを呼んだ瞬間、現在の状態が即座にクリアされること`() = runTest {
         val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        val person1 = Person(id = 1, lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
+        val person1 = Person(id = "1", lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         // 1. 一人目をロード完了させる
-        every { personRepository.getPersonById(1) } returns flowOf(person1)
-        viewModel.loadPerson(1)
+        every { personRepository.getPersonById("1") } returns flowOf(person1)
+        viewModel.loadPerson("1")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(1, viewModel.uiState.value.personId)
+        assertEquals("1", viewModel.uiState.value.personId)
 
         // 2. 二人目をロード開始する（レスポンスは遅延させる）
-        every { personRepository.getPersonById(2) } returns flow {
+        every { personRepository.getPersonById("2") } returns flow {
             delay(1000.milliseconds)
-            emit(Person(id = 2, lastName = "二人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
+            emit(Person(id = "2", lastName = "二人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
         
-        viewModel.loadPerson(2)
+        viewModel.loadPerson("2")
         
         // 【重要】非同期処理が完了する前（0ms時点）で、状態がnullになっている必要がある
         assertNull("ロード開始直後に状態がクリアされていること", viewModel.uiState.value.personId)
         
         // 時間を進めれば二人目がセットされる
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(2, viewModel.uiState.value.personId)
+        assertEquals("2", viewModel.uiState.value.personId)
     }
 
     @Test
@@ -96,26 +96,26 @@ class PersonLifecycleTest {
         val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
 
         // ID:1 は 2000ms かかる
-        every { personRepository.getPersonById(1) } returns flow {
+        every { personRepository.getPersonById("1") } returns flow {
             delay(2000.milliseconds)
-            emit(Person(id = 1, lastName = "遅い", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
+            emit(Person(id = "1", lastName = "遅い", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
         // ID:2 は 500ms かかる
-        every { personRepository.getPersonById(2) } returns flow {
+        every { personRepository.getPersonById("2") } returns flow {
             delay(500.milliseconds)
-            emit(Person(id = 2, lastName = "速い", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
+            emit(Person(id = "2", lastName = "速い", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
 
         // ID:1 を開始し、すぐに ID:2 に切り替える
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         advanceTimeBy(100.milliseconds)
-        viewModel.loadPerson(2)
+        viewModel.loadPerson("2")
 
         // 全ての処理が終わるまで時間を進める
         testDispatcher.scheduler.advanceUntilIdle()
 
         // 結果として ID:2 が残っていること。ID:1 で上書きされていないこと。
-        assertEquals(2, viewModel.uiState.value.personId)
+        assertEquals("2", viewModel.uiState.value.personId)
         assertEquals("速い", viewModel.uiState.value.person?.lastName)
     }
 
@@ -124,18 +124,18 @@ class PersonLifecycleTest {
         val viewModel = PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         
         // ID:1 で検索クエリを入力済み
-        every { personRepository.getPersonById(1) } returns flowOf(Person(id = 1, lastName = "A", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
-        viewModel.loadPerson(1)
+        every { personRepository.getPersonById("1") } returns flowOf(Person(id = "1", lastName = "A", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
+        viewModel.loadPerson("1")
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.updateSearchQuery("検索ワード")
         assertEquals("検索ワード", viewModel.uiState.value.searchQuery)
 
         // ID:2 に切り替え（データロード前）
-        every { personRepository.getPersonById(2) } returns flow {
+        every { personRepository.getPersonById("2") } returns flow {
             delay(1000.milliseconds)
-            emit(Person(id = 2, lastName = "B", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
+            emit(Person(id = "2", lastName = "B", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))
         }
-        viewModel.loadPerson(2)
+        viewModel.loadPerson("2")
 
         // 【重要】データのロード完了を待たずして、クエリがリセットされていること
         assertEquals("", viewModel.uiState.value.searchQuery)
@@ -144,19 +144,19 @@ class PersonLifecycleTest {
     @Test
     fun `同じIDで再度loadPersonを呼んだ場合、リロードやクリアが発生しないこと`() = runTest {
         val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        val person1 = Person(id = 1, lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
+        val person1 = Person(id = "1", lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
-        every { personRepository.getPersonById(1) } returns flowOf(person1)
+        every { personRepository.getPersonById("1") } returns flowOf(person1)
         
         // 初回ロード
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(1, viewModel.uiState.value.personId)
+        assertEquals("1", viewModel.uiState.value.personId)
 
         // 同じIDで再度ロード（もしリロードされるなら一瞬 null になるはず）
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         
         // null にならず、即座に値が維持されていること
-        assertEquals(1, viewModel.uiState.value.personId)
+        assertEquals("1", viewModel.uiState.value.personId)
     }
 }

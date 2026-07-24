@@ -120,7 +120,7 @@ object HealthLogic {
         val g = glucose ?: return null to HealthAlertLevel.NORMAL
         val spec = AppSpecifications.Health.BloodGlucose
         return when {
-            g > spec.THRESHOLD_HIGH -> GlucoseStatus.HIGH to HealthAlertLevel.ALERT
+            g >= spec.THRESHOLD_HIGH -> GlucoseStatus.HIGH to HealthAlertLevel.ALERT
             g >= spec.THRESHOLD_NORMAL_UPPER -> GlucoseStatus.WARNING to HealthAlertLevel.WARNING
             g >= spec.THRESHOLD_LOW -> GlucoseStatus.NORMAL to HealthAlertLevel.NORMAL
             else -> GlucoseStatus.LOW to HealthAlertLevel.ALERT

@@ -51,10 +51,10 @@ class AppMaintenanceRepositoryTest {
     @Test
     fun バックアップと復元_全てのデータとリレーションが完全に維持されること() = runBlocking {
         // 1. テストデータの作成
-        val person = Person(id = 1, lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
+        val person = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
         personDao.insert(person)
         
-        val hw = HeightAndWeight(personId = 1, height = 170.0, recordTime = Instant.now())
+        val hw = HeightAndWeight(personId = "1", height = 170.0, recordTime = Instant.now())
         db.heightAndWeightDao().insert(hw)
 
         // 2. バックアップ取得
@@ -74,7 +74,10 @@ class AppMaintenanceRepositoryTest {
         assertEquals(1, restoredPersons.size)
         assertEquals("山田", restoredPersons[0].lastName)
         
-        val restoredHw = db.heightAndWeightDao().getByPersonId(1).first()
+        // 注意: replaceAllData は内部で ID を振り直すため、ID "1" での取得はできない可能性がある。
+        // ここでは復元された利用者の新しい ID を取得して検索する。
+        val restoredPersonId = restoredPersons[0].id
+        val restoredHw = db.heightAndWeightDao().getByPersonId(restoredPersonId).first()
         assertEquals(1, restoredHw.size)
         assertEquals(170.0, restoredHw[0].height!!, 0.0)
     }

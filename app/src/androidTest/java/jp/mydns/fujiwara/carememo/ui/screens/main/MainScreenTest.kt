@@ -26,7 +26,7 @@ class MainScreenTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     // ヘルパー：モック利用者の作成
-    private fun createMockPerson(id: Int, lastName: String, firstName: String, note: String = ""): Person {
+    private fun createMockPerson(id: String, lastName: String, firstName: String, note: String = ""): Person {
         return Person(
             id = id,
             lastName = lastName,
@@ -107,7 +107,7 @@ class MainScreenTest {
 
     @Test
     fun cp03_userList_isDisplayed() {
-        val person = createMockPerson(1, "山田", "太郎")
+        val person = createMockPerson("1", "山田", "太郎")
         val mockUserList = listOf(createMockUiState(person, "山田　太郎"))
         
         composeTestRule.setContent {
@@ -136,7 +136,7 @@ class MainScreenTest {
 
     @Test
     fun cp04_nameMasking_isApplied() {
-        val person = createMockPerson(1, "山田", "太郎")
+        val person = createMockPerson("1", "山田", "太郎")
         val mockUserList = listOf(createMockUiState(person, "山○　太○"))
         
         composeTestRule.setContent {
@@ -164,7 +164,7 @@ class MainScreenTest {
 
     @Test
     fun cp05_recordBadges_areDisplayed() {
-        val person = createMockPerson(1, "山田", "太郎")
+        val person = createMockPerson("1", "山田", "太郎")
         val mockUserList = listOf(
             createMockUiState(person, "山田").copy(
                 summary = PersonCategorySummary(hasBpAndPulse = true, hasCondition = true, hasMedication = true)
@@ -223,7 +223,7 @@ class MainScreenTest {
     @Test
     fun cp07_veryLongName_doesNotBreakLayout() {
         val longName = "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末食う寝る処に住む処"
-        val person = createMockPerson(1, longName, "太郎")
+        val person = createMockPerson("1", longName, "太郎")
         val mockUserList = listOf(createMockUiState(person, longName))
         
         composeTestRule.setContent {
@@ -334,8 +334,8 @@ class MainScreenTest {
 
     @Test
     fun bh04_userMenu_edit_navigation() {
-        var editPersonId: Int? = null
-        val person = createMockPerson(99, "山田", "太郎")
+        var editPersonId: String? = null
+        val person = createMockPerson("99", "山田", "太郎")
         
         composeTestRule.setContent {
             CareMemoTheme {
@@ -351,13 +351,13 @@ class MainScreenTest {
         }
         composeTestRule.onNodeWithTag("UserListItem_MenuButton").performClick()
         composeTestRule.onNodeWithTag("UserListItem_MenuItem_Edit").performClick()
-        assert(editPersonId == 99)
+        assert(editPersonId == "99")
     }
 
     @Test
     fun bh05_endUser_isCalled() {
         var endUserCalled = false
-        val person = createMockPerson(1, "山田", "太郎")
+        val person = createMockPerson("1", "山田", "太郎")
         
         composeTestRule.setContent {
             CareMemoTheme {
@@ -399,7 +399,7 @@ class MainScreenTest {
     @Test
     fun bh07_detailNavigation_withCorrectId() {
         var clickedPerson: Person? = null
-        val person = createMockPerson(123, "山田", "太郎")
+        val person = createMockPerson("123", "山田", "太郎")
         
         composeTestRule.setContent {
             CareMemoTheme {
@@ -414,7 +414,7 @@ class MainScreenTest {
             }
         }
         composeTestRule.onNodeWithTag("UserListItem_123").performClick()
-        assert(clickedPerson?.id == 123)
+        assert(clickedPerson?.id == "123")
     }
 
     @Test
@@ -468,8 +468,8 @@ class MainScreenTest {
 
     @Test
     fun bh11_listReflectsChanges() {
-        val person = createMockPerson(1, "山田", "更新後")
-        val updatedUserList = listOf(createMockUiState(person, "山田　更新後"))
+        val person = createMockPerson("1", "山田", "更新後")
+        val updatedUserList = listOf(createMockUiState(person, "山田\u3000更新後"))
         
         composeTestRule.setContent {
             CareMemoTheme {

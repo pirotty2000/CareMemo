@@ -43,7 +43,7 @@ class PersonMedicationViewModelTest {
     private val fixedInstant = Instant.parse("2023-10-27T10:00:00Z")
 
     private val testPerson = Person(
-        id = 1, lastName = "服薬", firstName = "太郎",
+        id = "1", lastName = "服薬", firstName = "太郎",
         lastNameFurigana = "ふくやく", firstNameFurigana = "たろう",
         birthday = fixedInstant
     )
@@ -83,7 +83,7 @@ class PersonMedicationViewModelTest {
             throw RuntimeException("Flow Error")
         }
         
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
 
         // isLoading が false に戻ること
         assertEquals(false, viewModel.uiState.value.isLoading)
@@ -102,12 +102,12 @@ class PersonMedicationViewModelTest {
 
     @Test
     fun lg_02_保存失敗時の安全性() = runTest {
-        coEvery { medicationRepository.insertMedicationRecord(any(), any(), any()) } throws RuntimeException("Sync Error")
+        coEvery { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
         
         val date = "2023-10-27"
-        val record = MedicationRecord(id = 0, personId = 1, dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
+        val record = MedicationRecord(id = "", personId = "1", dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
 
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.syncMedicationDay(date, listOf(record, null, null, null))
@@ -132,13 +132,13 @@ class PersonMedicationViewModelTest {
         val initialMonth = YearMonth.now()
         val nextMonth = initialMonth.plusMonths(1)
         
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         
         // 月を次へ
         viewModel.nextMonth()
         
         // 即座に UiState の月が更新され、該当月のリポジトリが呼ばれていること
         assertEquals(nextMonth, viewModel.uiState.value.selectedMonth)
-        verify { medicationRepository.getMedicationRecordsByMonth(1, nextMonth.toString()) }
+        verify { medicationRepository.getMedicationRecordsByMonth("1", nextMonth.toString()) }
     }
 }

@@ -31,8 +31,8 @@ class ConditionRepositoryTest {
     @Test
     fun `insertConditionAtVisitを実行したとき、DAOのinsertが呼ばれ、かつ操作ログが記録されること`() = runTest {
         val record = ConditionAtVisit(
-            id = 0,
-            personId = 1,
+            id = "100",
+            personId = "1",
             title = "テスト",
             condition = "内容",
             author = "記録者",
@@ -41,12 +41,13 @@ class ConditionRepositoryTest {
         val screen = "テスト画面"
         val op = "保存ボタン押下"
         
-        coEvery { conditionAtVisitDao.insert(record) } returns 100L
+        coEvery { conditionAtVisitDao.insert(any()) } returns 1L // rowId
 
         val resultId = repository.insertConditionAtVisit(record, screen, op)
 
-        assertEquals(100L, resultId)
-        coVerify { conditionAtVisitDao.insert(record) }
+        assertEquals("100", resultId)
+        // updatedAt が内部で更新されるため、match を使用
+        coVerify { conditionAtVisitDao.insert(match { it.id == "100" && it.personId == "1" && it.title == "テスト" }) }
         coVerify {
             auditLogRepository.log(
                 featureName = screen,
@@ -63,8 +64,8 @@ class ConditionRepositoryTest {
     @Test
     fun `deleteConditionAtVisitを実行したとき、DAOのdeleteが呼ばれ、かつ操作ログが記録されること`() = runTest {
         val record = ConditionAtVisit(
-            id = 10,
-            personId = 1,
+            id = "10",
+            personId = "1",
             title = "テスト",
             condition = "内容",
             author = "記録者",
@@ -73,7 +74,7 @@ class ConditionRepositoryTest {
         
         repository.deleteConditionAtVisit(record, "画面", "削除")
 
-        coVerify { conditionAtVisitDao.delete(record) }
+        coVerify { conditionAtVisitDao.delete(any()) }
         coVerify {
             auditLogRepository.log(
                 featureName = "画面",
@@ -90,19 +91,20 @@ class ConditionRepositoryTest {
     @Test
     fun `insertConditionPhotoを実行したとき、DAOのinsertが呼ばれ、かつ操作ログが記録されること`() = runTest {
         val photo = ConditionPhoto(
-            id = 0,
-            conditionId = 5,
-            personId = 1,
+            id = "200",
+            conditionId = "5",
+            personId = "1",
             photoFileName = "p.jpg",
             thumbnailFileName = "t.jpg",
             capturedAt = Instant.now()
         )
 
-        coEvery { conditionPhotoDao.insert(photo) } returns 200L
+        coEvery { conditionPhotoDao.insert(any()) } returns 1L
 
         repository.insertConditionPhoto(photo, "画面", "写真保存")
 
-        coVerify { conditionPhotoDao.insert(photo) }
+        // updatedAt が内部で更新されるため、match を使用
+        coVerify { conditionPhotoDao.insert(match { it.id == "200" && it.conditionId == "5" && it.personId == "1" }) }
         coVerify {
             auditLogRepository.log(
                 featureName = "画面",

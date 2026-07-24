@@ -38,13 +38,13 @@ class PersonConditionScreenTest_3_Behavior {
 
     private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
     private val testPerson = Person(
-        id = 1, lastName = "山田", firstName = "太郎",
+        id = "1", lastName = "山田", firstName = "太郎",
         lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
 
-    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = 1))
-    private val conditionUiStateFlow = MutableStateFlow(PersonConditionUiState(personId = 1))
+    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = testPerson, personId = "1"))
+    private val conditionUiStateFlow = MutableStateFlow(PersonConditionUiState(personId = "1"))
 
     @Before
     fun setup() {
@@ -63,7 +63,7 @@ class PersonConditionScreenTest_3_Behavior {
 
         // 状態更新の stub
         every { conditionViewModel.setSelectedConditionId(any()) } answers {
-            val id = it.invocation.args[0] as Int?
+            val id = it.invocation.args[0] as String?
             conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = id)
         }
     }
@@ -74,7 +74,7 @@ class PersonConditionScreenTest_3_Behavior {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    personId = 1,
+                    personId = "1",
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
                     onNavigateToCategory = {},
@@ -88,17 +88,17 @@ class PersonConditionScreenTest_3_Behavior {
 
     @Test
     fun bh01_save_action_calls_viewmodel() {
-        // 一覧画面が表示されるように、selectedConditionId を明示的に -1 にする
+        // 一覧画面が表示されるように、selectedConditionId を明示的に "" にする
         conditionUiStateFlow.value = conditionUiStateFlow.value.copy(
-            selectedConditionId = -1,
-            records = listOf(ConditionAtVisit(id = 1, personId = 1, title = "A", condition = "B", author = "C", recordTime = Instant.now()))
+            selectedConditionId = "",
+            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now()))
         )
         setContent()
 
         // 新規追加ボタン（FAB）
         composeTestRule.onNodeWithContentDescription("新規追加", substring = true).performClick()
         
-        // FABをクリックした結果、selectedConditionId が 0 になり、編集フォームが表示されることを待機
+        // FABをクリックした結果、selectedConditionId が "0" になり、編集フォームが表示されることを待機
         composeTestRule.waitForIdle()
 
         // メモ入力欄を特定して入力する

@@ -50,7 +50,7 @@ class PersonListViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testPerson = Person(
-        id = 1,
+        id = "1",
         lastName = "テスト",
         firstName = "太郎",
         lastNameFurigana = "てすと",

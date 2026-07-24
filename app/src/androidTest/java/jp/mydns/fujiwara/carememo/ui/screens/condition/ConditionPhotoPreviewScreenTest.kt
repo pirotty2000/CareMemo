@@ -49,13 +49,13 @@ class ConditionPhotoPreviewScreenTest {
 
         detailUiState.value = PersonDetailUiState(
             person = Person(
-                id = 1, lastName = "山田", firstName = "太郎",
+                id = "1", lastName = "山田", firstName = "太郎",
                 lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
                 birthday = Instant.parse("1950-01-01T00:00:00Z")
             )
         )
         conditionUiState.value = PersonConditionUiState(
-            personId = 1,
+            personId = "1",
             errorMessage = null,
             isProcessing = false
         )
@@ -68,8 +68,8 @@ class ConditionPhotoPreviewScreenTest {
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
                     uri = mockUri,
-                    personId = 1,
-                    conditionId = 100,
+                    personId = "1",
+                    conditionId = "100",
                     onBack = onBack,
                     onSaved = onSaved
                 )
@@ -130,7 +130,7 @@ class ConditionPhotoPreviewScreenTest {
         composeTestRule.onNodeWithTag("PhotoPreview_SaveButton").performClick()
         
         verify { 
-            conditionViewModel.processAndSavePhoto(any(), eq(mockUri), eq(1), eq(100), any()) 
+            conditionViewModel.processAndSavePhoto(any(), eq(mockUri), eq("1"), eq("100"), any())
         }
         assert(savedCalled)
     }

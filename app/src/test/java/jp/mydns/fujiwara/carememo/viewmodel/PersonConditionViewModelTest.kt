@@ -44,14 +44,14 @@ class PersonConditionViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private val testPerson = Person(
-        id = 1, lastName = "記録", firstName = "太郎",
+        id = "1", lastName = "記録", firstName = "太郎",
         lastNameFurigana = "きろく", firstNameFurigana = "たろう",
         birthday = Instant.now()
     )
 
     private val testRecords = listOf(
-        ConditionAtVisit(id = 1, personId = 1, title = "朝の様子", condition = "元気です", author = "記録者", recordTime = Instant.now()),
-        ConditionAtVisit(id = 2, personId = 1, title = "昼の様子", condition = "眠そう", author = "記録者", recordTime = Instant.now())
+        ConditionAtVisit(id = "1", personId = "1", title = "朝の様子", condition = "元気です", author = "記録者", recordTime = Instant.now()),
+        ConditionAtVisit(id = "2", personId = "1", title = "昼の様子", condition = "眠そう", author = "記録者", recordTime = Instant.now())
     )
 
     @Before
@@ -85,7 +85,7 @@ class PersonConditionViewModelTest {
     fun lg_01_データロード失敗時の安全性() = runTest {
         every { conditionRepository.getConditionAtVisitByPersonId(any()) } returns flow { throw RuntimeException("Flow Error") }
 
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         advanceUntilIdle()
 
         // isLoading が false に戻ること
@@ -105,9 +105,9 @@ class PersonConditionViewModelTest {
 
     @Test
     fun lg_02_保存失敗時の安全性() = runTest {
-        coEvery { conditionRepository.insertConditionAtVisit(any(), any(), any()) } throws RuntimeException("Save Error")
+        coEvery { conditionRepository.insertConditionAtVisit(any(), any(), any(), any()) } throws RuntimeException("Save Error")
 
-        viewModel.saveRecord(1, 0, "タイトル", "内容", "著者", Instant.now())
+        viewModel.saveRecord("1", "0", "タイトル", "内容", "著者", Instant.now())
         advanceUntilIdle()
 
         // isLoading (loadingStateProxy経由) が false に戻ること
@@ -127,7 +127,7 @@ class PersonConditionViewModelTest {
 
     @Test
     fun lg_03_検索と連動した原子性() = runTest {
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         advanceUntilIdle()
 
         // 初期状態で2件
@@ -145,7 +145,7 @@ class PersonConditionViewModelTest {
 
     @Test
     fun lg_04_写真データの連動() = runTest {
-        val conditionId = 100
+        val conditionId = "100"
         val mockPhotos = listOf(mockk<ConditionPhoto>())
         every { conditionRepository.getConditionPhotosByConditionId(conditionId) } returns flowOf(mockPhotos)
 

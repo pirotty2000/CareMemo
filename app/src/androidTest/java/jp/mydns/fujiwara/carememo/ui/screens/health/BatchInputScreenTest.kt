@@ -34,9 +34,9 @@ class BatchInputScreenTest {
     private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
     private val viewEventFlow = MutableSharedFlow<BatchInputViewEvent>(extraBufferCapacity = 1)
     private val uiStateFlow = MutableStateFlow(BatchInputUiState(
-        personId = 1,
+        personId = "1",
         person = jp.mydns.fujiwara.carememo.data.Person(
-            id = 1, lastName = "山田", firstName = "太郎",
+            id = "1", lastName = "山田", firstName = "太郎",
             lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
             birthday = Instant.now()
         ),
@@ -124,7 +124,7 @@ class BatchInputScreenTest {
 
     @Test
     fun bh01_save_operation_calls_viewmodel() {
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = true, personId = 1) // personId も必要
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = true, personId = "1") // personId も必要
         setContent()
 
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().performClick()

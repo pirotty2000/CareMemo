@@ -54,7 +54,7 @@ class MedicationLogicTest {
     fun SYN_01_determineSyncActions_insert() {
         val current = emptyList<MedicationRecord>()
         val input = listOf(
-            MedicationRecord(id = 0, personId = 1, dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now),
+            MedicationRecord(id = "", personId = "1", dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now),
             null, null, null
         )
         
@@ -67,10 +67,10 @@ class MedicationLogicTest {
     @Test
     fun SYN_02_determineSyncActions_update() {
         val current = listOf(
-            MedicationRecord(id = 10, personId = 1, dosageDate = "2023-11-01", timeSlot = 0, status = 1, recordTime = now)
+            MedicationRecord(id = "10", personId = "1", dosageDate = "2023-11-01", timeSlot = 0, status = 1, recordTime = now)
         )
         val input = listOf(
-            MedicationRecord(id = 10, personId = 1, dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now),
+            MedicationRecord(id = "10", personId = "1", dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now),
             null, null, null
         )
         
@@ -81,7 +81,7 @@ class MedicationLogicTest {
     @Test
     fun SYN_03_determineSyncActions_delete() {
         val current = listOf(
-            MedicationRecord(id = 10, personId = 1, dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now)
+            MedicationRecord(id = "10", personId = "1", dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now)
         )
         val input = listOf(null, null, null, null)
         
@@ -92,10 +92,10 @@ class MedicationLogicTest {
     @Test
     fun SYN_04_determineSyncActions_none() {
         val current = listOf(
-            MedicationRecord(id = 10, personId = 1, dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now)
+            MedicationRecord(id = "10", personId = "1", dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now)
         )
         val input = listOf(
-            MedicationRecord(id = 10, personId = 1, dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now),
+            MedicationRecord(id = "10", personId = "1", dosageDate = "2023-11-01", timeSlot = 0, status = 2, recordTime = now),
             null, null, null
         )
         
@@ -109,19 +109,19 @@ class MedicationLogicTest {
 
     @Test
     fun VAL_01_validateMedication_success() {
-        val record = MedicationRecord(personId = 1, dosageDate = "2023-10-27", timeSlot = 0, status = 1, recordTime = now)
+        val record = MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 0, status = 1, recordTime = now)
         assertEquals(MedicationValidationResult.SUCCESS, MedicationLogic.validateMedication(record, LocalDate.of(2023, 10, 27)))
     }
 
     @Test
     fun VAL_02_validateMedication_future() {
-        val record = MedicationRecord(personId = 1, dosageDate = "2023-10-28", timeSlot = 0, status = 1, recordTime = now)
+        val record = MedicationRecord(personId = "1", dosageDate = "2023-10-28", timeSlot = 0, status = 1, recordTime = now)
         assertEquals(MedicationValidationResult.FUTURE_DATE_NOT_ALLOWED, MedicationLogic.validateMedication(record, LocalDate.of(2023, 10, 27)))
     }
 
     @Test
     fun VAL_03_validateMedication_invalidStatus() {
-        val record = MedicationRecord(personId = 1, dosageDate = "2023-10-27", timeSlot = 0, status = 9, recordTime = now)
+        val record = MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 0, status = 9, recordTime = now)
         assertEquals(MedicationValidationResult.INVALID_STATUS, MedicationLogic.validateMedication(record))
     }
 

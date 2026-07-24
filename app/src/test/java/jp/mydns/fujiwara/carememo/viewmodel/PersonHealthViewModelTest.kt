@@ -35,7 +35,7 @@ class PersonHealthViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testPerson = Person(
-        id = 1, lastName = "健康", firstName = "太郎",
+        id = "1", lastName = "健康", firstName = "太郎",
         lastNameFurigana = "ケンコウ", firstNameFurigana = "タロウ",
         birthday = Instant.now()
     )
@@ -79,7 +79,7 @@ class PersonHealthViewModelTest {
             throw RuntimeException("Load Failure")
         }
 
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         viewModel.setCategory(Category.BP_AND_PULSE)
 
         // 状態の変化を監視
@@ -104,9 +104,10 @@ class PersonHealthViewModelTest {
 
     @Test
     fun lg02_save_failure_safety() = runTest {
-        viewModel.loadPerson(1)
-        val record = BpAndPulse(id = 0, personId = 1, bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
-        coEvery { healthRepository.insertBpAndPulse(any(), any(), any()) } throws RuntimeException("Save Failure")
+        viewModel.loadPerson("1")
+        // 新規レコード (id="")
+        val record = BpAndPulse(id = "", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+        coEvery { healthRepository.insertBpAndPulse(any(), any(), any(), any()) } throws RuntimeException("Save Failure")
 
         viewModel.saveRecord(record)
         
@@ -120,7 +121,7 @@ class PersonHealthViewModelTest {
                 operation = "saveRecord",
                 tableName = "health_db",
                 actionType = "ERROR",
-                affectedId = "0",
+                affectedId = "", // id="" が渡されるはず
                 details = match { it.contains("Save Failure") },
                 resultType = "OTHER_ERROR"
             ) 
@@ -129,13 +130,13 @@ class PersonHealthViewModelTest {
 
     @Test
     fun lg04_atomicity_category_switch() = runTest {
-        viewModel.loadPerson(1)
+        viewModel.loadPerson("1")
         advanceUntilIdle()
 
         // カテゴリを切り替えた際、リポジトリが呼ばれていること
         viewModel.setCategory(Category.GLUCOSE_AND_HBA1C)
         advanceUntilIdle()
         
-        verify { healthRepository.getGlucoseAndHbA1cByPersonId(1) }
+        verify { healthRepository.getGlucoseAndHbA1cByPersonId("1") }
     }
 }
