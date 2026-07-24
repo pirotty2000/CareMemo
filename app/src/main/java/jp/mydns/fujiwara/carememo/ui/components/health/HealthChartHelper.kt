@@ -197,7 +197,6 @@ object HealthChartHelper {
 
         return when (index) {
             0 -> { // 血圧
-                val spec = AppSpecifications.Health.BloodPressure
                 val graph = AppSpecifications.Health.BloodPressure.Graph
                 val sysPoints = sortedData.filter { it.bpSystolic != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(it.bpSystolic, null, null, null, null)
@@ -231,7 +230,6 @@ object HealthChartHelper {
                 )
             }
             1 -> { // 酸素飽和度(SAT)
-                val spec = AppSpecifications.Health.OxygenSaturation
                 val graph = AppSpecifications.Health.OxygenSaturation.Graph
                 val satPoints = sortedData.filter { it.sat != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(null, null, it.sat, null, null)
@@ -254,7 +252,6 @@ object HealthChartHelper {
                 )
             }
             2 -> { // 脈拍
-                val spec = AppSpecifications.Health.Pulse
                 val graph = AppSpecifications.Health.Pulse.Graph
                 val pulsePoints = sortedData.filter { it.pulse != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(null, null, null, it.pulse, null)
@@ -277,7 +274,6 @@ object HealthChartHelper {
                 )
             }
             3 -> { // 体温
-                val spec = AppSpecifications.Health.BodyTemperature
                 val graph = AppSpecifications.Health.BodyTemperature.Graph
                 val tempPoints = sortedData.filter { it.bodyTemperature != null }.map { 
                     val status = HealthLogic.evaluateVitalItems(null, null, null, null, it.bodyTemperature)
@@ -308,7 +304,6 @@ object HealthChartHelper {
         
         return when (index) {
             0 -> { // 血糖値
-                val spec = AppSpecifications.Health.BloodGlucose
                 val graph = AppSpecifications.Health.BloodGlucose.Graph
                 val glucoses = sortedData.mapNotNull { it.glucose?.toDouble() }
                 val glucosePoints = sortedData.filter { it.glucose != null }.map { 
@@ -333,7 +328,6 @@ object HealthChartHelper {
                 )
             }
             1 -> { // HbA1c
-                val spec = AppSpecifications.Health.HbA1c
                 val graph = AppSpecifications.Health.HbA1c.Graph
                 val hba1cs = sortedData.mapNotNull { it.hba1c }
                 val hba1cPoints = sortedData.filter { it.hba1c != null }.map { 
@@ -388,7 +382,6 @@ object HealthChartHelper {
                 )
             }
             1 -> { // BMI
-                val spec = AppSpecifications.Health.BodyMassIndex
                 val graph = AppSpecifications.Health.BodyMassIndex.Graph
                 val bmis = sortedData.map { it.calculateBMI() }.filter { it > 0.0 }
                 val bmiPoints = sortedData.map { 

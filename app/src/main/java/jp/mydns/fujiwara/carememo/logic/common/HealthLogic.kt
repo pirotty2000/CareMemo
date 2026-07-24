@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
-import java.time.Instant
 import kotlin.math.pow
 
 /**

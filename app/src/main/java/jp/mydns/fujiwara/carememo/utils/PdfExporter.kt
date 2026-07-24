@@ -294,7 +294,9 @@ object PdfExporter {
         val labelWidth = AppSpecifications.Export.Pdf.TableConfig.Medication.LABEL_WIDTH
         val colWidth = (layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN * 2 - labelWidth) / 31f
         val rowHeight = AppSpecifications.Export.Pdf.TableConfig.Medication.ROW_HEIGHT
-        val tableHeight = rowHeight * 6 + 40f
+        val slotCount = AppSpecifications.Medication.TimeSlot.COUNT
+        val totalRows = 2 + slotCount
+        val tableHeight = rowHeight * totalRows + 40f
 
         recordsByMonth.forEach { (yearMonth, monthRecords) ->
             pageContext.ensureSpace(tableHeight)
@@ -314,17 +316,17 @@ object PdfExporter {
                 val date = yearMonth.atDay(day)
                 if (date.dayOfWeek == java.time.DayOfWeek.SUNDAY || date.dayOfWeek == java.time.DayOfWeek.SATURDAY) {
                     val x = startX + labelWidth + (day - 1) * colWidth
-                    pageContext.canvas.drawRect(RectF(x, tableTop, x + colWidth, tableTop + rowHeight * 6), if (date.dayOfWeek == java.time.DayOfWeek.SUNDAY) sunBg else satBg)
+                    pageContext.canvas.drawRect(RectF(x, tableTop, x + colWidth, tableTop + rowHeight * totalRows), if (date.dayOfWeek == java.time.DayOfWeek.SUNDAY) sunBg else satBg)
                 }
             }
 
             // グリッド
-            for (i in 0..6) pageContext.canvas.drawLine(startX, tableTop + i * rowHeight, startX + labelWidth + colWidth * daysInMonth, tableTop + i * rowHeight, linePaint)
-            pageContext.canvas.drawLine(startX, tableTop, startX, tableTop + rowHeight * 6, linePaint)
-            pageContext.canvas.drawLine(startX + labelWidth, tableTop, startX + labelWidth, tableTop + rowHeight * 6, linePaint)
+            for (i in 0..totalRows) pageContext.canvas.drawLine(startX, tableTop + i * rowHeight, startX + labelWidth + colWidth * daysInMonth, tableTop + i * rowHeight, linePaint)
+            pageContext.canvas.drawLine(startX, tableTop, startX, tableTop + rowHeight * totalRows, linePaint)
+            pageContext.canvas.drawLine(startX + labelWidth, tableTop, startX + labelWidth, tableTop + rowHeight * totalRows, linePaint)
             for (i in 1..daysInMonth) {
                 val x = startX + labelWidth + i * colWidth
-                pageContext.canvas.drawLine(x, tableTop, x, tableTop + rowHeight * 6, linePaint)
+                pageContext.canvas.drawLine(x, tableTop, x, tableTop + rowHeight * totalRows, linePaint)
             }
 
             // 日付・曜日
@@ -357,7 +359,7 @@ object PdfExporter {
                     pageContext.canvas.drawText(mark, x, y + rowHeight * 0.7f, statusPaints[rec?.status] ?: bodyPaint)
                 }
             }
-            pageContext.currentY += rowHeight * 6 + 30f
+            pageContext.currentY += rowHeight * totalRows + 30f
         }
     }
 

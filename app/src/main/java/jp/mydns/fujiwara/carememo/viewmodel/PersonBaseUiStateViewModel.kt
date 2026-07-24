@@ -89,10 +89,6 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
      */
     protected abstract fun getPersonId(state: S): Int?
 
-    /**
-     * UiState から現在のカテゴリを抽出します。
-     */
-    protected fun getCurrentCategory(state: S): Category? = state.currentCategory
 
     /**
      * ロードした利用者データを UiState に反映した新しい状態を返します。

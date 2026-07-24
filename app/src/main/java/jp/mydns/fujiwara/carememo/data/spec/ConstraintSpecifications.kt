@@ -20,10 +20,6 @@ object ConstraintSpecifications {
             const val MAX_LENGTH_NOTE = 255
         }
 
-        /** コンポーネントの構造や見た目に関する制約 (components) */
-        object Layout {
-            const val MAX_DISPLAY_NOTE_LINES = 2
-        }
     }
 
     /** 所見メモ (Condition) */

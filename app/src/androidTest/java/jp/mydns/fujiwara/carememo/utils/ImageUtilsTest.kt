@@ -61,7 +61,6 @@ class ImageUtilsTest {
         assertTrue(File(ImageUtils.getPhotosDirPublic(context), result.first).exists())
         assertTrue(File(ImageUtils.getPhotosDirPublic(context), result.second).exists())
         dummyFile.delete()
-        Unit
     }
 
     @Test
@@ -86,7 +85,6 @@ class ImageUtilsTest {
         assertTrue("Width should be smaller than height after 90 degree rotation correction", options.outWidth < options.outHeight)
         
         dummyFile.delete()
-        Unit
     }
 
     @Test
@@ -108,7 +106,6 @@ class ImageUtilsTest {
         assertTrue("Saved height should be <= MAX_SIZE_KB", options.outHeight <= maxSpec)
         
         dummyFile.delete()
-        Unit
     }
 
     @Test
@@ -117,7 +114,6 @@ class ImageUtilsTest {
         assertThrows(IOException::class.java) {
             runBlocking { ImageUtils.processAndSaveImage(context, invalidUri) }
         }
-        Unit
     }
 
     @Test
@@ -136,7 +132,6 @@ class ImageUtilsTest {
 
         photosDir.delete()
         dummyFile.delete()
-        Unit
     }
 
     // --- 3.2. File Operations ---
@@ -155,7 +150,6 @@ class ImageUtilsTest {
 
         assertFalse(photoFile.exists())
         assertFalse(thumbFile.exists())
-        Unit
     }
 
     @Test
@@ -169,7 +163,6 @@ class ImageUtilsTest {
             runBlocking { ImageUtils.deleteImageFiles(context, "non_empty_dir", null) }
         }
         dir.deleteRecursively()
-        Unit
     }
 
     @Test
@@ -180,7 +173,6 @@ class ImageUtilsTest {
         ImageUtils.clearPhotosDir(context)
 
         assertEquals(0, photosDir.listFiles()?.size ?: 0)
-        Unit
     }
 
     @Test
@@ -194,7 +186,6 @@ class ImageUtilsTest {
             runBlocking { ImageUtils.clearPhotosDir(context) }
         }
         subDir.deleteRecursively()
-        Unit
     }
 
     // --- 3.3. Temp File Management ---
@@ -226,7 +217,6 @@ class ImageUtilsTest {
         assertFalse(oldFile.exists())
         assertTrue(newFile.exists())
         newFile.delete()
-        Unit
     }
 
     // Helper
