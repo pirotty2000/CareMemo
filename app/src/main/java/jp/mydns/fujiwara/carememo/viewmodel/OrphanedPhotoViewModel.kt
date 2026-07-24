@@ -22,7 +22,9 @@ data class OrphanedPhotoUiState(
 class OrphanedPhotoViewModel(
     userSettingsRepository: UserSettingsRepository,
     private val conditionRepository: ConditionRepository,
-    @SuppressLint("StaticFieldLeak") private val context: Context // アプリケーションコンテキストを想定
+    @param:SuppressLint("StaticFieldLeak")
+    @field:SuppressLint("StaticFieldLeak")
+    private val context: Context, // アプリケーションコンテキストを想定
 ) : BaseUiStateViewModel<OrphanedPhotoUiState, Unit>(userSettingsRepository, OrphanedPhotoUiState()) {
 
     override val featureName: String = "OrphanedPhotoManagement"

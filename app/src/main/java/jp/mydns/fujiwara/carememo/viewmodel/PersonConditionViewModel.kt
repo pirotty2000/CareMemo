@@ -34,13 +34,15 @@ class PersonConditionViewModel(
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
-    @SuppressLint("StaticFieldLeak") private val context: Context // アプリケーションコンテキストを想定
+    @param:SuppressLint("StaticFieldLeak")
+    @field:SuppressLint("StaticFieldLeak")
+    private val context: Context, // アプリケーションコンテキストを想定
 ) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
     auditLogRepository,
-    PersonConditionUiState()
+    PersonConditionUiState(),
 ) {
 
     companion object {
@@ -72,7 +74,7 @@ class PersonConditionViewModel(
     override fun updateWithPersonData(
         state: PersonConditionUiState,
         person: Person,
-        summary: PersonCategorySummary?
+        summary: PersonCategorySummary?,
     ): PersonConditionUiState {
         val next = state.copy(personId = person.id)
         refreshRecords(next)
@@ -129,12 +131,12 @@ class PersonConditionViewModel(
             // (A) personIdが一致しているDB孤立レコード
             // (B) 物理ファイルのみでDBレコードがないもの
             val adoptableOrphans = allOrphaned.filter { 
-                it.personId == personId || it.type == jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoType.FILE_ONLY 
+                (it.personId == personId) || (it.type == jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoType.FILE_ONLY) 
             }
 
             updateUiState { current ->
-                val map = current.records.associate { memo ->
-                    memo.id to photos.any { it.conditionId == memo.id }
+                val map = current.records.associateBy({ it.id }) { memo ->
+                    photos.any { it.conditionId == memo.id }
                 }
                 current.copy(
                     conditionPhotoMap = map, 
@@ -213,7 +215,7 @@ class PersonConditionViewModel(
             val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE, isUpdate)
             
             if (!isUpdate) {
-                conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId, featureName, "${OP_SAVE}(link)")
+                conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId, featureName, "$OP_SAVE(link)")
             }
 
             showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
@@ -266,7 +268,7 @@ class PersonConditionViewModel(
      * 選択された迷子写真を現在のレコードに紐付けます。
      */
     fun reattachOrphanedPhoto(personId: String, conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
-        if (conditionId.isEmpty() || conditionId == "0") return
+        if ((conditionId.isEmpty()) || (conditionId == "0")) return
 
         safeLaunch(
             operation = "reattachOrphanedPhoto",
@@ -316,7 +318,7 @@ class PersonConditionViewModel(
             )
             conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
             
-            if (uri.scheme == "file" || uri.scheme == "content") {
+            if ((uri.scheme == "file") || (uri.scheme == "content")) {
                 try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
             }
             showSnackbar(R.string.p_cond_msg_photo_save_success)
