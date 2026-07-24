@@ -152,7 +152,7 @@ fun PersonConditionScreen(
                     tempPhotoUri = uri
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                 }
             },
@@ -199,7 +199,7 @@ fun PersonConditionScreen(
                     tempPhotoUri = uri
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                 }
             },

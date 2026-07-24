@@ -17,7 +17,7 @@ class HealthRepository(
     fun getHeightAndWeightByPersonId(personId: String): Flow<List<HeightAndWeight>> = 
         heightAndWeightDao.getByPersonId(personId)
 
-    suspend fun findHeightAndWeightAtTime(personId: String, time: java.time.Instant): HeightAndWeight? =
+    suspend fun findHeightAndWeightAtTime(personId: String, time: Instant): HeightAndWeight? =
         heightAndWeightDao.findAtTime(personId, time)
     
     suspend fun insertHeightAndWeight(item: HeightAndWeight, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
@@ -52,7 +52,7 @@ class HealthRepository(
     fun getBpAndPulseByPersonId(personId: String): Flow<List<BpAndPulse>> = 
         bpAndPulseDao.getByPersonId(personId)
 
-    suspend fun findBpAndPulseAtTime(personId: String, time: java.time.Instant): BpAndPulse? =
+    suspend fun findBpAndPulseAtTime(personId: String, time: Instant): BpAndPulse? =
         bpAndPulseDao.findAtTime(personId, time)
     
     suspend fun insertBpAndPulse(item: BpAndPulse, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
@@ -87,7 +87,7 @@ class HealthRepository(
     fun getGlucoseAndHbA1cByPersonId(personId: String): Flow<List<GlucoseAndHbA1c>> = 
         glucoseAndHbA1cDao.getByPersonId(personId)
 
-    suspend fun findGlucoseAndHbA1cAtTime(personId: String, time: java.time.Instant): GlucoseAndHbA1c? =
+    suspend fun findGlucoseAndHbA1cAtTime(personId: String, time: Instant): GlucoseAndHbA1c? =
         glucoseAndHbA1cDao.findAtTime(personId, time)
     
     suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {

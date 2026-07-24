@@ -179,7 +179,6 @@ object AppSpecifications {
             const val CODE_ASSIST = MedicationSpecifications.Status.CODE_ASSIST
             const val CODE_TAKEN = MedicationSpecifications.Status.CODE_TAKEN
             val VALID_RANGE = MedicationSpecifications.Status.VALID_RANGE
-            val LABELS = MedicationSpecifications.Status.LABELS
         }
     }
 

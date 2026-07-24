@@ -15,7 +15,7 @@ class ConditionRepository(
     fun getConditionAtVisitByPersonId(personId: String): Flow<List<ConditionAtVisit>> = 
         conditionAtVisitDao.getByPersonId(personId)
 
-    suspend fun findConditionAtTime(personId: String, time: java.time.Instant): ConditionAtVisit? =
+    suspend fun findConditionAtTime(personId: String, time: Instant): ConditionAtVisit? =
         conditionAtVisitDao.findAtTime(personId, time)
     
     suspend fun insertConditionAtVisit(item: ConditionAtVisit, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
