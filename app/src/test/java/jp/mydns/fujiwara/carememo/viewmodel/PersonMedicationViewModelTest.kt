@@ -3,7 +3,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
-import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
@@ -17,7 +16,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant

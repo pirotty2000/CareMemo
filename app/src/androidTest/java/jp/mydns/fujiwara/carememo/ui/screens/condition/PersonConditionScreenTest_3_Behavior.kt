@@ -7,7 +7,6 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.mockk.*
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState

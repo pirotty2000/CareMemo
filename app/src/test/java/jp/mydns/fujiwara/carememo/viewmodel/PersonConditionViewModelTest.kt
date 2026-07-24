@@ -2,13 +2,10 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.net.Uri
 import android.util.Log
-import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,7 +20,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import java.io.IOException
 import java.time.Instant
 
 /**
