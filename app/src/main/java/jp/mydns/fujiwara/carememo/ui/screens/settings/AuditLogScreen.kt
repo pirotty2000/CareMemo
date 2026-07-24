@@ -34,6 +34,8 @@ import jp.mydns.fujiwara.carememo.ui.mapping.toActionLabel
 import jp.mydns.fujiwara.carememo.ui.mapping.toFeatureLabel
 import jp.mydns.fujiwara.carememo.ui.mapping.toResultLabel
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.ui.theme.getAuditActionColor
+import jp.mydns.fujiwara.carememo.ui.theme.getAuditResultMainColor
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 
@@ -338,15 +340,7 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                     text = log.actionType.toActionLabel,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = when (log.actionType) {
-                        "INSERT" -> Color(0xFF4CAF50)
-                        "UPDATE" -> Color(0xFF2196F3)
-                        "DELETE" -> Color(0xFFF44336)
-                        "LOGICAL_DELETE" -> Color(0xFFFF9800)
-                        "RESTORE" -> Color(0xFF9C27B0)
-                        "ERROR" -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.primary
-                    },
+                    color = getAuditActionColor(log.actionType),
                 )
             }
             
@@ -363,33 +357,19 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
-                
+
+                val resultColor = getAuditResultMainColor(log.resultType)
                 Surface(
                     shape = MaterialTheme.shapes.extraSmall,
-                    color = when (log.resultType) {
-                        "SUCCESS" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                        "UNKNOWN" -> MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-                        else -> MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-                    },
-                    border = androidx.compose.foundation.BorderStroke(
-                        0.5.dp,
-                        when (log.resultType) {
-                            "SUCCESS" -> Color(0xFF4CAF50)
-                            "UNKNOWN" -> MaterialTheme.colorScheme.outline
-                            else -> MaterialTheme.colorScheme.error
-                        }
-                    )
+                    color = resultColor.copy(alpha = 0.1f),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, resultColor)
                 ) {
                     Text(
                         text = log.resultType.toResultLabel,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                        color = when (log.resultType) {
-                            "SUCCESS" -> Color(0xFF388E3C)
-                            "UNKNOWN" -> MaterialTheme.colorScheme.onSurfaceVariant
-                            else -> MaterialTheme.colorScheme.error
-                        }
+                        color = resultColor
                     )
                 }
             }
