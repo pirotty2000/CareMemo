@@ -19,11 +19,13 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +44,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 
 /**
@@ -183,6 +186,7 @@ private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androi
  */
 @Composable
 fun HealthRecordDetailPane(
+    isExpanded: Boolean,
     personId: String,
     category: Category,
     recordId: String,
@@ -204,9 +208,11 @@ fun HealthRecordDetailPane(
         if (record == null && !PersonHealthLogic.isNew(recordId)) {
             LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         } else {
-            // 全カテゴリでタップ時に即編集モード(isEditing = true)を開始するように統一。
-            // recordId が空でない限り、新規・既存に関わらず編集フォームを表示する。
-            var isEditing by remember(recordId) { mutableStateOf(recordId.isNotEmpty()) }
+            // Tablet モード (isExpanded=true) かつ 既存レコードの場合は閲覧モード (isEditing=false) から開始。
+            // Phone モード、または新規作成 ID の場合は常に編集モードから開始。
+            var isEditing by remember(recordId) { 
+                mutableStateOf(!isExpanded || PersonHealthLogic.isNew(recordId)) 
+            }
             val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
             var heightText by remember(recordId) {
@@ -287,52 +293,231 @@ fun HealthRecordDetailPane(
                 )
             }
 
-            val scrollState = rememberScrollState()
-            Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp)
-                        .verticalScroll(scrollState),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    HealthRecordEditForm(
-                        category = category,
-                        recordId = recordId,
-                        dateTimeState = dateTimeState,
-                        heightText = heightText, onHeightChange = { heightText = it },
-                        weightText = weightText, onWeightChange = { weightText = it },
-                        bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
-                        bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
-                        satText = satText, onSatChange = { satText = it },
-                        pulseText = pulseText, onPulseChange = { pulseText = it },
-                        bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
-                        glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
-                        hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
-                        onCancel = {
-                            if (isChanged) {
-                                showDiscardDialog = true
-                            } else {
-                                onCancel()
-                            }
-                        },
-                        onSave = {
-                            dateTimeState.toInstant()?.let { recordTime ->
-                                val values = when (category) {
-                                    Category.HEIGHT_AND_WEIGHT -> mapOf("height" to heightText.toDoubleOrNull(), "weight" to weightText.toDoubleOrNull())
-                                    Category.BP_AND_PULSE -> mapOf("bpSystolic" to bpSystolicText.toIntOrNull(), "bpDiastolic" to bpDiastolicText.toIntOrNull(), "sat" to satText.toIntOrNull(), "pulse" to pulseText.toIntOrNull(), "bodyTemperature" to bodyTemperatureText.toDoubleOrNull())
-                                    Category.GLUCOSE_AND_HBA1C -> mapOf("glucose" to glucoseText.toIntOrNull(), "hba1c" to hba1cText.toDoubleOrNull())
-                                    else -> emptyMap()
+            if (isEditing) {
+                val scrollState = rememberScrollState()
+                Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        HealthRecordEditForm(
+                            category = category,
+                            recordId = recordId,
+                            dateTimeState = dateTimeState,
+                            heightText = heightText, onHeightChange = { heightText = it },
+                            weightText = weightText, onWeightChange = { weightText = it },
+                            bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
+                            bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
+                            satText = satText, onSatChange = { satText = it },
+                            pulseText = pulseText, onPulseChange = { pulseText = it },
+                            bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
+                            glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
+                            hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
+                            onCancel = {
+                                if (isChanged) {
+                                    showDiscardDialog = true
+                                } else {
+                                    if (isExpanded && !PersonHealthLogic.isNew(recordId)) {
+                                        isEditing = false
+                                    } else {
+                                        onCancel()
+                                    }
                                 }
-                                val newRecord = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values)
-                                onSaveRecord(newRecord)
-                            }
-                        },
-                        isChanged = isChanged
-                    )
-                    Spacer(modifier = Modifier.height(80.dp))
+                            },
+                            onSave = {
+                                dateTimeState.toInstant()?.let { recordTime ->
+                                    val values = when (category) {
+                                        Category.HEIGHT_AND_WEIGHT -> mapOf("height" to heightText.toDoubleOrNull(), "weight" to weightText.toDoubleOrNull())
+                                        Category.BP_AND_PULSE -> mapOf("bpSystolic" to bpSystolicText.toIntOrNull(), "bpDiastolic" to bpDiastolicText.toIntOrNull(), "sat" to satText.toIntOrNull(), "pulse" to pulseText.toIntOrNull(), "bodyTemperature" to bodyTemperatureText.toDoubleOrNull())
+                                        Category.GLUCOSE_AND_HBA1C -> mapOf("glucose" to glucoseText.toIntOrNull(), "hba1c" to hba1cText.toDoubleOrNull())
+                                        else -> emptyMap()
+                                    }
+                                    val newRecord = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values)
+                                    onSaveRecord(newRecord)
+                                }
+                            },
+                            isChanged = isChanged
+                        )
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState)
                 }
-                VerticalScrollIndicator(scrollState = scrollState)
+            } else {
+                HealthRecordDisplayCard(
+                    category = category,
+                    record = record,
+                    onCancel = onCancel,
+                    onEditClick = { isEditing = true }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 健康記録の詳細表示カード。
+ */
+@Composable
+private fun HealthRecordDisplayCard(
+    category: Category,
+    record: HistoryRecord?,
+    onCancel: () -> Unit,
+    onEditClick: () -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDisplayCard")) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onCancel,
+                        modifier = Modifier.offset(x = (-12).dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                    }
+                    Text(
+                        text = "記録の詳細",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.offset(x = (-8).dp)
+                    )
+                }
+                IconButton(onClick = onEditClick) {
+                    Icon(Icons.Rounded.EditNote, contentDescription = "編集")
+                }
+            }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                    record?.let { r ->
+                        Text(
+                            text = DateTimeUtils.formatRecordTime(r.recordTime),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        HealthDetailContent(category, r)
+                    }
+                }
+            }
+        }
+        VerticalScrollIndicator(scrollState = scrollState)
+    }
+}
+
+@Composable
+private fun HealthDetailContent(category: Category, record: HistoryRecord) {
+    when (category) {
+        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightDetailContent(it) }
+        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalDetailContent(it) }
+        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseDetailContent(it) }
+        else -> {}
+    }
+}
+
+@Composable
+private fun HeightWeightDetailContent(record: HeightAndWeight) {
+    val bmi = record.calculateBMI()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DetailRow(
+            label = stringResource(R.string.health_label_height),
+            value = record.height?.let { HealthLogic.formatHeight(it) } ?: "---",
+            unit = AppSpecifications.Health.Height.UNIT
+        )
+        DetailRow(
+            label = stringResource(R.string.health_label_weight),
+            value = record.weight?.let { HealthLogic.formatWeight(it) } ?: "---",
+            unit = AppSpecifications.Health.Weight.UNIT
+        )
+        if (bmi > 0) {
+            val (status, alertLevel) = HealthLogic.evaluateBMI(bmi)
+            val bmiLabel = status?.let { stringResource(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
+            DetailRow(
+                label = stringResource(R.string.health_label_bmi),
+                value = "${HealthLogic.formatBmi(bmi)} ($bmiLabel)",
+                color = alertLevel.getDisplayColor(),
+                isBold = alertLevel != HealthAlertLevel.NORMAL
+            )
+        }
+    }
+}
+
+@Composable
+private fun VitalDetailContent(record: BpAndPulse) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DetailRow(
+            label = stringResource(R.string.health_label_bp_systolic),
+            value = HealthLogic.formatBpValue(record.bpSystolic),
+            unit = AppSpecifications.Health.BloodPressure.UNIT
+        )
+        DetailRow(
+            label = stringResource(R.string.health_label_bp_diastolic),
+            value = HealthLogic.formatBpValue(record.bpDiastolic),
+            unit = AppSpecifications.Health.BloodPressure.UNIT
+        )
+        DetailRow(
+            label = stringResource(R.string.health_label_sat),
+            value = HealthLogic.formatSat(record.sat),
+            unit = AppSpecifications.Health.OxygenSaturation.UNIT
+        )
+        DetailRow(
+            label = stringResource(R.string.health_label_pulse),
+            value = HealthLogic.formatPulse(record.pulse),
+            unit = AppSpecifications.Health.Pulse.UNIT
+        )
+        DetailRow(
+            label = stringResource(R.string.health_label_body_temp),
+            value = HealthLogic.formatBodyTemp(record.bodyTemperature),
+            unit = AppSpecifications.Health.BodyTemperature.UNIT
+        )
+    }
+}
+
+@Composable
+private fun GlucoseDetailContent(record: GlucoseAndHbA1c) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DetailRow(
+            label = stringResource(R.string.health_label_glucose),
+            value = record.glucose?.let { HealthLogic.formatGlucose(it) } ?: "---",
+            unit = AppSpecifications.Health.BloodGlucose.UNIT
+        )
+        DetailRow(
+            label = stringResource(R.string.health_label_hba1c),
+            value = record.hba1c?.let { HealthLogic.formatHbA1c(it) } ?: "---",
+            unit = AppSpecifications.Health.HbA1c.UNIT
+        )
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String, unit: String = "", color: Color = Color.Unspecified, isBold: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+                color = color
+            )
+            if (unit.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = unit, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

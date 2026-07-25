@@ -46,7 +46,6 @@ fun PersonHealthScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 画面状態の管理
-    var selectedRecordId by rememberSaveable { mutableStateOf("") }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
@@ -68,7 +67,7 @@ fun PersonHealthScreen(
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
-                    selectedRecordId = ""
+                    healthViewModel.setSelectedRecordId(null)
                 }
                 else -> {}
             }
@@ -84,14 +83,14 @@ fun PersonHealthScreen(
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            selectedRecordId = selectedRecordId,
-            onSelectedRecordIdChange = { selectedRecordId = it },
+            selectedRecordId = healthState.selectedRecordId ?: "",
+            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
             onBack = onBack,
             onNavigateToGraphExpansion = onNavigateToGraphExpansion,
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { healthViewModel.saveRecord(it, selectedRecordId) },
+            onSaveRecord = { healthViewModel.saveRecord(it, healthState.selectedRecordId ?: "") },
             snackbarHostState = snackbarHostState
         )
     } else {
@@ -105,14 +104,14 @@ fun PersonHealthScreen(
             isNameMaskingEnabled = isNameMaskingEnabled,
             preferredShowHistory = healthState.preferredShowHistory,
             onPreferredShowHistoryChange = { healthViewModel.updatePreferredShowHistory(it) },
-            selectedRecordId = selectedRecordId,
-            onSelectedRecordIdChange = { selectedRecordId = it },
+            selectedRecordId = healthState.selectedRecordId ?: "",
+            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
             onBack = onBack,
             onNavigateToGraphExpansion = onNavigateToGraphExpansion,
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { healthViewModel.saveRecord(it, selectedRecordId) },
+            onSaveRecord = { healthViewModel.saveRecord(it, healthState.selectedRecordId ?: "") },
             snackbarHostState = snackbarHostState
         )
     }

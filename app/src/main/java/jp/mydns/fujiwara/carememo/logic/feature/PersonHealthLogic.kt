@@ -13,6 +13,7 @@ data class PersonHealthUiState(
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     val records: List<HistoryRecord> = emptyList(),
     val preferredShowHistory: Boolean = true,
+    val selectedRecordId: String? = null,
     override val isLoading: Boolean = false
 ) : PersonAwareState
 

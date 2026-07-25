@@ -108,6 +108,7 @@ fun PersonHealthScreenContent(
                 if (selectedRecordId.isNotEmpty()) {
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
+                            isExpanded = isExpanded,
                             personId = personId,
                             category = currentCategory,
                             recordId = selectedRecordId,
@@ -145,6 +146,7 @@ fun PersonHealthScreenContent(
         if (selectedRecordId.isNotEmpty()) {
             Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                 HealthRecordDetailPane(
+                    isExpanded = false,
                     personId = personId,
                     category = currentCategory,
                     recordId = selectedRecordId,

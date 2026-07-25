@@ -84,7 +84,7 @@ class PersonHealthViewModel(
 
     override fun onPrepareLoadPerson(state: PersonHealthUiState): PersonHealthUiState {
         // ロード開始時にデータをクリアする（表示モードのリセットは loadPerson 側で永続化層に対して行う）
-        return state.copy(personId = null, records = emptyList())
+        return state.copy(personId = null, records = emptyList(), selectedRecordId = null)
     }
 
     /**
@@ -101,9 +101,16 @@ class PersonHealthViewModel(
      */
     fun setCategory(category: Category) {
         if (currentState.currentCategory != category) {
-            updateUiState { it.copy(currentCategory = category) }
+            updateUiState { it.copy(currentCategory = category, selectedRecordId = null) }
             refreshRecords(currentState.personId, category)
         }
+    }
+
+    /**
+     * 選択されたレコードIDを設定します。
+     */
+    fun setSelectedRecordId(id: String?) {
+        updateUiState { it.copy(selectedRecordId = id) }
     }
 
     /**
