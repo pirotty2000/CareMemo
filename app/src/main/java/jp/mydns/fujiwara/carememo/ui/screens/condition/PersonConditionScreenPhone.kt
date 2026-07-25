@@ -91,7 +91,7 @@ fun PersonConditionScreenPhone(
         floatingActionButton = {
             if (selectedId.isEmpty()) {
                 FloatingActionButton(
-                    onClick = { onSelectedIdChange("0") },
+                    onClick = { onSelectedIdChange(jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic.NEW_RECORD_ID) },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "新規追加")

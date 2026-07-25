@@ -171,16 +171,18 @@ fun ConditionDetailPane(
     onMicClick: () -> Unit,
 ) {
     val memo = remember(records, conditionId) {
-        records.find { it.id == conditionId }
+        if (PersonConditionLogic.isNew(conditionId)) null
+        else records.find { it.id == conditionId }
     }
 
-    // conditionId が "0" の場合は新規作成モード
-    if (memo == null && conditionId.isNotEmpty() && conditionId != "0") {
+    // conditionId が UUID であっても、データが見つからない場合はロード中とする（新規作成 ID の場合はスキップ）
+    if (memo == null && !PersonConditionLogic.isNew(conditionId)) {
         LoadingScreen()
         return
     }
 
-    var isEditing by remember(conditionId) { mutableStateOf(conditionId == "0") }
+    // Condition は閲覧を優先するため、新規作成 ID の場合のみ編集モードから開始する。
+    var isEditing by remember(conditionId) { mutableStateOf(PersonConditionLogic.isNew(conditionId)) }
     val dateTimeState = rememberDateTimeInputState(initialInstant = memo?.recordTime)
     
     var title by remember(conditionId) { mutableStateOf(memo?.title ?: "") }
@@ -374,7 +376,7 @@ private fun ConditionRecordDisplayCard(
             }
 
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     memo?.let { m ->
                         Text(text = DateTimeUtils.formatRecordTime(m.recordTime),
                             style = MaterialTheme.typography.labelMedium,
@@ -489,7 +491,7 @@ private fun ConditionRecordEditForm(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (conditionId == "0") "新規作成" else "記録の編集",
+                text = if (PersonConditionLogic.isNew(conditionId)) "新規作成" else "記録の編集",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )

@@ -164,8 +164,9 @@ object HealthChartHelper {
         return listOf(
             VisualRange(graph.RANGE_MIN, spec.THRESHOLD_LOW, HealthAlertLevel.INFO),
             VisualRange(spec.THRESHOLD_LOW, spec.THRESHOLD_NORMAL_UPPER, HealthAlertLevel.NORMAL),
-            VisualRange(spec.THRESHOLD_NORMAL_UPPER, spec.THRESHOLD_HIGH, HealthAlertLevel.WARNING),
-            VisualRange(spec.THRESHOLD_HIGH + 0.1, graph.RANGE_MAX, HealthAlertLevel.ALERT)
+            VisualRange(spec.THRESHOLD_NORMAL_UPPER, spec.THRESHOLD_PREDIABETES, HealthAlertLevel.INFO),
+            VisualRange(spec.THRESHOLD_PREDIABETES, spec.THRESHOLD_HIGH, HealthAlertLevel.WARNING),
+            VisualRange(spec.THRESHOLD_HIGH, graph.RANGE_MAX, HealthAlertLevel.ALERT)
         )
     }
 

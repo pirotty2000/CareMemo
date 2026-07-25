@@ -97,7 +97,7 @@ fun PersonHealthScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedRecordIdChange("0") }) {
+                        IconButton(onClick = { onSelectedRecordIdChange(jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic.NEW_RECORD_ID) }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
                         IconButton(

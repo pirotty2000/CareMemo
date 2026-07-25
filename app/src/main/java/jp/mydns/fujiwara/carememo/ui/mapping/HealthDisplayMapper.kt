@@ -116,9 +116,10 @@ object HealthDisplayMapper {
      */
     fun getGlucoseLabel(status: GlucoseStatus?): Int? = when (status) {
         GlucoseStatus.LOW -> R.string.glucose_label_low // 低血糖
-        GlucoseStatus.NORMAL -> R.string.glucose_label_normal // 正常
-        GlucoseStatus.WARNING -> R.string.hba1c_label_prediabetes // 予備群
-        GlucoseStatus.HIGH -> R.string.glucose_label_high // 高血糖
+        GlucoseStatus.NORMAL -> R.string.glucose_label_normal // 正常型
+        GlucoseStatus.NORMAL_HIGH -> R.string.glucose_label_normal_high // 正常高値
+        GlucoseStatus.PREDIABETES -> R.string.glucose_label_prediabetes // 予備群
+        GlucoseStatus.DIABETES -> R.string.glucose_label_diabetes // 糖尿病型
         null -> null
     }
 
@@ -197,7 +198,13 @@ object HealthDisplayMapper {
 
     fun getGlucoseExplanation(context: Context): String {
         val spec = AppSpecifications.Health.BloodGlucose
-        return context.getString(R.string.glucose_explanation, spec.THRESHOLD_LOW.toInt(), spec.THRESHOLD_NORMAL_UPPER.toInt())
+        return context.getString(
+            R.string.glucose_explanation,
+            spec.THRESHOLD_LOW.toInt(),
+            spec.THRESHOLD_NORMAL_UPPER.toInt(),
+            spec.THRESHOLD_PREDIABETES.toInt(),
+            spec.THRESHOLD_HIGH.toInt()
+        )
     }
 
     fun getHbA1cExplanation(context: Context): String =

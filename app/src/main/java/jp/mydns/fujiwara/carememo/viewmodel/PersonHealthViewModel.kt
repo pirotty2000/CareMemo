@@ -148,7 +148,7 @@ class PersonHealthViewModel(
     /**
      * 数値系レコードを保存または更新します。
      */
-    fun saveRecord(record: Any?) {
+    fun saveRecord(record: Any?, originalId: String) {
         if (record !is HistoryRecord) return
         
         safeLaunch(
@@ -163,7 +163,7 @@ class PersonHealthViewModel(
             val validationResult = PersonHealthLogic.validate(record)
             translateValidationResult(validationResult)
 
-            val isUpdate = !PersonHealthLogic.isNew(record)
+            val isUpdate = !PersonHealthLogic.isNew(originalId)
 
             // 2. 重複チェック
             val existing = when (record) {

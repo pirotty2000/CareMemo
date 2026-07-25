@@ -76,6 +76,7 @@ object AppSpecifications {
         }
         object BloodGlucose {
             const val THRESHOLD_HIGH = HealthSpecifications.BloodGlucose.THRESHOLD_HIGH
+            const val THRESHOLD_PREDIABETES = HealthSpecifications.BloodGlucose.THRESHOLD_PREDIABETES
             const val THRESHOLD_NORMAL_UPPER = HealthSpecifications.BloodGlucose.THRESHOLD_NORMAL_UPPER
             const val THRESHOLD_LOW = HealthSpecifications.BloodGlucose.THRESHOLD_LOW
             const val THRESHOLD_GRAPH_NORMAL_UPPER = HealthSpecifications.BloodGlucose.THRESHOLD_GRAPH_NORMAL_UPPER

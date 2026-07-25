@@ -2,6 +2,8 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import java.time.Instant
+import java.util.UUID
 
 /**
  * 健康記録画面用の UI 状態
@@ -10,7 +12,7 @@ data class PersonHealthUiState(
     val personId: String? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     val records: List<HistoryRecord> = emptyList(),
-    val preferredShowHistory: Boolean = true, // 追加: 履歴/グラフの選択状態
+    val preferredShowHistory: Boolean = true,
     override val isLoading: Boolean = false
 ) : PersonAwareState
 
@@ -18,11 +20,10 @@ data class PersonHealthUiState(
  * 健康記録画面固有のイベント
  */
 sealed interface PersonHealthViewEvent {
-    // 必要に応じて定義
 }
 
 /**
- * 健康記録のバリデーション結果（事実）
+ * 健康記録のバリデーション結果
  */
 enum class HealthValidationResult {
     SUCCESS,
@@ -35,27 +36,24 @@ enum class HealthValidationResult {
  * 健康記録画面固有のドメインロジック
  */
 object PersonHealthLogic {
+    /** 新規作成を明示する特別なID */
+    const val NEW_RECORD_ID = "__NEW__"
 
     /**
      * レコードが新規登録かどうかを判定します。
-     * IDが空または初期値であれば新規とみなします。
+     * 明示的な新規IDまたは空の場合のみ新規とみなします。
+     * これにより、DBに混入した "0" データを既存データとして救出可能にします。
      */
-    fun isNew(record: Any?): Boolean {
-        val id = (record as? HistoryRecord)?.id ?: return false
-        return id.isEmpty() || id == "0" // "0" は Int 時代からの移行用 ID
+    fun isNew(id: String?): Boolean {
+        return id.isNullOrEmpty() || id == NEW_RECORD_ID
     }
 
     /**
-     * 入力内容の妥当性を判定し、詳細な「事実」を返します。
+     * 入力内容の妥当性を判定します。
      */
     fun validate(record: HistoryRecord?): HealthValidationResult {
         if (record == null) return HealthValidationResult.INVALID_VALUE
-        
-        // 1. 日時の確認
-        @Suppress("SENSELESS_COMPARISON")
-        if (record.recordTime == null) return HealthValidationResult.INVALID_TIME
 
-        // 2. 数値の範囲確認
         val isValid = when (record) {
             is HeightAndWeight -> {
                 val hSpec = AppSpecifications.Health.Height
@@ -87,14 +85,31 @@ object PersonHealthLogic {
     }
 
     /**
-     * 保存しようとしているレコードが、自分自身（既存レコード）以外と重複しているか判定します。
+     * 重複チェック（自分自身を除外）
      */
     fun validateDuplicate(current: HistoryRecord, existing: HistoryRecord?): HealthValidationResult {
         if (existing == null) return HealthValidationResult.SUCCESS
+        return if (current.id != existing.id) HealthValidationResult.DUPLICATE_TIME else HealthValidationResult.SUCCESS
+    }
 
-        // 取得されたデータのIDが自分と異なれば重複
-        val isDuplicate = current.id != existing.id
-
-        return if (isDuplicate) HealthValidationResult.DUPLICATE_TIME else HealthValidationResult.SUCCESS
+    /**
+     * Entity を構築します。
+     * ID採番の責任を完全にこのメソッドが負います。
+     */
+    fun createEntity(
+        category: Category,
+        personId: String,
+        recordId: String,
+        recordTime: Instant,
+        values: Map<String, Any?>
+    ): Any {
+        val finalId = if (isNew(recordId)) UUID.randomUUID().toString() else recordId
+        
+        return when (category) {
+            Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = finalId, personId = personId, height = values["height"] as? Double, weight = values["weight"] as? Double, recordTime = recordTime)
+            Category.BP_AND_PULSE -> BpAndPulse(id = finalId, personId = personId, bpSystolic = values["bpSystolic"] as? Int, bpDiastolic = values["bpDiastolic"] as? Int, sat = values["sat"] as? Int, pulse = values["pulse"] as? Int, bodyTemperature = values["bodyTemperature"] as? Double, recordTime = recordTime)
+            Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = finalId, personId = personId, glucose = values["glucose"] as? Int, hba1c = values["hba1c"] as? Double, recordTime = recordTime)
+            else -> throw IllegalArgumentException("Unsupported category")
+        }
     }
 }

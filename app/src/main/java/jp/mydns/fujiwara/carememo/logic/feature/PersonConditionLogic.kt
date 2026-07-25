@@ -62,6 +62,15 @@ enum class PersonConditionValidationResult {
  * 所見メモ画面固有のドメインロジック
  */
 object PersonConditionLogic {
+    /** 新規作成を明示する特別なID */
+    const val NEW_RECORD_ID = "__NEW__"
+
+    /**
+     * レコードが新規登録かどうかを判定します。
+     */
+    fun isNew(id: String?): Boolean {
+        return id.isNullOrEmpty() || id == NEW_RECORD_ID
+    }
 
     /**
      * 現在の入力内容が初期状態から変更されているかどうかを判定します。
@@ -103,23 +112,15 @@ object PersonConditionLogic {
      */
     fun createRecord(personId: String, conditionId: String, state: PersonConditionUiState): ConditionAtVisit {
         val time = state.recordTime ?: throw IllegalArgumentException("Invalid record time")
-        return if (conditionId.isEmpty() || conditionId == "0") {
-            ConditionAtVisit(
-                personId = personId,
-                title = state.title.trim(),
-                condition = state.condition.trim(),
-                author = state.author.trim(),
-                recordTime = time
-            )
-        } else {
-            ConditionAtVisit(
-                id = conditionId,
-                personId = personId,
-                title = state.title.trim(),
-                condition = state.condition.trim(),
-                author = state.author.trim(),
-                recordTime = time
-            )
-        }
+        val finalId = if (isNew(conditionId)) java.util.UUID.randomUUID().toString() else conditionId
+        
+        return ConditionAtVisit(
+            id = finalId,
+            personId = personId,
+            title = state.title.trim(),
+            condition = state.condition.trim(),
+            author = state.author.trim(),
+            recordTime = time
+        )
     }
 }

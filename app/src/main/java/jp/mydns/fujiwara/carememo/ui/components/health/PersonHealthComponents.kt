@@ -36,6 +36,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.*
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.theme.getDisplayColor
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
@@ -211,152 +212,151 @@ fun HealthRecordDetailPane(
     onCancel: () -> Unit,
     onSaveRecord: (Any) -> Unit,
 ) {
-    val record = remember(records, recordId) {
-        when (category) {
-            Category.HEIGHT_AND_WEIGHT -> records.asSequence().filterIsInstance<HeightAndWeight>().find { it.id == recordId }
-            Category.BP_AND_PULSE -> records.asSequence().filterIsInstance<BpAndPulse>().find { it.id == recordId }
-            Category.GLUCOSE_AND_HBA1C -> records.asSequence().filterIsInstance<GlucoseAndHbA1c>().find { it.id == recordId }
-            else -> null
+    key(recordId) {
+        val record = remember(records, recordId) {
+            if (PersonHealthLogic.isNew(recordId)) null
+            else when (category) {
+                Category.HEIGHT_AND_WEIGHT -> records.asSequence().filterIsInstance<HeightAndWeight>().find { it.id == recordId }
+                Category.BP_AND_PULSE -> records.asSequence().filterIsInstance<BpAndPulse>().find { it.id == recordId }
+                Category.GLUCOSE_AND_HBA1C -> records.asSequence().filterIsInstance<GlucoseAndHbA1c>().find { it.id == recordId }
+                else -> null
+            }
         }
-    }
 
-    if (record == null && recordId.isNotEmpty() && recordId != "0") {
-        LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
-        return
-    }
-
-    var isEditing by remember(recordId) { mutableStateOf(recordId.isEmpty() || recordId == "0") }
-    val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
-
-    var heightText by remember(recordId, category, records) {
-        val initialValue = if (record is HeightAndWeight) {
-            record.height?.toString() ?: ""
-        } else if ((recordId.isEmpty() || recordId == "0") && category == Category.HEIGHT_AND_WEIGHT) {
-            records.filterIsInstance<HeightAndWeight>()
-                .filter { it.height != null }
-                .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
+        if (record == null && !PersonHealthLogic.isNew(recordId)) {
+            LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         } else {
-            ""
-        }
-        mutableStateOf(initialValue)
-    }
-    var weightText by remember(recordId) { mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "") }
-    var bpSystolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "") }
-    var bpDiastolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "") }
-    var satText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.sat?.toString() ?: "" else "") }
-    var pulseText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.pulse?.toString() ?: "" else "") }
-    var bodyTemperatureText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "") }
-    var glucoseText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
-    var hba1cText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
+            // 全カテゴリでタップ時に即編集モード(isEditing = true)を開始するように統一。
+            // recordId が空でない限り、新規・既存に関わらず編集フォームを表示する。
+            var isEditing by remember(recordId) { mutableStateOf(recordId.isNotEmpty()) }
+            val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
-    // 変更検知用の初期状態（UI初期化直後のスナップショットを保持することで、新規作成時のデフォルト値による誤検知を防ぐ）
-    val initialHeightSnapshot = remember(recordId, category) { heightText }
-    val initialWeightSnapshot = remember(recordId) { weightText }
-    val initialBpSystolicSnapshot = remember(recordId) { bpSystolicText }
-    val initialBpDiastolicSnapshot = remember(recordId) { bpDiastolicText }
-    val initialSatSnapshot = remember(recordId) { satText }
-    val initialPulseSnapshot = remember(recordId) { pulseText }
-    val initialBodyTempSnapshot = remember(recordId) { bodyTemperatureText }
-    val initialGlucoseSnapshot = remember(recordId) { glucoseText }
-    val initialHbA1cSnapshot = remember(recordId) { hba1cText }
-    val initialDateTimeSnapshot = remember(recordId) { dateTimeState.toInstant() }
-
-    val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
-        derivedStateOf {
-            heightText != initialHeightSnapshot || weightText != initialWeightSnapshot ||
-            bpSystolicText != initialBpSystolicSnapshot || bpDiastolicText != initialBpDiastolicSnapshot ||
-            satText != initialSatSnapshot || pulseText != initialPulseSnapshot || 
-            bodyTemperatureText != initialBodyTempSnapshot ||
-            glucoseText != initialGlucoseSnapshot || hba1cText != initialHbA1cSnapshot ||
-            dateTimeState.toInstant() != initialDateTimeSnapshot
-        }
-    }
-
-    var showDiscardDialog by remember { mutableStateOf(false) }
-
-    // システム戻るボタンの制御
-    androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
-        showDiscardDialog = true
-    }
-
-    if (showDiscardDialog) {
-        AppDialog(
-            onDismissRequest = { showDiscardDialog = false },
-            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
-            text = {
-                AppDialogContent(text = stringResource(R.string.common_confirm_discard_message))
-            },
-            confirmButton = {
-                AppDialogConfirmButton(
-                    text = stringResource(R.string.common_discard),
-                    type = AppDialogActionType.DELETE,
-                    onClick = {
-                        showDiscardDialog = false
-                        if (recordId.isEmpty() || recordId == "0") onCancel() else isEditing = false
-                    }
-                )
-            },
-            dismissButton = {
-                AppDialogDismissButton(
-                    text = stringResource(R.string.common_cancel),
-                    onClick = { showDiscardDialog = false }
-                )
+            var heightText by remember(recordId) {
+                val initialValue = if (record is HeightAndWeight) {
+                    record.height?.toString() ?: ""
+                } else if (PersonHealthLogic.isNew(recordId) && category == Category.HEIGHT_AND_WEIGHT) {
+                    // 身長の最新値引き継ぎロジック
+                    records.filterIsInstance<HeightAndWeight>()
+                        .filter { it.height != null }
+                        .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
+                } else {
+                    ""
+                }
+                mutableStateOf(initialValue)
             }
-        )
-    }
+            var weightText by remember(recordId) { mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "") }
+            var bpSystolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "") }
+            var bpDiastolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "") }
+            var satText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.sat?.toString() ?: "" else "") }
+            var pulseText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.pulse?.toString() ?: "" else "") }
+            var bodyTemperatureText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "") }
+            var glucoseText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
+            var hba1cText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
 
-    val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp) // horizontal に変更
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (isEditing) {
-                HealthRecordEditForm(
-                    category = category,
-                    recordId = recordId,
-                    dateTimeState = dateTimeState,
-                    heightText = heightText, onHeightChange = { heightText = it },
-                    weightText = weightText, onWeightChange = { weightText = it },
-                    bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
-                    bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
-                    satText = satText, onSatChange = { satText = it },
-                    pulseText = pulseText, onPulseChange = { pulseText = it },
-                    bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
-                    glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
-                    hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
-                    onCancel = {
-                        if (isChanged) {
-                            showDiscardDialog = true
-                        } else {
-                            if (recordId.isEmpty() || recordId == "0") onCancel() else isEditing = false
-                        }
+            // 変更検知用の初期状態
+            val initialHeightSnapshot = remember(recordId) { heightText }
+            val initialWeightSnapshot = remember(recordId) { weightText }
+            val initialBpSystolicSnapshot = remember(recordId) { bpSystolicText }
+            val initialBpDiastolicSnapshot = remember(recordId) { bpDiastolicText }
+            val initialSatSnapshot = remember(recordId) { satText }
+            val initialPulseSnapshot = remember(recordId) { pulseText }
+            val initialBodyTempSnapshot = remember(recordId) { bodyTemperatureText }
+            val initialGlucoseSnapshot = remember(recordId) { glucoseText }
+            val initialHbA1cSnapshot = remember(recordId) { hba1cText }
+            val initialDateTimeSnapshot = remember(recordId) { dateTimeState.toInstant() }
+
+            val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
+                derivedStateOf {
+                    heightText != initialHeightSnapshot || weightText != initialWeightSnapshot ||
+                    bpSystolicText != initialBpSystolicSnapshot || bpDiastolicText != initialBpDiastolicSnapshot ||
+                    satText != initialSatSnapshot || pulseText != initialPulseSnapshot || 
+                    bodyTemperatureText != initialBodyTempSnapshot ||
+                    glucoseText != initialGlucoseSnapshot || hba1cText != initialHbA1cSnapshot ||
+                    dateTimeState.toInstant() != initialDateTimeSnapshot
+                }
+            }
+
+            var showDiscardDialog by remember { mutableStateOf(false) }
+
+            // システム戻るボタンの制御
+            androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
+                showDiscardDialog = true
+            }
+
+            if (showDiscardDialog) {
+                AppDialog(
+                    onDismissRequest = { showDiscardDialog = false },
+                    title = { Text(stringResource(R.string.common_confirm_discard_title)) },
+                    text = {
+                        AppDialogContent(text = stringResource(R.string.common_confirm_discard_message))
                     },
-                    onSave = {
-                        dateTimeState.toInstant()?.let { recordTime ->
-                            val newRecord: Any = when (category) {
-                                Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = recordId, personId = personId, height = heightText.toDoubleOrNull(), weight = weightText.toDoubleOrNull(), recordTime = recordTime)
-                                Category.BP_AND_PULSE -> BpAndPulse(id = recordId, personId = personId, bpSystolic = bpSystolicText.toIntOrNull(), bpDiastolic = bpDiastolicText.toIntOrNull(), sat = satText.toIntOrNull(), pulse = pulseText.toIntOrNull(), bodyTemperature = bodyTemperatureText.toDoubleOrNull(), recordTime = recordTime)
-                                Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = recordId, personId = personId, glucose = glucoseText.toIntOrNull(), hba1c = hba1cText.toDoubleOrNull(), recordTime = recordTime)
-                                else -> throw IllegalStateException("Not supported category")
+                    confirmButton = {
+                        AppDialogConfirmButton(
+                            text = stringResource(R.string.common_discard),
+                            type = AppDialogActionType.DELETE,
+                            onClick = {
+                                showDiscardDialog = false
+                                onCancel()
                             }
-                            onSaveRecord(newRecord)
-                        }
+                        )
+                    },
+                    dismissButton = {
+                        AppDialogDismissButton(
+                            text = stringResource(R.string.common_cancel),
+                            onClick = { showDiscardDialog = false }
+                        )
                     }
                 )
-            } else {
-                HealthRecordDisplayCard(
-                    record = record!!,
-                    onBack = onCancel,
-                    onEditClick = { isEditing = true }
-                )
             }
-            Spacer(modifier = Modifier.height(80.dp))
+
+            val scrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    HealthRecordEditForm(
+                        category = category,
+                        recordId = recordId,
+                        dateTimeState = dateTimeState,
+                        heightText = heightText, onHeightChange = { heightText = it },
+                        weightText = weightText, onWeightChange = { weightText = it },
+                        bpSystolicText = bpSystolicText, onBpSystolicChange = { bpSystolicText = it },
+                        bpDiastolicText = bpDiastolicText, onBpDiastolicChange = { bpDiastolicText = it },
+                        satText = satText, onSatChange = { satText = it },
+                        pulseText = pulseText, onPulseChange = { pulseText = it },
+                        bodyTemperatureText = bodyTemperatureText, onBodyTemperatureChange = { bodyTemperatureText = it },
+                        glucoseText = glucoseText, onGlucoseChange = { glucoseText = it },
+                        hba1cText = hba1cText, onHba1cChange = { hba1cText = it },
+                        onCancel = {
+                            if (isChanged) {
+                                showDiscardDialog = true
+                            } else {
+                                onCancel()
+                            }
+                        },
+                        onSave = {
+                            dateTimeState.toInstant()?.let { recordTime ->
+                                val values = when (category) {
+                                    Category.HEIGHT_AND_WEIGHT -> mapOf("height" to heightText.toDoubleOrNull(), "weight" to weightText.toDoubleOrNull())
+                                    Category.BP_AND_PULSE -> mapOf("bpSystolic" to bpSystolicText.toIntOrNull(), "bpDiastolic" to bpDiastolicText.toIntOrNull(), "sat" to satText.toIntOrNull(), "pulse" to pulseText.toIntOrNull(), "bodyTemperature" to bodyTemperatureText.toDoubleOrNull())
+                                    Category.GLUCOSE_AND_HBA1C -> mapOf("glucose" to glucoseText.toIntOrNull(), "hba1c" to hba1cText.toDoubleOrNull())
+                                    else -> emptyMap()
+                                }
+                                val newRecord = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values)
+                                onSaveRecord(newRecord)
+                            }
+                        },
+                        isChanged = isChanged
+                    )
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
+                VerticalScrollIndicator(scrollState = scrollState)
+            }
         }
-        VerticalScrollIndicator(scrollState = scrollState)
     }
 }
 
@@ -378,13 +378,15 @@ private fun HealthRecordEditForm(
     glucoseText: String, onGlucoseChange: (String) -> Unit,
     hba1cText: String, onHba1cChange: (String) -> Unit,
     onCancel: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    isChanged: Boolean
 ) {
     val isDateTimeValid by remember(dateTimeState) { derivedStateOf { dateTimeState.toInstant() != null } }
+    val isNew = remember(recordId) { PersonHealthLogic.isNew(recordId) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = if (recordId.isEmpty() || recordId == "0") "新規作成" else "記録の編集",
+            text = if (PersonHealthLogic.isNew(recordId)) "新規作成" else "記録の編集",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -430,7 +432,7 @@ private fun HealthRecordEditForm(
                                 Category.BP_AND_PULSE -> HealthLogic.isValidBpAndPulse(bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText)
                                 Category.GLUCOSE_AND_HBA1C -> HealthLogic.isValidGlucoseAndHbA1c(glucoseText, hba1cText)
                                 else -> true
-                            }) && isDateTimeValid
+                            }) && isDateTimeValid && (isNew || isChanged)
                         ) {
                             Text(stringResource(R.string.common_save))
                         }

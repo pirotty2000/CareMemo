@@ -14,16 +14,19 @@ object CalendarSpecifications {
 
     /** 各元号の定義 */
     object Era {
+        /** 昭和 **/
         object Showa {
             val START_DATE: LocalDate = LocalDate.of(1926, 12, 25)
             const val OFFSET_YEAR = 1925
             const val MAX_YEAR = 64
         }
+        /** 平成 **/
         object Heisei {
             val START_DATE: LocalDate = LocalDate.of(1989, 1, 8)
             const val OFFSET_YEAR = 1988
             const val MAX_YEAR = 31
         }
+        /** 令和 **/
         object Reiwa {
             val START_DATE: LocalDate = LocalDate.of(2019, 5, 1)
             const val OFFSET_YEAR = 2018

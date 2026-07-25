@@ -51,6 +51,9 @@ sealed class SyncAction {
  */
 object MedicationLogic {
 
+    /** 新規作成を明示する特別なID */
+    const val NEW_RECORD_ID = "__NEW__"
+
     /**
      * カレンダー表示用の日付リストを生成します。
      */
@@ -67,8 +70,9 @@ object MedicationLogic {
     }
 
     /**
-     * 特定の日の同期アクションを判定します。
-     * 各スロット（0〜3）に対して、どのような DB 操作が必要か（あるいは不要か）を返します。
+     * 特定の日の同期アクションを判定し、適切な ID 管理を伴う Entity を構築します。
+     * UI 層から渡された ID は無視し、既存レコードの timeSlot に基づいて 
+     * 「既存 ID の維持（更新）」または「新規 UUID の採番（追加）」を決定します。
      */
     fun determineSyncActions(
         current: List<MedicationRecord>,
@@ -76,25 +80,34 @@ object MedicationLogic {
     ): List<SyncAction> {
         val actions = mutableListOf<SyncAction>()
 
-        input.forEachIndexed { index, newRecord ->
+        input.forEachIndexed { index, inputRecord ->
             val existingRecord = current.find { it.timeSlot == index }
 
             when {
-                newRecord != null -> {
-                    if (existingRecord != null && existingRecord.status == newRecord.status) {
-                        // 内容が同じなので「維持」
+                inputRecord != null -> {
+                    // 入力がある場合：追加または更新
+                    val finalRecord = if (existingRecord != null) {
+                        // 既存あり：IDを維持してコピー（更新）
+                        inputRecord.copy(id = existingRecord.id)
+                    } else {
+                        // 既存なし：新しい UUID を発行（新規追加）
+                        inputRecord.copy(id = java.util.UUID.randomUUID().toString())
+                    }
+
+                    if (existingRecord != null && existingRecord.status == finalRecord.status && existingRecord.recordTime == finalRecord.recordTime) {
+                        // 内容が完全に同じなら何もしない
                         actions.add(SyncAction.None)
                     } else {
-                        // 新規またはステータス変更なので「保存」
-                        actions.add(SyncAction.Insert(newRecord))
+                        // 変更がある、または新規なら Insert (RoomのReplaceにより更新もInsertで扱う)
+                        actions.add(SyncAction.Insert(finalRecord))
                     }
                 }
                 existingRecord != null -> {
-                    // 入力が null になったので「削除」
+                    // 入力が null（解除）で既存がある場合：削除
                     actions.add(SyncAction.Delete(existingRecord))
                 }
                 else -> {
-                    // 元々なく、今もないので「何もしない」
+                    // 元々なく、今もない
                     actions.add(SyncAction.None)
                 }
             }

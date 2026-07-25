@@ -91,7 +91,7 @@ fun PersonHealthScreen(
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { healthViewModel.saveRecord(it) },
+            onSaveRecord = { healthViewModel.saveRecord(it, selectedRecordId) },
             snackbarHostState = snackbarHostState
         )
     } else {
@@ -112,7 +112,7 @@ fun PersonHealthScreen(
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { healthViewModel.saveRecord(it) },
+            onSaveRecord = { healthViewModel.saveRecord(it, selectedRecordId) },
             snackbarHostState = snackbarHostState
         )
     }

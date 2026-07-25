@@ -204,7 +204,7 @@ class PersonConditionViewModel(
 
             // 2. Entity 構築
             val record = PersonConditionLogic.createRecord(personId, conditionId, inputState)
-            val isUpdate = conditionId.isNotEmpty() && conditionId != "0"
+            val isUpdate = !PersonConditionLogic.isNew(conditionId)
 
             // 3. 重複チェック
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)

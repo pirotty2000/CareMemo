@@ -430,6 +430,7 @@ fun MedicationInputDialog(
                                         current.copy(status = status.code, recordTime = instant)
                                     } else {
                                         MedicationRecord(
+                                            id = MedicationLogic.NEW_RECORD_ID,
                                             personId = personId,
                                             dosageDate = date.toString(),
                                             timeSlot = slot.index,

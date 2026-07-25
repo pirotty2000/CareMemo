@@ -4,8 +4,47 @@ package jp.mydns.fujiwara.carememo.data.spec
  * 健康データに関する仕様定義
  */
 object HealthSpecifications {
+
+    // ----- 身長・体重 ------------------------------------------------------------------------------
+    /** BMI */
+    object BodyMassIndex {
+        /**
+         * BMIの判断基準
+         *   (1)低体重：18.5未満
+         *   (2)普通体重：18.5以上、25.0未満
+         *   (3)肥満(1度)：25.0以上、30.0未満
+         *   (4)肥満(2度)：30.0以上、35.0未満
+         *   (5)肥満(3度)：35.0以上、40.0未満
+         *   (6)肥満(4度)：40.0以上
+         */
+        const val THRESHOLD_UNDERWEIGHT = 18.5
+        const val THRESHOLD_NORMAL_UPPER = 25.0
+        const val THRESHOLD_OBESITY_1 = 30.0
+        const val THRESHOLD_OBESITY_2 = 35.0
+        const val THRESHOLD_OBESITY_3 = 40.0
+
+        const val THRESHOLD_GRAPH_NORMAL_UPPER = 25.0
+        const val THRESHOLD_GRAPH_NORMAL_LOWER = 18.5
+
+        /** グラフ描画設定 */
+        object Graph {
+            const val Y_AXIS_STEP = 2.0         // Y軸の目盛りの刻み幅
+            const val DEFAULT_MIN = 20.0        // データ空時のデフォルト最小値
+            const val DEFAULT_MAX = 25.0        // データ空時のデフォルト最大値
+            const val VIEW_PADDING = 1.0        // データの最大/最小値から表示端までの余白
+            const val RANGE_MAX = 100.0         // ハイライトの終点
+            const val RANGE_MIN = 0.0           // ハイライトの始点
+        }
+    }
+
+    // ----- バイタル --------------------------------------------------------------------------------
     /** 血圧 */
     object BloodPressure {
+        /**
+         * 血圧の判断基準
+         *   (1)高血圧：血圧(上)が140以上、または血圧(下)が90以上
+         *   (2)低血圧：血圧(上)が100未満、または血圧(下)が60未満
+         */
         const val THRESHOLD_HIGH_SYSTOLIC = 140.0
         const val THRESHOLD_HIGH_DIASTOLIC = 90.0
         const val THRESHOLD_LOW_SYSTOLIC = 100.0
@@ -28,6 +67,11 @@ object HealthSpecifications {
 
     /** 脈拍 */
     object Pulse {
+        /**
+         * 脈拍の判断基準
+         *   (1)頻脈：100回/分 以上
+         *   (2)徐脈： 50回/分 以下
+         */
         const val THRESHOLD_HIGH = 100.0
         const val THRESHOLD_LOW = 50.0
 
@@ -51,6 +95,10 @@ object HealthSpecifications {
 
     /** 酸素飽和度(SAT) */
     object OxygenSaturation {
+        /**
+         * 酸素飽和度の判断基準
+         *   (1)呼吸不全：90.0%以下
+         */
         const val THRESHOLD_LOW = 90.0
 
         const val THRESHOLD_GRAPH_NORMAL_LOWER = 90.0
@@ -72,14 +120,19 @@ object HealthSpecifications {
 
     /** 体温 */
     object BodyTemperature {
+        /**
+         * 体温の判断基準
+         *   (1)熱発：37.5℃以上
+         *   (2)低体温：35.0℃以下
+         */
         const val THRESHOLD_HIGH = 37.5
-        const val THRESHOLD_LOW = 35.5
+        const val THRESHOLD_LOW = 35.0
 
         /** グラフ描画設定 */
         object Graph {
             const val Y_AXIS_STEP = 0.5         // Y軸の刻み幅（体温は0.1単位の変化が重要なため細かく設定）
-            const val Y_MIN_VIEW_LIMIT = 35.0   // 最低限表示したい下限値
-            const val Y_MAX_VIEW_LIMIT = 39.0   // 最低限表示したい上限値
+            const val Y_MIN_VIEW_LIMIT = 34.0   // 最低限表示したい下限値
+            const val Y_MAX_VIEW_LIMIT = 40.0   // 最低限表示したい上限値
             const val RANGE_MAX = 50.0          // ハイライトの終点
             const val RANGE_MIN = 0.0           // ハイライトの始点
         }
@@ -91,9 +144,19 @@ object HealthSpecifications {
         const val UNIT = "℃"
     }
 
+    // ----- 血糖値・HbA1c ---------------------------------------------------------------------------
     /** 血糖値 */
     object BloodGlucose {
+        /**
+         * 空腹時血糖値の判断基準
+         *   (1)低血糖  ： 70mg/dL未満：INFO
+         *   (2)正常型  ： 70mg/dL以上、99mg/dL以下(アプリでは100mg/dL未満)：NORMAL
+         *   (3)正常高値：100mg/dL以上、109mg/dL以下(アプリでは110mg/dL未満)：INFO
+         *   (4)予備群  ：110mg/dL以上、125mg/dL以下(アプリでは126mg/dL未満)：WARNING
+         *   (5)糖尿病型：126mg/dL以上：ALERT
+         */
         const val THRESHOLD_HIGH = 126.0
+        const val THRESHOLD_PREDIABETES = 110.0
         const val THRESHOLD_NORMAL_UPPER = 100.0
         const val THRESHOLD_LOW = 70.0
 
@@ -140,27 +203,6 @@ object HealthSpecifications {
         const val UNIT = "%"
     }
 
-    /** BMI */
-    object BodyMassIndex {
-        const val THRESHOLD_UNDERWEIGHT = 18.5
-        const val THRESHOLD_NORMAL_UPPER = 25.0
-        const val THRESHOLD_OBESITY_1 = 30.0
-        const val THRESHOLD_OBESITY_2 = 35.0
-        const val THRESHOLD_OBESITY_3 = 40.0
-
-        const val THRESHOLD_GRAPH_NORMAL_UPPER = 25.0
-        const val THRESHOLD_GRAPH_NORMAL_LOWER = 18.5
-
-        /** グラフ描画設定 */
-        object Graph {
-            const val Y_AXIS_STEP = 2.0         // Y軸の目盛りの刻み幅
-            const val DEFAULT_MIN = 20.0        // データ空時のデフォルト最小値
-            const val DEFAULT_MAX = 25.0        // データ空時のデフォルト最大値
-            const val VIEW_PADDING = 1.0        // データの最大/最小値から表示端までの余白
-            const val RANGE_MAX = 100.0         // ハイライトの終点
-            const val RANGE_MIN = 0.0           // ハイライトの始点
-        }
-    }
 
     /** 身長 */
     object Height {

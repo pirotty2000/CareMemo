@@ -29,7 +29,7 @@ enum class HealthAlertLevel(val severity: Int) {
  */
 enum class BmiStatus { UNDERWEIGHT, NORMAL, OBESITY_1, OBESITY_2, OBESITY_3, OBESITY_4 }
 enum class VitalStatus { NORMAL, HIGH_BP, LOW_BP, TACHYCARDIA, BRADYCARDIA, LOW_SAT, FEVER, HYPOTHERMIA }
-enum class GlucoseStatus { LOW, NORMAL, WARNING, HIGH }
+enum class GlucoseStatus { LOW, NORMAL, NORMAL_HIGH, PREDIABETES, DIABETES }
 enum class HbA1cStatus { NORMAL, WARNING, DIABETES }
 
 /**
@@ -65,7 +65,7 @@ object HealthLogic {
             bmi <= 0.0 -> null to HealthAlertLevel.NORMAL
             bmi < specs.THRESHOLD_UNDERWEIGHT -> BmiStatus.UNDERWEIGHT to HealthAlertLevel.INFO
             bmi < specs.THRESHOLD_NORMAL_UPPER -> BmiStatus.NORMAL to HealthAlertLevel.NORMAL
-            bmi < specs.THRESHOLD_OBESITY_1 -> BmiStatus.OBESITY_1 to HealthAlertLevel.WARNING
+            bmi < specs.THRESHOLD_OBESITY_1 -> BmiStatus.OBESITY_1 to HealthAlertLevel.INFO     // 2026-07-25 WARNING -> INFO
             bmi < specs.THRESHOLD_OBESITY_2 -> BmiStatus.OBESITY_2 to HealthAlertLevel.WARNING
             bmi < specs.THRESHOLD_OBESITY_3 -> BmiStatus.OBESITY_3 to HealthAlertLevel.ALERT
             else -> BmiStatus.OBESITY_4 to HealthAlertLevel.ALERT
@@ -120,10 +120,11 @@ object HealthLogic {
         val g = glucose ?: return null to HealthAlertLevel.NORMAL
         val spec = AppSpecifications.Health.BloodGlucose
         return when {
-            g >= spec.THRESHOLD_HIGH -> GlucoseStatus.HIGH to HealthAlertLevel.ALERT
-            g >= spec.THRESHOLD_NORMAL_UPPER -> GlucoseStatus.WARNING to HealthAlertLevel.WARNING
+            g >= spec.THRESHOLD_HIGH -> GlucoseStatus.DIABETES to HealthAlertLevel.ALERT
+            g >= spec.THRESHOLD_PREDIABETES -> GlucoseStatus.PREDIABETES to HealthAlertLevel.WARNING
+            g >= spec.THRESHOLD_NORMAL_UPPER -> GlucoseStatus.NORMAL_HIGH to HealthAlertLevel.INFO
             g >= spec.THRESHOLD_LOW -> GlucoseStatus.NORMAL to HealthAlertLevel.NORMAL
-            else -> GlucoseStatus.LOW to HealthAlertLevel.ALERT
+            else -> GlucoseStatus.LOW to HealthAlertLevel.INFO
         }
     }
 

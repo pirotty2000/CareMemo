@@ -73,7 +73,7 @@ fun PersonConditionScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedIdChange("0") }) {
+                        IconButton(onClick = { onSelectedIdChange(jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic.NEW_RECORD_ID) }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
                         IconButton(

@@ -142,7 +142,7 @@ fun PersonHealthScreenPhone(
             if (selectedRecordId.isEmpty()) {
                 FloatingActionButton(
                     onClick = {
-                        onSelectedRecordIdChange("0") // "0" は新規作成を意味する特別な ID (UUID化後も互換性のために暫定使用)
+                        onSelectedRecordIdChange(jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic.NEW_RECORD_ID)
                     },
                     modifier = Modifier.testTag("HealthScreen_AddButton")
                 ) {
