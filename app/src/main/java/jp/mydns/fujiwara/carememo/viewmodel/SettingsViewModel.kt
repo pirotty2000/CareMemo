@@ -83,6 +83,7 @@ class SettingsViewModel(
                     val theme = values[6] as ThemeSetting
                     val retention = values[7] as Int
                     val count = values[8] as Int
+                    @Suppress("UNCHECKED_CAST")
                     val archived = values[9] as List<Person>
 
                     currentState.copy(
