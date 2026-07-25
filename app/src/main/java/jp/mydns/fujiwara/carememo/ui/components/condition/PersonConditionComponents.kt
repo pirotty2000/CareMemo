@@ -165,6 +165,7 @@ fun ConditionDetailPane(
     onSelectedIdChange: (String) -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
+    onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit = {},
     orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo> = emptyList(),
     onNavigateToFullScreen: (String, String) -> Unit,
@@ -286,6 +287,7 @@ fun ConditionDetailPane(
                 }
             },
             onAddPhotoClick = onAddPhotoClick,
+            onPickPhotoClick = onPickPhotoClick,
             onReattachClick = { showOrphanedSelectDialog = true },
             orphanedPhotoCount = orphanedPhotos.size,
             onDeletePhoto = { photoToDelete = it },
@@ -300,6 +302,7 @@ fun ConditionDetailPane(
             onEditClick = { isEditing = true },
             onPhotoClick = { onNavigateToFullScreen(it.conditionId, it.id) },
             onAddPhotoClick = onAddPhotoClick,
+            onPickPhotoClick = onPickPhotoClick,
             onReattachClick = { showOrphanedSelectDialog = true },
             orphanedPhotoCount = orphanedPhotos.size
         )
@@ -338,6 +341,7 @@ private fun ConditionRecordDisplayCard(
     onEditClick: () -> Unit,
     onPhotoClick: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
+    onPickPhotoClick: () -> Unit = {},
     onReattachClick: () -> Unit = {},
     orphanedPhotoCount: Int = 0,
 ) {
@@ -418,6 +422,16 @@ private fun ConditionRecordDisplayCard(
                         }
                     }
 
+                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
+                        IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
+                            Icon(
+                                imageVector = Icons.Rounded.PhotoLibrary,
+                                contentDescription = "ギャラリーから追加",
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    }
+
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
                         IconButton(
                             onClick = onAddPhotoClick,
@@ -463,6 +477,7 @@ private fun ConditionRecordEditForm(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
+    onPickPhotoClick: () -> Unit = {},
     onReattachClick: () -> Unit = {},
     orphanedPhotoCount: Int = 0,
     onDeletePhoto: (ConditionPhoto) -> Unit,
@@ -564,6 +579,16 @@ private fun ConditionRecordEditForm(
                                 imageVector = Icons.Rounded.CloudDownload, // フォルダに矢印的なものを期待
                                 contentDescription = "迷子写真を再登録",
                                 tint = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+
+                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+                        IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
+                            Icon(
+                                imageVector = Icons.Rounded.PhotoLibrary,
+                                contentDescription = "ギャラリーから追加",
+                                tint = MaterialTheme.colorScheme.secondary
                             )
                         }
                     }
@@ -714,6 +739,7 @@ private fun PreviewConditionDetailPane() {
             onSelectedIdChange = {},
             onCancel = {},
             onAddPhotoClick = {},
+            onPickPhotoClick = {},
             onReattachPhoto = {},
             orphanedPhotos = emptyList(),
             onNavigateToFullScreen = { _, _ -> },
@@ -741,6 +767,7 @@ private fun PreviewConditionRecordEditFormDirect() {
             onSave = {},
             onCancel = {},
             onAddPhotoClick = {},
+            onPickPhotoClick = {},
             onReattachClick = {},
             onDeletePhoto = {},
             onMicClick = {}

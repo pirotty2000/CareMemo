@@ -92,6 +92,7 @@ fun SettingsScreen(
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     var showRetentionDialog by rememberSaveable { mutableStateOf(false) }
     var showLogClearConfirm by rememberSaveable { mutableStateOf(false) }
+    var showImportSampleConfirm by rememberSaveable { mutableStateOf(false) }
     var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
 
@@ -208,6 +209,16 @@ fun SettingsScreen(
             title = context.getString(R.string.audit_log_clear_confirm_title),
             message = context.getString(R.string.audit_log_clear_confirm_msg),
             confirmButtonText = context.getString(R.string.common_delete)
+        )
+    }
+
+    if (showImportSampleConfirm) {
+        AppDeleteConfirmDialog(
+            onDismiss = { showImportSampleConfirm = false },
+            onDelete = { viewModel.importSampleData() },
+            title = context.getString(R.string.settings_import_sample_confirm_title),
+            message = context.getString(R.string.settings_import_sample_confirm_msg),
+            confirmButtonText = context.getString(R.string.settings_btn_import_sample_data)
         )
     }
 
@@ -560,6 +571,18 @@ fun SettingsScreen(
         onOrphanedPhotosClick = onNavigateToOrphanedPhotos,
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
+        onImportSampleDataClick = {
+            if (viewModel.canAuthenticate(context)) {
+                onRequireAuthentication(
+                    R.string.security_auth_title,
+                    R.string.security_auth_reason_change_settings
+                ) {
+                    showImportSampleConfirm = true
+                }
+            } else {
+                showImportSampleConfirm = true
+            }
+        },
         isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
         isProcessing = uiState.isProcessing,
         processingProgress = uiState.processingProgress,
@@ -607,6 +630,7 @@ fun SettingsScreenContent(
     onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
+    onImportSampleDataClick: () -> Unit,
     isDeveloperModeEnabled: Boolean,
     isProcessing: Boolean,
     processingProgress: Int,
@@ -691,7 +715,8 @@ fun SettingsScreenContent(
                         onViewLogsClick = onViewLogsClick,
                         onOrphanedPhotosClick = onOrphanedPhotosClick,
                         onRotateLogsClick = onRotateLogsClick,
-                        onClearLogsClick = onClearLogsClick
+                        onClearLogsClick = onClearLogsClick,
+                        onImportSampleDataClick = onImportSampleDataClick
                     )
                 }
 
@@ -969,7 +994,8 @@ private fun ResetSection(
     onViewLogsClick: () -> Unit,
     onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
-    onClearLogsClick: () -> Unit
+    onClearLogsClick: () -> Unit,
+    onImportSampleDataClick: () -> Unit
 ) {
     val context = LocalContext.current
     SettingsSection(title = "管理者向けツール", modifier = Modifier.testTag("Settings_DevSection")) {
@@ -1016,7 +1042,14 @@ private fun ResetSection(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
-        Text(text = "※ データベースの状態チェックと修復を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(text = "※ データメンテナンスを行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+
+        ListItem(
+            headlineContent = { Text(context.getString(R.string.settings_btn_import_sample_data)) },
+            supportingContent = { Text("12名分のサンプルデータを生成して取り込みます") },
+            leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
+            modifier = Modifier.clickable { onImportSampleDataClick() }.testTag("Settings_ImportSampleButton")
+        )
         
         ListItem(
             headlineContent = { Text("迷子写真の確認") },
@@ -1097,6 +1130,7 @@ fun SettingsScreenPreview() {
             onOrphanedPhotosClick = {},
             onRotateLogsClick = {},
             onClearLogsClick = {},
+            onImportSampleDataClick = {},
             isDeveloperModeEnabled = true,
             isProcessing = false,
             processingProgress = 0,

@@ -245,6 +245,12 @@
     <string name="settings_msg_test_inconsistency_added">テスト用不整合データを1件挿入しました。</string>
     <string name="settings_msg_dev_mode_enabled">管理者向け設定が有効になりました</string>
 
+    <!-- サンプルデータ取り込み -->
+    <string name="settings_btn_import_sample_data">サンプルデータを取り込む</string>
+    <string name="settings_msg_import_sample_success">12名分のサンプルデータの取り込みが完了しました。</string>
+    <string name="settings_import_sample_confirm_title">サンプルデータの取り込み</string>
+    <string name="settings_import_sample_confirm_msg">現在のデータはすべて消去され、12名分のサンプルデータに置き換わります（※写真は含まれません）。よろしいですか？</string>
+
     <!-- Archive (DeleteOrRestorePerson) -->
     <string name="archive_msg_restored">%1$d 名の利用者を一覧に戻しました</string>
     <string name="archive_msg_deleted">%1$d 名の利用者を完全に抹消しました</string>

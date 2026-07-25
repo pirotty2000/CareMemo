@@ -45,6 +45,7 @@ class SettingsViewModel(
         private const val OP_INTEGRITY = "checkIntegrity"
         private const val OP_FIX_INCONSISTENCY = "fixInconsistencies"
         private const val OP_TEST_INCONSISTENCY = "insertTestInconsistency"
+        private const val OP_IMPORT_SAMPLE = "importSampleData"
     }
 
     override val featureName: String = FEATURE_NAME
@@ -224,6 +225,14 @@ class SettingsViewModel(
         safeLaunch(operation = OP_CLEAR_ALL, loadingState = loadingStateProxy) {
             maintenanceRepository.clearAllData()
             showSnackbar(R.string.settings_msg_clear_all_success)
+        }
+    }
+
+    fun importSampleData() {
+        safeLaunch(operation = OP_IMPORT_SAMPLE, loadingState = loadingStateProxy) {
+            val sampleData = jp.mydns.fujiwara.carememo.logic.sample.SampleDataGenerator.generate()
+            maintenanceRepository.replaceAllData(sampleData)
+            showSnackbar(R.string.settings_msg_import_sample_success)
         }
     }
 

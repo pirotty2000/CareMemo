@@ -124,6 +124,16 @@ fun PersonConditionScreen(
         }
     }
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
+            val pid = detailState.personId ?: return@rememberLauncherForActivityResult
+            val cid = conditionState.selectedConditionId ?: ""
+            conditionViewModel.onPhotoCaptured(uri, pid, cid)
+        }
+    }
+
     var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
     val isAnyDialogOpen = recordToDelete != null || showPdfSettingsDialog || dialogMessage != null
 
@@ -155,6 +165,10 @@ fun PersonConditionScreen(
                 } catch (_: Exception) {
                     conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                 }
+            },
+            onPickPhotoClick = {
+                conditionViewModel.setLockBypassEnabled(true)
+                galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
             onNavigateToFullScreen = { photoId, conditionId -> 
                 onNavigateToFullScreen(photoId, conditionId) 
@@ -209,6 +223,10 @@ fun PersonConditionScreen(
                 } catch (_: Exception) {
                     conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                 }
+            },
+            onPickPhotoClick = {
+                conditionViewModel.setLockBypassEnabled(true)
+                galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
             onNavigateToFullScreen = { photoId, conditionId -> 
                 onNavigateToFullScreen(photoId, conditionId) 
@@ -339,6 +357,10 @@ fun PersonConditionScreen(
                         } catch (_: Exception) {
                             conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                         }
+                    },
+                    onPickPhotoClick = {
+                        conditionViewModel.setLockBypassEnabled(true)
+                        galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                     onReattachPhoto = { info ->
                         detailState.personId?.let { pid ->
