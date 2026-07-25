@@ -68,18 +68,6 @@ object HealthDisplayMapper {
     }
 
     /**
-     * 複数のバイタル判定結果を「・」で連結した文字列を生成します。
-     */
-    fun formatVitalResults(context: Context, results: List<Pair<VitalStatus, HealthAlertLevel>>): String {
-        if (results.all { it.second == HealthAlertLevel.NORMAL }) {
-            return context.getString(R.string.vital_label_normal)
-        }
-        return results
-            .filter { it.second != HealthAlertLevel.NORMAL }
-            .joinToString("・") { context.getString(getVitalLabel(it.first)) }
-    }
-
-    /**
      * バイタルインジケーターのアラートレベルを決定します（On/Off判定）。
      */
     fun getVitalIndicatorLevel(isActive: Boolean): HealthAlertLevel {

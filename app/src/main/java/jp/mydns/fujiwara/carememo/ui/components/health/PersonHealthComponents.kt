@@ -19,13 +19,11 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,31 +36,12 @@ import jp.mydns.fujiwara.carememo.logic.common.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.theme.getDisplayColor
-import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
-import java.time.Instant
-
-
-/**
- * 詳細表示カード内の各項目（ラベルと値のペア）を描画する補助コンポーネント。
- * ラベルを左側に控えめに、値を right 側に強調して配置する。
- */
-@Composable
-fun DetailItem(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.secondary)
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    }
-}
 
 
 /**
