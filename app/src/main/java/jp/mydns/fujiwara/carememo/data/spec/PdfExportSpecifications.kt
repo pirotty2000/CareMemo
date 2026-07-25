@@ -32,7 +32,7 @@ object ExportSpecifications {
         /** 配色仕様 (RGB) */
         object Colors {
             val BACKGROUND_LIGHT = Color.rgb(245, 245, 245)
-            val TABLE_LINE = Color.LTGRAY
+            const val TABLE_LINE = Color.LTGRAY
             val SUN_BACKGROUND = Color.rgb(255, 240, 240)
             val SAT_BACKGROUND = Color.rgb(240, 248, 255)
             val SUN_TEXT = Color.rgb(211, 47, 47)

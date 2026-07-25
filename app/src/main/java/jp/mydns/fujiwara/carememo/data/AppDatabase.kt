@@ -52,7 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
-                // SQLCipherのロード
+                // SQLCipher のロード
                 System.loadLibrary("sqlcipher")
 
                 val dbName = "care_memo_database"

@@ -19,11 +19,11 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.BloodPressure.MAX_VALUE
             const val UNIT = HealthSpecifications.BloodPressure.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.BloodPressure.Graph.Y_AXIS_STEP
-                val Y_MIN_VIEW_LIMIT = HealthSpecifications.BloodPressure.Graph.Y_MIN_VIEW_LIMIT
-                val Y_MAX_VIEW_LIMIT = HealthSpecifications.BloodPressure.Graph.Y_MAX_VIEW_LIMIT
-                val RANGE_MAX = HealthSpecifications.BloodPressure.Graph.RANGE_MAX
-                val RANGE_MIN = HealthSpecifications.BloodPressure.Graph.RANGE_MIN
+                const val Y_AXIS_STEP = HealthSpecifications.BloodPressure.Graph.Y_AXIS_STEP
+                const val Y_MIN_VIEW_LIMIT = HealthSpecifications.BloodPressure.Graph.Y_MIN_VIEW_LIMIT
+                const val Y_MAX_VIEW_LIMIT = HealthSpecifications.BloodPressure.Graph.Y_MAX_VIEW_LIMIT
+                const val RANGE_MAX = HealthSpecifications.BloodPressure.Graph.RANGE_MAX
+                const val RANGE_MIN = HealthSpecifications.BloodPressure.Graph.RANGE_MIN
             }
         }
         object Pulse {
@@ -36,11 +36,11 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.Pulse.MAX_VALUE
             const val UNIT = HealthSpecifications.Pulse.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.Pulse.Graph.Y_AXIS_STEP
-                val Y_MIN_VIEW_LIMIT = HealthSpecifications.Pulse.Graph.Y_MIN_VIEW_LIMIT
-                val Y_MAX_VIEW_LIMIT = HealthSpecifications.Pulse.Graph.Y_MAX_VIEW_LIMIT
-                val RANGE_MAX = HealthSpecifications.Pulse.Graph.RANGE_MAX
-                val RANGE_MIN = HealthSpecifications.Pulse.Graph.RANGE_MIN
+                const val Y_AXIS_STEP = HealthSpecifications.Pulse.Graph.Y_AXIS_STEP
+                const val Y_MIN_VIEW_LIMIT = HealthSpecifications.Pulse.Graph.Y_MIN_VIEW_LIMIT
+                const val Y_MAX_VIEW_LIMIT = HealthSpecifications.Pulse.Graph.Y_MAX_VIEW_LIMIT
+                const val RANGE_MAX = HealthSpecifications.Pulse.Graph.RANGE_MAX
+                const val RANGE_MIN = HealthSpecifications.Pulse.Graph.RANGE_MIN
             }
         }
         object OxygenSaturation {
@@ -51,11 +51,11 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.OxygenSaturation.MAX_VALUE
             const val UNIT = HealthSpecifications.OxygenSaturation.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.OxygenSaturation.Graph.Y_AXIS_STEP
-                val Y_MIN_VIEW_LIMIT = HealthSpecifications.OxygenSaturation.Graph.Y_MIN_VIEW_LIMIT
-                val Y_MAX_VIEW_LIMIT = HealthSpecifications.OxygenSaturation.Graph.Y_MAX_VIEW_LIMIT
-                val RANGE_MIN = HealthSpecifications.OxygenSaturation.Graph.RANGE_MIN
-                val RANGE_MAX = HealthSpecifications.OxygenSaturation.Graph.RANGE_MAX
+                const val Y_AXIS_STEP = HealthSpecifications.OxygenSaturation.Graph.Y_AXIS_STEP
+                const val Y_MIN_VIEW_LIMIT = HealthSpecifications.OxygenSaturation.Graph.Y_MIN_VIEW_LIMIT
+                const val Y_MAX_VIEW_LIMIT = HealthSpecifications.OxygenSaturation.Graph.Y_MAX_VIEW_LIMIT
+                const val RANGE_MIN = HealthSpecifications.OxygenSaturation.Graph.RANGE_MIN
+                const val RANGE_MAX = HealthSpecifications.OxygenSaturation.Graph.RANGE_MAX
             }
         }
         object BodyTemperature {
@@ -67,11 +67,11 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.BodyTemperature.MAX_VALUE
             const val UNIT = HealthSpecifications.BodyTemperature.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.BodyTemperature.Graph.Y_AXIS_STEP
-                val Y_MIN_VIEW_LIMIT = HealthSpecifications.BodyTemperature.Graph.Y_MIN_VIEW_LIMIT
-                val Y_MAX_VIEW_LIMIT = HealthSpecifications.BodyTemperature.Graph.Y_MAX_VIEW_LIMIT
-                val RANGE_MAX = HealthSpecifications.BodyTemperature.Graph.RANGE_MAX
-                val RANGE_MIN = HealthSpecifications.BodyTemperature.Graph.RANGE_MIN
+                const val Y_AXIS_STEP = HealthSpecifications.BodyTemperature.Graph.Y_AXIS_STEP
+                const val Y_MIN_VIEW_LIMIT = HealthSpecifications.BodyTemperature.Graph.Y_MIN_VIEW_LIMIT
+                const val Y_MAX_VIEW_LIMIT = HealthSpecifications.BodyTemperature.Graph.Y_MAX_VIEW_LIMIT
+                const val RANGE_MAX = HealthSpecifications.BodyTemperature.Graph.RANGE_MAX
+                const val RANGE_MIN = HealthSpecifications.BodyTemperature.Graph.RANGE_MIN
             }
         }
         object BloodGlucose {
@@ -86,12 +86,12 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.BloodGlucose.MAX_VALUE
             const val UNIT = HealthSpecifications.BloodGlucose.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.BloodGlucose.Graph.Y_AXIS_STEP
-                val DEFAULT_MIN = HealthSpecifications.BloodGlucose.Graph.DEFAULT_MIN
-                val DEFAULT_MAX = HealthSpecifications.BloodGlucose.Graph.DEFAULT_MAX
-                val VIEW_PADDING = HealthSpecifications.BloodGlucose.Graph.VIEW_PADDING
-                val RANGE_MAX = HealthSpecifications.BloodGlucose.Graph.RANGE_MAX
-                val RANGE_MIN = HealthSpecifications.BloodGlucose.Graph.RANGE_MIN
+                const val Y_AXIS_STEP = HealthSpecifications.BloodGlucose.Graph.Y_AXIS_STEP
+                const val DEFAULT_MIN = HealthSpecifications.BloodGlucose.Graph.DEFAULT_MIN
+                const val DEFAULT_MAX = HealthSpecifications.BloodGlucose.Graph.DEFAULT_MAX
+                const val VIEW_PADDING = HealthSpecifications.BloodGlucose.Graph.VIEW_PADDING
+                const val RANGE_MAX = HealthSpecifications.BloodGlucose.Graph.RANGE_MAX
+                const val RANGE_MIN = HealthSpecifications.BloodGlucose.Graph.RANGE_MIN
             }
         }
         object HbA1c {
@@ -104,12 +104,12 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.HbA1c.MAX_VALUE
             const val UNIT = HealthSpecifications.HbA1c.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.HbA1c.Graph.Y_AXIS_STEP
-                val DEFAULT_MIN = HealthSpecifications.HbA1c.Graph.DEFAULT_MIN
-                val DEFAULT_MAX = HealthSpecifications.HbA1c.Graph.DEFAULT_MAX
-                val VIEW_PADDING = HealthSpecifications.HbA1c.Graph.VIEW_PADDING
-                val RANGE_MAX = HealthSpecifications.HbA1c.Graph.RANGE_MAX
-                val RANGE_MIN = HealthSpecifications.HbA1c.Graph.RANGE_MIN
+                const val Y_AXIS_STEP = HealthSpecifications.HbA1c.Graph.Y_AXIS_STEP
+                const val DEFAULT_MIN = HealthSpecifications.HbA1c.Graph.DEFAULT_MIN
+                const val DEFAULT_MAX = HealthSpecifications.HbA1c.Graph.DEFAULT_MAX
+                const val VIEW_PADDING = HealthSpecifications.HbA1c.Graph.VIEW_PADDING
+                const val RANGE_MAX = HealthSpecifications.HbA1c.Graph.RANGE_MAX
+                const val RANGE_MIN = HealthSpecifications.HbA1c.Graph.RANGE_MIN
             }
         }
         object BodyMassIndex {
@@ -121,12 +121,12 @@ object AppSpecifications {
             const val THRESHOLD_GRAPH_NORMAL_UPPER = HealthSpecifications.BodyMassIndex.THRESHOLD_GRAPH_NORMAL_UPPER
             const val THRESHOLD_GRAPH_NORMAL_LOWER = HealthSpecifications.BodyMassIndex.THRESHOLD_GRAPH_NORMAL_LOWER
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.BodyMassIndex.Graph.Y_AXIS_STEP
-                val DEFAULT_MIN = HealthSpecifications.BodyMassIndex.Graph.DEFAULT_MIN
-                val DEFAULT_MAX = HealthSpecifications.BodyMassIndex.Graph.DEFAULT_MAX
-                val VIEW_PADDING = HealthSpecifications.BodyMassIndex.Graph.VIEW_PADDING
-                val RANGE_MAX = HealthSpecifications.BodyMassIndex.Graph.RANGE_MAX
-                val RANGE_MIN = HealthSpecifications.BodyMassIndex.Graph.RANGE_MIN
+                const val Y_AXIS_STEP = HealthSpecifications.BodyMassIndex.Graph.Y_AXIS_STEP
+                const val DEFAULT_MIN = HealthSpecifications.BodyMassIndex.Graph.DEFAULT_MIN
+                const val DEFAULT_MAX = HealthSpecifications.BodyMassIndex.Graph.DEFAULT_MAX
+                const val VIEW_PADDING = HealthSpecifications.BodyMassIndex.Graph.VIEW_PADDING
+                const val RANGE_MAX = HealthSpecifications.BodyMassIndex.Graph.RANGE_MAX
+                const val RANGE_MIN = HealthSpecifications.BodyMassIndex.Graph.RANGE_MIN
             }
         }
         object Height {
@@ -143,10 +143,10 @@ object AppSpecifications {
             const val MAX_VALUE = HealthSpecifications.Weight.MAX_VALUE
             const val UNIT = HealthSpecifications.Weight.UNIT
             object Graph {
-                val Y_AXIS_STEP = HealthSpecifications.Weight.Graph.Y_AXIS_STEP
-                val DEFAULT_MIN = HealthSpecifications.Weight.Graph.DEFAULT_MIN
-                val DEFAULT_MAX = HealthSpecifications.Weight.Graph.DEFAULT_MAX
-                val VIEW_PADDING = HealthSpecifications.Weight.Graph.VIEW_PADDING
+                const val Y_AXIS_STEP = HealthSpecifications.Weight.Graph.Y_AXIS_STEP
+                const val DEFAULT_MIN = HealthSpecifications.Weight.Graph.DEFAULT_MIN
+                const val DEFAULT_MAX = HealthSpecifications.Weight.Graph.DEFAULT_MAX
+                const val VIEW_PADDING = HealthSpecifications.Weight.Graph.VIEW_PADDING
             }
         }
     }
@@ -224,7 +224,7 @@ object AppSpecifications {
             val Style = ExportSpecifications.Pdf.Style
             object Colors {
                 val BACKGROUND_LIGHT = ExportSpecifications.Pdf.Colors.BACKGROUND_LIGHT
-                val TABLE_LINE = ExportSpecifications.Pdf.Colors.TABLE_LINE
+                const val TABLE_LINE = ExportSpecifications.Pdf.Colors.TABLE_LINE
                 val SUN_BACKGROUND = ExportSpecifications.Pdf.Colors.SUN_BACKGROUND
                 val SAT_BACKGROUND = ExportSpecifications.Pdf.Colors.SAT_BACKGROUND
                 val SUN_TEXT = ExportSpecifications.Pdf.Colors.SUN_TEXT

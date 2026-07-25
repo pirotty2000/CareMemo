@@ -97,29 +97,29 @@ jp.mydns.fujiwara.carememo
 ---
 # CareMemo 画面一覧
 
-| 画面ID       | 分類         | 画面名                         | 実装ID          | 実装ファイル                                        | 備考          |
-|------------|------------|-----------------------------|---------------|-----------------------------------------------|-------------|
-| SCR-M-001  | Main       | MainScreen                  | -             | `main/MainScreen.kt`                          | トップ画面       |
-| SCR-M-002  | Main       | PersonEditScreen            | -             | `main/PersonEditScreen.kt`                    | 利用者登録・編集    |
-| SCR-PH-001 | Health     | PersonHealthScreen          | -             | `health/PersonHealthScreen.kt`                | 健康記録        |
-|            |            |                             | SCR-PH-001-PH | `health/PersonHealthScreenPhone.kt`           | Phone実装     |
-|            |            |                             | SCR-PH-001-TB | `health/PersonHealthScreenTablet.kt`          | Tablet実装    |
-|            |            |                             | SCR-PH-001-CT | `health/PersonHealthScreenContent.kt`         | 共通Content実装 |
-| SCR-PH-002 | Health     | BatchInputScreen            | -             | `health/BatchInputScreen.kt`                  | 健康記録一括入力    |
-| SCR-PH-003 | Health     | GraphExpansionScreen        | -             | `health/GraphExpansionScreen.kt`              | グラフ拡大表示     |
-| SCR-PC-001 | Condition  | PersonConditionScreen       | -             | `condition/PersonConditionScreen.kt`          | 所見メモ        |
-|            |            |                             | SCR-PC-001-PH | `condition/PersonConditionScreenPhone.kt`     | Phone実装     |
-|            |            |                             | SCR-PC-001-TB | `condition/PersonConditionScreenTablet.kt`    | Tablet実装    |
-|            |            |                             | SCR-PC-001-CT | `condition/PersonConditionScreenContent.kt`   | 共通Content実装 |
-| SCR-PC-002 | Condition  | ConditionPhotoPreviewScreen | -             | `condition/ConditionPhotoPreviewScreen.kt`    | 写真プレビュー     |
-| SCR-PC-003 | Condition  | ConditionPhotoFullScreen    | -             | `condition/ConditionPhotoFullScreen.kt`       | 写真全画面表示     |
-| SCR-PM-001 | Medication | PersonMedicationScreen      | -             | `medication/PersonMedicationScreen.kt`        | 服薬管理        |
-|            |            |                             | SCR-PM-001-PH | `medication/PersonMedicationScreenPhone.kt`   | Phone実装     |
-|            |            |                             | SCR-PM-001-TB | `medication/PersonMedicationScreenTablet.kt`  | Tablet実装    |
-|            |            |                             | SCR-PM-001-CT | `medication/PersonMedicationScreenContent.kt` | 共通Content実装 |
-| SCR-S-001  | Settings   | SettingsScreen              | -             | `settings/SettingsScreen.kt`                  | 設定          |
-| SCR-S-002  | Settings   | AuditLogScreen              | -             | `settings/AuditLogScreen.kt`                  | 監査ログ        |
-| SCR-S-003  | Settings   | DeleteOrRestorePerson       | -             | `settings/DeleteOrRestorePerson.kt`           | 利用者管理       |
+| 画面ID       | 分類         | 画面名                           | 実装ID          | 実装ファイル                                        | 備考          |
+|------------|------------|-------------------------------|---------------|-----------------------------------------------|-------------|
+| SCR-M-001  | Main       | MainScreen                    | -             | `main/MainScreen.kt`                          | トップ画面       |
+| SCR-M-002  | Main       | PersonEditScreen              | -             | `main/PersonEditScreen.kt`                    | 利用者登録・編集    |
+| SCR-PH-001 | Health     | PersonHealthScreen            | -             | `health/PersonHealthScreen.kt`                | 健康記録        |
+|            |            |                               | SCR-PH-001-PH | `health/PersonHealthScreenPhone.kt`           | Phone実装     |
+|            |            |                               | SCR-PH-001-TB | `health/PersonHealthScreenTablet.kt`          | Tablet実装    |
+|            |            |                               | SCR-PH-001-CT | `health/PersonHealthScreenContent.kt`         | 共通Content実装 |
+| SCR-PH-002 | Health     | BatchInputScreen              | -             | `health/BatchInputScreen.kt`                  | 健康記録一括入力    |
+| SCR-PH-003 | Health     | GraphExpansionScreen          | -             | `health/GraphExpansionScreen.kt`              | グラフ拡大表示     |
+| SCR-PC-001 | Condition  | PersonConditionScreen         | -             | `condition/PersonConditionScreen.kt`          | 所見メモ        |
+|            |            |                               | SCR-PC-001-PH | `condition/PersonConditionScreenPhone.kt`     | Phone実装     |
+|            |            |                               | SCR-PC-001-TB | `condition/PersonConditionScreenTablet.kt`    | Tablet実装    |
+|            |            |                               | SCR-PC-001-CT | `condition/PersonConditionScreenContent.kt`   | 共通Content実装 |
+| SCR-PC-002 | Condition  | ConditionPhotoPreviewScreen   | -             | `condition/ConditionPhotoPreviewScreen.kt`    | 写真プレビュー     |
+| SCR-PC-003 | Condition  | ConditionPhotoFullScreen      | -             | `condition/ConditionPhotoFullScreen.kt`       | 写真全画面表示     |
+| SCR-PM-001 | Medication | PersonMedicationScreen        | -             | `medication/PersonMedicationScreen.kt`        | 服薬管理        |
+|            |            |                               | SCR-PM-001-PH | `medication/PersonMedicationScreenPhone.kt`   | Phone実装     |
+|            |            |                               | SCR-PM-001-TB | `medication/PersonMedicationScreenTablet.kt`  | Tablet実装    |
+|            |            |                               | SCR-PM-001-CT | `medication/PersonMedicationScreenContent.kt` | 共通Content実装 |
+| SCR-S-001  | Settings   | SettingsScreen                | -             | `settings/SettingsScreen.kt`                  | 設定          |
+| SCR-S-002  | Settings   | AuditLogScreen                | -             | `settings/AuditLogScreen.kt`                  | 監査ログ        |
+| SCR-S-003  | Settings   | DeleteOrRestorePerson         | -             | `settings/DeleteOrRestorePerson.kt`           | 利用者管理       |
 | SCR-S-004  | Settings   | OrphanedPhotoManagementScreen | -             | `settings/OrphanedPhotoManagementScreen.kt`   | 迷子写真の確認     |
 
 ---
@@ -249,7 +249,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                         |
 | 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/AppDeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                           |
 | 10. 操作ログ             | `AuditLogScreen`                                                         | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                   |
-| 11. 迷子写真確認          | `OrphanedPhotoManagementScreen`                                          | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示                                                                                                                                                                                                                                                                             |
+| 11. 迷子写真確認           | `OrphanedPhotoManagementScreen`                                          | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示                                                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -331,7 +331,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | **NAV-S-001**          | SCR-M-001  | SCR-S-001  | ドロワー（ハンバーガーメニュー）を開き、「設定」をタップする。   | 設定画面が表示される。              |
 | **NAV-S-002**          | SCR-S-001  | SCR-S-002  | 設定画面で「操作ログの参照」をタップする。             | 監査ログ画面が表示される。            |
 | **NAV-S-003**          | SCR-S-001  | SCR-S-003  | 設定画面で「利用終了者の管理」をタップする。            | 利用者管理（復帰・抹消）画面が表示される。    |
-| **NAV-S-004**          | SCR-S-001  | SCR-S-004  | 設定画面で「迷子写真の確認」をタップする。            | 迷子写真確認画面が表示される。          |
+| **NAV-S-004**          | SCR-S-001  | SCR-S-004  | 設定画面で「迷子写真の確認」をタップする。             | 迷子写真確認画面が表示される。          |
 | **[Common: 詳細画面間遷移]**  |            |            |                                   |                          |
 | **NAV-COM-001**        | SCR-PH-001 | SCR-PC-001 | 詳細画面のカテゴリバーで「所見」をタップする。           | 所見メモ画面に切り替わる（スタックは積まない）。 |
 | **NAV-COM-002**        | SCR-PC-001 | SCR-PM-001 | 詳細画面のカテゴリバーで「服薬」をタップする。           | 服薬管理画面に切り替わる（スタックは積まない）。 |

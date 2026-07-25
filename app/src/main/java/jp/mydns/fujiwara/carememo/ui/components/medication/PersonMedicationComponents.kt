@@ -426,10 +426,8 @@ fun MedicationInputDialog(
                                     // 新規またはステータス変更
                                     syncCurrentTimeFieldsToTemp()
                                     val instant = current?.recordTime ?: Instant.now()
-                                    val newRecord = if (current != null) {
-                                        current.copy(status = status.code, recordTime = instant)
-                                    } else {
-                                        MedicationRecord(
+                                    val newRecord = current?.copy(status = status.code, recordTime = instant)
+                                        ?: MedicationRecord(
                                             id = MedicationLogic.NEW_RECORD_ID,
                                             personId = personId,
                                             dosageDate = date.toString(),
@@ -437,7 +435,6 @@ fun MedicationInputDialog(
                                             status = status.code,
                                             recordTime = instant
                                         )
-                                    }
                                     tempRecords = tempRecords.toMutableList().apply {
                                         set(slot.index, newRecord)
                                     }

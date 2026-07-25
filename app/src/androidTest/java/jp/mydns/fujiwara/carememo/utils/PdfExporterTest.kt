@@ -139,17 +139,6 @@ class PdfExporterTest {
         }
     }
 
-    @Test
-    fun PDF_07_exportAndShare_write_failure_throws_exception() {
-        // IOException を投げることが可能な設計であることを確認済み。
-        // 物理的に確実に失敗させる状況を実機上で安定して作ることが困難なため、パスとする。
-    }
-
-    @Test
-    fun PDF_08_exportAndShare_share_failure_not_testable_directly() {
-        // ActivityNotFoundException を IOException に変換して投げる設計をコードレビューにて確認済み。
-    }
-
     // --- 3.2. Internal Utilities ---
 
     @Test
