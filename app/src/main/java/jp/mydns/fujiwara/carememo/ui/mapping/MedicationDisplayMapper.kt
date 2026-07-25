@@ -24,13 +24,6 @@ object MedicationDisplayMapper {
     }
 
     /**
-     * ステータスに対応する業務上の呼称を返します。
-     */
-//    fun getStatusLabel(status: MedicationStatus): String {
-//        return AppSpecifications.Medication.Status.LABELS[status.code] ?: ""
-//    }
-
-    /**
      * ステータスに対応する Compose 用のカラーを返します。
      */
     @Composable

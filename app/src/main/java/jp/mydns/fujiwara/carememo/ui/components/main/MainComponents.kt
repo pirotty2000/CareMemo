@@ -35,7 +35,6 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
  * 利用者カードを表示するコンポーネント（一覧用）。
- * v2.1.1のデザインを完全に復元。
  */
 @Composable
 fun UserListItem(
@@ -63,8 +62,8 @@ fun UserListItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
+                // カテゴリー・バッジ
                 CategoryBadges(summary = summary ?: PersonCategorySummary())
-                
                 // ケーキアイコン領域
                 Box(
                     modifier = Modifier.width(20.dp),
@@ -86,10 +85,11 @@ fun UserListItem(
                 // フリガナ (上段)
                 Text(
                     text = person.getMaskedFurigana(isNameMaskingEnabled), 
-                    style = MaterialTheme.typography.labelSmall, 
-                    color = if (isBirthdayToday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.secondary
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isBirthdayToday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                            else MaterialTheme.colorScheme.secondary
                 )
-                // 氏名 + 備考 (中段)
+                // 氏名 + 同姓同名識別メモ (中段)
                 Text(
                     text = buildString { 
                         append(person.getMaskedName(isNameMaskingEnabled))
@@ -108,13 +108,15 @@ fun UserListItem(
                         stringResource(R.string.common_age_suffix, DateTimeUtils.calculateAge(person.birthday))
                     ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isBirthdayToday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isBirthdayToday) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             } 
         },
         trailingContent = {
+            // 鉛筆アイコン
             Box {
                 IconButton(
                     onClick = { showItemMenu = true },
@@ -138,6 +140,7 @@ fun UserListItem(
                 }
             }
         },
+        // 背景色（誕生日・誕生日が近い･･･は色を変えている)
         colors = ListItemDefaults.colors(
             containerColor = when {
                 isBirthdayToday -> MaterialTheme.colorScheme.tertiaryContainer
@@ -155,7 +158,6 @@ fun UserListItem(
 
 /**
  * 利用者を選択した際に表示されるカテゴリ選択用のボトムシート。
- * v2.1.1のデザインを復元。
  */
 @Composable
 fun CategorySelectionSheet(

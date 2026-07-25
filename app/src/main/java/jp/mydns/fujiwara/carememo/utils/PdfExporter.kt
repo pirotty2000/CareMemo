@@ -129,7 +129,8 @@ object PdfExporter {
                 }
                 Category.CONDITION_AT_VISIT -> {
                     val casted = filteredRecords.filterIsInstance<ConditionAtVisit>()
-                    val sorted = if (order == ExportOrder.NEWEST_FIRST) casted.sortedByDescending { it.recordTime } else casted.sortedBy { it.recordTime }
+                    val sorted =    if (order == ExportOrder.NEWEST_FIRST) casted.sortedByDescending { it.recordTime }
+                                    else casted.sortedBy { it.recordTime }
                     drawConditionContent(pageContext, sorted, allPhotos)
                 }
                 Category.MEDICATION -> {
@@ -662,6 +663,9 @@ object PdfExporter {
     }
 
     fun clearOldExports(context: Context) {
-        try { context.cacheDir.listFiles()?.forEach { if (it.name.startsWith("CareMemo") && it.name.endsWith(".pdf")) it.delete() } } catch (e: Exception) { e.printStackTrace() }
+        try { context.cacheDir.listFiles()?.forEach {
+            if (it.name.startsWith("CareMemo") && it.name.endsWith(".pdf")) it.delete() }
+        }
+        catch (e: Exception) { e.printStackTrace() }
     }
 }

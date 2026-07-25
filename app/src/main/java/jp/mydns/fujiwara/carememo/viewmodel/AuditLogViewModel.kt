@@ -10,7 +10,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import kotlinx.coroutines.flow.combine
 
 /**
- * 操作ログ（監査ログ）閲覧画面用の ViewModel (System B)
+ * 操作ログ（監査ログ）閲覧画面用の ViewModel
  */
 class AuditLogViewModel(
     private val auditLogRepository: AuditLogRepository,
@@ -27,7 +27,7 @@ class AuditLogViewModel(
     override val featureName: String = FEATURE_NAME
 
     init {
-        // (B)系統標準のエラーハンドラをセットアップ
+        // 標準のエラーハンドラをセットアップ
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
             showError(title, msg, *args)
         }

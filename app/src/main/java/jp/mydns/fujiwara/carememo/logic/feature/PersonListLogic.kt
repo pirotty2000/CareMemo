@@ -79,7 +79,7 @@ object PersonListLogic {
     ): List<Person> {
         var filtered = allPersons
         
-        // 五五十音フィルタ
+        // 五十音フィルタ
         if (section != AppSpecifications.Search.SECTION_ALL) {
             filtered = filtered.filter { person ->
                 getSection(person.lastNameFurigana) == section

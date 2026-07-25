@@ -181,6 +181,12 @@ object HealthSpecifications {
 
     /** HbA1c */
     object HbA1c {
+        /**
+         * HbA1c
+         *   (1)正常値：5.5%以下
+         *   (2)予備群：5.6%以上、6.4％以下(アプリでは6.5％未満)
+         *   (3)糖尿病型：6.5％以上
+         */
         const val THRESHOLD_NORMAL_UPPER = 5.5
         const val THRESHOLD_DIABETES = 6.5
 

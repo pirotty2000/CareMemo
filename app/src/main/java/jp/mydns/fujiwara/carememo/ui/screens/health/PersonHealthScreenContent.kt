@@ -23,9 +23,9 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
  * なし（Stateless化済み。親からラムダ経由で操作を実行）
  *
  * 【使用するComponents】：
- * ・detail/health/HealthGraphView.kt
- * ・detail/health/HealthRecordDetailPane (PersonHealthComponents.kt)
- * ・detail/health/PersonHistoryList (PersonHealthComponents.kt)
+ * ・health/HealthGraphView.kt
+ * ・health/HealthRecordDetailPane (PersonHealthComponents.kt)
+ * ・health/PersonHistoryList (PersonHealthComponents.kt)
  * ・base/LoadingScreen.kt
  * ・base/VerticalScrollIndicator.kt
  *
@@ -59,6 +59,26 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthRecordDetailPane
+
+/**
+ * 全体像
+ *   ★ PersonHealthScreenContent
+ *    ├─【左側 / 上部】
+ *    │   └─ ui/components/common/HistoryComponents.kt の PersonHistoryList
+ *    │     └─ [1] ui/components/health/PersonHealthComponents.kt の HealthHistoryItemBody (履歴1行分の要約)
+ *    │          ├─ [1-1] HeightWeightRecordItemContent (身長・体重の要約)
+ *    │          ├─ [1-2] VitalRecordItemContent (バイタルの要約)
+ *    │          │    └─ [1-2-1] VitalStatusIndicator
+ *    │          └─ [1-3] GlucoseRecordItemContent (血糖値の要約)
+ *    └─【右側 / 詳細】
+ *         └─ [2] ui/components/health/PersonHealthComponents.kt の HealthRecordDetailPane (詳細・編集パネル)
+ *              ├─ [2-1] HealthRecordEditForm (入力フォーム)
+ *              └─ [2-2] HealthRecordDisplayCard (閲覧用カード)
+ *                   └─ [2-2-1] HealthDetailContent (カテゴリ分岐)
+ *                       ├── [2-2-1-1] HeightWeightDetailContent x DetailRow
+ *                       ├── [2-2-1-2] VitalDetailContent x DetailRow
+ *                       └── [2-2-1-3] GlucoseDetailContent x DetailRow
+ **/
 
 @Composable
 fun PersonHealthScreenContent(

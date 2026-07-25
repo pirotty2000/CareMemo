@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -97,7 +98,7 @@ fun PersonHealthScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedRecordIdChange(jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic.NEW_RECORD_ID) }) {
+                        IconButton(onClick = { onSelectedRecordIdChange(AppSpecifications.Id.NEW_RECORD_ID) }) {
                             Icon(Icons.Rounded.Add, contentDescription = "新規追加")
                         }
                         IconButton(

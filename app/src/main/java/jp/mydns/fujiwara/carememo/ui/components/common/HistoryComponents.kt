@@ -48,6 +48,32 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import java.time.ZoneId
 
 /**
+ * 全体像
+ *   ui/components/health/PersonHealthScreenContent.kt の PersonHealthScreenContent
+ *    ├─【左側 / 上部】
+ *    │   └─ PersonHistoryList
+ *    │      └─ [1] ui/components/health/PersonHealthComponents.kt の HealthHistoryItemBody (履歴1行分の要約)
+ *    │           ├─ [1-1] HeightWeightRecordItemContent (身長・体重の要約)
+ *    │           ├─ [1-2] VitalRecordItemContent (バイタルの要約)
+ *    │           │    └─ [1-2-1] VitalStatusIndicator
+ *    │           └─ [1-3] GlucoseRecordItemContent (血糖値の要約)
+ *    └─【右側 / 詳細】
+ *           └─ [2] ui/components/health/PersonHealthComponents.kt の HealthRecordDetailPane (詳細・編集パネル)
+ *                ├─ [2-1] HealthRecordEditForm (入力フォーム)
+ *                └─ [2-2] HealthRecordDisplayCard (閲覧用カード)
+ *                     └─ [2-2-1] HealthDetailContent (カテゴリ分岐)
+ *                         ├── [2-2-1-1] HeightWeightDetailContent x DetailRow
+ *                         ├── [2-2-1-2] VitalDetailContent x DetailRow
+ *                         └── [2-2-1-3] GlucoseDetailContent x DetailRow
+ **/
+
+/**
+ * PersonHistoryList (履歴リストの枠)
+ *  └─ HistoryItemWrapper (共通の振る舞い：スワイプ・選択・枠)
+ *      └─ (別ファイル)HealthHistoryItemBody (健康記録専用の中身)
+ */
+
+/**
  * 利用者情報の履歴リストを表示する汎用コンポーネント
  */
 @OptIn(ExperimentalFoundationApi::class)

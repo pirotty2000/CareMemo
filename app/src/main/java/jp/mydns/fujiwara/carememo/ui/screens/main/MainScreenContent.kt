@@ -130,7 +130,7 @@ fun MainScreenContent(
                     modifier = Modifier.testTag("MainScreen_SearchBox")
                 )
 
-                // ---------- 名前(ふりがな)インデックス ----------
+                // ---------- 五十音インデックス ----------
                 KanaIndexBar(
                     selectedSection = selectedSection,
                     onSectionSelect = onSectionSelect,
@@ -159,6 +159,9 @@ fun MainScreenContent(
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(userList, key = { it.person.id }) { userUiState ->
+                            /**
+                             * ui/components/main/MainComponents.kt
+                             */
                             UserListItem(
                                 person = userUiState.person,
                                 summary = userUiState.summary,

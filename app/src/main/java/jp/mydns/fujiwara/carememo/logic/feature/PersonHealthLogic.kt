@@ -1,6 +1,9 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
+import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 import java.util.UUID
@@ -38,17 +41,6 @@ enum class HealthValidationResult {
  * 健康記録画面固有のドメインロジック
  */
 object PersonHealthLogic {
-    /** 新規作成を明示する特別なID */
-    const val NEW_RECORD_ID = "__NEW__"
-
-    /**
-     * レコードが新規登録かどうかを判定します。
-     * 明示的な新規IDまたは空の場合のみ新規とみなします。
-     * これにより、DBに混入した "0" データを既存データとして救出可能にします。
-     */
-    fun isNew(id: String?): Boolean {
-        return id.isNullOrEmpty() || id == NEW_RECORD_ID
-    }
 
     /**
      * 入力内容の妥当性を判定します。
@@ -95,6 +87,38 @@ object PersonHealthLogic {
     }
 
     /**
+     * 各カテゴリの入力文字列を一括評価します。
+     * UI側での「保存ボタンの活性制御」や「エラー表示」に使用します。
+     *
+     * @param category カテゴリ
+     * @param values 入力値のマップ（キーはフィールド名）
+     * @return [HealthInputValidationResult]
+     */
+    fun validateInputs(
+        category: Category,
+        values: Map<String, String>
+    ): HealthInputValidationResult {
+        return when (category) {
+            Category.HEIGHT_AND_WEIGHT -> HealthLogic.validateHeightAndWeight(
+                values["height"] ?: "",
+                values["weight"] ?: ""
+            )
+            Category.BP_AND_PULSE -> HealthLogic.validateBpAndPulse(
+                values["bpSystolic"] ?: "",
+                values["bpDiastolic"] ?: "",
+                values["sat"] ?: "",
+                values["pulse"] ?: "",
+                values["bodyTemperature"] ?: ""
+            )
+            Category.GLUCOSE_AND_HBA1C -> HealthLogic.validateGlucoseAndHbA1c(
+                values["glucose"] ?: "",
+                values["hba1c"] ?: ""
+            )
+            else -> HealthInputValidationResult.SUCCESS
+        }
+    }
+
+    /**
      * Entity を構築します。
      * ID採番の責任を完全にこのメソッドが負います。
      */
@@ -105,7 +129,7 @@ object PersonHealthLogic {
         recordTime: Instant,
         values: Map<String, Any?>
     ): Any {
-        val finalId = if (isNew(recordId)) UUID.randomUUID().toString() else recordId
+        val finalId = if (IdLogic.isNew(recordId)) UUID.randomUUID().toString() else recordId
         
         return when (category) {
             Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = finalId, personId = personId, height = values["height"] as? Double, weight = values["weight"] as? Double, recordTime = recordTime)

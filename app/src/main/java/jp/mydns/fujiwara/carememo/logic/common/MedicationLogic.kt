@@ -51,9 +51,6 @@ sealed class SyncAction {
  */
 object MedicationLogic {
 
-    /** 新規作成を明示する特別なID */
-    const val NEW_RECORD_ID = "__NEW__"
-
     /**
      * カレンダー表示用の日付リストを生成します。
      */

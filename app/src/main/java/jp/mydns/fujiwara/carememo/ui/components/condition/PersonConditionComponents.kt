@@ -63,6 +63,7 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.mapping.ConditionDisplayMapper
@@ -172,18 +173,18 @@ fun ConditionDetailPane(
     onMicClick: () -> Unit,
 ) {
     val memo = remember(records, conditionId) {
-        if (PersonConditionLogic.isNew(conditionId)) null
+        if (IdLogic.isNew(conditionId)) null
         else records.find { it.id == conditionId }
     }
 
     // conditionId が UUID であっても、データが見つからない場合はロード中とする（新規作成 ID の場合はスキップ）
-    if (memo == null && !PersonConditionLogic.isNew(conditionId)) {
+    if (memo == null && !IdLogic.isNew(conditionId)) {
         LoadingScreen()
         return
     }
 
     // Condition は閲覧を優先するため、新規作成 ID の場合のみ編集モードから開始する。
-    var isEditing by remember(conditionId) { mutableStateOf(PersonConditionLogic.isNew(conditionId)) }
+    var isEditing by remember(conditionId) { mutableStateOf(IdLogic.isNew(conditionId)) }
     val dateTimeState = rememberDateTimeInputState(initialInstant = memo?.recordTime)
     
     var title by remember(conditionId) { mutableStateOf(memo?.title ?: "") }
@@ -506,7 +507,7 @@ private fun ConditionRecordEditForm(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (PersonConditionLogic.isNew(conditionId)) "新規作成" else "記録の編集",
+                text = if (IdLogic.isNew(conditionId)) "新規作成" else "記録の編集",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )

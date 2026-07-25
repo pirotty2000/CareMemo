@@ -84,26 +84,52 @@ object HealthLogic {
     ): List<Pair<VitalStatus, HealthAlertLevel>> {
         val results = mutableListOf<Pair<VitalStatus, HealthAlertLevel>>()
 
+        // ----- 異常値判定(ここから) -----------------------------------------------------------------
+
         systolic?.let {
+            /**
+             * 血圧(上)
+             *   (1)高血圧：血圧(上)が THRESHOLD_HIGH_SYSTOLIC 以上：ALERT
+             *   (2)低血圧：血圧(上)が THRESHOLD_LOW_SYSTOLIC  未満：WARNING
+             */
             val spec = AppSpecifications.Health.BloodPressure
             if (it >= spec.THRESHOLD_HIGH_SYSTOLIC) results.add(VitalStatus.HIGH_BP to HealthAlertLevel.ALERT)
             else if (it < spec.THRESHOLD_LOW_SYSTOLIC) results.add(VitalStatus.LOW_BP to HealthAlertLevel.WARNING)
         }
         diastolic?.let {
+            /**
+             * 血圧(下)
+             *   (1)高血圧：血圧(下)が THRESHOLD_HIGH_DIASTOLIC 以上：ALERT
+             *   (2)低血圧：血圧(下)が THRESHOLD_LOW_DIASTOLIC  未満：WARNING
+             */
             val spec = AppSpecifications.Health.BloodPressure
             if (it >= spec.THRESHOLD_HIGH_DIASTOLIC) results.add(VitalStatus.HIGH_BP to HealthAlertLevel.ALERT)
             else if (it < spec.THRESHOLD_LOW_DIASTOLIC) results.add(VitalStatus.LOW_BP to HealthAlertLevel.WARNING)
         }
         sat?.let {
+            /**
+             * 酸素飽和度(SAT)
+             *   (1)呼吸不全：THRESHOLD_LOW [%]以下：ALERT
+             */
             val spec = AppSpecifications.Health.OxygenSaturation
             if (it <= spec.THRESHOLD_LOW) results.add(VitalStatus.LOW_SAT to HealthAlertLevel.ALERT)
         }
         pulse?.let {
+            /**
+             * 脈拍
+             *   (1)頻脈：THRESHOLD_HIGH 回/分 以上：ALERT
+             *   (2)徐脈：THRESHOLD_LOW  回/分 以下：WARNING
+             */
             val spec = AppSpecifications.Health.Pulse
             if (it >= spec.THRESHOLD_HIGH) results.add(VitalStatus.TACHYCARDIA to HealthAlertLevel.ALERT)
             else if (it <= spec.THRESHOLD_LOW) results.add(VitalStatus.BRADYCARDIA to HealthAlertLevel.WARNING)
         }
         temp?.let {
+            /**
+             * 体温
+             *   (1)熱発  ：THRESHOLD_HIGH ℃以上：ALERT
+             *   (2)低体温：THRESHOLD_LOW  ℃以下：WARNING
+             */
             val spec = AppSpecifications.Health.BodyTemperature
             if (it >= spec.THRESHOLD_HIGH) results.add(VitalStatus.FEVER to HealthAlertLevel.ALERT)
             else if (it < spec.THRESHOLD_LOW) results.add(VitalStatus.HYPOTHERMIA to HealthAlertLevel.WARNING)
@@ -117,6 +143,14 @@ object HealthLogic {
      * 血糖値を判定します。
      */
     fun evaluateGlucose(glucose: Int?): Pair<GlucoseStatus?, HealthAlertLevel> {
+        /**
+         * 血糖値
+         *   (1)低血糖  ：THRESHOLD_LOW mg/dL未満：INFO
+         *   (2)正常型  ：THRESHOLD_LOW mg/dL以上、THRESHOLD_NORMAL_UPPER mg/dL未満：NORMAL
+         *   (3)正常高値：THRESHOLD_NORMAL_UPPER mg/dL以上、THRESHOLD_PREDIABETES mg/dL未満：INFO
+         *   (4)予備群  ：THRESHOLD_PREDIABETES mg/dL以上、THRESHOLD_HIGH mg/dL未満：WARNING
+         *   (5)糖尿病型：THRESHOLD_HIGH mg/dL以上：ALERT
+         */
         val g = glucose ?: return null to HealthAlertLevel.NORMAL
         val spec = AppSpecifications.Health.BloodGlucose
         return when {
@@ -132,6 +166,12 @@ object HealthLogic {
      * HbA1cを判定します。
      */
     fun evaluateHbA1c(hba1c: Double?): Pair<HbA1cStatus?, HealthAlertLevel> {
+        /**
+         * HbA1c
+         *   (1)正常値  ：THRESHOLD_NORMAL_UPPER %以下：NOMAL
+         *   (2)予備群  ：THRESHOLD_NORMAL_UPPER %を超えて、THRESHOLD_DIABETES ％未満：WARNING
+         *   (3)糖尿病型：THRESHOLD_DIABETES ％以上：ALERT
+         */
         val h = hba1c ?: return null to HealthAlertLevel.NORMAL
         val spec = AppSpecifications.Health.HbA1c
         return when {
@@ -140,6 +180,8 @@ object HealthLogic {
             else -> HbA1cStatus.NORMAL to HealthAlertLevel.NORMAL
         }
     }
+
+    // ----- 異常値判定(ここまで) -----------------------------------------------------------------
 
     // --- バリデーション ---
 
@@ -203,7 +245,10 @@ object HealthLogic {
         
         val hSpec = AppSpecifications.Health.Height
         val wSpec = AppSpecifications.Health.Weight
-        val hRes = if (height.isNotBlank()) validateValue(height, hSpec.DIGITS_INT, hSpec.DIGITS_DEC, hSpec.MIN_VALUE, hSpec.MAX_VALUE) else HealthInputValidationResult.SUCCESS
+        val hRes =  if (height.isNotBlank())
+                        validateValue(height, hSpec.DIGITS_INT, hSpec.DIGITS_DEC, hSpec.MIN_VALUE, hSpec.MAX_VALUE)
+                    else
+                        HealthInputValidationResult.SUCCESS
         val wRes = validateValue(weight, wSpec.DIGITS_INT, wSpec.DIGITS_DEC, wSpec.MIN_VALUE, wSpec.MAX_VALUE)
 
         return when {
@@ -254,11 +299,6 @@ object HealthLogic {
             else -> HealthInputValidationResult.SUCCESS
         }
     }
-
-    // 互換性維持のための古いメソッド (将来的に削除)
-    fun isValidHeightAndWeight(height: String, weight: String) = validateHeightAndWeight(height, weight) == HealthInputValidationResult.SUCCESS
-    fun isValidBpAndPulse(systolic: String, diastolic: String, sat: String, pulse: String, temp: String) = validateBpAndPulse(systolic, diastolic, sat, pulse, temp) == HealthInputValidationResult.SUCCESS
-    fun isValidGlucoseAndHbA1c(glucose: String, hba1c: String) = validateGlucoseAndHbA1c(glucose, hba1c) == HealthInputValidationResult.SUCCESS
 
     // --- 表示用フォーマッタ (AppSpecifications への移行に伴い集約) ---
     fun formatHeight(value: Double?): String = value?.let { "%.1f".format(it) } ?: "---"

@@ -18,9 +18,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * (B)系統：UiState と ViewEvent を用いた画面状態管理の基底クラス。
+ * UiState と ViewEvent を用いた画面状態管理の基底クラス。
  *
- * BaseViewModel (A系統) から完全に独立し、単一の状態管理と原子的な更新を提供します。
+ * 単一の状態管理と原子的な更新を提供します。
  *
  * @param S UI状態の型 (Data Class)
  * @param E 画面固有イベントの型
@@ -49,7 +49,7 @@ abstract class BaseUiStateViewModel<S, E>(
 
     // --- 2. イベント通知 (UiEvent & ViewEvent) ---
 
-    /** UIに対する一回限りの共通通知イベント (A系統の UiEvent と同等の機能を保持) */
+    /** UIに対する一回限りの共通通知イベント */
     sealed interface UiEvent {
         data class ShowSnackbar(val message: String) : UiEvent
         data class ShowSnackbarRes(val resId: Int, val args: List<Any> = emptyList()) : UiEvent

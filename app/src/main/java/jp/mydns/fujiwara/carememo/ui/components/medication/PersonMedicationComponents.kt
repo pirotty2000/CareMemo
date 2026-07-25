@@ -428,7 +428,7 @@ fun MedicationInputDialog(
                                     val instant = current?.recordTime ?: Instant.now()
                                     val newRecord = current?.copy(status = status.code, recordTime = instant)
                                         ?: MedicationRecord(
-                                            id = MedicationLogic.NEW_RECORD_ID,
+                                            id = AppSpecifications.Id.NEW_RECORD_ID,
                                             personId = personId,
                                             dosageDate = date.toString(),
                                             timeSlot = slot.index,

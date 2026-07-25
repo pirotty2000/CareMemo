@@ -17,6 +17,7 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
 import jp.mydns.fujiwara.carememo.logic.common.ConditionValidationResult
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
@@ -204,7 +205,7 @@ class PersonConditionViewModel(
 
             // 2. Entity 構築
             val record = PersonConditionLogic.createRecord(personId, conditionId, inputState)
-            val isUpdate = !PersonConditionLogic.isNew(conditionId)
+            val isUpdate = !IdLogic.isNew(conditionId)
 
             // 3. 重複チェック
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)

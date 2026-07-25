@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -129,6 +130,7 @@ fun PersonHealthScreenPhone(
                         }
                     }
                 )
+                // カテゴリ選択バー
                 CategorySelectorBar(
                     currentCategory = currentCategory,
                     personCategorySummary = personCategorySummary,
@@ -137,12 +139,12 @@ fun PersonHealthScreenPhone(
                 )
             }
         },
-        // 右下の「＋」
+        // 右下のFAB
         floatingActionButton = {
             if (selectedRecordId.isEmpty()) {
                 FloatingActionButton(
                     onClick = {
-                        onSelectedRecordIdChange(jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic.NEW_RECORD_ID)
+                        onSelectedRecordIdChange(AppSpecifications.Id.NEW_RECORD_ID)
                     },
                     modifier = Modifier.testTag("HealthScreen_AddButton")
                 ) {
@@ -173,6 +175,7 @@ fun PersonHealthScreenPhone(
                     icon = Icons.Outlined.Description
                 )
             } else {
+                //-- ui/screens/health/PersonHealtScreeenContent.kt
                 PersonHealthScreenContent(
                     isExpanded = false,
                     personId = personId,

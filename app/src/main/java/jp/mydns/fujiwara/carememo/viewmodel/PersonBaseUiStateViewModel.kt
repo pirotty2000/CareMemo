@@ -20,9 +20,9 @@ interface PersonAwareState {
 }
 
 /**
- * (B)系統：利用者情報を扱う ViewModel の共通基底クラス。
+ * 利用者情報を扱う ViewModel の共通基底クラス。
  *
- * フェーズ 2 の設計指針に基づき、取得した利用者情報を原子的に UiState へ反映する仕組みを提供します。
+ * 取得した利用者情報を原子的に UiState へ反映する仕組みを提供します。
  *
  * @param S UI状態の型。PersonAwareState を実装していること。
  * @param E 画面固有イベントの型
@@ -41,7 +41,7 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     }
 
     init {
-        // (B)系統標準のエラーハンドラをセットアップ
+        // エラーハンドラをセットアップ
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
             showError(title, msg, *args)
         }

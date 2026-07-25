@@ -247,4 +247,15 @@ object AppSpecifications {
 
     /** 設定項目に関する仕様 */
     val Settings = SettingsSpecifications
+
+    /**
+     * ID管理に関する仕様.
+     *
+     * 「文字数制限」などのバリデーション制約ではないため、Constraints ではなく
+     * 独立したオブジェクトとして定義。実体は [IdSpecifications] を参照。
+     */
+    object Id {
+        /** 新規レコードであることを示す共通識別子（システム予約語） */
+        const val NEW_RECORD_ID = IdSpecifications.NEW_RECORD_ID
+    }
 }

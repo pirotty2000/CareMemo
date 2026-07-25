@@ -30,7 +30,7 @@ fun PersonHealthScreen(
     val healthState by healthViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
-    // 1.2.2項に基づき、ID変更時のみロードをトリガー
+    // PersonID変更時のみロードをトリガー
     LaunchedEffect(detailState.personId) {
         detailState.personId?.let { healthViewModel.loadPerson(it) }
     }
@@ -74,6 +74,7 @@ fun PersonHealthScreen(
     }
 
     if (isExpanded) {
+        // Tablet
         PersonHealthScreenTablet(
             personId = detailState.personId ?: "",
             currentCategory = detailState.currentCategory,
@@ -93,6 +94,7 @@ fun PersonHealthScreen(
             snackbarHostState = snackbarHostState
         )
     } else {
+        // Phone
         PersonHealthScreenPhone(
             personId = detailState.personId ?: "",
             currentCategory = detailState.currentCategory,

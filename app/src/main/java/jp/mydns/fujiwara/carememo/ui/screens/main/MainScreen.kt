@@ -57,10 +57,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     viewModel: PersonListViewModel,
-    onNavigateToDetail: (String, Category) -> Unit,    // 各カテゴリ
-    onNavigateToBatchInput: (String) -> Unit,          // 一括入力画面
+    onNavigateToDetail: (String, Category) -> Unit, // 各カテゴリ
+    onNavigateToBatchInput: (String) -> Unit,       // 一括入力画面
     onNavigateToAddPerson: () -> Unit,              // 利用者の新規登録
-    onNavigateToEditPerson: (String) -> Unit,          // 利用者の編集
+    onNavigateToEditPerson: (String) -> Unit,       // 利用者の編集
     onNavigateToSettings: () -> Unit                // 設定・管理画面
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,7 +79,7 @@ fun MainScreen(
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
-    // ViewModelからのイベントを監視 (System B の共通通知イベントを使用)
+    // ViewModelからのイベントを監視 (共通通知イベントを使用)
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -110,6 +110,7 @@ fun MainScreen(
         }
     }
 
+    //-- ui/screens/main/MainScreenContent.kt
     MainScreenContent(
         userList = uiState.userList,
         isLoading = uiState.isLoading,
@@ -156,6 +157,7 @@ fun MainScreen(
     // カテゴリ選択メニュー（下からスライド）
     if (showSheet && selectedPerson != null) {
         ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
+            //-- ui/components/main/MainComponents.kt
             CategorySelectionSheet(
                 personName = selectedPerson!!.getMaskedName(uiState.isNameMaskingEnabled),
                 onCategorySelect = { category -> 

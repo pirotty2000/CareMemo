@@ -4,6 +4,7 @@ import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.Instant
@@ -20,19 +21,19 @@ class PersonHealthLogicTest {
     @Test
     fun NEW_01_isNew_newRecord_returnsTrue() {
         val record = HeightAndWeight(id = "", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
-        assertTrue(PersonHealthLogic.isNew(record))
+        assertTrue(IdLogic.isNew(record.id))
     }
 
     @Test
     fun NEW_02_isNew_existingRecord_returnsFalse() {
         val record = HeightAndWeight(id = "100", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
-        assertFalse(PersonHealthLogic.isNew(record))
+        assertFalse(IdLogic.isNew(record.id))
     }
 
     @Test
     fun NEW_03_isNew_notHistoryRecord_returnsFalse() {
-        assertFalse(PersonHealthLogic.isNew("Not a record"))
-        assertFalse(PersonHealthLogic.isNew(null))
+        assertFalse(IdLogic.isNew("Not a record"))
+        assertFalse(IdLogic.isNew(null))
     }
 
     // endregion
