@@ -19,8 +19,9 @@ data class PersonHealthUiState(
 /**
  * 健康記録画面固有のイベント
  */
-//sealed interface PersonHealthViewEvent {
-//}
+sealed interface PersonHealthViewEvent {
+    // 将来的に「特定の画面への遷移」や「複雑なアニメーションの開始」などのイベントが必要になる可能性があります。
+}
 
 /**
  * 健康記録のバリデーション結果
