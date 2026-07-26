@@ -39,13 +39,13 @@ import java.time.YearMonth
  * │            └─ [1-1-1] MedicationStatusIcon (朝/昼/夕/寝る前 4スロットの状況アイコン)
  * ├──【履歴テーブル表示】
  * │  └─ [2] MedicationHistoryTable (月間一覧テーブル：PersonMedicationComponents.kt)
- * │       └─ [テーブル行] 日付ごとの服薬状況を記号（○/△/×/－）で一覧表示
+ * │       └─ <テーブル行> 日付ごとの服薬状況を記号（○/△/×/－）で一覧表示
  * └──【入力・編集セクション】
  *      └─ [3] MedicationInputDialog (登録・編集用ダイアログ：PersonMedicationComponents.kt)
  *           ├─ [3-1] MedicationRow (時間枠ごとの入力行：朝・昼・夕・寝る前)
  *           │    └─ StatusChip (服薬状況選択：未・介助・服用)
  *           └─ [3-2] DateTimeInputFields (特定の時間枠の「記録時刻」を詳細編集)
- *                └─ [アクション] キャンセル、保存ボタン
+ *                └─ <アクション> キャンセル、保存ボタン
  */
 
 @Composable

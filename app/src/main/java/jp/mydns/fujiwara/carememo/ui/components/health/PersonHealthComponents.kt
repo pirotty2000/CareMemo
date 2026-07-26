@@ -65,11 +65,11 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
  *           │
  *           ├─ [2-1] HealthRecordEditForm (【編集モード】入力フォーム)
  *           │    ├─ DateTimeInputFields (日時入力)
- *           │    ├─ [カテゴリ別入力] AppCompactTextField (各項目：数値入力)
- *           │    └─ [アクション] キャンセルボタン、保存ボタン
+ *           │    ├─ <カテゴリ別入力> AppCompactTextField (各項目：数値入力)
+ *           │    └─ <アクション> キャンセルボタン、保存ボタン
  *           │
  *           └─ [2-2] HealthRecordDisplayCard (【閲覧モード】詳細表示用)
- *                ├─ [ヘッダー] 戻るボタン、タイトル、編集開始ボタン
+ *                ├─ <ヘッダー> 戻るボタン、タイトル、編集開始ボタン
  *                └─ [2-2-1] HealthDetailContent (カテゴリ別詳細表示)
  *                     ├─ [2-2-1-1] HeightWeightDetailContent ─ DetailRow (身長/体重/BMI)
  *                     ├─ [2-2-1-2] VitalDetailContent ─ DetailRow (血圧/SAT/脈拍/体温)

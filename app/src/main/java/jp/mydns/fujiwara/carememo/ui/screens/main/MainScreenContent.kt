@@ -39,13 +39,13 @@ import java.time.ZoneId
  * ├─【コンテンツエリア：Column】
  * │    ├─ [1] SearchBox (氏名・所見メモのリアルタイム検索：ui/components/base/SearchBox.kt)
  * │    ├─ [2] KanaIndexBar (五十音インデックスバー：ui/components/main/KanaIndexBar.kt)
- * │    ├─ [区切り線] HorizontalDivider
+ * │    ├─ <区切り線> HorizontalDivider
  * │    └─ [3] LazyColumn (メインリスト)
  * │         └─ [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
  * │              ├─ [3-1-1] CategoryBadges (入力済み情報のバッジ：ui/components/main/CategoryBadges.kt)
  * │              ├─ CakeIcon (本日/近日誕生日の通知アイコン)
- * │              ├─ [表示情報] フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
- * │              └─ [操作メニュー] DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
+ * │              ├─ <表示情報> フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
+ * │              └─ <操作メニュー> DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
  * │
  * └─【遷移・シート・ダイアログ群】
  *      ├─ [4] CategorySelectionSheet (機能選択シート：ui/components/main/MainComponents.kt)

@@ -91,10 +91,10 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
  *           │    ├─ DateTimeInputFields (日時入力)
  *           │    ├─ AppTextField (タイトル、記録者、本文/音声入力対応)
  *           │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
- *           │    └─ [アクション] キャンセル、保存ボタン
+ *           │    └─ <アクション> キャンセル、保存ボタン
  *           ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示用)
- *           │    ├─ [ヘッダー] 戻るボタン、タイトル、編集ボタン
- *           │    ├─ [内容部] 記録日時、タイトル、本文、記録者名
+ *           │    ├─ <ヘッダー> 戻るボタン、タイトル、編集ボタン
+ *           │    ├─ <内容部> 記録日時、タイトル、本文、記録者名
  *           │    └─ [2-2-1] PhotoGrid (写真一覧：閲覧・フルスクリーン遷移)
  *           └─ [2-3] OrphanedPhotoSelectionDialog (迷子写真の再登録用ダイアログ)
  */
