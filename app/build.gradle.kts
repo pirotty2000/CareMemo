@@ -13,8 +13,8 @@ android {
         applicationId = "jp.mydns.fujiwara.carememo"
         minSdk = 31
         targetSdk = 35
-        versionCode = 7 // versionCode = 7 , 2026/07/26 RELEASE Ver.3.0.0-rc-3
-        versionName = "3.0.0-rc-3"
+        versionCode = 8 // versionCode = 8 , 2026/07/26 RELEASE Ver.3.0.0-rc-3-1
+        versionName = "3.0.0-rc-3-1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
