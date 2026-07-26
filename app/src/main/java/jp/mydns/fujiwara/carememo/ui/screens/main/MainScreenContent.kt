@@ -27,6 +27,35 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
+ * 全体像：利用者一覧（Main）
+ *
+ * ■ ui/screens/main/MainScreenContent.kt の MainScreenContent (画面全体の器)
+ * │
+ * ├─ [Scaffold]
+ * │    ├─ TopAppBar (アプリタイトル、設定・バージョンメニュー)
+ * │    ├─ FloatingActionButton (利用者の新規追加ボタン ➔ [5] 画面へ遷移)
+ * │    └─ SnackbarHost (メッセージ通知領域)
+ * │
+ * ├─【コンテンツエリア：Column】
+ * │    ├─ [1] SearchBox (氏名・所見メモのリアルタイム検索：ui/components/base/SearchBox.kt)
+ * │    ├─ [2] KanaIndexBar (五十音インデックスバー：ui/components/main/KanaIndexBar.kt)
+ * │    ├─ [区切り線] HorizontalDivider
+ * │    └─ [3] LazyColumn (メインリスト)
+ * │         └─ [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
+ * │              ├─ [3-1-1] CategoryBadges (入力済み情報のバッジ：ui/components/main/CategoryBadges.kt)
+ * │              ├─ CakeIcon (本日/近日誕生日の通知アイコン)
+ * │              ├─ [表示情報] フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
+ * │              └─ [操作メニュー] DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
+ * │
+ * └─【遷移・シート・ダイアログ群】
+ *      ├─ [4] CategorySelectionSheet (機能選択シート：ui/components/main/MainComponents.kt)
+ *      ├─ [5] PersonEditScreen (利用者の登録・編集画面：ui/screens/main/PersonEditScreen.kt)
+ *      └─ [6] VersionDialog (アプリ情報・バージョン表示：MainScreenContent内に定義)
+ */
+
+
+/**
+ * ■  MainScreenContent (画面全体の器)
  * 利用者一覧画面のUIレイアウト本体。
  * Scaffoldによる基本構造、検索ボックス、インデックスバー、利用者リストを表示する。
  */
@@ -51,7 +80,7 @@ fun MainScreenContent(
     var showMenu by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
 
-    // バージョン情報ダイアログ
+    // [6] VersionDialog (アプリ情報・バージョン表示：MainScreenContent内に定義)
     if (showVersionDialog) {
         AppDialog(
             onDismissRequest = { showVersionDialog = false },
@@ -80,12 +109,15 @@ fun MainScreenContent(
         )
     }
 
-    // ハンバーガーメニューの内容
+    // [Scaffold] ----------------------------------------------------------------------------------
     Scaffold(
         topBar = {
+            // --TopAppBar (アプリタイトル、設定・バージョンメニュー)
             TopAppBar(
+                // アプリタイトル
                 title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
                 colors = appTopAppBarColors(),
+                // ハンバーガー・メニュー
                 actions = {
                     IconButton(onClick = { showMenu = true }, modifier = Modifier.testTag("MainScreen_MenuButton")) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
@@ -107,11 +139,13 @@ fun MainScreenContent(
                 }
             )
         },
+        // SnackbarHost (メッセージ通知領域)
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // FloatingActionButton (利用者の新規追加ボタン)
         floatingActionButton = { FloatingActionButton(onClick = onAddClick, modifier = Modifier.testTag("MainScreen_AddButton")) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.main_user_registration)) } }
     ) 
     
-    // メインのコンテンツ
+    // --【コンテンツエリア：Column】-------------------------------------------------------------------
     { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(
@@ -122,7 +156,7 @@ fun MainScreenContent(
                 // ########## 検索ボックス／五十音かなインデックス／利用者一覧の上下の余白 ##########
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // ---------- 所見メモ検索 ----------
+                // [1] SearchBox (氏名・所見メモのリアルタイム検索：ui/components/base/SearchBox.kt)
                 SearchBox(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
@@ -130,7 +164,7 @@ fun MainScreenContent(
                     modifier = Modifier.testTag("MainScreen_SearchBox")
                 )
 
-                // ---------- 五十音インデックス ----------
+                // [2] KanaIndexBar (五十音インデックスバー：ui/components/main/KanaIndexBar.kt)
                 KanaIndexBar(
                     selectedSection = selectedSection,
                     onSectionSelect = onSectionSelect,
@@ -140,7 +174,7 @@ fun MainScreenContent(
                 //Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider()
 
-                // ---------- 利用者一覧 ----------
+                //  [3] LazyColumn (メインリスト・利用者一覧)
                 if (isLoading) {
                     LoadingScreen(modifier = Modifier.testTag("MainScreen_Loading"))
                 } else if (userList.isEmpty()) {
@@ -159,9 +193,7 @@ fun MainScreenContent(
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(userList, key = { it.person.id }) { userUiState ->
-                            /**
-                             * ui/components/main/MainComponents.kt
-                             */
+                            // [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
                             UserListItem(
                                 person = userUiState.person,
                                 summary = userUiState.summary,

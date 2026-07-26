@@ -34,6 +34,34 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
+ * 全体像：利用者一覧（Main）
+ *
+ * ■ ui/screens/main/MainScreenContent.kt の MainScreenContent (画面全体の器)
+ * │
+ * ├─ [Scaffold]
+ * │    ├─ TopAppBar (アプリタイトル、設定・バージョンメニュー)
+ * │    ├─ FloatingActionButton (利用者の新規追加ボタン ➔ [5] 画面へ遷移)
+ * │    └─ SnackbarHost (メッセージ通知領域)
+ * │
+ * ├─【コンテンツエリア：Column】
+ * │    ├─ [1] SearchBox (氏名・所見メモのリアルタイム検索：ui/components/base/SearchBox.kt)
+ * │    ├─ [2] KanaIndexBar (五十音インデックスバー：ui/components/main/KanaIndexBar.kt)
+ * │    ├─ [区切り線] HorizontalDivider
+ * │    └─ [3] LazyColumn (メインリスト)
+ * │         └─ [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
+ * │              ├─ [3-1-1] CategoryBadges (入力済み情報のバッジ：ui/components/main/CategoryBadges.kt)
+ * │              ├─ CakeIcon (本日/近日誕生日の通知アイコン)
+ * │              ├─ [表示情報] フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
+ * │              └─ [操作メニュー] DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
+ * │
+ * └─【遷移・シート・ダイアログ群】
+ *      ├─ [4] CategorySelectionSheet (機能選択シート：ui/components/main/MainComponents.kt)
+ *      ├─ [5] PersonEditScreen (利用者の登録・編集画面：ui/screens/main/PersonEditScreen.kt)
+ *      └─ [6] VersionDialog (アプリ情報・バージョン表示：MainScreenContent内に定義)
+ */
+
+/**
+ * [3-1] UserListItem (利用者カード)
  * 利用者カードを表示するコンポーネント（一覧用）。
  */
 @Composable
@@ -62,9 +90,9 @@ fun UserListItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                // カテゴリー・バッジ
+                // [3-1-1] CategoryBadges (入力済み情報のバッジ：ui/components/main/CategoryBadges.kt)
                 CategoryBadges(summary = summary ?: PersonCategorySummary())
-                // ケーキアイコン領域
+                // CakeIcon (本日/近日誕生日の通知アイコン)
                 Box(
                     modifier = Modifier.width(20.dp),
                     contentAlignment = Alignment.Center
@@ -80,6 +108,7 @@ fun UserListItem(
                 }
             }
         },
+        // [表示情報] フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
         headlineContent = { 
             Column { 
                 // フリガナ (上段)
@@ -115,6 +144,7 @@ fun UserListItem(
                 )
             } 
         },
+        // [操作メニュー] DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
         trailingContent = {
             // 鉛筆アイコン
             Box {
@@ -125,12 +155,14 @@ fun UserListItem(
                     Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") 
                 }
                 DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
+                    // 利用者情報を編集
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_edit_user_info)) }, 
                         leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, 
                         onClick = { showItemMenu = false; onEditClick() },
                         modifier = Modifier.testTag("UserListItem_MenuItem_Edit")
                     )
+                    // 利用者を終了
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_end_user_service), color = MaterialTheme.colorScheme.error) }, 
                         leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, 
@@ -157,6 +189,7 @@ fun UserListItem(
 
 
 /**
+ * [4] CategorySelectionSheet (機能選択：健康/服薬/所見/一括入力)
  * 利用者を選択した際に表示されるカテゴリ選択用のボトムシート。
  */
 @Composable

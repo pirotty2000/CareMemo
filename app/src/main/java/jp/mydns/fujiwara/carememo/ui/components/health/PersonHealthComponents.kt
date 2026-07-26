@@ -48,24 +48,33 @@ import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
- * 全体像
- *   ui/components/health/PersonHealthScreenContent.kt の PersonHealthScreenContent (画面全体：別ファイル)
- *   ├─【左側 / 上部】
- *   │   └─ ui/components/common/HistoryComponents.kt の PersonHistoryList (履歴リストの枠)
- *   │      └─ [1] HealthHistoryItemBody (履歴1行分の要約：このファイルの部品)
- *   │           ├─ [1-1] HeightWeightRecordItemContent (身長・体重の要約)
- *   │           ├─ [1-2] VitalRecordItemContent (バイタルの要約)
- *   │           │    └─ [1-2-1] VitalStatusIndicator
- *   │           └─ [1-3] GlucoseRecordItemContent (血糖値の要約)
- *   └─【右側 / 詳細】
- *          └─ [2] HealthRecordDetailPane (詳細・編集パネル)
- *               ├─ [2-1] HealthRecordEditForm (入力フォーム)
- *               └─ [2-2] HealthRecordDisplayCard (閲覧用カード)
- *                    └─ [2-2-1] HealthDetailContent (カテゴリ分岐)
- *                        ├── [2-2-1-1] HeightWeightDetailContent x DetailRow
- *                        ├── [2-2-1-2] VitalDetailContent x DetailRow
- *                        └── [2-2-1-3] GlucoseDetailContent x DetailRow
-**/
+ * 全体像：健康管理（Health）
+ *
+ * ■ ui/screens/health/PersonHealthScreenContent.kt の PersonHealthScreenContent (画面全体の器)
+ * │
+ * ├─【左側 / 上部：履歴セクション】
+ * │  └─ ■ ui/components/common/HistoryComponents.kt の PersonHistoryList (共通履歴リストの枠)
+ * │       └─ [1] HealthHistoryItemBody (履歴1行分の要約：PersonHealthComponents.kt)
+ * │            ├─ [1-1] HeightWeightRecordItemContent (身長・体重の要約)
+ * │            ├─ [1-2] VitalRecordItemContent (バイタルの要約)
+ * │            │    └─ [1-2-1] VitalStatusIndicator (状態インジケーター)
+ * │            └─ [1-3] GlucoseRecordItemContent (血糖値の要約)
+ * │
+ * └─【右側 / 詳細：詳細・編集セクション】
+ *      └─ [2] HealthRecordDetailPane (詳細・編集パネル：PersonHealthComponents.kt)
+ *           │
+ *           ├─ [2-1] HealthRecordEditForm (【編集モード】入力フォーム)
+ *           │    ├─ DateTimeInputFields (日時入力)
+ *           │    ├─ [カテゴリ別入力] AppCompactTextField (各項目：数値入力)
+ *           │    └─ [アクション] キャンセルボタン、保存ボタン
+ *           │
+ *           └─ [2-2] HealthRecordDisplayCard (【閲覧モード】詳細表示用)
+ *                ├─ [ヘッダー] 戻るボタン、タイトル、編集開始ボタン
+ *                └─ [2-2-1] HealthDetailContent (カテゴリ別詳細表示)
+ *                     ├─ [2-2-1-1] HeightWeightDetailContent ─ DetailRow (身長/体重/BMI)
+ *                     ├─ [2-2-1-2] VitalDetailContent ─ DetailRow (血圧/SAT/脈拍/体温)
+ *                     └─ [2-2-1-3] GlucoseDetailContent ─ DetailRow (血糖値/HbA1c)
+ */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 

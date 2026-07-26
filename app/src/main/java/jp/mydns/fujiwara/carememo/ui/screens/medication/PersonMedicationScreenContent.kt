@@ -1,5 +1,7 @@
 package jp.mydns.fujiwara.carememo.ui.screens.medication
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -26,6 +28,26 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import java.time.LocalDate
 import java.time.YearMonth
 
+/**
+ * 全体像：服薬管理（Medication）
+ *
+ * ■ ui/screens/medication/PersonMedicationScreenContent.kt の PersonMedicationScreenContent (画面全体の器)
+ * ├── [レイアウト制御：Phone版 (カレンダー/履歴 切り替え) ・ Tablet版 (2カラム固定)]
+ * ├──【カレンダー表示】
+ * │  └─ [1] CalendarGrid (月間グリッド：PersonMedicationComponents.kt)
+ * │       └─ [1-1] DayCell (1日分のセル：タップで入力ダイアログ起動)
+ * │            └─ [1-1-1] MedicationStatusIcon (朝/昼/夕/寝る前 4スロットの状況アイコン)
+ * ├──【履歴テーブル表示】
+ * │  └─ [2] MedicationHistoryTable (月間一覧テーブル：PersonMedicationComponents.kt)
+ * │       └─ [テーブル行] 日付ごとの服薬状況を記号（○/△/×/－）で一覧表示
+ * └──【入力・編集セクション】
+ *      └─ [3] MedicationInputDialog (登録・編集用ダイアログ：PersonMedicationComponents.kt)
+ *           ├─ [3-1] MedicationRow (時間枠ごとの入力行：朝・昼・夕・寝る前)
+ *           │    └─ StatusChip (服薬状況選択：未・介助・服用)
+ *           └─ [3-2] DateTimeInputFields (特定の時間枠の「記録時刻」を詳細編集)
+ *                └─ [アクション] キャンセル、保存ボタン
+ */
+
 @Composable
 fun PersonMedicationScreenContent(
     isExpanded: Boolean,
@@ -50,11 +72,21 @@ fun PersonMedicationScreenContent(
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: カレンダー
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                CalendarGrid(
-                    yearMonth = selectedMonth,
-                    recordsByDate = recordsByDate,
-                    onDayClick = onDayClick
-                )
+                val calendarScrollState = rememberScrollState()
+                Box(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(calendarScrollState)
+                    ) {
+                        CalendarGrid(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate,
+                            onDayClick = onDayClick
+                        )
+                    }
+                    VerticalScrollIndicator(scrollState = calendarScrollState)
+                }
             }
             // 右側: 履歴（テーブル）
             Column(modifier = Modifier.weight(1.2f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -198,11 +230,19 @@ fun PersonMedicationScreenContent(
                         VerticalScrollIndicator(lazyListState = historyTableState)
                     }
                 } else {
-                    CalendarGrid(
-                        yearMonth = selectedMonth,
-                        recordsByDate = recordsByDate,
-                        onDayClick = onDayClick
-                    )
+                    val calendarScrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(calendarScrollState)
+                    ) {
+                        CalendarGrid(
+                            yearMonth = selectedMonth,
+                            recordsByDate = recordsByDate,
+                            onDayClick = onDayClick
+                        )
+                    }
+                    VerticalScrollIndicator(scrollState = calendarScrollState)
                 }
             }
         }

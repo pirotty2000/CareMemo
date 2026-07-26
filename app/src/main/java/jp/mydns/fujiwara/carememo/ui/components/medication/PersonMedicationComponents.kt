@@ -69,112 +69,29 @@ import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 
 /**
- * 月間の服薬状況を一覧表示するテーブル形式のコンポーネント。
+ * 全体像：服薬管理（Medication）
+ *
+ * ■ ui/screens/medication/PersonMedicationScreenContent.kt の PersonMedicationScreenContent (画面全体の器)
+ * ├── [レイアウト制御：Phone版 (カレンダー/履歴 切り替え) ・ Tablet版 (2カラム固定)]
+ * ├──【カレンダー表示】
+ * │  └─ [1] CalendarGrid (月間グリッド：PersonMedicationComponents.kt)
+ * │       └─ [1-1] DayCell (1日分のセル：タップで入力ダイアログ起動)
+ * │            └─ [1-1-1] MedicationStatusIcon (朝/昼/夕/寝る前 4スロットの状況アイコン)
+ * ├──【履歴テーブル表示】
+ * │  └─ [2] MedicationHistoryTable (月間一覧テーブル：PersonMedicationComponents.kt)
+ * │       └─ [テーブル行] 日付ごとの服薬状況を記号（○/△/×/－）で一覧表示
+ * └──【入力・編集セクション】
+ *      └─ [3] MedicationInputDialog (登録・編集用ダイアログ：PersonMedicationComponents.kt)
+ *           ├─ [3-1] MedicationRow (時間枠ごとの入力行：朝・昼・夕・寝る前)
+ *           │    └─ [3-1-1] StatusChip (服薬状況選択：未・介助・服用)
+ *           └─ [3-2] DateTimeInputFields (特定の時間枠の「記録時刻」を詳細編集)
+ *                └─ [アクション] キャンセル、保存ボタン
  */
-@Composable
-fun MedicationHistoryTable(
-    yearMonth: YearMonth,
-    recordsByDate: Map<String, List<MedicationRecord>>,
-    lazyListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
-) {
-    val daysInMonth = yearMonth.lengthOfMonth()
-    val slotLabels = AppSpecifications.Medication.TimeSlot.LABELS
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
-            .clip(MaterialTheme.shapes.medium)
-            .testTag("Medication_HistoryTable")
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(R.string.p_med_history_table_day), modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            slotLabels.forEachIndexed { index, label ->
-                val weight = if (index == AppSpecifications.Medication.TimeSlot.INDEX_BEDTIME) 1.2f else 1f
-                Text(
-                    text = label, 
-                    modifier = Modifier.weight(weight), 
-                    textAlign = TextAlign.Center, 
-                    fontWeight = FontWeight.Bold, 
-                    style = MaterialTheme.typography.titleSmall
-                )
-            }
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = lazyListState
-        ) {
-            items(count = daysInMonth) { index ->
-                val day = index + 1
-                val date = yearMonth.atDay(day)
-                val dateStr = date.toString()
-                val records = recordsByDate[dateStr] ?: emptyList()
-
-                val dayOfWeek = date.dayOfWeek
-                val dayOfWeekText = formatShortDayOfWeek(date)
-
-                val rowBgColor = when (dayOfWeek) {
-                    DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-                    DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    else -> MaterialTheme.colorScheme.surface
-                }
-
-                val textColor = getDayOfWeekColor(dayOfWeek)
-                val daySuffix = stringResource(R.string.common_day_suffix)
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(rowBgColor)
-                        .padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${day}${daySuffix}($dayOfWeekText)",
-                        modifier = Modifier.weight(1.5f),
-                        textAlign = TextAlign.Center,
-                        color = textColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    val timeSlots = MedicationTimeSlot.entries
-                    timeSlots.forEach { slot ->
-                        val weight = if (slot == MedicationTimeSlot.BEDTIME) 1.2f else 1f
-                        val record = records.find { it.timeSlot == slot.index }
-                        val status = MedicationStatus.fromCode(record?.status)
-                        
-                        val symbol = MedicationDisplayMapper.getStatusSymbol(status)
-                        val symbolColor = MedicationDisplayMapper.getStatusColor(status)
-
-                        Text(
-                            text = symbol,
-                            modifier = Modifier.weight(weight),
-                            textAlign = TextAlign.Center,
-                            color = symbolColor,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                if (day < daysInMonth) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                }
-            }
-        }
-    }
-}
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
+ * [1] CalendarGrid (月間グリッド)
  * 1ヶ月分の日付をグリッド表示するカレンダーコンポーネント。
  */
 @Composable
@@ -220,21 +137,40 @@ fun CalendarGrid(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
+        // スクロール可能な親要素の中で正しく高さを計算させるため、
+        // LazyVerticalGrid ではなく Column と Row を使用してカレンダーを構成します。
+        val rows = remember(calendarDays) { calendarDays.chunked(7) }
+
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("Medication_Calendar")
+                .testTag("Medication_Calendar"),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            items(calendarDays) { date ->
-                if (date != null) {
-                    DayCell(
-                        date = date,
-                        records = recordsByDate[date.toString()] ?: emptyList(),
-                        onClick = { onDayClick(date) }
-                    )
-                } else {
-                    Box(modifier = Modifier.aspectRatio(1f))
+            rows.forEach { rowDays ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    // 常に7列分の領域を確保する
+                    for (i in 0 until 7) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (i < rowDays.size) {
+                                val date = rowDays[i]
+                                if (date != null) {
+                                    // 日付があるマス（1日〜31日）
+                                    DayCell(
+                                        date = date,
+                                        records = recordsByDate[date.toString()] ?: emptyList(),
+                                        onClick = { onDayClick(date) }
+                                    )
+                                } else {
+                                    // 月初の余白
+                                    Box(modifier = Modifier.aspectRatio(0.8f))
+                                }
+                            } else {
+                                // 月末の余白（最終週が7日に満たない場合）
+                                Box(modifier = Modifier.aspectRatio(0.8f))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -242,6 +178,7 @@ fun CalendarGrid(
 }
 
 /**
+ * [1-1] DayCell (1日分のセル：タップで入力ダイアログ起動)
  * カレンダー内の1日分を表示するセル。
  */
 @Composable
@@ -296,6 +233,7 @@ private fun DayCell(
 }
 
 /**
+ * [1-1-1] MedicationStatusIcon (朝/昼/夕/寝る前 4スロットの状況アイコン)
  * 服薬状況（服用・未・介助）を示す小さな円形アイコン。
  */
 @Composable
@@ -344,7 +282,133 @@ private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationSta
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
+ * [2] MedicationHistoryTable (月間一覧テーブル)
+ * 月間の服薬状況を一覧表示するテーブル形式のコンポーネント。
+ */
+@Composable
+fun MedicationHistoryTable(
+    yearMonth: YearMonth,
+    recordsByDate: Map<String, List<MedicationRecord>>,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+) {
+    val daysInMonth = yearMonth.lengthOfMonth()
+    val slotLabels = AppSpecifications.Medication.TimeSlot.LABELS
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+            .clip(MaterialTheme.shapes.medium)
+            .testTag("Medication_HistoryTable")
+    ) {
+        // 履歴一覧・ヘッダー部分（日・朝・昼・夕・寝る前）
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 日
+            Text(stringResource(R.string.p_med_history_table_day), modifier =
+                Modifier
+                    .weight(1.0f)
+                    .padding(end = 8.dp),
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall)
+            // 朝・昼・夕・寝る前 （TimeSlot）
+            slotLabels.forEachIndexed { index, label ->
+                val weight = if (index == AppSpecifications.Medication.TimeSlot.INDEX_BEDTIME) 1.2f else 1f
+                Text(
+                    text = label,
+                    modifier = Modifier.weight(weight),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        // 履歴一覧・本体
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = lazyListState
+        ) {
+            items(count = daysInMonth) { index ->
+                val day = index + 1
+                val date = yearMonth.atDay(day)
+                val dateStr = date.toString()
+                val records = recordsByDate[dateStr] ?: emptyList()
+
+                val dayOfWeek = date.dayOfWeek
+                val dayOfWeekText = formatShortDayOfWeek(date)
+
+                val rowBgColor = when (dayOfWeek) {
+                    DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                    DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                    else -> MaterialTheme.colorScheme.surface
+                }
+
+                val textColor = getDayOfWeekColor(dayOfWeek)
+                // val daySuffix = stringResource(R.string.common_day_suffix)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(rowBgColor)
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 日 (例：2(木))
+                    Text(
+                        //text = "${day}${daySuffix}($dayOfWeekText)",
+                        text = "${day}($dayOfWeekText)",
+                        modifier = Modifier
+                            .weight(1.0f)
+                            .padding(end = 8.dp),
+                        textAlign = TextAlign.End,
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    val timeSlots = MedicationTimeSlot.entries
+                    timeSlots.forEach { slot ->
+                        val weight = if (slot == MedicationTimeSlot.BEDTIME) 1.2f else 1f
+                        val record = records.find { it.timeSlot == slot.index }
+                        val status = MedicationStatus.fromCode(record?.status)
+
+                        val symbol = MedicationDisplayMapper.getStatusSymbol(status)
+                        val symbolColor = MedicationDisplayMapper.getStatusColor(status)
+
+                        Text(
+                            text = symbol,
+                            modifier = Modifier.weight(weight),
+                            textAlign = TextAlign.Center,
+                            color = symbolColor,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                if (day < daysInMonth) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                }
+            }
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * [3] MedicationInputDialog (登録・編集用ダイアログ)
  * 日付ごとの服薬状況を登録・編集するためのダイアログ。
  */
 @Composable
@@ -476,6 +540,7 @@ fun MedicationInputDialog(
 }
 
 /**
+ * [3-1] MedicationRow (時間枠ごとの入力行：朝・昼・夕・寝る前)
  * ダイアログ内の1つの時間枠（朝など）の行。
  */
 @Composable
@@ -536,6 +601,7 @@ private fun MedicationRow(
 }
 
 /**
+ *  [3-1-1] StatusChip (服薬状況選択：未・介助・服用)
  * ステータス（未・介助・服用）を選択するためのチップ。
  */
 @Composable
@@ -568,6 +634,8 @@ private fun StatusChip(
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 @Composable
 fun getDayOfWeekColor(dayOfWeek: DayOfWeek): Color {

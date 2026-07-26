@@ -61,11 +61,13 @@ abstract class AppDatabase : RoomDatabase() {
                 val keyManager = DatabaseKeyManager(context)
                 val passphrase = keyManager.getOrCreatePassphrase()
 
+                /*
                 // デバッグ時のみDBキーをログ出力 (App Inspectionでの複合化に使用)
                 if (BuildConfig.DEBUG) {
                     val hexKey = passphrase.joinToString("") { "%02x".format(it) }
                     Log.d("AppDatabase", "Database Key for Inspector: x'$hexKey'")
                 }
+                */
 
                 val factory = SupportOpenHelperFactory(passphrase)
 

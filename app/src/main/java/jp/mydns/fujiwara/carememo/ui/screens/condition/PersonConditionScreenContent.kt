@@ -58,6 +58,28 @@ import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 
+/**
+ * 全体像：利用者所見記録（Condition）
+ *
+ * ■ PersonConditionScreenContent (画面全体の器)
+ * ├─【一覧セクション】
+ * │  └─ [1] ConditionList (所見記録リスト：PersonConditionComponents.kt)
+ * │       └─ ■ ui/components/common/HistoryComponents.kt の PersonHistoryList (共通履歴リストの枠)
+ * │            └─ [1-1] ConditionMemoContent (履歴1行分の要約：タイトル・本文・写真アイコン)
+ * └─【詳細セクション】
+ *      └─ [2] ConditionDetailPane (詳細・編集パネル：PersonConditionComponents.kt)
+ *           ├─ [2-1] ConditionRecordEditForm (【編集モード】入力フォーム)
+ *           │    ├─ DateTimeInputFields (日時入力)
+ *           │    ├─ AppTextField (タイトル、記録者、本文/音声入力対応)
+ *           │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
+ *           │    └─ [アクション] キャンセル、保存ボタン
+ *           ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示用)
+ *           │    ├─ [ヘッダー] 戻るボタン、タイトル、編集ボタン
+ *           │    ├─ [内容部] 記録日時、タイトル、本文、記録者名
+ *           │    └─ [2-2-1] PhotoGrid (写真一覧：閲覧・フルスクリーン遷移)
+ *           └─ [2-3] OrphanedPhotoSelectionDialog (迷子写真の再登録用ダイアログ)
+ */
+
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
@@ -93,7 +115,7 @@ fun PersonConditionScreenContent(
     if (isLoading) {
         LoadingScreen()
     } else if (isExpanded) {
-        // タブレット用レイアウト (2ペイン)
+        // --- タブレット・横向き: 2カラムレイアウト ---
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -101,15 +123,18 @@ fun PersonConditionScreenContent(
                 .testTag("Condition_TabletLayout"),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 左側: 履歴リスト
             Column(
                 modifier = Modifier.weight(1f).testTag("Condition_HistoryList"),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // 検索ボックス
                 SearchBox(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
                     placeholder = stringResource(R.string.main_search_hint_short)
                 )
+                // 所見メモ・履歴一覧
                 Box(modifier = Modifier.weight(1f)) {
                     if (conditionRecords.isEmpty()) {
                         EmptyState(
@@ -131,6 +156,7 @@ fun PersonConditionScreenContent(
                     }
                 }
             }
+            // 右側・記録の詳細
             Box(
                 modifier = Modifier
                     .weight(2f)
@@ -165,11 +191,13 @@ fun PersonConditionScreenContent(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // 検索ボックス
             SearchBox(
                 query = searchQuery,
                 onQueryChange = onSearchQueryChange,
                 modifier = Modifier.testTag("ConditionScreen_SearchBox")
             )
+            // 所見メモ・履歴一覧
             Box(modifier = Modifier.weight(1f)) {
                 if (conditionRecords.isEmpty()) {
                     EmptyState(
