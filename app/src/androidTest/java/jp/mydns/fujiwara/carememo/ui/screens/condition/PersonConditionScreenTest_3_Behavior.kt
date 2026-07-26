@@ -97,7 +97,7 @@ class PersonConditionScreenTest_3_Behavior {
         // 新規追加ボタン（FAB）
         composeTestRule.onNodeWithContentDescription("新規追加", substring = true).performClick()
         
-        // FABをクリックした結果、selectedConditionId が "0" になり、編集フォームが表示されることを待機
+        // FABをクリックした結果、selectedConditionId が NEW_RECORD_ID になり、編集フォームが表示されることを待機
         composeTestRule.waitForIdle()
 
         // メモ入力欄を特定して入力する

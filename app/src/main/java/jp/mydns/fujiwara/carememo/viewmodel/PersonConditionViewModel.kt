@@ -269,7 +269,7 @@ class PersonConditionViewModel(
      * 選択された迷子写真を現在のレコードに紐付けます。
      */
     fun reattachOrphanedPhoto(personId: String, conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
-        if ((conditionId.isEmpty()) || (conditionId == "0")) return
+        if (IdLogic.isNew(conditionId)) return
 
         safeLaunch(
             operation = "reattachOrphanedPhoto",

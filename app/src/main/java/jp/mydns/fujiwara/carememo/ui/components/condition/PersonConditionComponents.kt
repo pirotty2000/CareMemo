@@ -265,7 +265,7 @@ fun ConditionDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        if (conditionId == "0") onSelectedIdChange("") else isEditing = false
+                        if (IdLogic.isNew(conditionId)) onSelectedIdChange("") else isEditing = false
                     }
                 )
             },
@@ -320,7 +320,7 @@ fun ConditionDetailPane(
                 if (isChanged) {
                     showDiscardDialog = true
                 } else {
-                    if (conditionId != "0") isEditing = false else onSelectedIdChange("")
+                    if (!IdLogic.isNew(conditionId)) isEditing = false else onSelectedIdChange("")
                 }
             },
             onAddPhotoClick = onAddPhotoClick,
@@ -483,7 +483,7 @@ private fun ConditionRecordEditForm(
 
                 Row {
                     // 迷子写真の再登録ボタン (動的表示)
-                    if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+                    if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                         IconButton(onClick = onReattachClick, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.CloudDownload, // フォルダに矢印的なものを期待
@@ -493,7 +493,7 @@ private fun ConditionRecordEditForm(
                         }
                     }
 
-                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                         IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.PhotoLibrary,
@@ -503,14 +503,14 @@ private fun ConditionRecordEditForm(
                         }
                     }
 
-                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+                    if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                         IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
                             Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
             }
-            if (conditionId == "0") {
+            if (IdLogic.isNew(conditionId)) {
                 Text(
                     text = stringResource(R.string.condition_photo_add_guide),
                     style = MaterialTheme.typography.bodySmall,
@@ -523,7 +523,7 @@ private fun ConditionRecordEditForm(
                 PhotoGrid(photos = photos, isEditable = true, onPhotoClick = {}, onDeletePhoto = onDeletePhoto)
             }
 
-            if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && conditionId != "0") {
+            if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                 Button(onClick = onAddPhotoClick, enabled = !isProcessing, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
