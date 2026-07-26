@@ -2,6 +2,7 @@
 
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.content.Context
 import android.util.Log
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
@@ -66,7 +67,7 @@ class PersonConditionViewModelTest {
         coEvery { conditionRepository.findConditionAtTime(any(), any()) } returns null
         
         viewModel = PersonConditionViewModel(
-            conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository
+            conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, mockk<Context>(relaxed = true)
         )
     }
 
