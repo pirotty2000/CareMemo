@@ -244,7 +244,6 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
  */
 @Composable
 fun HealthRecordDetailPane(
-    isExpanded: Boolean,
     personId: String,
     category: Category,
     recordId: String,
@@ -266,14 +265,12 @@ fun HealthRecordDetailPane(
         if (record == null && !IdLogic.isNew(recordId)) {
             LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         } else {
-            // Tablet モード (isExpanded=true) かつ 既存レコードの場合は閲覧モード (isEditing=false) から開始。
-            // Phone モード、または新規作成 ID の場合は常に編集モードから開始。
             var isEditing by remember(recordId) {
-                mutableStateOf(!isExpanded || IdLogic.isNew(recordId))
+                mutableStateOf(IdLogic.isNew(recordId))
             }
             val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
-            var heightText by remember(recordId) {
+            var heightText by remember(recordId, record) {
                 val initialValue = if (record is HeightAndWeight) {
                     record.height?.toString() ?: ""
                 } else if (IdLogic.isNew(recordId) && category == Category.HEIGHT_AND_WEIGHT) {
@@ -286,26 +283,26 @@ fun HealthRecordDetailPane(
                 }
                 mutableStateOf(initialValue)
             }
-            var weightText by remember(recordId) { mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "") }
-            var bpSystolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "") }
-            var bpDiastolicText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "") }
-            var satText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.sat?.toString() ?: "" else "") }
-            var pulseText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.pulse?.toString() ?: "" else "") }
-            var bodyTemperatureText by remember(recordId) { mutableStateOf(if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "") }
-            var glucoseText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
-            var hba1cText by remember(recordId) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
+            var weightText by remember(recordId, record) { mutableStateOf(if (record is HeightAndWeight) record.weight?.toString() ?: "" else "") }
+            var bpSystolicText by remember(recordId, record) { mutableStateOf(if (record is BpAndPulse) record.bpSystolic?.toString() ?: "" else "") }
+            var bpDiastolicText by remember(recordId, record) { mutableStateOf(if (record is BpAndPulse) record.bpDiastolic?.toString() ?: "" else "") }
+            var satText by remember(recordId, record) { mutableStateOf(if (record is BpAndPulse) record.sat?.toString() ?: "" else "") }
+            var pulseText by remember(recordId, record) { mutableStateOf(if (record is BpAndPulse) record.pulse?.toString() ?: "" else "") }
+            var bodyTemperatureText by remember(recordId, record) { mutableStateOf(if (record is BpAndPulse) record.bodyTemperature?.toString() ?: "" else "") }
+            var glucoseText by remember(recordId, record) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
+            var hba1cText by remember(recordId, record) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
 
-            // 変更検知用の初期状態
-            val initialHeightSnapshot = remember(recordId) { heightText }
-            val initialWeightSnapshot = remember(recordId) { weightText }
-            val initialBpSystolicSnapshot = remember(recordId) { bpSystolicText }
-            val initialBpDiastolicSnapshot = remember(recordId) { bpDiastolicText }
-            val initialSatSnapshot = remember(recordId) { satText }
-            val initialPulseSnapshot = remember(recordId) { pulseText }
-            val initialBodyTempSnapshot = remember(recordId) { bodyTemperatureText }
-            val initialGlucoseSnapshot = remember(recordId) { glucoseText }
-            val initialHbA1cSnapshot = remember(recordId) { hba1cText }
-            val initialDateTimeSnapshot = remember(recordId) { dateTimeState.toInstant() }
+            // 変更検知用の初期状態 (編集モード開始時の値を保持)
+            val initialHeightSnapshot = remember(recordId, record, isEditing) { heightText }
+            val initialWeightSnapshot = remember(recordId, record, isEditing) { weightText }
+            val initialBpSystolicSnapshot = remember(recordId, record, isEditing) { bpSystolicText }
+            val initialBpDiastolicSnapshot = remember(recordId, record, isEditing) { bpDiastolicText }
+            val initialSatSnapshot = remember(recordId, record, isEditing) { satText }
+            val initialPulseSnapshot = remember(recordId, record, isEditing) { pulseText }
+            val initialBodyTempSnapshot = remember(recordId, record, isEditing) { bodyTemperatureText }
+            val initialGlucoseSnapshot = remember(recordId, record, isEditing) { glucoseText }
+            val initialHbA1cSnapshot = remember(recordId, record, isEditing) { hba1cText }
+            val initialDateTimeSnapshot = remember(recordId, record, isEditing) { dateTimeState.toInstant() }
 
             val isChanged by remember(heightText, weightText, bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText, glucoseText, hba1cText, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
                 derivedStateOf {
@@ -380,7 +377,7 @@ fun HealthRecordDetailPane(
                                 if (isChanged) {
                                     showDiscardDialog = true
                                 } else {
-                                    if (isExpanded && !IdLogic.isNew(recordId)) {
+                                    if (!IdLogic.isNew(recordId)) {
                                         isEditing = false
                                     } else {
                                         onCancel()
@@ -397,6 +394,7 @@ fun HealthRecordDetailPane(
                                     }
                                     val newRecord = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values)
                                     onSaveRecord(newRecord)
+                                    isEditing = false
                                 }
                             },
                             isChanged = isChanged

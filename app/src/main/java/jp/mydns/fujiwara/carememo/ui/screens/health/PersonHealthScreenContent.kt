@@ -128,7 +128,6 @@ fun PersonHealthScreenContent(
                 if (selectedRecordId.isNotEmpty()) {
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
-                            isExpanded = isExpanded,
                             personId = personId,
                             category = currentCategory,
                             recordId = selectedRecordId,
@@ -165,17 +164,16 @@ fun PersonHealthScreenContent(
         // --- スマホ: 1カラム・切り替えレイアウト ---
         if (selectedRecordId.isNotEmpty()) {
             Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
-                HealthRecordDetailPane(
-                    isExpanded = false,
-                    personId = personId,
-                    category = currentCategory,
-                    recordId = selectedRecordId,
-                    records = historyRecords,
-                    onCancel = { onSelectedRecordIdChange("") },
-                    onSaveRecord = { record ->
-                        onSaveRecord(record)
-                    }
-                )
+            HealthRecordDetailPane(
+                personId = personId,
+                category = currentCategory,
+                recordId = selectedRecordId,
+                records = historyRecords,
+                onCancel = { onSelectedRecordIdChange("") },
+                onSaveRecord = { record ->
+                    onSaveRecord(record)
+                }
+            )
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
