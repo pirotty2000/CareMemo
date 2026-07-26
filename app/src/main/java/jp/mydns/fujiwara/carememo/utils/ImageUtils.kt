@@ -78,6 +78,47 @@ object ImageUtils {
         }
     }
 
+    /**
+     * 画像の撮影日時を取得する。
+     * MediaStore からの取得を優先し、失敗した場合は Exif メタデータからの取得を試みる。
+     * @return 撮影日時のミリ秒、取得できなかった場合は null
+     */
+    fun getCaptureTime(context: Context, uri: Uri): Long? {
+        // 1. MediaStore からの取得試行 (ギャラリー等)
+        try {
+            val projection = arrayOf(android.provider.MediaStore.Images.ImageColumns.DATE_TAKEN)
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val dateTakenIndex = cursor.getColumnIndex(android.provider.MediaStore.Images.ImageColumns.DATE_TAKEN)
+                    if (dateTakenIndex != -1) {
+                        val dateTaken = cursor.getLong(dateTakenIndex)
+                        if (dateTaken > 0) return dateTaken
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            // ignore
+        }
+
+        // 2. ExifInterface からの取得試行 (直接ファイル等)
+        try {
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val exif = ExifInterface(inputStream)
+                val dateTimeStr = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                    ?: exif.getAttribute(ExifInterface.TAG_DATETIME)
+
+                if (dateTimeStr != null) {
+                    val format = java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US)
+                    return format.parse(dateTimeStr)?.time
+                }
+            }
+        } catch (_: Exception) {
+            // ignore
+        }
+
+        return null
+    }
+
     private fun getRotation(context: Context, uri: Uri): Int {
         return try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->

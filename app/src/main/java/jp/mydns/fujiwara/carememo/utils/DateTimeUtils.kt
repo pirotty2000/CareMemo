@@ -1,5 +1,7 @@
 package jp.mydns.fujiwara.carememo.utils
 
+import android.content.Context
+import android.net.Uri
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -115,6 +117,19 @@ object DateTimeUtils {
      * 現在時刻を写真のキャプション用にフォーマットして返す
      */
     fun getCurrentPhotoCaption(): String = formatPhotoCaption(Instant.now())
+
+    /**
+     * 写真のUriから撮影日時を取得し、キャプション用の文字列を生成する。
+     * 取得できない場合は現在日時のキャプションを返す。
+     */
+    fun getPhotoCaption(context: Context, uri: Uri): String {
+        val captureTime = ImageUtils.getCaptureTime(context, uri)
+        return if (captureTime != null) {
+            formatPhotoCaption(Instant.ofEpochMilli(captureTime))
+        } else {
+            getCurrentPhotoCaption()
+        }
+    }
 
     /**
      * 誕生日が現在から指定された日数以内（誕生日を含む）かどうかを判定する。

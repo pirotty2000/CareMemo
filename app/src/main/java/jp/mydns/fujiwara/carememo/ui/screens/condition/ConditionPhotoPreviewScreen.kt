@@ -43,7 +43,7 @@ fun ConditionPhotoPreviewScreen(
     val errorMessage = conditionState.errorMessage
     val person = detailState.person
 
-    val initialCaption = remember { DateTimeUtils.getCurrentPhotoCaption() }
+    val initialCaption = remember(uri) { DateTimeUtils.getPhotoCaption(context, uri) }
     var caption by remember { mutableStateOf(initialCaption) }
     val isModified = caption != initialCaption
 
