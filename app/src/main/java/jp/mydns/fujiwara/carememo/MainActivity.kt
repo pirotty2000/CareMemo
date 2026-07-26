@@ -72,9 +72,12 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         
         // セキュリティ保護
+        // スクリーンショットの撮影や画面録画を防止します
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         
-        // 履歴画面での識別性向上
+        // タスク説明のカスタマイズ
+        // 最近使用したアプリ一覧（履歴画面）での表示名やアイコン、カラーを設定しています
+        // （APIレベルに応じた分岐処理を含む）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val taskDescription = ActivityManager.TaskDescription.Builder()
                 .setLabel(getString(R.string.app_name))
@@ -92,6 +95,8 @@ class MainActivity : FragmentActivity() {
             setTaskDescription(taskDescription)
         }
 
+        // 一時ファイルのクリーンアップ
+        // PdfExporter.clearOldExports(this)を呼び出し、古いエクスポートファイルを削除しています。
         PdfExporter.clearOldExports(this)
 
         enableEdgeToEdge()
@@ -102,6 +107,19 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+/**
+ * CareMemoApp
+ *
+ * (1)リポジトリと状態の管理
+ *     CareMemoApplicationから各リポジトリを取得し、ViewModelに注入する準備をします
+ *     userSettingsRepositoryを通じて、テーマ設定（ダークモード/ライトモード）や生体認証の設定を監視しています
+ * (2)生体認証とアプリ・ロック
+ *     Security by Default: 初回起動時にデバイスが認証可能であれば、自動的に生体認証を有効にします。
+ *     自動ロック機能: アプリがバックグラウンドに回ってから一定時間（lockTimeoutMinutes）経過した場合に、再認証を要求する仕組みです。
+ *     再認証プロンプト: 機密性の高い操作を行う際に呼び出せる共通関数 requestAuthentication が定義されています。
+ * (3)ナビゲーション構造 (NavHost)
+ *     Jetpack Compose Navigationを使用して、画面遷移を定義しています
+ */
 @Composable
 fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass) {
     val context = LocalContext.current
@@ -129,6 +147,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         var isAuthenticated by rememberSaveable { mutableStateOf(value = false) }
 
         // 初回起動時の生体認証設定の自動最適化
+        // isBiometricSettingInitialized というフラグを監視し
+        // このフラグが false（未初期化）の場合のみ、中の処理が実行されます
+        // 一度初期化（true）されると、次回のアプリ起動時からはこのロジックはスキップされます
         LaunchedEffect(isBiometricSettingInitialized) {
             if (!isBiometricSettingInitialized) {
                 val biometricManager = androidx.biometric.BiometricManager.from(activity)
@@ -144,7 +165,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         }
 
         // アプリ・ロック：
-        // 「最後にアプリを閉じてからどれくらい時間が経過したか」を判定し、必要であれば再認証（生体認証）を要求する
+        // 最後にアプリを閉じてからどれくらい時間が経過したかを判定し、
+        // 必要であれば再認証（生体認証）を要求する
         DisposableEffect(activity) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -220,6 +242,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             }
         }
 
+        //
+        // 認証が完了するまで、アプリのメインコンテンツ（画面）を一切生成・表示させません
+        //
         if (!(!isAuthenticated && isBiometricEnabled)) {
             // 認証要求を処理する共通関数
             val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
@@ -250,10 +275,16 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
             }
 
+            /**
+             * NavHost
+             *   (1)ナビゲーションの集約：画面の遷移と履歴(バックスタック)の整理
+             *   (2)依存注入(DI)：Screen必要とするViewModelを生成し、そこにRepositoryやContextを流し込む
+             *   (3)セキュリティ・ゲート：生体認証の成否に応じて NavHost 自体を表示するかどうかを制御
+             */
             NavHost(navController = navController, startDestination = "main") {
 
                 // ---------------------------------------------
-                // ---------- 「利用者一覧」(MainScreen) ----------
+                // ---------- 利用者一覧(SCR-M-001) -------------
                 // ---------------------------------------------
                 composable("main") {
                     val listViewModel: PersonListViewModel = viewModel(
@@ -265,7 +296,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             userSettingsRepository,
                             auditLogRepository))
                     MainScreen(
-                        viewModel = listViewModel, 
+                        // (1)onNavigateToDetail    ：身長・体重などの各カテゴリへ
+                        // (2)onNavigateToBatchInput：一括入力(SCR-M-002)へ
+                        // (3)onNavigateToAddPerson ：利用者編集(SCR-M-002)へ
+                        // (4)onNavigateToEditPerson：利用者編集(SCR-M-002)へ
+                        // (5)onNavigateToSettings  ：管理・設定(SCR-S-001)へ
+                        viewModel = listViewModel,
                         onNavigateToDetail = { personId, category ->
                             listViewModel.prepareDetailNavigation() // 遷移準備（表示モードのリセット）を実行
                             val query = listViewModel.uiState.value.searchQuery
@@ -285,7 +321,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 「利用者情報の登録・編集」 ----------
+                // ---------------------------------------------
+                // ---------- 利用者編集(SCR-M-002) --------------
+                // ---------------------------------------------
                 composable("person_edit/{personId}", arguments = listOf(
                     navArgument("personId") { type = NavType.StringType }
                 )) { backStackEntry ->
@@ -301,16 +339,15 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
 
                 // --------------------------------------------------------
-                // ----- 利用者詳細データ（各カテゴリの閲覧・登録・修正・削除） -----
+                // ----- 健康記録(身長・体重、バイタル、血糖値・HbA1c) (SCR-PH-001)
                 // --------------------------------------------------------
-
-                // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」 ----------
                 composable("detail/{personId}/{categoryName}", arguments = listOf(
                     navArgument("personId") { type = NavType.StringType },
                     navArgument("categoryName") { type = NavType.StringType }
                 )) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
+                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?:
+                        Category.BP_AND_PULSE.name
                     val category = Category.valueOf(categoryName)
                     
                     val detailViewModel: PersonDetailUiStateViewModel = viewModel(
@@ -327,6 +364,8 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     }
 
                     PersonHealthScreen(
+                        // (1)onNavigateToCategory：SCR-M-001に戻ってから選択したカテゴリへ
+                        // (2)onNavigateToGraphExpansion：グラフ拡大表示(SCR-PH-002)へ
                         detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
                         widthSizeClass = widthSizeClass,
@@ -343,7 +382,28 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         }
                     )
                 }
-                // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」のグラフ拡大 ----------
+
+                // --------------------------------------------------------
+                // ----- 一括入力(SCR-PH-002) ------------------------------
+                // --------------------------------------------------------
+                composable("batch_input/{personId}", arguments = listOf(
+                    navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
+                    val batchViewModel: BatchInputViewModel = viewModel(
+                        factory = BatchInputViewModel.Factory(
+                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
+
+                    // 利用者情報のロード（状態は ViewModel が管理する）
+                    LaunchedEffect(personId) {
+                        batchViewModel.loadPerson(personId)
+                    }
+
+                    BatchInputScreen(viewModel = batchViewModel, onBack = { navController.popBackStack() })
+                }
+
+                // --------------------------------------------------------
+                // ----- グラフ拡大表示(SCR-PH-003) -------------------------
+                // --------------------------------------------------------
                 composable("graphExpansion/{personId}/{categoryName}/{initialIndex}", arguments = listOf(
                     navArgument("personId") { type = NavType.StringType },
                     navArgument("categoryName") { type = NavType.StringType },
@@ -369,23 +429,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onBack = { navController.popBackStack() })
                 }
 
-                // ---------- 「身長・体重」「バイタル」「血糖値・HbA1c」の一括入力 ----------
-                composable("batch_input/{personId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val batchViewModel: BatchInputViewModel = viewModel(
-                        factory = BatchInputViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-                    
-                    // 利用者情報のロード（フェーズ 2: 状態は ViewModel が管理する）
-                    LaunchedEffect(personId) {
-                        batchViewModel.loadPerson(personId)
-                    }
-
-                    BatchInputScreen(viewModel = batchViewModel, onBack = { navController.popBackStack() })
-                }
-
-                // ---------- 「所見メモ」 ----------
+                // --------------------------------------------------------
+                // ----- 所見メモ(SCR-PM-001) ------------------------------
+                // --------------------------------------------------------
                 composable("condition/{personId}?query={query}", arguments = listOf(
                     navArgument("personId") { type = NavType.StringType },
                     navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }
@@ -408,6 +454,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     }
 
                     PersonConditionScreen(
+                        // (1)onNavigateToCategory    ：SCR-M-001に戻ってから選択したカテゴリへ
+                        // (2)onNavigateToPhotoPreview：写真プレビュー(SCR-PC-002)へ
+                        // (3)onNavigateToFullScreen  ：写真全画面表示(SCR-PC-003)へ
                         detailViewModel = detailViewModel,
                         conditionViewModel = conditionViewModel,
                         personId = personId,
@@ -431,7 +480,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 「所見メモ」の写真プレビュー ----------
+                // --------------------------------------------------------
+                // ----- 写真プレビュー(SCR-PM-002) -------------------------
+                // --------------------------------------------------------
                 composable("photoPreview/{uri}/{personId}/{conditionId}", arguments = listOf(
                     navArgument("uri") { type = NavType.StringType },
                     navArgument("personId") { type = NavType.StringType },
@@ -464,7 +515,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 「所見メモ」の写真表示 ----------
+                // --------------------------------------------------------
+                // ----- 写真全画面表示(SCR-PC-003) -------------------------
+                // --------------------------------------------------------
                 composable(
                     "photoFull/{conditionId}/{initialPhotoId}",
                     arguments = listOf(
@@ -484,7 +537,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 「服薬管理」 ----------
+                // --------------------------------------------------------
+                // ----- 服薬管理(SCR-PM-001) ------------------------------
+                // --------------------------------------------------------
                 composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     
@@ -514,14 +569,16 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // -------------------------------------------------------------
-                // ----- 設定・管理画面（アプリケーションの設定、利用修了者管理など） -----
-                // -------------------------------------------------------------
-
-                // ---------- 「設定・管理」 ----------
+                // --------------------------------------------------------
+                // ----- 設定(SCR-S-001) ----------------------------------
+                // --------------------------------------------------------
                 composable("settings") {
                     val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
                     SettingsScreen(
+                        // (1)onNavigateToArchiveManagement：利用者管理(SCR-S-003)へ
+                        // (2)onNavigateToAuditLog         ：監査ログ(SCR-S-002)へ
+                        // (3)onNavigateToOrphanedPhotos   ：迷子写真の管理(SCR-S-004)へ
+                        // (4)
                         viewModel = settingsViewModel, 
                         navController = navController,
                         onNavigateToArchiveManagement = { mode ->
@@ -538,7 +595,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 設定：操作ログ参照 ----------
+                // --------------------------------------------------------
+                // ----- 監査ログ(SCR-S-002) -------------------------------
+                // --------------------------------------------------------
                 composable("audit_log") {
                     val auditLogViewModel: AuditLogViewModel = viewModel(
                         factory = AuditLogViewModel.Factory(auditLogRepository, userSettingsRepository)
@@ -549,7 +608,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 設定：終了利用者の復帰・抹消 ----------
+                // --------------------------------------------------------
+                // ----- 利用者管理(SCR-S-003) ------------------------------
+                // --------------------------------------------------------
                 composable("archive_management/{mode}") { backStackEntry ->
                     val modeName = backStackEntry.arguments?.getString("mode") ?: DeleteOrRestorePersonViewModel.OperationMode.RESTORE.name
                     val mode = DeleteOrRestorePersonViewModel.OperationMode.valueOf(modeName)
@@ -564,7 +625,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     )
                 }
 
-                // ---------- 設定：迷子写真の管理 (SCR-S-004) ----------
+                // --------------------------------------------------------
+                // ----- 迷子写真管理(SCR-S-004) ----------------------------
+                // --------------------------------------------------------
                 composable("orphaned_photos") {
                     val orphanedViewModel: OrphanedPhotoViewModel = viewModel(
                         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -579,9 +642,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         onBack = { navController.popBackStack() }
                     )
                 }
-
-
-
             }
         }
     }
