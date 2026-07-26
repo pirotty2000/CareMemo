@@ -438,7 +438,6 @@ private fun HealthRecordEditForm(
     isChanged: Boolean
 ) {
     val isDateTimeValid by remember(dateTimeState) { derivedStateOf { dateTimeState.toInstant() != null } }
-    val isNew = remember(recordId) { IdLogic.isNew(recordId) }
 
     // 入力値の検証
     val validationResult = remember(
@@ -522,7 +521,7 @@ private fun HealthRecordEditForm(
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f).testTag("HealthField_SaveButton"),
-                            enabled = (validationResult == HealthInputValidationResult.SUCCESS) && isDateTimeValid && (isNew || isChanged)
+                            enabled = (validationResult == HealthInputValidationResult.SUCCESS) && isDateTimeValid && isChanged
                         ) {
                             Text(stringResource(R.string.common_save))
                         }

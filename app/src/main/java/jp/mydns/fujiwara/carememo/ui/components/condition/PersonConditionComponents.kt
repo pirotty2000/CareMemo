@@ -132,7 +132,6 @@ fun ConditionList(
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * [1-1] ConditionMemoContent
  * 所見メモの一覧表示 (リストアイテム用)
@@ -184,6 +183,8 @@ private fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * [2] ConditionDetailPane
@@ -298,6 +299,7 @@ fun ConditionDetailPane(
     }
 
     if (isEditing) {
+        // [2-1] ConditionRecordEditForm(記録の編集)
         ConditionRecordEditForm(
             conditionId = conditionId,
             dateTimeState = dateTimeState,
@@ -328,9 +330,11 @@ fun ConditionDetailPane(
             onReattachClick = { showOrphanedSelectDialog = true },
             orphanedPhotoCount = orphanedPhotos.size,
             onDeletePhoto = { photoToDelete = it },
-            onMicClick = onMicClick
+            onMicClick = onMicClick,
+            isChanged = isChanged
         )
     } else {
+        // [2-2] ConditionRecordDisplayCard
         ConditionRecordDisplayCard(
             memo = memo,
             photos = photos,
@@ -392,6 +396,7 @@ private fun ConditionRecordEditForm(
     orphanedPhotoCount: Int = 0,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
+    isChanged: Boolean
 ) {
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -468,7 +473,7 @@ private fun ConditionRecordEditForm(
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
-                            enabled = PersonConditionLogic.isValid(PersonConditionUiState(title, condition, author, dateTimeState.toInstant()))
+                            enabled = PersonConditionLogic.isValid(PersonConditionUiState(title, condition, author, dateTimeState.toInstant())) && isChanged
                         ) { Text(stringResource(R.string.common_save)) }
                     }
                 }
@@ -822,7 +827,8 @@ private fun PreviewConditionRecordEditFormDirect() {
             onPickPhotoClick = {},
             onReattachClick = {},
             onDeletePhoto = {},
-            onMicClick = {}
+            onMicClick = {},
+            isChanged = false
         )
     }
 }
