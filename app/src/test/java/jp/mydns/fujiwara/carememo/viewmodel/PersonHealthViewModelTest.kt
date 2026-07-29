@@ -130,6 +130,7 @@ class PersonHealthViewModelTest {
     }
 
     @Test
+    @Suppress("USELESS_IS_CHECK")
     fun lg04_atomicity_category_switch() = runTest {
         viewModel.loadPerson("1")
         advanceUntilIdle()
@@ -138,6 +139,6 @@ class PersonHealthViewModelTest {
         viewModel.setCategory(Category.GLUCOSE_AND_HBA1C)
         advanceUntilIdle()
         
-        verify { healthRepository.getGlucoseAndHbA1cByPersonId("1") }
+        verify { healthRepository.getGlucoseAndHbA1cByPersonId("1") is kotlinx.coroutines.flow.Flow<*> }
     }
 }
