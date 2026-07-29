@@ -14,10 +14,24 @@ android {
         minSdk = 31
         targetSdk = 35
         //noinspection HighAppVersionCode
-        versionCode = 2026072901 // versionCode = 2026072901 , 2026/07/29 RELEASE Ver.3.0.0-rc-4
+        versionCode = 2026072902 // versionCode = 2026072902 , 2026/07/29 RELEASE Ver.3.0.0-rc-4
         versionName = "3.0.0-rc-4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "version"
+    productFlavors {
+        create("stable") {
+            dimension = "version"
+            buildConfigField("boolean", "DEV_MODE", "false")
+        }
+        create("dev") {
+            dimension = "version"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("boolean", "DEV_MODE", "true")
+        }
     }
 
     buildTypes {
