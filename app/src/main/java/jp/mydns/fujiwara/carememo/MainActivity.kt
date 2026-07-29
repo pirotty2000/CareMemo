@@ -507,7 +507,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         detailViewModel = detailViewModel,
                         conditionViewModel = conditionViewModel,
                         uri = uri,
-                        personId = personId,
                         conditionId = conditionId,
                         onBack = { navController.popBackStack() },
                         onSaved = { navController.popBackStack() }

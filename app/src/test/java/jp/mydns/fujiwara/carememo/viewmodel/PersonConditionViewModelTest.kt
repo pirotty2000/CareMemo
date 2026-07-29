@@ -104,7 +104,10 @@ class PersonConditionViewModelTest {
     fun lg_02_保存失敗時の安全性() = runTest {
         coEvery { conditionRepository.insertConditionAtVisit(any(), any(), any(), any()) } throws RuntimeException("Save Error")
 
-        viewModel.saveRecord("1", AppSpecifications.Id.NEW_RECORD_ID, "タイトル", "内容", "著者", Instant.now())
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        viewModel.saveRecord(AppSpecifications.Id.NEW_RECORD_ID, "タイトル", "内容", "著者", Instant.now())
         advanceUntilIdle()
 
         // isLoading (loadingStateProxy経由) が false に戻ること

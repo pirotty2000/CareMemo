@@ -105,7 +105,7 @@ class PersonConditionScreenTest_3_Behavior {
             .performTextInput("内容")
         composeTestRule.onNodeWithTag("Condition_SaveButton").performClick()
         
-        verify { conditionViewModel.saveRecord(any(), any(), any(), any(), any(), any(), any()) }
+        verify { conditionViewModel.saveRecord(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test

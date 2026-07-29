@@ -181,7 +181,6 @@ class PersonConditionViewModel(
      * 所見メモを保存または更新します。
      */
     fun saveRecord(
-        personId: String,
         conditionId: String,
         title: String,
         condition: String,
@@ -189,6 +188,7 @@ class PersonConditionViewModel(
         recordTime: Instant,
         onSuccess: (String) -> Unit = {}
     ) {
+        val personId = currentState.personId ?: return
         val inputState = PersonConditionUiState(title, condition, author, recordTime)
         
         safeLaunch(
@@ -261,14 +261,16 @@ class PersonConditionViewModel(
         }
     }
 
-    fun onPhotoCaptured(uri: Uri, personId: String, conditionId: String) {
+    fun onPhotoCaptured(uri: Uri, conditionId: String) {
+        val personId = currentState.personId ?: return
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, personId, conditionId))
     }
 
     /**
      * 選択された迷子写真を現在のレコードに紐付けます。
      */
-    fun reattachOrphanedPhoto(personId: String, conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
+    fun reattachOrphanedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
+        val personId = currentState.personId ?: return
         if (IdLogic.isNew(conditionId)) return
 
         safeLaunch(
@@ -298,7 +300,8 @@ class PersonConditionViewModel(
         }
     }
 
-    fun processAndSavePhoto(context: Context, uri: Uri, personId: String, conditionId: String, caption: String) {
+    fun processAndSavePhoto(context: Context, uri: Uri, conditionId: String, caption: String) {
+        val personId = currentState.personId ?: return
         safeLaunch(
             operation = OP_SAVE_PHOTO,
             loadingState = loadingStateProxy,
@@ -346,7 +349,8 @@ class PersonConditionViewModel(
         showError(message)
     }
 
-    suspend fun getAllPhotosForPerson(personId: String): List<ConditionPhoto> {
+    suspend fun getAllPhotosForPerson(): List<ConditionPhoto> {
+        val personId = currentState.personId ?: return emptyList()
         return conditionRepository.getAllPhotosByPersonId(personId)
     }
 

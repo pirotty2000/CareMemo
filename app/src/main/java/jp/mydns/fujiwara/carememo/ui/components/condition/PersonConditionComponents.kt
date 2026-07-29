@@ -192,13 +192,12 @@ private fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
  */
 @Composable
 fun ConditionDetailPane(
-    personId: String,
     conditionId: String,
     records: List<ConditionAtVisit>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     defaultRecorderName: String,
-    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onSelectedIdChange: (String) -> Unit,
     onCancel: () -> Unit,
@@ -313,7 +312,7 @@ fun ConditionDetailPane(
             isProcessing = isProcessing,
             onSave = {
                 val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
-                onSaveRecord(personId, conditionId, currentState) { newId ->
+                onSaveRecord(conditionId, currentState) { newId ->
                     onSelectedIdChange(newId)
                     isEditing = false
                 }
@@ -785,13 +784,12 @@ private fun OrphanedPhotoSelectionDialog(
 private fun PreviewConditionDetailPane() {
     MaterialTheme {
         ConditionDetailPane(
-            personId = "1",
             conditionId = "1",
             records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "サンプル", condition = "内容", author = "A", recordTime = Instant.now())),
             photos = emptyList(),
             isProcessing = false,
             defaultRecorderName = "A",
-            onSaveRecord = { _, _, _, _ -> },
+            onSaveRecord = { _, _, _ -> },
             onDeletePhoto = {},
             onSelectedIdChange = {},
             onCancel = {},

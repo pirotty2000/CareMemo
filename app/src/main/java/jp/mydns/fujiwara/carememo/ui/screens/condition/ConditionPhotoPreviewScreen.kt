@@ -29,7 +29,6 @@ fun ConditionPhotoPreviewScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
     uri: Uri,
-    personId: String,
     conditionId: String,
     onBack: () -> Unit,
     onSaved: () -> Unit,
@@ -130,7 +129,7 @@ fun ConditionPhotoPreviewScreen(
                     }
                     Button(
                         onClick = {
-                            conditionViewModel.processAndSavePhoto(context, uri, personId, conditionId, caption)
+                            conditionViewModel.processAndSavePhoto(context, uri, conditionId, caption)
                             onSaved()
                         },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")

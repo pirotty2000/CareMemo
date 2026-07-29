@@ -83,7 +83,6 @@ import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
-    personId: String,
     records: List<Any>,
     isLoading: Boolean,
     searchQuery: String,
@@ -96,7 +95,7 @@ fun PersonConditionScreenContent(
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
@@ -164,7 +163,6 @@ fun PersonConditionScreenContent(
                     .testTag("Condition_DetailPane")
             ) {
                 ConditionDetailPane(
-                    personId = personId,
                     conditionId = selectedId,
                     records = conditionRecords,
                     photos = photos,

@@ -113,9 +113,8 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         if (success && tempPhotoUri != null) {
-            val pid = detailState.personId ?: return@rememberLauncherForActivityResult
             val cid = conditionState.selectedConditionId ?: ""
-            conditionViewModel.onPhotoCaptured(tempPhotoUri!!, pid, cid)
+            conditionViewModel.onPhotoCaptured(tempPhotoUri!!, cid)
         } else {
             if (!success && tempPhotoUri != null) {
                 conditionViewModel.notifyPhotoError("写真の取得に失敗しました。")
@@ -127,9 +126,8 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            val pid = detailState.personId ?: return@rememberLauncherForActivityResult
             val cid = conditionState.selectedConditionId ?: ""
-            conditionViewModel.onPhotoCaptured(uri, pid, cid)
+            conditionViewModel.onPhotoCaptured(uri, cid)
         }
     }
 
@@ -139,7 +137,6 @@ fun PersonConditionScreen(
     if (isExpanded) {
         // Tablet
         PersonConditionScreenTablet(
-            personId = detailState.personId ?: "",
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
@@ -181,15 +178,13 @@ fun PersonConditionScreen(
                 }
             },
             onDeleteRecord = { recordToDelete = it },
-            onSaveRecord = { pId, cId, s, onSuccess -> 
-                conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
+            onSaveRecord = { cId, s, onSuccess -> 
+                conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
             },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             onReattachPhoto = { info ->
-                detailState.personId?.let { pid ->
-                    val cid = conditionState.selectedConditionId ?: ""
-                    conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
-                }
+                val cid = conditionState.selectedConditionId ?: ""
+                conditionViewModel.reattachOrphanedPhoto(cid, info)
             },
             orphanedPhotos = conditionState.availableOrphanedPhotos,
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
@@ -198,7 +193,6 @@ fun PersonConditionScreen(
     } else {
         // Phone
         PersonConditionScreenPhone(
-            personId = detailState.personId ?: "",
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
@@ -246,17 +240,15 @@ fun PersonConditionScreen(
             // 削除
             onDeleteRecord = { recordToDelete = it },
             // 保存
-            onSaveRecord = { pId, cId, s, onSuccess -> 
-                conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
+            onSaveRecord = { cId, s, onSuccess ->
+                conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
             },
             // サムネイルのごみ箱アイコン
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             // 迷子写真の再アタッチ処理
             onReattachPhoto = { info ->
-                detailState.personId?.let { pid ->
-                    val cid = conditionState.selectedConditionId ?: ""
-                    conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
-                }
+                val cid = conditionState.selectedConditionId ?: ""
+                conditionViewModel.reattachOrphanedPhoto(cid, info)
             },
             // 迷子写真のコレクション
             orphanedPhotos = conditionState.availableOrphanedPhotos,
@@ -270,9 +262,7 @@ fun PersonConditionScreen(
     if (showPdfSettingsDialog) {
         val allPhotos = remember { mutableStateOf<List<ConditionPhoto>>(emptyList()) }
         LaunchedEffect(Unit) {
-            detailState.personId?.let { pid ->
-                allPhotos.value = conditionViewModel.getAllPhotosForPerson(pid)
-            }
+            allPhotos.value = conditionViewModel.getAllPhotosForPerson()
         }
         PdfExportActionHandler(
             showDialog = showPdfSettingsDialog,
@@ -348,14 +338,13 @@ fun PersonConditionScreen(
                 color = MaterialTheme.colorScheme.surface
             ) {
                 jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane(
-                    personId = detailState.personId!!,
                     conditionId = conditionState.selectedConditionId!!,
                     records = conditionState.records,
                     photos = conditionState.currentConditionPhotos,
                     isProcessing = conditionState.isProcessing,
                     defaultRecorderName = defaultRecorderName,
-                    onSaveRecord = { pId: String, cId: String, s, onSuccess -> 
-                        conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess)
+                    onSaveRecord = { cId: String, s, onSuccess ->
+                        conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess)
                     },
                     onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
                     onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(
@@ -376,10 +365,8 @@ fun PersonConditionScreen(
                         galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                     onReattachPhoto = { info ->
-                        detailState.personId?.let { pid ->
-                            val cid = conditionState.selectedConditionId ?: ""
-                            conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
-                        }
+                        val cid = conditionState.selectedConditionId ?: ""
+                        conditionViewModel.reattachOrphanedPhoto(cid, info)
                     },
                     orphanedPhotos = conditionState.availableOrphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,

@@ -23,7 +23,6 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenPhone(
-    personId: String,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
@@ -45,7 +44,7 @@ fun PersonConditionScreenPhone(
     onNavigateToFullScreen: (String, String) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
     orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
@@ -108,7 +107,6 @@ fun PersonConditionScreenPhone(
             Box(modifier = Modifier.padding(padding)) {
                 PersonConditionScreenContent(
                     isExpanded = false,
-                    personId = personId,
                     records = records,
                     isLoading = isLoading,
                     searchQuery = searchQuery,

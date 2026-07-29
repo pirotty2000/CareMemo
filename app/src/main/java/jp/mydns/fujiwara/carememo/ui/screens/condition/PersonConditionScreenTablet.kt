@@ -23,7 +23,6 @@ import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenTablet(
-    personId: String,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
@@ -45,7 +44,7 @@ fun PersonConditionScreenTablet(
     onNavigateToFullScreen: (String, String) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (String, String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
     orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
@@ -102,7 +101,6 @@ fun PersonConditionScreenTablet(
         ) {
             PersonConditionScreenContent(
                 isExpanded = true,
-                personId = personId,
                 records = records,
                 isLoading = isLoading,
                 searchQuery = searchQuery,
