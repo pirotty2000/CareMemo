@@ -61,7 +61,6 @@ class PersonMedicationScreenTest {
                 PersonMedicationScreen(
                     detailViewModel = detailViewModel,
                     medicationViewModel = medicationViewModel,
-                    personId = "1",
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = {},
                     onNavigateToCategory = {}

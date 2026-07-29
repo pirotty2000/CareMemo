@@ -36,7 +36,6 @@ import java.time.Instant
 fun PersonConditionScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
-    personId: String,
     initialQuery: String = "",
     widthSizeClass: WindowWidthSizeClass,
     onBack: () -> Unit,
@@ -138,8 +137,9 @@ fun PersonConditionScreen(
     val isAnyDialogOpen = recordToDelete != null || showPdfSettingsDialog || dialogMessage != null
 
     if (isExpanded) {
+        // Tablet
         PersonConditionScreenTablet(
-            personId = personId,
+            personId = detailState.personId ?: "",
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
@@ -196,8 +196,9 @@ fun PersonConditionScreen(
             snackbarHostState = snackbarHostState
         )
     } else {
+        // Phone
         PersonConditionScreenPhone(
-            personId = personId,
+            personId = detailState.personId ?: "",
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
@@ -214,6 +215,7 @@ fun PersonConditionScreen(
             onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(id.ifEmpty { null }) },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
+            // カメラ
             onAddPhotoClick = {
                 try {
                     val uri = ImageUtils.getTempPhotoUri(context)
@@ -224,13 +226,16 @@ fun PersonConditionScreen(
                     conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
                 }
             },
+            // ギャラリー
             onPickPhotoClick = {
                 conditionViewModel.setLockBypassEnabled(true)
                 galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
+            // 写真のフルスクリーン表示
             onNavigateToFullScreen = { photoId, conditionId -> 
                 onNavigateToFullScreen(photoId, conditionId) 
             },
+            // PDF出力
             onShowPdfSettings = {
                 if (conditionState.records.isEmpty()) {
                     scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(conditionCategoryName)) }
@@ -238,18 +243,24 @@ fun PersonConditionScreen(
                     showPdfSettingsDialog = true
                 }
             },
+            // 削除
             onDeleteRecord = { recordToDelete = it },
+            // 保存
             onSaveRecord = { pId, cId, s, onSuccess -> 
                 conditionViewModel.saveRecord(pId, cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
             },
+            // サムネイルのごみ箱アイコン
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            // 迷子写真の再アタッチ処理
             onReattachPhoto = { info ->
                 detailState.personId?.let { pid ->
                     val cid = conditionState.selectedConditionId ?: ""
                     conditionViewModel.reattachOrphanedPhoto(pid, cid, info)
                 }
             },
+            // 迷子写真のコレクション
             orphanedPhotos = conditionState.availableOrphanedPhotos,
+            // マイク
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
         )
@@ -259,7 +270,9 @@ fun PersonConditionScreen(
     if (showPdfSettingsDialog) {
         val allPhotos = remember { mutableStateOf<List<ConditionPhoto>>(emptyList()) }
         LaunchedEffect(Unit) {
-            allPhotos.value = conditionViewModel.getAllPhotosForPerson(personId)
+            detailState.personId?.let { pid ->
+                allPhotos.value = conditionViewModel.getAllPhotosForPerson(pid)
+            }
         }
         PdfExportActionHandler(
             showDialog = showPdfSettingsDialog,

@@ -459,7 +459,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         // (3)onNavigateToFullScreen  ：写真全画面表示(SCR-PC-003)へ
                         detailViewModel = detailViewModel,
                         conditionViewModel = conditionViewModel,
-                        personId = personId,
                         initialQuery = initialQuery,
                         widthSizeClass = widthSizeClass,
                         onRequireAuthentication = requestAuthentication,
@@ -556,7 +555,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     PersonMedicationScreen(
                         detailViewModel = detailViewModel,
                         medicationViewModel = medicationViewModel,
-                        personId = personId,
                         widthSizeClass = widthSizeClass,
                         onRequireAuthentication = requestAuthentication,
                         onBack = { navController.popBackStack("main", inclusive = false) },

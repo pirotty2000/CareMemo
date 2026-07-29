@@ -25,7 +25,6 @@ import java.time.LocalDate
 fun PersonMedicationScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     medicationViewModel: PersonMedicationViewModel,
-    personId: String,
     widthSizeClass: WindowWidthSizeClass,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
@@ -146,7 +145,7 @@ fun PersonMedicationScreen(
         val dateStr = showDialog.toString()
         MedicationInputDialog(
             date = showDialog!!,
-            personId = personId,
+            personId = detailState.personId ?: "",
             records = medicationState.recordsByDate[dateStr] ?: emptyList(),
             onDismiss = { showDialog = null },
             onConfirm = { slotRecords ->

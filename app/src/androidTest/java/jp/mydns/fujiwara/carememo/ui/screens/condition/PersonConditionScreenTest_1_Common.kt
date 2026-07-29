@@ -72,7 +72,6 @@ class PersonConditionScreenTest_1_Common {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    personId = "1",
                     widthSizeClass = WindowWidthSizeClass.Compact,
                     onBack = onBack,
                     onNavigateToCategory = onNavigateToCategory,

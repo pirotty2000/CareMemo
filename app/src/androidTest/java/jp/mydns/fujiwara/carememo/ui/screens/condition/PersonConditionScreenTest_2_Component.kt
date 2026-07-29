@@ -75,7 +75,6 @@ class PersonConditionScreenTest_2_Component {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    personId = "1",
                     widthSizeClass = widthSizeClass,
                     onBack = {},
                     onNavigateToCategory = {},
