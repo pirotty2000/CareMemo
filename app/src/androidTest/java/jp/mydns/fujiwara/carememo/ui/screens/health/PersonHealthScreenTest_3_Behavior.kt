@@ -108,7 +108,7 @@ class PersonHealthScreenTest_3_Behavior {
         composeTestRule.onNodeWithTag("HealthField_SaveButton").assertIsEnabled().performClick()
         
         // 4. ViewModel の保存処理が呼ばれたことを検証
-        verify { healthViewModel.saveRecord(any()) }
+        verify { healthViewModel.saveRecord(any(), any(), any(), any()) }
     }
 
     @Test

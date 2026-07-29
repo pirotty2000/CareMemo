@@ -69,7 +69,6 @@ import java.time.Instant
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenPhone(
-    personId: String,
     currentCategory: Category,
     records: List<Any>,
     isLoading: Boolean,
@@ -81,11 +80,11 @@ fun PersonHealthScreenPhone(
     selectedRecordId: String,
     onSelectedRecordIdChange: (String) -> Unit,
     onBack: () -> Unit,
-    onNavigateToGraphExpansion: (String, Category, Int) -> Unit,
+    onExpandGraph: (Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Any) -> Unit,
+    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
@@ -178,7 +177,6 @@ fun PersonHealthScreenPhone(
                 //-- ui/screens/health/PersonHealtScreeenContent.kt
                 PersonHealthScreenContent(
                     isExpanded = false,
-                    personId = personId,
                     records = records,
                     isLoading = isLoading,
                     currentCategory = currentCategory,
@@ -188,9 +186,7 @@ fun PersonHealthScreenPhone(
                     onSelectedRecordIdChange = onSelectedRecordIdChange,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = { record -> recordToDelete = record },
-                    onExpandGraph = { index ->
-                        onNavigateToGraphExpansion(personId, currentCategory, index)
-                    },
+                    onExpandGraph = onExpandGraph,
                     onSaveRecord = onSaveRecord,
                     isAnyDialogOpen = recordToDelete != null
                 )
@@ -204,7 +200,6 @@ fun PersonHealthScreenPhone(
 fun PersonHealthScreenPhonePreview() {
     CareMemoTheme {
         PersonHealthScreenPhone(
-            personId = "person-1",
             currentCategory = Category.BP_AND_PULSE,
             records = listOf(
                 BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
@@ -224,11 +219,11 @@ fun PersonHealthScreenPhonePreview() {
             selectedRecordId = "",
             onSelectedRecordIdChange = {},
             onBack = {},
-            onNavigateToGraphExpansion = { _, _, _ -> },
+            onExpandGraph = {},
             onNavigateToCategory = {},
             onShowPdfSettings = {},
             onDeleteRecord = {},
-            onSaveRecord = {},
+            onSaveRecord = { _, _, _, _ -> },
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

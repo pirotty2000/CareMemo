@@ -46,6 +46,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import java.time.Instant
 
 /**
  * 全体像：健康管理（Health）
@@ -244,12 +245,11 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
  */
 @Composable
 fun HealthRecordDetailPane(
-    personId: String,
     category: Category,
     recordId: String,
     records: List<HistoryRecord>,
     onCancel: () -> Unit,
-    onSaveRecord: (Any) -> Unit,
+    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
 ) {
     key(recordId) {
         val record = remember(records, recordId) {
@@ -392,8 +392,7 @@ fun HealthRecordDetailPane(
                                         Category.GLUCOSE_AND_HBA1C -> mapOf("glucose" to glucoseText.toIntOrNull(), "hba1c" to hba1cText.toDoubleOrNull())
                                         else -> emptyMap()
                                     }
-                                    val newRecord = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values)
-                                    onSaveRecord(newRecord)
+                                    onSaveRecord(category, recordId, recordTime, values)
                                     isEditing = false
                                 }
                             },

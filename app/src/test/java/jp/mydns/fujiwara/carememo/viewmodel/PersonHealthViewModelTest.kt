@@ -106,10 +106,11 @@ class PersonHealthViewModelTest {
     fun lg02_save_failure_safety() = runTest {
         viewModel.loadPerson("1")
         // 新規レコード (id="")
-        val record = BpAndPulse(id = "", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+        val time = Instant.now()
+        val values = mapOf("bpSystolic" to 120, "bpDiastolic" to 80, "pulse" to 70)
         coEvery { healthRepository.insertBpAndPulse(any(), any(), any(), any()) } throws RuntimeException("Save Failure")
 
-        viewModel.saveRecord(record)
+        viewModel.saveRecord(Category.BP_AND_PULSE, "", time, values)
         
         advanceUntilIdle()
 
@@ -121,7 +122,7 @@ class PersonHealthViewModelTest {
                 operation = "saveRecord",
                 tableName = "health_db",
                 actionType = "ERROR",
-                affectedId = "", // id="" が渡されるはず
+                affectedId = "",
                 details = match { it.contains("Save Failure") },
                 resultType = "OTHER_ERROR"
             ) 

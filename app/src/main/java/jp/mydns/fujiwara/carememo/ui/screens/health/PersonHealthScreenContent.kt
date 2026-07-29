@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.time.Instant
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -83,7 +84,6 @@ import jp.mydns.fujiwara.carememo.ui.components.health.HealthRecordDetailPane
 @Composable
 fun PersonHealthScreenContent(
     isExpanded: Boolean,
-    personId: String,
     records: List<Any>,
     isLoading: Boolean,
     currentCategory: Category,
@@ -94,7 +94,7 @@ fun PersonHealthScreenContent(
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
-    onSaveRecord: (Any) -> Unit,
+    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
     isAnyDialogOpen: Boolean
 ) {
     val historyListState = rememberLazyListState()
@@ -128,14 +128,11 @@ fun PersonHealthScreenContent(
                 if (selectedRecordId.isNotEmpty()) {
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
-                            personId = personId,
                             category = currentCategory,
                             recordId = selectedRecordId,
                             records = historyRecords,
                             onCancel = { onSelectedRecordIdChange("") },
-                            onSaveRecord = { record ->
-                                onSaveRecord(record)
-                            }
+                            onSaveRecord = onSaveRecord
                         )
                     }
                 } else {
@@ -165,14 +162,11 @@ fun PersonHealthScreenContent(
         if (selectedRecordId.isNotEmpty()) {
             Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
             HealthRecordDetailPane(
-                personId = personId,
                 category = currentCategory,
                 recordId = selectedRecordId,
                 records = historyRecords,
                 onCancel = { onSelectedRecordIdChange("") },
-                onSaveRecord = { record ->
-                    onSaveRecord(record)
-                }
+                onSaveRecord = onSaveRecord
             )
             }
         } else {

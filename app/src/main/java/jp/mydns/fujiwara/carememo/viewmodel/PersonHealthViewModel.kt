@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 /**
  * 利用者健康記録（身長体重、バイタル、血糖値）固有のロジックを扱う ViewModel。
@@ -156,24 +157,27 @@ class PersonHealthViewModel(
     /**
      * 数値系レコードを保存または更新します。
      */
-    fun saveRecord(record: Any?, originalId: String) {
-        if (record !is HistoryRecord) return
+    fun saveRecord(category: Category, recordId: String, recordTime: Instant, values: Map<String, Any?>) {
+        val personId = currentState.personId ?: return
         
         safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = record.id
+                affectedId = recordId
             }
         ) {
-            // 1. バリデーション
+            // 1. Entity 構築
+            val record = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values) as HistoryRecord
+
+            // 2. バリデーション
             val validationResult = PersonHealthLogic.validate(record)
             translateValidationResult(validationResult)
 
-            val isUpdate = !IdLogic.isNew(originalId)
+            val isUpdate = !IdLogic.isNew(recordId)
 
-            // 2. 重複チェック
+            // 3. 重複チェック
             val existing = when (record) {
                 is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
                 is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
@@ -184,7 +188,7 @@ class PersonHealthViewModel(
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            // 3. 保存実行
+            // 4. 保存実行
             performSave(record, isUpdate)
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)

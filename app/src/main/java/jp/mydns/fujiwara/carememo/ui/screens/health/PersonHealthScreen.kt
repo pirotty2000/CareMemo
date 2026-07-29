@@ -76,7 +76,6 @@ fun PersonHealthScreen(
     if (isExpanded) {
         // Tablet
         PersonHealthScreenTablet(
-            personId = detailState.personId ?: "",
             currentCategory = detailState.currentCategory,
             records = healthState.records,
             isLoading = healthState.isLoading,
@@ -86,17 +85,22 @@ fun PersonHealthScreen(
             selectedRecordId = healthState.selectedRecordId ?: "",
             onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
             onBack = onBack,
-            onNavigateToGraphExpansion = onNavigateToGraphExpansion,
+            onExpandGraph = { index ->
+                detailState.personId?.let { pid ->
+                    onNavigateToGraphExpansion(pid, detailState.currentCategory, index)
+                }
+            },
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { healthViewModel.saveRecord(it, healthState.selectedRecordId ?: "") },
+            onSaveRecord = { cat, recordId, time, values -> 
+                healthViewModel.saveRecord(cat, recordId, time, values) 
+            },
             snackbarHostState = snackbarHostState
         )
     } else {
         // Phone
         PersonHealthScreenPhone(
-            personId = detailState.personId ?: "",
             currentCategory = detailState.currentCategory,
             records = healthState.records,
             isLoading = healthState.isLoading,
@@ -108,11 +112,17 @@ fun PersonHealthScreen(
             selectedRecordId = healthState.selectedRecordId ?: "",
             onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
             onBack = onBack,
-            onNavigateToGraphExpansion = onNavigateToGraphExpansion,
+            onExpandGraph = { index ->
+                detailState.personId?.let { pid ->
+                    onNavigateToGraphExpansion(pid, detailState.currentCategory, index)
+                }
+            },
             onNavigateToCategory = onNavigateToCategory,
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { healthViewModel.saveRecord(it, healthState.selectedRecordId ?: "") },
+            onSaveRecord = { cat, recordId, time, values -> 
+                healthViewModel.saveRecord(cat, recordId, time, values) 
+            },
             snackbarHostState = snackbarHostState
         )
     }
