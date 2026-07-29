@@ -14,7 +14,7 @@ import java.time.Instant
  * 一括入力画面用の UI 状態
  */
 data class BatchInputUiState(
-    val personId: String? = null,
+    override val personId: String? = null,
     val person: Person? = null, // 追加
     val currentPersonName: String = "",
     val personSummary: PersonCategorySummary? = null,

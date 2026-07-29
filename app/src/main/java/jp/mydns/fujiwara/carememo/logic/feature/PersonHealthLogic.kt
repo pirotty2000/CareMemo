@@ -12,7 +12,7 @@ import java.util.UUID
  * 健康記録画面用の UI 状態
  */
 data class PersonHealthUiState(
-    val personId: String? = null,
+    override val personId: String? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     val records: List<HistoryRecord> = emptyList(),
     val preferredShowHistory: Boolean = true,

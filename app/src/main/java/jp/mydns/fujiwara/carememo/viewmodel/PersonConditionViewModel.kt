@@ -70,8 +70,6 @@ class PersonConditionViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonConditionUiState): String? = state.personId
-
     override fun updateWithPersonData(
         state: PersonConditionUiState,
         person: Person,
@@ -188,7 +186,6 @@ class PersonConditionViewModel(
         recordTime: Instant,
         onSuccess: (String) -> Unit = {}
     ) {
-        val personId = currentState.personId ?: return
         val inputState = PersonConditionUiState(title, condition, author, recordTime)
         
         safeLaunch(
@@ -204,7 +201,7 @@ class PersonConditionViewModel(
             translateValidationResult(validationResult)
 
             // 2. Entity 構築
-            val record = PersonConditionLogic.createRecord(personId, conditionId, inputState)
+            val record = PersonConditionLogic.createRecord(requiredPersonId, conditionId, inputState)
             val isUpdate = !IdLogic.isNew(conditionId)
 
             // 3. 重複チェック
@@ -262,15 +259,13 @@ class PersonConditionViewModel(
     }
 
     fun onPhotoCaptured(uri: Uri, conditionId: String) {
-        val personId = currentState.personId ?: return
-        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, personId, conditionId))
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, requiredPersonId, conditionId))
     }
 
     /**
      * 選択された迷子写真を現在のレコードに紐付けます。
      */
     fun reattachOrphanedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
-        val personId = currentState.personId ?: return
         if (IdLogic.isNew(conditionId)) return
 
         safeLaunch(
@@ -287,7 +282,7 @@ class PersonConditionViewModel(
             } else {
                 // ファイルのみの場合
                 conditionRepository.adoptFileAsPhoto(
-                    personId = personId,
+                    personId = requiredPersonId,
                     conditionId = conditionId,
                     photoFileName = photoInfo.photoFileName,
                     thumbnailFileName = photoInfo.thumbnailFileName,
@@ -301,7 +296,6 @@ class PersonConditionViewModel(
     }
 
     fun processAndSavePhoto(context: Context, uri: Uri, conditionId: String, caption: String) {
-        val personId = currentState.personId ?: return
         safeLaunch(
             operation = OP_SAVE_PHOTO,
             loadingState = loadingStateProxy,
@@ -314,7 +308,7 @@ class PersonConditionViewModel(
             val (photoName, thumbName) = ImageUtils.processAndSaveImage(context, uri)
             val photo = ConditionPhoto(
                 conditionId = conditionId,
-                personId = personId,
+                personId = requiredPersonId,
                 photoFileName = photoName,
                 thumbnailFileName = thumbName,
                 capturedAt = Instant.now(),
@@ -350,8 +344,7 @@ class PersonConditionViewModel(
     }
 
     suspend fun getAllPhotosForPerson(): List<ConditionPhoto> {
-        val personId = currentState.personId ?: return emptyList()
-        return conditionRepository.getAllPhotosByPersonId(personId)
+        return conditionRepository.getAllPhotosByPersonId(requiredPersonId)
     }
 
     class Factory(

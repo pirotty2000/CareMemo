@@ -63,8 +63,6 @@ class BatchInputViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: BatchInputUiState): String? = state.personId
-
     override fun updateWithPersonData(
         state: BatchInputUiState,
         person: Person,
@@ -126,7 +124,6 @@ class BatchInputViewModel(
      */
     fun saveBatch() {
         val state = currentState
-        val personId = state.personId ?: return
         val time = state.recordTime
 
         safeLaunch(
@@ -134,7 +131,7 @@ class BatchInputViewModel(
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = personId
+                affectedId = requiredPersonId
             }
         ) {
             // 1. バリデーション（事実の判定）
@@ -152,9 +149,9 @@ class BatchInputViewModel(
 
             effectiveCategories.forEach { category ->
                 val isDuplicate = when (category) {
-                    BatchInputCategory.HEIGHT_WEIGHT -> healthRepository.findHeightAndWeightAtTime(personId, time) != null
-                    BatchInputCategory.VITAL -> healthRepository.findBpAndPulseAtTime(personId, time) != null
-                    BatchInputCategory.GLUCOSE -> healthRepository.findGlucoseAndHbA1cAtTime(personId, time) != null
+                    BatchInputCategory.HEIGHT_WEIGHT -> healthRepository.findHeightAndWeightAtTime(requiredPersonId, time) != null
+                    BatchInputCategory.VITAL -> healthRepository.findBpAndPulseAtTime(requiredPersonId, time) != null
+                    BatchInputCategory.GLUCOSE -> healthRepository.findGlucoseAndHbA1cAtTime(requiredPersonId, time) != null
                 }
                 if (isDuplicate) {
                     duplicateCategoryNames.add(category.name)
@@ -179,7 +176,7 @@ class BatchInputViewModel(
             }
             
             // 4. 保存実行
-            val entities = BatchInputLogic.createEntities(personId, time, state)
+            val entities = BatchInputLogic.createEntities(requiredPersonId, time, state)
             entities.forEach { entity ->
                 when (entity) {
                     is HeightAndWeight -> healthRepository.insertHeightAndWeight(entity, featureName, OP_SAVE_BATCH)

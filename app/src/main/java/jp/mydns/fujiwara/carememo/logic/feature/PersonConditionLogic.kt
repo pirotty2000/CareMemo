@@ -20,7 +20,7 @@ data class PersonConditionUiState(
     val recordTime: Instant? = null,
 
     // --- 集約された状態 ---
-    val personId: String? = null,
+    override val personId: String? = null,
     override val currentCategory: Category = Category.CONDITION_AT_VISIT,
 
     val records: List<ConditionAtVisit> = emptyList(),

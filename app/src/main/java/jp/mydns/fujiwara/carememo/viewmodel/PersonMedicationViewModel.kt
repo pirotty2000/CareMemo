@@ -54,8 +54,6 @@ class PersonMedicationViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonMedicationUiState): String? = state.personId
-
     override fun updateWithPersonData(
         state: PersonMedicationUiState,
         person: Person,
@@ -122,14 +120,12 @@ class PersonMedicationViewModel(
      * 特定の日の服薬状況を一括同期（保存・更新・削除）します。
      */
     fun syncMedicationDay(date: String, slotRecords: List<MedicationRecord?>) {
-        val personId = currentState.personId ?: return
-        
         safeLaunch(
             operation = OP_SYNC,
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_MEDICATION
-                affectedId = personId
+                affectedId = requiredPersonId
             }
         ) {
             // 1. バリデーション

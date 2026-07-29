@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
  * 利用者コンテキストを持つ UiState が実装すべきインターフェース
  */
 interface PersonAwareState {
+    val personId: String?
     val currentCategory: Category? get() = null
     val isLoading: Boolean
 }
@@ -56,7 +57,7 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
      */
     open fun loadPerson(personId: String) {
         // 現在ロードされている利用者と同じならスキップ
-        if (getPersonId(currentState) == personId) return
+        if (currentState.personId == personId) return
 
         // ロード開始前に状態をクリア（サブクラスでリセットロジックを実装可能にする）
         updateUiState { onPrepareLoadPerson(it) }
@@ -84,11 +85,12 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     }
 
     /**
-     * UiState から現在の利用者IDを抽出します。
-     * 二重ロード防止判定に使用します。
+     * 現在の利用者IDを安全に取得します。
+     * ロードされていない場合は IllegalStateException をスローします。
+     * 保存などの「利用者が特定されていることが前提の操作」で使用します。
      */
-    protected abstract fun getPersonId(state: S): String?
-
+    protected val requiredPersonId: String
+        get() = currentState.personId ?: throw IllegalStateException("Person information is not loaded.")
 
     /**
      * ロードした利用者データを UiState に反映した新しい状態を返します。

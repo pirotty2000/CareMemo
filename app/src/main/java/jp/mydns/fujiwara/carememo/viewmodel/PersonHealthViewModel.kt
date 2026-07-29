@@ -72,8 +72,6 @@ class PersonHealthViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonHealthUiState): String? = state.personId
-
     override fun updateWithPersonData(
         state: PersonHealthUiState,
         person: Person,
@@ -158,8 +156,6 @@ class PersonHealthViewModel(
      * 数値系レコードを保存または更新します。
      */
     fun saveRecord(category: Category, recordId: String, recordTime: Instant, values: Map<String, Any?>) {
-        val personId = currentState.personId ?: return
-        
         safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
@@ -169,7 +165,7 @@ class PersonHealthViewModel(
             }
         ) {
             // 1. Entity 構築
-            val record = PersonHealthLogic.createEntity(category, personId, recordId, recordTime, values) as HistoryRecord
+            val record = PersonHealthLogic.createEntity(category, requiredPersonId, recordId, recordTime, values) as HistoryRecord
 
             // 2. バリデーション
             val validationResult = PersonHealthLogic.validate(record)

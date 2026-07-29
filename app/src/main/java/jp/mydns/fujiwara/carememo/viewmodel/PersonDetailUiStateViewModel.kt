@@ -35,8 +35,6 @@ class PersonDetailUiStateViewModel(
         return state.copy(isLoading = isLoading)
     }
 
-    override fun getPersonId(state: PersonDetailUiState): String? = state.personId
-
     override fun updateWithPersonData(
         state: PersonDetailUiState,
         person: Person,

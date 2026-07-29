@@ -9,7 +9,7 @@ import java.time.YearMonth
  * 服薬管理画面用の UI 状態
  */
 data class PersonMedicationUiState(
-    val personId: String? = null,
+    override val personId: String? = null,
     override val currentCategory: Category = Category.MEDICATION,
 
     val selectedMonth: YearMonth = YearMonth.now(),
