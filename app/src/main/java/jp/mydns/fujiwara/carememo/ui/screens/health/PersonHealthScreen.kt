@@ -140,9 +140,8 @@ fun PersonHealthScreen(
 
     // PDF出力共通ハンドラー
     if (showPdfSettingsDialog) {
-        @Suppress("ConstantConditions")
         PdfExportActionHandler(
-            showDialog = showPdfSettingsDialog,
+            showDialog = true,
             onDismiss = { showPdfSettingsDialog = false },
             category = detailState.currentCategory,
             person = detailState.person,

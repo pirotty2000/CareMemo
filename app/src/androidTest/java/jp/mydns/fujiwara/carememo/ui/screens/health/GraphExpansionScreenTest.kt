@@ -145,13 +145,20 @@ class GraphExpansionScreenTest {
 
     @Test
     fun cp04_received_data_reflection() {
-        recordsFlow.value = mockRecords
         // 血糖値カテゴリで開始
+        val glucoseRecords = listOf(
+            jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c(id = "3", personId = "1", glucose = 150, hba1c = 7.0, recordTime = baseTime)
+        )
+        recordsFlow.value = glucoseRecords
         setContent(category = Category.GLUCOSE_AND_HBA1C)
         
         // ヘッダーに「血糖値」が含まれていること
         composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle")
             .assertTextContains("血糖値", substring = true)
+
+        // 1番目のグラフ(血糖値)と2番目のグラフ(HbA1c)の両方が存在することを確認
+        assertChartContainsValue(0, "150")
+        assertChartContainsValue(1, "7.0")
     }
 
     @Test

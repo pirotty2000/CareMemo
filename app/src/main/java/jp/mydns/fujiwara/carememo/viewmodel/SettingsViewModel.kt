@@ -157,6 +157,10 @@ class SettingsViewModel(
         }
     }
 
+    fun setForceImportEnabled(enabled: Boolean) {
+        updateUiState { it.copy(isForceImportEnabled = enabled) }
+    }
+
     fun clearAuditLogs() {
         safeLaunch(operation = OP_CLEAR_LOGS, loadingState = loadingStateProxy) {
             auditLogRepository.deleteAllLogs()
@@ -206,7 +210,12 @@ class SettingsViewModel(
             contextBuilder = { errorMessageRes = R.string.common_error_save }
         ) {
             try {
-                maintenanceRepository.importData(context, uri, password) { progress ->
+                maintenanceRepository.importData(
+                    context = context,
+                    uri = uri,
+                    password = password,
+                    isDeveloperMode = currentState.isForceImportEnabled
+                ) { progress ->
                     updateUiState { it.copy(processingProgress = progress) }
                 }
                 sendViewEvent(SettingsViewEvent.ImportSuccess)

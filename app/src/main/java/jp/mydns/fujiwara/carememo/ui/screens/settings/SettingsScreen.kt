@@ -583,6 +583,8 @@ fun SettingsScreen(
                 showImportSampleConfirm = true
             }
         },
+        isForceImportEnabled = uiState.isForceImportEnabled,
+        onForceImportEnabledChange = { viewModel.setForceImportEnabled(it) },
         isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
         isProcessing = uiState.isProcessing,
         processingProgress = uiState.processingProgress,
@@ -631,6 +633,8 @@ fun SettingsScreenContent(
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
+    isForceImportEnabled: Boolean,
+    onForceImportEnabledChange: (Boolean) -> Unit,
     isDeveloperModeEnabled: Boolean,
     isProcessing: Boolean,
     processingProgress: Int,
@@ -716,7 +720,9 @@ fun SettingsScreenContent(
                         onOrphanedPhotosClick = onOrphanedPhotosClick,
                         onRotateLogsClick = onRotateLogsClick,
                         onClearLogsClick = onClearLogsClick,
-                        onImportSampleDataClick = onImportSampleDataClick
+                        onImportSampleDataClick = onImportSampleDataClick,
+                        isForceImportEnabled = isForceImportEnabled,
+                        onForceImportEnabledChange = onForceImportEnabledChange
                     )
                 }
 
@@ -995,7 +1001,9 @@ private fun ResetSection(
     onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
-    onImportSampleDataClick: () -> Unit
+    onImportSampleDataClick: () -> Unit,
+    isForceImportEnabled: Boolean,
+    onForceImportEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     SettingsSection(title = "管理者向けツール", modifier = Modifier.testTag("Settings_DevSection")) {
@@ -1056,6 +1064,24 @@ private fun ResetSection(
             supportingContent = { Text("紐付けが途切れた写真の確認と削除") },
             leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
             modifier = Modifier.clickable { onOrphanedPhotosClick() }.testTag("Settings_OrphanedPhotosButton")
+        )
+
+        ListItem(
+            headlineContent = { Text("バージョン不一致を無視してインポート") },
+            supportingContent = { Text("インポート元のバックアップデータが、現在のアプリより新しいバージョンであっても強制的に取り込みます。スキーマの不整合によりアプリが起動できなくなるリスクがあるため、事前に必ず現在の状態をエクスポートしてください。") },
+            leadingContent = { Icon(Icons.Rounded.PublishedWithChanges, contentDescription = null) },
+            trailingContent = {
+                Switch(
+                    checked = isForceImportEnabled,
+                    onCheckedChange = null,
+                    modifier = Modifier.testTag("Settings_ForceImportSwitch")
+                )
+            },
+            modifier = Modifier.toggleable(
+                value = isForceImportEnabled,
+                role = Role.Switch,
+                onValueChange = onForceImportEnabledChange
+            )
         )
 
         ListItem(
@@ -1131,6 +1157,8 @@ fun SettingsScreenPreview() {
             onRotateLogsClick = {},
             onClearLogsClick = {},
             onImportSampleDataClick = {},
+            isForceImportEnabled = false,
+            onForceImportEnabledChange = {},
             isDeveloperModeEnabled = true,
             isProcessing = false,
             processingProgress = 0,

@@ -129,9 +129,8 @@ fun PersonMedicationScreen(
 
     // PDF出力共通ハンドラー
     if (showPdfSettingsDialog) {
-        @Suppress("ConstantConditions")
         PdfExportActionHandler(
-            showDialog = showPdfSettingsDialog,
+            showDialog = true,
             onDismiss = { showPdfSettingsDialog = false },
             category = Category.MEDICATION,
             person = detailState.person,

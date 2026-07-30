@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
@@ -40,7 +38,13 @@ class PersonHealthViewModelTest {
         birthday = Instant.now()
     )
 
-    private val emptySummary = PersonCategorySummary(false, false, false, false, false)
+    private val emptySummary = PersonCategorySummary(
+        hasHeightWeight = false,
+        hasBpAndPulse = false,
+        hasGlucoseAndHbA1c = false,
+        hasCondition = false,
+        hasMedication = false
+    )
 
     @Before
     fun setup() {
@@ -73,7 +77,7 @@ class PersonHealthViewModelTest {
     }
 
     @Test
-    fun lg01_data_load_failure_safety() = runTest {
+    fun LG_01_load_failure_safety() = runTest {
         // 特定のカテゴリ（バイタル）のロードでエラーを発生させる
         every { healthRepository.getBpAndPulseByPersonId(any()) } returns flow {
             throw RuntimeException("Load Failure")
@@ -103,7 +107,7 @@ class PersonHealthViewModelTest {
     }
 
     @Test
-    fun lg02_save_failure_safety() = runTest {
+    fun LG_02_save_failure_safety() = runTest {
         viewModel.loadPerson("1")
         // 新規レコード (id="")
         val time = Instant.now()
@@ -131,7 +135,7 @@ class PersonHealthViewModelTest {
 
     @Test
     @Suppress("USELESS_IS_CHECK")
-    fun lg04_atomicity_category_switch() = runTest {
+    fun LG_04_atomicity_category_switch() = runTest {
         viewModel.loadPerson("1")
         advanceUntilIdle()
 

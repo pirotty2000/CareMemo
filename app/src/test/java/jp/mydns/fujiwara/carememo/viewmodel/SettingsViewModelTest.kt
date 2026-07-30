@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
@@ -92,7 +90,7 @@ class SettingsViewModelTest {
     // ======================================================================================
 
     @Test
-    fun lg_01_exportData_safetyOnFailure() = runTest {
+    fun LG_01_exportData_safetyOnFailure() = runTest {
         val context = mockk<Context>(relaxed = true)
         val uri = mockk<Uri>(relaxed = true)
         
@@ -105,7 +103,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun lg_02_clearAuditLogs_safetyOnFailure() = runTest {
+    fun LG_02_clearAuditLogs_safetyOnFailure() = runTest {
         coEvery { auditLogRepository.deleteAllLogs() } throws RuntimeException("Delete Error")
 
         viewModel.clearAuditLogs()
@@ -125,7 +123,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun lg_03_rotateLogs_safetyOnFailure() = runTest {
+    fun LG_03_rotateLogs_safetyOnFailure() = runTest {
         // 設定値の読み込みを待機
         advanceUntilIdle()
         
@@ -149,7 +147,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun lg_04_clearAllData_safetyOnFailure() = runTest {
+    fun LG_04_clearAllData_safetyOnFailure() = runTest {
         coEvery { maintenanceRepository.clearAllData() } throws IOException("Clear Error")
 
         viewModel.clearAllData()
@@ -170,7 +168,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun lg_05_checkIntegrity_safetyOnFailure() = runTest {
+    fun LG_05_checkIntegrity_safetyOnFailure() = runTest {
         coEvery { maintenanceRepository.scanInconsistencies() } throws RuntimeException("Integrity Error")
 
         viewModel.checkIntegrity()
@@ -191,13 +189,13 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun lg_06_initialSettingsSync_safety() = runTest {
+    fun LG_06_initialSettingsSync_safety() = runTest {
         every { userSettingsRepository.isBiometricEnabled } returns flow {
             throw RuntimeException("Flow Error")
         }
 
         // 新しく ViewModel を作成して Flow を購読させる
-        val errorViewModel = SettingsViewModel(
+        SettingsViewModel(
             maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository
         )
         

@@ -53,7 +53,13 @@ class BatchInputViewModelTest {
         every { userSettingsRepository.defaultRecorderName } returns flowOf("")
         coEvery { personRepository.getPersonById(any()) } returns flowOf(testPerson)
         coEvery { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(
-            jp.mydns.fujiwara.carememo.data.PersonCategorySummary(false, false, false, false, false)
+            jp.mydns.fujiwara.carememo.data.PersonCategorySummary(
+                hasHeightWeight = false,
+                hasBpAndPulse = false,
+                hasGlucoseAndHbA1c = false,
+                hasCondition = false,
+                hasMedication = false
+            )
         )
         
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null

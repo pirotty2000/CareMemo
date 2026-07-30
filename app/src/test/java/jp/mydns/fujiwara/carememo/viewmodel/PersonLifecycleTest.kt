@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
@@ -65,7 +63,7 @@ class PersonLifecycleTest {
     }
 
     @Test
-    fun `loadPersonを呼んだ瞬間、現在の状態が即座にクリアされること`() = runTest {
+    fun BP_01_loadPerson_clears_state_immediately() = runTest {
         val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         val person1 = Person(id = "1", lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
@@ -92,7 +90,7 @@ class PersonLifecycleTest {
     }
 
     @Test
-    fun `高速な切り替え時、古いロード処理がキャンセルされ、最後の要求のみが反映されること`() = runTest {
+    fun BP_01_rapid_switch_cancels_previous_load() = runTest {
         val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
 
         // ID:1 は 2000ms かかる
@@ -120,7 +118,7 @@ class PersonLifecycleTest {
     }
 
     @Test
-    fun `利用者の切り替え時にサブクラス固有の状態もリセットされること`() = runTest {
+    fun BP_01_switch_person_resets_subclass_state() = runTest {
         val viewModel = PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         
         // ID:1 で検索クエリを入力済み
@@ -142,7 +140,7 @@ class PersonLifecycleTest {
     }
 
     @Test
-    fun `同じIDで再度loadPersonを呼んだ場合、リロードやクリアが発生しないこと`() = runTest {
+    fun BP_01_same_id_avoids_reload() = runTest {
         val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
         val person1 = Person(id = "1", lastName = "一人目", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         

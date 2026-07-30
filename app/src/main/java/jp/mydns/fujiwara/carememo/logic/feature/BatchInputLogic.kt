@@ -4,6 +4,7 @@ import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
@@ -15,6 +16,7 @@ import java.time.Instant
  */
 data class BatchInputUiState(
     override val personId: String? = null,
+    override val currentCategory: Category? = null,
     val person: Person? = null, // 追加
     val currentPersonName: String = "",
     val personSummary: PersonCategorySummary? = null,

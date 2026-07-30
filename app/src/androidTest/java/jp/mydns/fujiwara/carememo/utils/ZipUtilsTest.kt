@@ -27,9 +27,10 @@ class ZipUtilsTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        testDir = File(context.cacheDir, "zip_test_src")
-        outputZip = File(context.cacheDir, "test_output.zip")
-        extractDir = File(context.cacheDir, "zip_test_extract")
+        val cacheDir: File = context.cacheDir!!
+        testDir = File(cacheDir, "zip_test_src")
+        outputZip = File(cacheDir, "test_output.zip")
+        extractDir = File(cacheDir, "zip_test_extract")
         
         testDir.mkdirs()
         extractDir.mkdirs()
@@ -47,14 +48,13 @@ class ZipUtilsTest {
 
     @Test
     fun ZIP_01_zip_no_password_success() = runBlocking {
-        val file1 = File(testDir, "file1.txt").apply { writeText("Content 1") }
+        File(testDir, "file1.txt").apply { writeText("Content 1") }
         val subDir = File(testDir, "sub").apply { mkdirs() }
         File(subDir, "file2.txt").apply { writeText("Content 2") }
 
         ZipUtils.zip(listOf(testDir), outputZip, null)
 
         assertTrue("Zip file should be created", outputZip.exists())
-        Unit
     }
 
     @Test
@@ -65,7 +65,6 @@ class ZipUtilsTest {
 
         assertTrue(outputZip.exists())
         assertTrue("File should be encrypted", ZipUtils.isEncrypted(outputZip))
-        Unit
     }
 
     @Test
@@ -79,12 +78,12 @@ class ZipUtilsTest {
         }
 
         assertTrue("Progress callback should be invoked", progressCalled)
-        Unit
     }
 
     @Test
     fun ZIP_04_zip_invalid_input_throws_exception() = runBlocking {
-        val nonExistentFile = File(context.cacheDir, "none_existent_file_12345")
+        val cacheDir: File = context.cacheDir!!
+        val nonExistentFile = File(cacheDir, "none_existent_file_12345")
         
         // Zip4j throws exception if input file doesn't exist
         assertThrows(Exception::class.java) {
@@ -92,7 +91,6 @@ class ZipUtilsTest {
                 ZipUtils.zip(listOf(nonExistentFile), outputZip, null)
             }
         }
-        Unit
     }
 
     @Test
@@ -105,7 +103,6 @@ class ZipUtilsTest {
                 ZipUtils.zip(listOf(testDir), outputZip, null)
             }
         }
-        Unit
     }
 
     // --- 3.2. Decompression (unzip) ---
@@ -121,7 +118,6 @@ class ZipUtilsTest {
         val extractedFile = File(extractDir, "zip_test_src/test.txt")
         assertTrue(extractedFile.exists())
         assertEquals(originalText, extractedFile.readText())
-        Unit
     }
 
     @Test
@@ -135,7 +131,6 @@ class ZipUtilsTest {
         val extractedFile = File(extractDir, "zip_test_src/secret.txt")
         assertTrue(extractedFile.exists())
         assertEquals(secretText, extractedFile.readText())
-        Unit
     }
 
     @Test
@@ -148,7 +143,6 @@ class ZipUtilsTest {
                 ZipUtils.unzip(outputZip, extractDir, "wrong_pass")
             }
         }
-        Unit
     }
 
     @Test
@@ -160,7 +154,6 @@ class ZipUtilsTest {
                 ZipUtils.unzip(outputZip, extractDir, null)
             }
         }
-        Unit
     }
 
     // --- 3.3. Verification (isEncrypted / isValidPassword) ---
@@ -177,7 +170,6 @@ class ZipUtilsTest {
         outputZip.delete()
         ZipUtils.zip(listOf(testDir), outputZip, "pw")
         assertTrue(ZipUtils.isEncrypted(outputZip))
-        Unit
     }
 
     @Test
@@ -186,7 +178,6 @@ class ZipUtilsTest {
         ZipUtils.zip(listOf(testDir), outputZip, "mypass")
 
         assertTrue(ZipUtils.isValidPassword(outputZip, "mypass"))
-        Unit
     }
 
     @Test
@@ -195,18 +186,17 @@ class ZipUtilsTest {
         ZipUtils.zip(listOf(testDir), outputZip, "mypass")
 
         assertFalse(ZipUtils.isValidPassword(outputZip, "wrong"))
-        Unit
     }
 
     @Test
     fun CHK_04_isValidPassword_fatal_error_throws_exception() = runBlocking {
-        val nonExistent = File(context.cacheDir, "not_found.zip")
+        val cacheDir: File = context.cacheDir!!
+        val nonExistent = File(cacheDir, "not_found.zip")
 
         assertThrows(IOException::class.java) {
             runBlocking {
                 ZipUtils.isValidPassword(nonExistent, "any")
             }
         }
-        Unit
     }
 }

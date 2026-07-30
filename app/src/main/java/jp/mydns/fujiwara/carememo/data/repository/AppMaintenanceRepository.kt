@@ -253,7 +253,13 @@ class AppMaintenanceRepository(
     /**
      * ZIP形式のバックアップからデータをインポート（復元）します。
      */
-    suspend fun importData(context: Context, uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
+    suspend fun importData(
+        context: Context,
+        uri: Uri,
+        password: String?,
+        isDeveloperMode: Boolean = false,
+        onProgress: (Int) -> Unit = {}
+    ) = withContext(Dispatchers.IO) {
         val tempZipFile = File(context.cacheDir, "import.zip")
         context.contentResolver.openInputStream(uri)?.use { input ->
             tempZipFile.outputStream().use { output ->
@@ -291,8 +297,14 @@ class AppMaintenanceRepository(
                 throw IOException("データの解析に失敗しました。ファイルが破損しているか、形式が異なります。", e)
             }
             
-            // アプリバージョンの互換性チェック
-            if (backup.appVersionCode > BuildConfig.VERSION_CODE) {
+            // アプリバージョンの互換性チェック（SettingsLogic を使用）
+            val versionResult = jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic.validateVersion(
+                backupVersionCode = backup.appVersionCode,
+                currentVersionCode = BuildConfig.VERSION_CODE,
+                isDeveloperMode = isDeveloperMode
+            )
+            
+            if (versionResult == jp.mydns.fujiwara.carememo.logic.feature.ImportValidationResult.INCOMPATIBLE) {
                 throw IOException("バックアップの作成バージョン(${backup.appVersionCode})が現在のアプリ(${BuildConfig.VERSION_CODE})より新しいため復元できません。")
             }
 

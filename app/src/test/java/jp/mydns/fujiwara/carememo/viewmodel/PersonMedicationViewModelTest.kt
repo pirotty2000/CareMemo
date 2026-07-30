@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
@@ -68,7 +66,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun nextMonth_updatesMonth() = runTest {
+    fun BH_03_nextMonth_updatesMonth() = runTest {
         val initialMonth = viewModel.uiState.value.selectedMonth
         viewModel.nextMonth()
         
@@ -76,7 +74,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun lg_01_データロード失敗時の安全性() = runTest {
+    fun LG_01_load_failure_safety() = runTest {
         every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flow {
             throw RuntimeException("Flow Error")
         }
@@ -99,7 +97,7 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun lg_02_保存失敗時の安全性() = runTest {
+    fun LG_02_save_failure_safety() = runTest {
         coEvery { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
         
         val date = "2023-10-27"
@@ -126,7 +124,8 @@ class PersonMedicationViewModelTest {
     }
 
     @Test
-    fun lg_03_月変更と連動した原子性() = runTest {
+    @Suppress("USELESS_IS_CHECK")
+    fun LG_03_month_switch_atomicity() = runTest {
         val initialMonth = YearMonth.now()
         val nextMonth = initialMonth.plusMonths(1)
         
@@ -137,6 +136,6 @@ class PersonMedicationViewModelTest {
         
         // 即座に UiState の月が更新され、該当月のリポジトリが呼ばれていること
         assertEquals(nextMonth, viewModel.uiState.value.selectedMonth)
-        verify { medicationRepository.getMedicationRecordsByMonth("1", nextMonth.toString()) }
+        verify { medicationRepository.getMedicationRecordsByMonth("1", nextMonth.toString()) is kotlinx.coroutines.flow.Flow<*> }
     }
 }

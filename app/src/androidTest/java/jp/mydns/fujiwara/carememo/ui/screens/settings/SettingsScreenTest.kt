@@ -308,7 +308,7 @@ class SettingsScreenTest {
             }
         }
 
-        currentSavedStateHandle.set("refresh_needed", true)
+        currentSavedStateHandle["refresh_needed"] = true
         composeTestRule.waitForIdle()
         
         composeTestRule.onNodeWithTag("SettingsScreen_BackButton").performClick()

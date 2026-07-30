@@ -7,6 +7,7 @@ import java.time.LocalTime
 import java.time.ZoneOffset
 import java.util.UUID
 import java.util.Random
+import kotlin.math.roundToLong
 
 /**
  * サンプルデータ（12名分）を生成するロジック
@@ -111,8 +112,8 @@ object SampleDataGenerator {
                             HeightAndWeightBackupDto(
                                 id = UUID.randomUUID().toString(),
                                 personId = personId,
-                                height = Math.round(baseHeight * 10) / 10.0,
-                                weight = Math.round(currentWeight * 10) / 10.0,
+                                height = (baseHeight * 10).roundToLong() / 10.0,
+                                weight = (currentWeight * 10).roundToLong() / 10.0,
                                 recordTime = recordTime
                             )
                         )
@@ -145,7 +146,7 @@ object SampleDataGenerator {
                                 id = UUID.randomUUID().toString(),
                                 personId = personId,
                                 glucose = glu,
-                                hba1c = Math.round(currentHbA1c * 10) / 10.0,
+                                hba1c = (currentHbA1c * 10).roundToLong() / 10.0,
                                 recordTime = recordTime
                             )
                         )

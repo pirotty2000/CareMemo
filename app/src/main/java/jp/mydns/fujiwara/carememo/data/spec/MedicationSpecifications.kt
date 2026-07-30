@@ -40,12 +40,5 @@ object MedicationSpecifications {
 
         /** 有効なステータスコードの範囲 */
         val VALID_RANGE = CODE_NONE..CODE_TAKEN
-
-        /** ステータスコードに対応する業務上の意味（呼称） */
-        val LABELS = mapOf(
-            CODE_NONE to "未服用",
-            CODE_ASSIST to "服薬介助",
-            CODE_TAKEN to "服用"
-        )
     }
 }

@@ -45,6 +45,7 @@ data class SettingsUiState(
     val isProcessing: Boolean = false,   // バックアップ等の重い処理用
     val processingProgress: Int = 0,     // 実行進捗
     val isDeveloperModeEnabled: Boolean = false,
+    val isForceImportEnabled: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -81,9 +82,10 @@ object SettingsLogic {
 
     /**
      * バックアップデータが現在のアプリバージョンと互換性があるか判定します。
+     * 開発者モードが有効な場合は、バージョンが新しくてもインポートを許可します。
      */
-    fun validateVersion(backupVersionCode: Int, currentVersionCode: Int): ImportValidationResult {
-        return if (backupVersionCode <= currentVersionCode) {
+    fun validateVersion(backupVersionCode: Int, currentVersionCode: Int, isDeveloperMode: Boolean = false): ImportValidationResult {
+        return if (isDeveloperMode || backupVersionCode <= currentVersionCode) {
             ImportValidationResult.SUCCESS
         } else {
             ImportValidationResult.INCOMPATIBLE

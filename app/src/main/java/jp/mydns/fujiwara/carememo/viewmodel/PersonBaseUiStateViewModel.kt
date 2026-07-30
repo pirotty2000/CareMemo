@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.first
  */
 interface PersonAwareState {
     val personId: String?
-    val currentCategory: Category? get() = null
+    val currentCategory: Category?
     val isLoading: Boolean
 }
 
