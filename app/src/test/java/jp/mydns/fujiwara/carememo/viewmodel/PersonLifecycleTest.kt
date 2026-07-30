@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import android.content.Context
 import android.util.Log
 import io.mockk.every
 import io.mockk.mockk
@@ -119,7 +120,14 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_switch_person_resets_subclass_state() = runTest {
-        val viewModel = PersonConditionViewModel(conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonConditionViewModel(
+            conditionRepository, 
+            personRepository, 
+            summaryRepository, 
+            userSettingsRepository, 
+            auditLogRepository,
+            mockk<Context>(relaxed = true)
+        )
         
         // ID:1 で検索クエリを入力済み
         every { personRepository.getPersonById("1") } returns flowOf(Person(id = "1", lastName = "A", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))

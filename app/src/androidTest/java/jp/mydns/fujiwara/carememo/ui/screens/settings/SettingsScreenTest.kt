@@ -61,9 +61,6 @@ class SettingsScreenTest {
             isDeveloperModeEnabled = false
         )
         
-        // 互換性維持のための個別の StateFlow mock (もし View 側が直接参照している場合)
-        // 今回の移行で View 側は uiState を見るように変更しているため、本来は不要。
-        
         return viewModel
     }
 
@@ -83,6 +80,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
@@ -108,6 +106,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
@@ -154,6 +153,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = { backCalled = true }
                 )
@@ -179,6 +179,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
@@ -208,6 +209,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = { navigated = true },
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
@@ -237,6 +239,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
@@ -268,6 +271,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = { navigated = true },
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
@@ -302,6 +306,7 @@ class SettingsScreenTest {
                     navController = navController,
                     onNavigateToArchiveManagement = {},
                     onNavigateToAuditLog = {},
+                    onNavigateToOrphanedPhotos = {},
                     onRequireAuthentication = { _, _, _ -> },
                     onBack = {}
                 )
