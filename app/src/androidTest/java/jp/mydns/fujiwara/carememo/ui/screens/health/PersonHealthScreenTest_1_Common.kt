@@ -55,6 +55,12 @@ class PersonHealthScreenTest_1_Common {
 
         every { healthViewModel.uiState } returns healthUiStateFlow
         every { healthViewModel.uiEventFlow } returns MutableSharedFlow<BaseUiStateViewModel.UiEvent>().asSharedFlow()
+
+        // 状態更新の stub
+        every { healthViewModel.setSelectedRecordId(any()) } answers {
+            val id = firstArg<String?>()
+            healthUiStateFlow.value = healthUiStateFlow.value.copy(selectedRecordId = id)
+        }
     }
 
     private fun setContent(

@@ -66,6 +66,12 @@ class PersonHealthScreenTest_3_Behavior {
         every { healthViewModel.uiState } returns healthUiStateFlow
         every { healthViewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
 
+        // 状態更新の stub
+        every { healthViewModel.setSelectedRecordId(any()) } answers {
+            val id = firstArg<String?>()
+            healthUiStateFlow.value = healthUiStateFlow.value.copy(selectedRecordId = id)
+        }
+
         // タブ切り替え時に UiState を更新するように設定
         every { healthViewModel.updatePreferredShowHistory(any()) } answers {
             healthUiStateFlow.value = healthUiStateFlow.value.copy(preferredShowHistory = firstArg())

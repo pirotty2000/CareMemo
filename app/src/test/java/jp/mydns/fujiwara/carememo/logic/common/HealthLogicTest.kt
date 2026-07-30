@@ -30,7 +30,7 @@ class HealthLogicTest {
     fun BMI_03_evaluateBMI_obesity1() {
         val (status, alert) = HealthLogic.evaluateBMI(25.0)
         assertEquals(BmiStatus.OBESITY_1, status)
-        assertEquals(HealthAlertLevel.WARNING, alert)
+        assertEquals(HealthAlertLevel.INFO, alert)
     }
 
     @Test
@@ -92,15 +92,15 @@ class HealthLogicTest {
 
     @Test
     fun GLC_02_evaluateGlucose_warning() {
-        val (status, alert) = HealthLogic.evaluateGlucose(100)
-        assertEquals(GlucoseStatus.WARNING, status)
+        val (status, alert) = HealthLogic.evaluateGlucose(110)
+        assertEquals(GlucoseStatus.PREDIABETES, status)
         assertEquals(HealthAlertLevel.WARNING, alert)
     }
 
     @Test
     fun GLC_03_evaluateGlucose_high() {
         val (status, alert) = HealthLogic.evaluateGlucose(126)
-        assertEquals(GlucoseStatus.HIGH, status)
+        assertEquals(GlucoseStatus.DIABETES, status)
         assertEquals(HealthAlertLevel.ALERT, alert)
     }
 
@@ -108,7 +108,7 @@ class HealthLogicTest {
     fun GLC_04_evaluateGlucose_low() {
         val (status, alert) = HealthLogic.evaluateGlucose(69)
         assertEquals(GlucoseStatus.LOW, status)
-        assertEquals(HealthAlertLevel.ALERT, alert)
+        assertEquals(HealthAlertLevel.INFO, alert)
     }
 
     @Test

@@ -91,6 +91,7 @@ class ZipUtilsTest {
                 ZipUtils.zip(listOf(nonExistentFile), outputZip, null)
             }
         }
+        Unit
     }
 
     @Test
@@ -103,6 +104,7 @@ class ZipUtilsTest {
                 ZipUtils.zip(listOf(testDir), outputZip, null)
             }
         }
+        Unit
     }
 
     // --- 3.2. Decompression (unzip) ---
@@ -143,6 +145,7 @@ class ZipUtilsTest {
                 ZipUtils.unzip(outputZip, extractDir, "wrong_pass")
             }
         }
+        Unit
     }
 
     @Test
@@ -154,6 +157,7 @@ class ZipUtilsTest {
                 ZipUtils.unzip(outputZip, extractDir, null)
             }
         }
+        Unit
     }
 
     // --- 3.3. Verification (isEncrypted / isValidPassword) ---
@@ -198,5 +202,6 @@ class ZipUtilsTest {
                 ZipUtils.isValidPassword(nonExistent, "any")
             }
         }
+        Unit
     }
 }

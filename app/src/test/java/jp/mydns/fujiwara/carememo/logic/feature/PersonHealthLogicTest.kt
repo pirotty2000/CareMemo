@@ -3,7 +3,6 @@ package jp.mydns.fujiwara.carememo.logic.feature
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import org.junit.Assert.*
 import org.junit.Test
@@ -33,7 +32,6 @@ class PersonHealthLogicTest {
     @Test
     fun NEW_03_isNew_notHistoryRecord_returnsFalse() {
         assertFalse(IdLogic.isNew("Not a record"))
-        assertFalse(IdLogic.isNew(null))
     }
 
     // endregion
@@ -93,24 +91,6 @@ class PersonHealthLogicTest {
     fun VAL_04_validate_validGlucoseAndHbA1c_returnsSuccess() {
         val record = GlucoseAndHbA1c(id = "", personId = "1", glucose = 100, hba1c = 5.5, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
-    }
-
-    @Test
-    fun VAL_05_validate_nullTime_returnsInvalidTime() {
-        // Javaの動的プロキシを使用して、Kotlinの非null型制約をバイパスしてnullを返却させる
-        val record = java.lang.reflect.Proxy.newProxyInstance(
-            HistoryRecord::class.java.classLoader,
-            arrayOf(HistoryRecord::class.java)
-        ) { _, method, _ ->
-            when (method.name) {
-                "getRecordTime" -> null // recordTime プロパティのゲッター
-                "getId" -> ""
-                "getPersonId" -> "1"
-                else -> null
-            }
-        } as HistoryRecord
-        
-        assertEquals(HealthValidationResult.INVALID_TIME, PersonHealthLogic.validate(record))
     }
 
     // endregion

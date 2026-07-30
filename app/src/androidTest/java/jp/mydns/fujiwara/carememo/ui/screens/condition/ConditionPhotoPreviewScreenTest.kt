@@ -68,7 +68,6 @@ class ConditionPhotoPreviewScreenTest {
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
                     uri = mockUri,
-                    personId = "1",
                     conditionId = "100",
                     onBack = onBack,
                     onSaved = onSaved
@@ -130,7 +129,7 @@ class ConditionPhotoPreviewScreenTest {
         composeTestRule.onNodeWithTag("PhotoPreview_SaveButton").performClick()
         
         verify { 
-            conditionViewModel.processAndSavePhoto(any(), eq(mockUri), eq("1"), eq("100"), any())
+            conditionViewModel.processAndSavePhoto(any(), eq(mockUri), eq("100"), any())
         }
         assert(savedCalled)
     }
