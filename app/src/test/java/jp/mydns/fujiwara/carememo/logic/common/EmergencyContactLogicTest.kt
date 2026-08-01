@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.common
 
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
-import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import org.junit.Assert.*
 import org.junit.Test
 
