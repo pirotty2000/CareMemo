@@ -29,7 +29,8 @@ import java.util.UUID
  *   ├ [glucose_and_hba1c_db(pk:id, fk:person_id)] 利用者の「血糖値・HbA1c」を格納
  *   ├ [condition_at_visit_db(pk:id, fk:person_id)] 利用者の「所見メモ」を格納
  *   ├   └ [condition_photo_db(pk:id, fk:condition_id)] 所見メモに添付した写真のファイル名を格納
- *   └ [medication_record_db(pk:id, fk:person_id)] 利用者の服薬状況を格納
+ *   ├ [medication_record_db(pk:id, fk:person_id)] 利用者の服薬状況を格納
+ *   └ [emergency_contact_db(pk:id, fk:person_id)] 利用者の緊急連絡先を格納
  *
  **********************************************************************/
 
@@ -314,6 +315,40 @@ data class MedicationRecord(
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
 ) : HistoryRecord
+
+@Serializable
+@Entity(
+    tableName = "emergency_contact_db",
+    foreignKeys = [
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["person_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["person_id"]),
+        Index(value = ["person_id", "priority", "facility_name"])
+    ]
+)
+data class EmergencyContact(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    @ColumnInfo(name = "person_id") val personId: String,
+    /** 種別 (DOCTOR, NURSING_STATION, FAMILY 等) */
+    @ColumnInfo(name = "contact_type") val contactType: String,
+    /** 病院名・事業所名・続柄 */
+    @ColumnInfo(name = "facility_name") val facilityName: String,
+    /** 担当者名・個人名 (任意) */
+    @ColumnInfo(name = "person_name") val personName: String? = null,
+    /** 電話番号 (任意) */
+    @ColumnInfo(name = "phone_number") val phoneNumber: String? = null,
+    /** 表示順序 (デフォルト 99) */
+    @ColumnInfo(name = "priority") val priority: Int = 99,
+    @Serializable(with = InstantSerializer::class)
+    @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
+    @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
+)
 
 /**
  * アプリ全体のバックアップデータを保持するクラス

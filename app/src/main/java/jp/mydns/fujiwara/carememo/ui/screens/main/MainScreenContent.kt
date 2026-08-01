@@ -20,6 +20,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.KanaIndexBar
+import jp.mydns.fujiwara.carememo.ui.components.main.QuickActionMenu
 import jp.mydns.fujiwara.carememo.ui.components.main.UserListItem
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
@@ -67,11 +68,17 @@ fun MainScreenContent(
     isNameMaskingEnabled: Boolean,
     searchQuery: String,
     selectedSection: String,
+    selectedPersonForQuickMenu: Person?,
+    isQuickActionMenuExpanded: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onSectionSelect: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
     onUserClick: (Person) -> Unit,
+    onQuickMenuClick: (Person) -> Unit,
+    onEmergencyContactClick: (Person) -> Unit,
+    onEmergencyContactManageClick: (Person) -> Unit,
+    onDismissQuickMenu: () -> Unit,
     onEditUser: (Person) -> Unit,
     onAddClick: () -> Unit,
     onEndUser: (Person) -> Unit,
@@ -193,18 +200,31 @@ fun MainScreenContent(
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(userList, key = { it.person.id }) { userUiState ->
-                            // [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
-                            UserListItem(
-                                person = userUiState.person,
-                                summary = userUiState.summary,
-                                isNameMaskingEnabled = isNameMaskingEnabled,
-                                onClick = { onUserClick(userUiState.person) },
-                                onEditClick = { onEditUser(userUiState.person) },
-                                onDeleteClick = { onEndUser(userUiState.person) },
-                                modifier = Modifier
-                                    .animateItem()
-                                    .testTag("UserListItem_${userUiState.person.id}")
-                            )
+                            Box {
+                                // [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
+                                UserListItem(
+                                    person = userUiState.person,
+                                    summary = userUiState.summary,
+                                    isNameMaskingEnabled = isNameMaskingEnabled,
+                                    onClick = { onUserClick(userUiState.person) },
+                                    onQuickMenuClick = { onQuickMenuClick(userUiState.person) },
+                                    onEmergencyContactManageClick = { onEmergencyContactManageClick(userUiState.person) },
+                                    onEditClick = { onEditUser(userUiState.person) },
+                                    onDeleteClick = { onEndUser(userUiState.person) },
+                                    modifier = Modifier
+                                        .animateItem()
+                                        .testTag("UserListItem_${userUiState.person.id}")
+                                )
+
+                                // クイックメニュー
+                                QuickActionMenu(
+                                    expanded = isQuickActionMenuExpanded && selectedPersonForQuickMenu?.id == userUiState.person.id,
+                                    person = userUiState.person,
+                                    isNameMaskingEnabled = isNameMaskingEnabled,
+                                    onDismissRequest = onDismissQuickMenu,
+                                    onEmergencyContactClick = { onEmergencyContactClick(userUiState.person) }
+                                )
+                            }
                             HorizontalDivider()
                         }
                     }
@@ -268,12 +288,18 @@ fun MainScreenPreview() {
             isLoading = false,
             searchQuery = "",
             selectedSection = "全",
+            selectedPersonForQuickMenu = null,
+            isQuickActionMenuExpanded = false,
             onSearchQueryChange = {},
             onSectionSelect = {},
             isNameMaskingEnabled = false,
             snackbarHostState = remember { SnackbarHostState() }, 
             lazyListState = rememberLazyListState(), 
             onUserClick = { }, 
+            onQuickMenuClick = { },
+            onEmergencyContactClick = { },
+            onEmergencyContactManageClick = { },
+            onDismissQuickMenu = { },
             onEditUser = { }, 
             onAddClick = { }, 
             onEndUser = { }, 

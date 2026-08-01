@@ -373,3 +373,53 @@ interface AuditLogDao {
     @Query("DELETE FROM audit_log_db")
     suspend fun deleteAll()
 }
+
+@Dao
+interface EmergencyContactDao {
+    /**
+     * 利用者に紐付く連絡先一覧を取得する。
+     * ソート順: 種別定義順 ➔ 優先度 ➔ 施設名
+     */
+    @Query("""
+        SELECT * FROM emergency_contact_db 
+        WHERE person_id = :personId 
+        ORDER BY 
+            CASE contact_type 
+                WHEN 'DOCTOR' THEN 1 
+                WHEN 'NURSING_STATION' THEN 2 
+                WHEN 'SUPPORT_CENTER' THEN 3 
+                WHEN 'CASE_WORKER' THEN 4 
+                WHEN 'FAMILY' THEN 5 
+                ELSE 6 
+            END ASC, 
+            priority ASC, 
+            facility_name ASC
+    """)
+    fun getByPersonId(personId: String): Flow<List<EmergencyContact>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(item: EmergencyContact): Long
+
+    @Update
+    suspend fun update(item: EmergencyContact)
+
+    @Delete
+    suspend fun delete(item: EmergencyContact)
+
+    /** 連絡先の存在確認 */
+    @Query("SELECT EXISTS(SELECT 1 FROM emergency_contact_db WHERE person_id = :personId)")
+    suspend fun hasDataForPerson(personId: String): Boolean
+
+    @Query("SELECT * FROM emergency_contact_db WHERE id = :id")
+    suspend fun getById(id: String): EmergencyContact?
+
+    // --- バックアップ・インポート用 ---
+    @Query("SELECT * FROM emergency_contact_db")
+    suspend fun getAllRaw(): List<EmergencyContact>
+
+    @Query("DELETE FROM emergency_contact_db")
+    suspend fun deleteAll()
+
+    @Upsert
+    suspend fun insertAll(items: List<EmergencyContact>)
+}

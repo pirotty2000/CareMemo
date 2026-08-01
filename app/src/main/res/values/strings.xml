@@ -7,6 +7,8 @@
     <string name="common_clear">クリア</string>
     <string name="common_back">戻る</string>
     <string name="common_delete">削除</string>
+    <string name="common_add">追加</string>
+    <string name="common_edit">編集</string>
     <string name="common_undo">元に戻す</string>
     <string name="common_pdf_export">PDF出力</string>
 
@@ -277,4 +279,31 @@
     <string name="audit_log_clear_confirm_msg">記録されているすべての操作ログを消去します。よろしいですか？</string>
     <string name="settings_btn_view_audit_logs">操作ログを参照</string>
     <string name="settings_btn_rotate_logs">ログの手動ローテーション</string>
+
+    <!-- 緊急連絡先 (MedicalContact) -->
+    <string name="medical_contacts_title_format">%1$s さんの緊急連絡先</string>
+    <string name="medical_contacts_manage_label">連絡先の管理・編集</string>
+    <string name="medical_contacts_manage_title_format">%1$s さんの連絡先管理</string>
+    <string name="medical_contacts_empty">連絡先が登録されていません</string>
+    <string name="medical_contact_delete_confirm_title">連絡先の削除</string>
+    <string name="medical_contact_delete_confirm_msg">%1$s を削除しますか？</string>
+    <string name="medical_contact_add_title">緊急連絡先の登録</string>
+    <string name="medical_contact_edit_title">緊急連絡先の編集</string>
+    <string name="medical_contact_facility_label">施設名・事業所名・続柄</string>
+    <string name="medical_contact_facility_placeholder">例：○○クリニック、長男 など</string>
+    <string name="medical_contact_person_label">担当者名・個人名 (任意)</string>
+    <string name="medical_contact_person_placeholder">例：田中先生、佐藤太郎 など</string>
+    <string name="medical_contact_phone_label">電話番号 (任意)</string>
+    <string name="medical_contact_phone_placeholder">ハイフンなしで入力してください</string>
+    <string name="medical_contact_phone_note">ハイフンなしで入力してください</string>
+    <string name="medical_contact_priority_label">表示順序 (小さいほど上)</string>
+    <string name="medical_contact_type_label">種別</string>
+    <string name="medical_contact_type_doctor">病院・主治医</string>
+    <string name="medical_contact_type_nursing">訪問看護ステーション</string>
+    <string name="medical_contact_type_support">地域包括支援センター</string>
+    <string name="medical_contact_type_caseworker">ケースワーカー</string>
+    <string name="medical_contact_type_family">家族</string>
+    <string name="medical_contact_type_other">その他</string>
+    <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
+    <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
 </resources>

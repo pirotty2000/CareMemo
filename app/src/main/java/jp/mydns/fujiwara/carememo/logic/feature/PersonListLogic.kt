@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
+import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
@@ -13,7 +14,12 @@ data class PersonListUiState(
     val selectedSection: String = AppSpecifications.Search.SECTION_ALL,
     val searchQuery: String = "",
     val userList: List<PersonUiState> = emptyList(),
-    val isNameMaskingEnabled: Boolean = true
+    val isNameMaskingEnabled: Boolean = true,
+    // クイックメニュー・緊急連絡先表示用
+    val selectedPersonForQuickMenu: Person? = null,
+    val isQuickActionMenuExpanded: Boolean = false,
+    val emergencyContactsForSheet: List<EmergencyContact>? = null,
+    val isEmergencyContactLoading: Boolean = false
 )
 
 /**

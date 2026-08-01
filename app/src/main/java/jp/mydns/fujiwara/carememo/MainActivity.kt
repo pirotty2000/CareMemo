@@ -40,6 +40,8 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.ui.screens.main.MainScreen
 import jp.mydns.fujiwara.carememo.ui.screens.main.PersonEditScreen
+import jp.mydns.fujiwara.carememo.ui.screens.main.EmergencyContactEditScreen
+import jp.mydns.fujiwara.carememo.ui.screens.main.EmergencyContactListScreen
 import jp.mydns.fujiwara.carememo.ui.screens.health.BatchInputScreen
 import jp.mydns.fujiwara.carememo.ui.screens.health.GraphExpansionScreen
 import jp.mydns.fujiwara.carememo.ui.screens.health.PersonHealthScreen
@@ -64,6 +66,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
+import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import java.net.URLEncoder
 
 class MainActivity : FragmentActivity() {
@@ -293,6 +296,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             deleteOrRestorePersonRepository,
                             personSummaryRepository,
                             conditionRepository,
+                            application.emergencyContactRepository,
                             userSettingsRepository,
                             auditLogRepository))
                     MainScreen(
@@ -318,6 +322,68 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             navController.navigate("person_edit/$personId")
                         },
                         onNavigateToSettings = { navController.navigate("settings") },
+                        onNavigateToMedicalContacts = { personId ->
+                            navController.navigate("medical_contacts/$personId")
+                        }
+                    )
+                }
+
+                // --------------------------------------------------------
+                // ----- 緊急連絡先管理(SCR-M-003) --------------------------
+                // --------------------------------------------------------
+                composable("medical_contacts/{personId}", arguments = listOf(
+                    navArgument("personId") { type = NavType.StringType }
+                )) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
+                    val emergencyContactRepository = application.emergencyContactRepository
+                    
+                    val medicalViewModel: EmergencyContactEditViewModel = viewModel(
+                        factory = EmergencyContactEditViewModel.Factory(
+                            personId, emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
+
+                    EmergencyContactListScreen(
+                        viewModel = medicalViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToAdd = { navController.navigate("medical_contact_edit/$personId/_new") },
+                        onNavigateToEdit = { contactId -> navController.navigate("medical_contact_edit/$personId/$contactId") }
+                    )
+                }
+
+                // --------------------------------------------------------
+                // ----- 緊急連絡先編集(SCR-M-004) ---------------------------
+                // --------------------------------------------------------
+                composable("medical_contact_edit/{personId}/{contactId}", arguments = listOf(
+                    navArgument("personId") { type = NavType.StringType },
+                    navArgument("contactId") { type = NavType.StringType }
+                )) { backStackEntry ->
+                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
+                    val contactIdRaw = backStackEntry.arguments?.getString("contactId") ?: "_new"
+                    
+                    val emergencyContactRepository = application.emergencyContactRepository
+                    val medicalViewModel: EmergencyContactEditViewModel = viewModel(
+                        factory = EmergencyContactEditViewModel.Factory(
+                            personId, emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
+
+                    // 初期化
+                    LaunchedEffect(contactIdRaw) {
+                        if (contactIdRaw == "_new") {
+                            medicalViewModel.startAdd()
+                        } else {
+                            val contact = medicalViewModel.uiState.value.contacts.find { it.id == contactIdRaw }
+                            if (contact != null) {
+                                medicalViewModel.startEdit(contact)
+                            } else {
+                                // 万が一リストにない場合は取得を試みる
+                                emergencyContactRepository.getContactById(contactIdRaw)?.let {
+                                    medicalViewModel.startEdit(it)
+                                }
+                            }
+                        }
+                    }
+
+                    EmergencyContactEditScreen(
+                        viewModel = medicalViewModel,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 

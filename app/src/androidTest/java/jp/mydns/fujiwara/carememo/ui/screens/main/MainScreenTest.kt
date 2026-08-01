@@ -65,11 +65,17 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "",
                     selectedSection = "全",
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
                     onSearchQueryChange = {},
                     onSectionSelect = {},
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
                     onUserClick = {},
+                    onQuickMenuClick = {},
+                    onEmergencyContactClick = {},
+                    onEmergencyContactManageClick = {},
+                    onDismissQuickMenu = {},
                     onEditUser = {},
                     onAddClick = {},
                     onEndUser = {},
@@ -90,11 +96,17 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "",
                     selectedSection = "全",
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
                     onSearchQueryChange = {},
                     onSectionSelect = {},
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
                     onUserClick = {},
+                    onQuickMenuClick = {},
+                    onEmergencyContactClick = {},
+                    onEmergencyContactManageClick = {},
+                    onDismissQuickMenu = {},
                     onEditUser = {},
                     onAddClick = {},
                     onEndUser = {},
@@ -118,11 +130,17 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "",
                     selectedSection = "全",
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
                     onSearchQueryChange = {},
                     onSectionSelect = {},
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
                     onUserClick = {},
+                    onQuickMenuClick = {},
+                    onEmergencyContactClick = {},
+                    onEmergencyContactManageClick = {},
+                    onDismissQuickMenu = {},
                     onEditUser = {},
                     onAddClick = {},
                     onEndUser = {},
@@ -147,11 +165,17 @@ class MainScreenTest {
                     isNameMaskingEnabled = true,
                     searchQuery = "",
                     selectedSection = "全",
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
                     onSearchQueryChange = {},
                     onSectionSelect = {},
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
                     onUserClick = {},
+                    onQuickMenuClick = {},
+                    onEmergencyContactClick = {},
+                    onEmergencyContactManageClick = {},
+                    onDismissQuickMenu = {},
                     onEditUser = {},
                     onAddClick = {},
                     onEndUser = {},
@@ -178,14 +202,20 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "",
                     selectedSection = "全",
-                    onSearchQueryChange = {},
-                    onSectionSelect = {},
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> },
+                    onSectionSelect = { _ -> },
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
-                    onUserClick = {},
-                    onEditUser = {},
+                    onUserClick = { _ -> },
+                    onQuickMenuClick = { _ -> },
+                    onEmergencyContactClick = { _ -> },
+                    onEmergencyContactManageClick = { _ -> },
+                    onDismissQuickMenu = {},
+                    onEditUser = { _ -> },
                     onAddClick = {},
-                    onEndUser = {},
+                    onEndUser = { _ -> },
                     onNavigateToSettings = {}
                 )
             }
@@ -205,11 +235,17 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "該当者なし",
                     selectedSection = "全",
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
                     onSearchQueryChange = {},
                     onSectionSelect = {},
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
                     onUserClick = {},
+                    onQuickMenuClick = {},
+                    onEmergencyContactClick = {},
+                    onEmergencyContactManageClick = {},
+                    onDismissQuickMenu = {},
                     onEditUser = {},
                     onAddClick = {},
                     onEndUser = {},
@@ -234,14 +270,20 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "",
                     selectedSection = "全",
-                    onSearchQueryChange = {},
-                    onSectionSelect = {},
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> },
+                    onSectionSelect = { _ -> },
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
-                    onUserClick = {},
-                    onEditUser = {},
+                    onUserClick = { _ -> },
+                    onQuickMenuClick = { _ -> },
+                    onEmergencyContactClick = { _ -> },
+                    onEmergencyContactManageClick = { _ -> },
+                    onDismissQuickMenu = {},
+                    onEditUser = { _ -> },
                     onAddClick = {},
-                    onEndUser = {},
+                    onEndUser = { _ -> },
                     onNavigateToSettings = {}
                 )
             }
@@ -264,14 +306,20 @@ class MainScreenTest {
                     isNameMaskingEnabled = false,
                     searchQuery = "",
                     selectedSection = "全",
-                    onSearchQueryChange = {},
-                    onSectionSelect = {},
+                    selectedPersonForQuickMenu = null,
+                    isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> },
+                    onSectionSelect = { _ -> },
                     snackbarHostState = remember { SnackbarHostState() },
                     lazyListState = rememberLazyListState(),
-                    onUserClick = {},
-                    onEditUser = {},
+                    onUserClick = { _ -> },
+                    onQuickMenuClick = { _ -> },
+                    onEmergencyContactClick = { _ -> },
+                    onEmergencyContactManageClick = { _ -> },
+                    onDismissQuickMenu = {},
+                    onEditUser = { _ -> },
                     onAddClick = {},
-                    onEndUser = {},
+                    onEndUser = { _ -> },
                     onNavigateToSettings = { navigatedToSettings = true }
                 )
             }
@@ -302,10 +350,13 @@ class MainScreenTest {
                 MainScreenContent(
                     userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
                     searchQuery = "", selectedSection = "全",
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
                     onSearchQueryChange = { capturedQuery = it },
-                    onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {},
-                    onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                    onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(), onUserClick = { _ -> }, onEditUser = { _ -> },
+                    onAddClick = {}, onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }
@@ -320,11 +371,14 @@ class MainScreenTest {
             CareMemoTheme {
                 MainScreenContent(
                     userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
-                    searchQuery = "", selectedSection = "全", onSearchQueryChange = {},
+                    searchQuery = "", selectedSection = "全",
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> },
                     onSectionSelect = { capturedSection = it },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
                     snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {},
-                    onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                    lazyListState = rememberLazyListState(), onUserClick = { _ -> }, onEditUser = { _ -> },
+                    onAddClick = {}, onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }
@@ -342,10 +396,13 @@ class MainScreenTest {
                 MainScreenContent(
                     userList = listOf(createMockUiState(person, "山田")),
                     isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, 
-                    onEditUser = { editPersonId = it.id }, 
-                    onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> }, onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(), onUserClick = { _ -> },
+                    onEditUser = { editPersonId = it.id },
+                    onAddClick = {}, onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }
@@ -364,10 +421,12 @@ class MainScreenTest {
                 MainScreenContent(
                     userList = listOf(createMockUiState(person, "山田")),
                     isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = {}, 
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> }, onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
                     snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), onUserClick = {}, onEditUser = {}, onAddClick = {},
-                    onEndUser = { endUserCalled = true },
+                    lazyListState = rememberLazyListState(), onUserClick = { _ -> }, onEditUser = { _ -> }, onAddClick = {},
+                    onEndUser = { _ -> endUserCalled = true },
                     onNavigateToSettings = {}
                 )
             }
@@ -384,11 +443,14 @@ class MainScreenTest {
             CareMemoTheme {
                 MainScreenContent(
                     userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
-                    searchQuery = "", selectedSection = "全", onSearchQueryChange = {}, onSectionSelect = {},
+                    searchQuery = "", selectedSection = "全",
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> }, onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
                     snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(),
-                    onUserClick = {}, onEditUser = {}, 
-                    onAddClick = { addClickCalled = true }, 
-                    onEndUser = {}, onNavigateToSettings = {}
+                    onUserClick = { _ -> }, onEditUser = { _ -> },
+                    onAddClick = { addClickCalled = true },
+                    onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }
@@ -406,10 +468,13 @@ class MainScreenTest {
                 MainScreenContent(
                     userList = listOf(createMockUiState(person, "山田")),
                     isLoading = false, isNameMaskingEnabled = false, searchQuery = "", selectedSection = "全",
-                    onSearchQueryChange = {}, onSectionSelect = {}, snackbarHostState = remember { SnackbarHostState() },
-                    lazyListState = rememberLazyListState(), 
-                    onUserClick = { clickedPerson = it }, 
-                    onEditUser = {}, onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> }, onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
+                    snackbarHostState = remember { SnackbarHostState() },
+                    lazyListState = rememberLazyListState(),
+                    onUserClick = { clickedPerson = it },
+                    onEditUser = { _ -> }, onAddClick = {}, onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }
@@ -440,9 +505,12 @@ class MainScreenTest {
             CareMemoTheme {
                 MainScreenContent(
                     userList = emptyList(), isLoading = false, isNameMaskingEnabled = false,
-                    searchQuery = query, selectedSection = "全", onSearchQueryChange = {}, onSectionSelect = {},
+                    searchQuery = query, selectedSection = "全",
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> }, onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
                     snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(),
-                    onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                    onUserClick = { _ -> }, onEditUser = { _ -> }, onAddClick = {}, onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }
@@ -457,7 +525,7 @@ class MainScreenTest {
             CareMemoTheme {
                 CategorySelectionSheet(
                     personName = "山田 太郎",
-                    onCategorySelect = {},
+                    onCategorySelect = { _ -> },
                     onBatchInputSelect = { batchInputClicked = true }
                 )
             }
@@ -475,9 +543,12 @@ class MainScreenTest {
             CareMemoTheme {
                 MainScreenContent(
                     userList = updatedUserList, isLoading = false, isNameMaskingEnabled = false,
-                    searchQuery = "", selectedSection = "全", onSearchQueryChange = {}, onSectionSelect = {},
+                    searchQuery = "", selectedSection = "全",
+                    selectedPersonForQuickMenu = null, isQuickActionMenuExpanded = false,
+                    onSearchQueryChange = { _ -> }, onSectionSelect = { _ -> },
+                    onQuickMenuClick = { _ -> }, onEmergencyContactClick = { _ -> }, onEmergencyContactManageClick = { _ -> }, onDismissQuickMenu = {},
                     snackbarHostState = remember { SnackbarHostState() }, lazyListState = rememberLazyListState(),
-                    onUserClick = {}, onEditUser = {}, onAddClick = {}, onEndUser = {}, onNavigateToSettings = {}
+                    onUserClick = { _ -> }, onEditUser = { _ -> }, onAddClick = {}, onEndUser = { _ -> }, onNavigateToSettings = {}
                 )
             }
         }

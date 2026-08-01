@@ -112,4 +112,12 @@ class CareMemoApplication : Application() {
             auditLogRepository
         )
     }
+
+    // (D系統) 緊急連絡先リポジトリ
+    val emergencyContactRepository: EmergencyContactRepository by lazy {
+        EmergencyContactRepository(
+            database.emergencyContactDao(),
+            auditLogRepository
+        )
+    }
 }

@@ -9,6 +9,7 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
+import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -17,9 +18,11 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonListLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -33,6 +36,7 @@ class PersonListViewModel(
     private val archivedRepository: DeleteOrRestorePersonRepository,
     summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
+    private val emergencyContactRepository: EmergencyContactRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
 ) : BaseUiStateViewModel<PersonListUiState, PersonListViewEvent>(
@@ -45,13 +49,14 @@ class PersonListViewModel(
         private const val OP_ADD = "addPerson"
         private const val OP_DELETE = "logicalDeletePerson"
         private const val OP_RESTORE = "restorePerson"
+        private const val OP_LOAD_CONTACTS = "loadEmergencyContacts"
         private const val TABLE_PERSON = "person_db"
     }
 
     override val featureName: String = FEATURE_NAME
 
     // 後方互換性のためのプロパティ（テストや外部からの参照用）
-    val searchQuery: StateFlow<String> get() = kotlinx.coroutines.flow.MutableStateFlow(currentState.searchQuery).asStateFlow() // 実際には UI 側は uiState を見るべき
+    val searchQuery: StateFlow<String> get() = MutableStateFlow(currentState.searchQuery).asStateFlow() // 実際には UI 側は uiState を見るべき
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val personsWithMatchedConditions: StateFlow<List<String>?> = uiState
@@ -198,6 +203,72 @@ class PersonListViewModel(
     }
 
     /**
+     * クイックメニューを表示します。
+     */
+    fun showQuickMenu(person: Person) {
+        updateUiState { 
+            it.copy(
+                selectedPersonForQuickMenu = person,
+                isQuickActionMenuExpanded = true
+            ) 
+        }
+    }
+
+    /**
+     * クイックメニューを閉じます。
+     */
+    fun dismissQuickMenu() {
+        updateUiState { it.copy(isQuickActionMenuExpanded = false) }
+    }
+
+    /**
+     * 緊急連絡先表示（ボトムシート等）の状態をクリアします。
+     */
+    fun clearEmergencyContactState() {
+        updateUiState {
+            it.copy(
+                selectedPersonForQuickMenu = null,
+                isQuickActionMenuExpanded = false,
+                emergencyContactsForSheet = null,
+                isEmergencyContactLoading = false
+            )
+        }
+    }
+
+    /**
+     * 緊急連絡先を取得します（オンデマンド）。
+     */
+    fun loadEmergencyContacts(personId: String) {
+        // メニューは先に閉じる
+        dismissQuickMenu()
+
+        // 一時的なローディングプロキシ
+        val contactLoadingState = MutableStateFlow(false)
+        scope.launch {
+            contactLoadingState.collect { loading ->
+                updateUiState { it.copy(isEmergencyContactLoading = loading) }
+            }
+        }
+
+        safeLaunch(
+            operation = OP_LOAD_CONTACTS,
+            loadingState = contactLoadingState,
+            contextBuilder = {
+                tableName = "emergency_contact_db"
+                affectedId = personId
+            }
+        ) {
+            val contacts = emergencyContactRepository.getContactsByPersonId(personId).first()
+            if (contacts.isEmpty()) {
+                showSnackbar(R.string.medical_msg_no_contacts)
+                clearEmergencyContactState()
+            } else {
+                updateUiState { it.copy(emergencyContactsForSheet = contacts) }
+            }
+        }
+    }
+
+    /**
      * 利用者詳細画面への遷移準備を行います。
      * 表示モードをデフォルト（履歴）にリセットします。
      */
@@ -208,13 +279,14 @@ class PersonListViewModel(
     }
 
     // 互換性ヘルパー
-    private fun <T> kotlinx.coroutines.flow.MutableStateFlow<T>.asStateFlow(): StateFlow<T> = this
+    private fun <T> MutableStateFlow<T>.asStateFlow(): StateFlow<T> = this
 
     class Factory(
         private val repository: PersonRepository,
         private val archivedRepository: DeleteOrRestorePersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
+        private val emergencyContactRepository: EmergencyContactRepository,
         private val userSettingsRepository: UserSettingsRepository,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
@@ -225,6 +297,7 @@ class PersonListViewModel(
                 archivedRepository,
                 summaryRepository,
                 conditionRepository,
+                emergencyContactRepository,
                 userSettingsRepository,
                 auditLogRepository
             ) as T

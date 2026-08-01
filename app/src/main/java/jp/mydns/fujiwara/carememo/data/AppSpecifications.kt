@@ -194,6 +194,25 @@ object AppSpecifications {
         }
     }
 
+    /** 緊急連絡先に関する仕様 */
+    object MedicalContact {
+        object Validation {
+            const val MAX_LENGTH_FACILITY_NAME = EmergencyContactSpecifications.Validation.MAX_LENGTH_FACILITY_NAME
+            const val MAX_LENGTH_PERSON_NAME = EmergencyContactSpecifications.Validation.MAX_LENGTH_PERSON_NAME
+            const val MAX_LENGTH_PHONE_NUMBER = EmergencyContactSpecifications.Validation.MAX_LENGTH_PHONE_NUMBER
+            const val DEFAULT_PRIORITY = EmergencyContactSpecifications.Validation.DEFAULT_PRIORITY
+        }
+        object Types {
+            const val DOCTOR = EmergencyContactSpecifications.Types.DOCTOR
+            const val NURSING_STATION = EmergencyContactSpecifications.Types.NURSING_STATION
+            const val SUPPORT_CENTER = EmergencyContactSpecifications.Types.SUPPORT_CENTER
+            const val CASE_WORKER = EmergencyContactSpecifications.Types.CASE_WORKER
+            const val FAMILY = EmergencyContactSpecifications.Types.FAMILY
+            const val OTHER = EmergencyContactSpecifications.Types.OTHER
+            val ORDERED_TYPES = EmergencyContactSpecifications.Types.ORDERED_TYPES
+        }
+    }
+
     /** 各種制約（文字数制限等）に関する仕様 */
     object Constraints {
         object Person {

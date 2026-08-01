@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +71,8 @@ fun UserListItem(
     summary: PersonCategorySummary? = null,
     isNameMaskingEnabled: Boolean = true,
     onClick: () -> Unit,
+    onQuickMenuClick: () -> Unit,
+    onEmergencyContactManageClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
@@ -84,15 +87,23 @@ fun UserListItem(
     var showItemMenu by remember { mutableStateOf(false) }
 
     ListItem(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier,
         leadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // [3-1-1] CategoryBadges (入力済み情報のバッジ：ui/components/main/CategoryBadges.kt)
-                CategoryBadges(summary = summary ?: PersonCategorySummary())
-                // CakeIcon (本日/近日誕生日の通知アイコン)
+                // バッジ部分 (タップでクイックメニュー)
+                Box(
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(onClick = onQuickMenuClick)
+                        .padding(4.dp)
+                ) {
+                    CategoryBadges(summary = summary ?: PersonCategorySummary())
+                }
+
+                // CakeIcon (本日/近日誕生日の通知アイコン - 反応なし)
                 Box(
                     modifier = Modifier.width(20.dp),
                     contentAlignment = Alignment.Center
@@ -109,8 +120,13 @@ fun UserListItem(
             }
         },
         // [表示情報] フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
-        headlineContent = { 
-            Column { 
+        headlineContent = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick)
+                    .padding(vertical = 4.dp)
+            ) {
                 // フリガナ (上段)
                 Text(
                     text = person.getMaskedFurigana(isNameMaskingEnabled), 
@@ -161,6 +177,13 @@ fun UserListItem(
                         leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, 
                         onClick = { showItemMenu = false; onEditClick() },
                         modifier = Modifier.testTag("UserListItem_MenuItem_Edit")
+                    )
+                    // 緊急連絡先の管理
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.medical_contacts_manage_label)) },
+                        leadingIcon = { Icon(Icons.Rounded.Phone, contentDescription = null) },
+                        onClick = { showItemMenu = false; onEmergencyContactManageClick() },
+                        modifier = Modifier.testTag("UserListItem_MenuItem_EmergencyContact")
                     )
                     // 利用者を終了
                     DropdownMenuItem(

@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepositor
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
+import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +44,7 @@ class PersonListViewModelTest {
     private val archivedRepository = mockk<DeleteOrRestorePersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
+    private val emergencyContactRepository = mockk<EmergencyContactRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
@@ -73,7 +75,7 @@ class PersonListViewModelTest {
 
         viewModel = PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
-            conditionRepository, userSettingsRepository, auditLogRepository
+            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository
         )
     }
 
@@ -96,7 +98,7 @@ class PersonListViewModelTest {
         
         val errorViewModel = PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
-            conditionRepository, userSettingsRepository, auditLogRepository
+            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository
         )
 
         errorViewModel.uiState.test {
@@ -163,7 +165,7 @@ class PersonListViewModelTest {
         // 新しく ViewModel を作成して Flow を購読させる
         val syncViewModel = PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
-            conditionRepository, userSettingsRepository, auditLogRepository
+            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository
         )
         
         // TestDispatcher でコルーチンを回す
