@@ -252,7 +252,7 @@ fun ContactTypeDropdown(
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor()
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
         )
         ExposedDropdownMenu(
             expanded = expanded,
