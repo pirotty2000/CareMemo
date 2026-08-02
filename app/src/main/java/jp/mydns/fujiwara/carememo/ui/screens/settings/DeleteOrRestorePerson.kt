@@ -24,7 +24,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
  * DeleteOrRestorePersonViewModel
  *
  * ---
- * 最終更新日: 2026/07/19
+ * 最終更新日: 2026/08/02
  */
 
 import androidx.compose.foundation.background
@@ -54,6 +54,14 @@ import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * 利用者の復帰・抹消画面のメイン Composable
+ *
+ * @param viewModel 操作と状態を管理する ViewModel
+ * @param navController 画面遷移制御用の NavController
+ * @param mode 初期表示モード（RESTORE:復帰 / DELETE:完全抹消）
+ * @param onBack 戻るボタン押下時のコールバック
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeleteOrRestorePersonScreen(
@@ -68,16 +76,24 @@ fun DeleteOrRestorePersonScreen(
     val isNameMaskingEnabled = uiState.isNameMaskingEnabled
 
     val scope = rememberCoroutineScope()
+    // 操作が行われた場合に、戻り先の画面にリスト更新を促すためのフラグ
     var isRefreshNeeded by rememberSaveable { mutableStateOf(false) }
+    
+    // 確認ダイアログの表示制御
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
+    
+    // 汎用情報・エラーダイアログ用の状態
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    // 戻る際の処理（親画面への通知準備）
+    /**
+     * 戻る際の処理
+     * 復帰や抹消が一度でも行われていれば、遷移元に更新を通知します。
+     */
     val handleBack = {
         if (isRefreshNeeded) {
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
@@ -85,17 +101,17 @@ fun DeleteOrRestorePersonScreen(
         onBack()
     }
 
-    // モードを ViewModel に反映
+    // ナビゲーション等から渡されたモードを ViewModel の状態に同期させる
     LaunchedEffect(mode) {
         viewModel.setMode(mode)
     }
 
-    // ViewModelからのイベントを監視 (System B)
+    // ViewModel から発行される一過性のイベント（通知やダイアログ要求）を監視
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
                 is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
-                    // 復帰・抹消成功メッセージの場合、親画面の更新フラグを立てる
+                    // 復帰・抹消の成功メッセージを受信した場合、画面更新が必要と判断
                     if (event.resId == R.string.archive_msg_restored || event.resId == R.string.archive_msg_deleted) {
                         isRefreshNeeded = true
                     }
@@ -126,14 +142,14 @@ fun DeleteOrRestorePersonScreen(
 
     val isDeleteMode = uiState.mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
     
-    // 背景色の決定 (DELETEモード時は警告色)
+    // 背景色の決定 (DELETEモード時は、注意を促すために薄いエラー色を適用)
     val backgroundColor = if (isDeleteMode) {
         MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
     } else {
         MaterialTheme.colorScheme.background
     }
 
-    // TopBar 色の決定
+    // TopBar 配色の決定 (DELETEモード時は、破壊的操作であることを示すためエラー色を適用)
     val topBarColors = if (isDeleteMode) {
         TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.error,
@@ -167,6 +183,7 @@ fun DeleteOrRestorePersonScreen(
                 },
                 colors = topBarColors,
                 actions = {
+                    // DELETEモード時は「全選択」による誤抹消を防ぐため、アクションを非表示にする
                     if (!isDeleteMode && archivedPersons.isNotEmpty()) {
                         val isAllSelected = selectedIds.size == archivedPersons.size
                         TextButton(
@@ -189,12 +206,13 @@ fun DeleteOrRestorePersonScreen(
             )
         },
         bottomBar = {
+            // いずれかの利用者が選択されている場合のみ、実行ボタンを表示
             if (selectedIds.isNotEmpty()) {
                 Surface(
                     tonalElevation = 4.dp,
                     shadowElevation = 8.dp,
                     color = if (isDeleteMode) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.navigationBarsPadding() // ナビゲーションバーとの重なりを回避
+                    modifier = Modifier.navigationBarsPadding()
                 ) {
                     Button(
                         onClick = {
@@ -224,6 +242,7 @@ fun DeleteOrRestorePersonScreen(
                 .background(backgroundColor)
         ) {
             if (archivedPersons.isEmpty()) {
+                // アーカイブ対象がいない場合の表示
                 EmptyState(
                     message = "終了した利用者はいません",
                     icon = Icons.Outlined.PersonOff,
@@ -233,7 +252,7 @@ fun DeleteOrRestorePersonScreen(
                 val listState = androidx.compose.foundation.lazy.rememberLazyListState()
                 Column {
                     if (isDeleteMode) {
-                        // DELETEモード時の警告文
+                        // DELETEモード時の警告バナー
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -269,7 +288,9 @@ fun DeleteOrRestorePersonScreen(
                                     },
                                     supportingContent = {
                                         Column {
+                                            // ふりがな（マスク対応）
                                             Text(person.getMaskedFurigana(isNameMaskingEnabled))
+                                            // 生年月日、年齢、および識別メモを表示して人違いを防止
                                             Text(
                                                 text = buildString {
                                                     append(DateTimeUtils.formatBirthday(person.birthday))
@@ -288,6 +309,7 @@ fun DeleteOrRestorePersonScreen(
                                             checked = isSelected,
                                             onCheckedChange = { viewModel.toggleSelection(person.id) },
                                             colors = if (isDeleteMode) {
+                                                // 抹消モード時はチェックボックスも赤色にして警告を強調
                                                 CheckboxDefaults.colors(
                                                     checkedColor = MaterialTheme.colorScheme.error,
                                                     uncheckedColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
@@ -302,6 +324,7 @@ fun DeleteOrRestorePersonScreen(
                                 HorizontalDivider(thickness = 0.5.dp)
                             }
                         }
+                        // 画面右端のスクロール位置インジケータ
                         VerticalScrollIndicator(lazyListState = listState)
                     }
                 }
@@ -309,7 +332,7 @@ fun DeleteOrRestorePersonScreen(
         }
     }
 
-    // 復帰実行前の確認
+    // 復帰実行前の最終確認ダイアログ
     if (showRestoreConfirmDialog) {
         AppDialog(
             onDismissRequest = { showRestoreConfirmDialog = false },
@@ -335,7 +358,7 @@ fun DeleteOrRestorePersonScreen(
         )
     }
 
-    // 抹消実行前の最終確認
+    // 抹消実行前の最終確認ダイアログ（破壊的操作）
     if (showFinalConfirmDialog) {
         AppDialog(
             onDismissRequest = { showFinalConfirmDialog = false },
@@ -363,6 +386,7 @@ fun DeleteOrRestorePersonScreen(
         )
     }
 
+    // エラーまたは情報通知用ダイアログ
     if (dialogMessage != null) {
         AppInfoDialog(
             title = dialogTitle,

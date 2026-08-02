@@ -1,100 +1,179 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
+import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
  * UI State：PersonListUiState
  *
  * 【役割】
- * 利用者一覧画面における、リストデータ、検索条件、選択状態、および各利用者の記録サマリーを保持します。
- *
- * @param persons 現在アクティブな全利用者のリスト
- * @param filteredPersons 検索・五十音・メモ検索により絞り込まれた表示対象のリスト
- * @param summaryMap 利用者IDをキーとした、各カテゴリの記録有無サマリーのマップ
- * @param searchQuery 名前検索用キーワード
- * @param selectedSection 現在選択されている五十音セクション（「全」または「あ」「か」等）
- * @param isLoading データの読み込み中フラグ
+ * 利用者一覧画面（MainScreen）全体の表示状態を保持します。
+ * 
+ * @param isLoading 全体の読み込み中フラグ
+ * @param selectedSection 現在選択されている五十音セクション
+ * @param searchQuery 検索キーワード
+ * @param userList 画面に表示される加工済みの利用者リスト
  * @param isNameMaskingEnabled 氏名のマスキング（伏せ字）が有効か
+ * @param selectedPersonForQuickMenu クイックメニュー対象の利用者 (develop追加分)
+ * @param isQuickActionMenuExpanded クイックメニュー表示フラグ (develop追加分)
+ * @param emergencyContactsForSheet ボトムシート用連絡先リスト (develop追加分)
+ * @param isEmergencyContactLoading 連絡先読み込み中フラグ (develop追加分)
  */
 data class PersonListUiState(
-    val persons: List<Person> = emptyList(),
-    val filteredPersons: List<Person> = emptyList(),
-    val summaryMap: Map<String, PersonCategorySummary> = emptyMap(),
+    val isLoading: Boolean = true,
+    val selectedSection: String = AppSpecifications.Search.SECTION_ALL,
     val searchQuery: String = "",
-    val selectedSection: String = "全",
-    val isLoading: Boolean = false,
-    val isNameMaskingEnabled: Boolean = true
+    val userList: List<PersonUiState> = emptyList(),
+    val isNameMaskingEnabled: Boolean = true,
+    // --- 緊急連絡先機能の実装に伴う追加フィールド ---
+    val selectedPersonForQuickMenu: Person? = null,
+    val isQuickActionMenuExpanded: Boolean = false,
+    val emergencyContactsForSheet: List<EmergencyContact>? = null,
+    val isEmergencyContactLoading: Boolean = false
 )
+
+/**
+ * View Event：PersonListViewEvent
+ */
+sealed interface PersonListViewEvent {
+    // 将来的な拡張用
+}
+
+/**
+ * UI State：PersonUiState
+ *
+ * 【役割】
+ * 利用者一覧の各行（1名分）の表示状態を保持する UI 専用モデルです。
+ */
+data class PersonUiState(
+    val person: Person,
+    val maskedName: String,
+    val maskedFurigana: String,
+    val age: Int,
+    val formattedBirthday: String,
+    val summary: PersonCategorySummary
+)
+
+/**
+ * 利用者追加・更新時の重複判定結果（事実）。
+ */
+enum class PersonDuplicateResult {
+    /** 重複なし */
+    SUCCESS,
+    /** アクティブな利用者に重複が存在 */
+    DUPLICATE_ACTIVE,
+    /** 利用終了（アーカイブ）の中に重複が存在 */
+    DUPLICATE_ARCHIVED
+}
 
 /**
  * Logic：PersonListLogic
  *
  * 【役割】
- * 利用者一覧画面（MainScreen）における表示データの加工（絞り込み、並び替え、関連データの統合）に関するドメインロジックを提供します。
- *
- * 【主な機能】
- * ・氏名（漢字・ふりがな）および所見メモの内容に基づいたリアルタイム検索。
- * ・五十音行（あかさたな）によるカテゴリカルな絞り込み。
- * ・ふりがなに基づいた利用者の五十音順ソート。
- * ・利用者情報と記録サマリーの統合。
- *
- * 【設計指針】
- * 1. 検索キーワードと五十音セクションが両方指定されている場合、キーワード検索を優先し、
- *    キーワードでの一致が 0 件の場合のみセクションフィルタを適用する（ユーザーの期待する「直接検索」を優先）。
- * 2. 検索対象には、氏名だけでなく所見メモ（ConditionAtVisit）の内容も含まれることを考慮する（上位レイヤーでの結果を persons として受け取る）。
- * 3. 並び替えは、姓（lastNameFurigana）を第一キー、名（firstNameFurigana）を第二キーとして一貫性を保つ。
+ * 利用者一覧画面における表示データの加工（五十音判定、フィルタリング、UI用変換）および
+ * 利用者情報の妥当性チェックに関するドメインロジックを提供します。
  */
 object PersonListLogic {
 
     /**
-     * 指定された条件に基づいて、利用者リストをフィルタリングおよび並び替えします。
+     * ふりがなから、所属する五十音行（あ、か、さ...）を判定します。
      *
-     * @param persons 元の利用者リスト
-     * @param query 検索キーワード（空文字可）
-     * @param section 五十音セクション（「全」なら全件）
-     * @return 処理後の利用者リスト
+     * @param furigana 判定対象のふりがな（姓）
+     * @return 行の頭文字（あ〜わ）、または「他」
      */
-    fun filterPersons(persons: List<Person>, query: String, section: String): List<Person> {
-        // 1. キーワード検索（氏名・ふりがな・所見メモ一致）
-        val keywordMatched = if (query.isNotBlank()) {
-            persons.filter { person ->
-                person.lastName.contains(query, ignoreCase = true) ||
-                person.firstName.contains(query, ignoreCase = true) ||
-                person.lastNameFurigana.contains(query, ignoreCase = true) ||
-                person.firstNameFurigana.contains(query, ignoreCase = true)
-            }
-        } else {
-            persons
+    fun getSection(furigana: String): String {
+        val firstChar = furigana.firstOrNull() ?: return AppSpecifications.Search.SECTION_OTHER
+        return when (firstChar) {
+            in 'あ'..'お' -> "あ"
+            in 'か'..'こ', in 'が'..'ご' -> "か"
+            in 'さ'..'そ', in 'ざ'..'ぞ' -> "さ"
+            in 'た'..'と', in 'だ'..'ど', in 'っ'..'っ' -> "た"
+            in 'な'..'の' -> "な"
+            in 'は'..'ほ', in 'ば'..'ぼ', in 'ぱ'..'ぽ' -> "は"
+            in 'ま'..'も' -> "ま"
+            in 'や'..'よ' -> "や"
+            in 'ら'..'ろ' -> "ら"
+            in 'わ'..'ん' -> "わ"
+            else -> AppSpecifications.Search.SECTION_OTHER
         }
+    }
 
-        // 2. 五十音セクションでの絞り込み
-        // ただし、キーワード検索で結果が得られている場合は、セクションの指定に関わらずその結果を優先して表示する
-        val finalFiltered = if (query.isNotBlank() && keywordMatched.isNotEmpty()) {
-            keywordMatched
-        } else if (section != "全") {
-            // セクション指定がある場合は、ふりがなの先頭1文字で判定
-            keywordMatched.filter { person ->
-                person.lastNameFurigana.startsWith(section)
+    /**
+     * 各種条件に基づき、利用者リストをフィルタリングします。
+     *
+     * @param allPersons 全利用者リスト
+     * @param section 選択された五十音セクション
+     * @param matchedIds キーワード検索に合致した利用者IDのリスト（null なら全件対象）
+     * @return フィルタリング後の利用者リスト
+     */
+    fun filterPersons(
+        allPersons: List<Person>,
+        section: String,
+        matchedIds: List<String>?
+    ): List<Person> {
+        var filtered = allPersons
+        
+        // 1. 五十音フィルタの適用
+        if (section != AppSpecifications.Search.SECTION_ALL) {
+            filtered = filtered.filter { person ->
+                getSection(person.lastNameFurigana) == section
             }
-        } else {
-            keywordMatched
         }
+        
+        // 2. 検索（キーワードマッチ）フィルタの適用
+        if (matchedIds != null) {
+            filtered = filtered.filter { person ->
+                matchedIds.contains(person.id)
+            }
+        }
+        
+        return filtered
+    }
 
-        // 3. ふりがな順（姓 -> 名）でソートして返す
-        return finalFiltered.sortedWith(
-            compareBy<Person> { it.lastNameFurigana }.thenBy { it.firstNameFurigana }
+    /**
+     * 利用者エンティティを表示用の UI 状態（PersonUiState）へ変換します。
+     *
+     * @param person 変換元の利用者 Entity
+     * @param isMasking 伏せ字を適用するかどうか
+     * @param summary カテゴリ別の記録状況サマリー
+     * @return 構築済みの PersonUiState
+     */
+    fun createPersonUiState(
+        person: Person,
+        isMasking: Boolean,
+        summary: PersonCategorySummary?
+    ): PersonUiState {
+        return PersonUiState(
+            person = person,
+            maskedName = person.getMaskedName(isMasking),
+            maskedFurigana = person.getMaskedFurigana(isMasking),
+            age = DateTimeUtils.calculateAge(person.birthday),
+            formattedBirthday = DateTimeUtils.formatDateJapaneseEra(person.birthday),
+            summary = summary ?: PersonCategorySummary()
         )
     }
 
     /**
-     * 利用者リストと記録サマリーを紐付けた表示用のデータを構築します。
+     * 利用者の新規追加または更新時に、既存データとの重複を判定します。
+     * 姓名、生年月日、および備考がすべて一致する人物を「重複」とみなします。
      *
-     * @param person 対象の利用者
-     * @param summaryMap IDをキーとしたサマリーマップ
-     * @return 該当するサマリー。存在しない場合は新規の空サマリーを返す。
+     * @param input 保存しようとしている情報
+     * @param existing DB内に存在する、条件の一致する人物（いなければ null）
+     * @return 重複判定の結果
      */
-    fun getSummaryForPerson(person: Person, summaryMap: Map<String, PersonCategorySummary>): PersonCategorySummary {
-        return summaryMap[person.id] ?: PersonCategorySummary()
+    fun validateDuplicate(input: Person, existing: Person?): PersonDuplicateResult {
+        if (existing == null) return PersonDuplicateResult.SUCCESS
+        
+        // 更新時、自分自身（IDが一致するレコード）であれば重複エラーとはしない
+        if (input.id == existing.id) return PersonDuplicateResult.SUCCESS
+
+        return if (existing.deletedAt == null) {
+            PersonDuplicateResult.DUPLICATE_ACTIVE
+        } else {
+            PersonDuplicateResult.DUPLICATE_ARCHIVED
+        }
     }
 }
