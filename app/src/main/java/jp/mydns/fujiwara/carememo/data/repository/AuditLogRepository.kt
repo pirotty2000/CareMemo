@@ -80,7 +80,7 @@ class AuditLogRepository(
                     resultType = resultType
                 )
                 auditLogDao.insert(entry)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ログ記録の失敗は業務処理を中断させないよう、例外をキャッチする。
                 // ログ自体の失敗によりアプリがクラッシュまたは中断することを防ぐ。
             }
