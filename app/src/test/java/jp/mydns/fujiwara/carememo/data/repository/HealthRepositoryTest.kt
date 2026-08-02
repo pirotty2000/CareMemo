@@ -5,6 +5,7 @@ package jp.mydns.fujiwara.carememo.data.repository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import jp.mydns.fujiwara.carememo.data.AppDatabase
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.BpAndPulseDao
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
@@ -19,6 +20,7 @@ import java.time.Instant
 
 class HealthRepositoryTest {
 
+    private val database = mockk<AppDatabase>(relaxed = true)
     private val heightAndWeightDao = mockk<HeightAndWeightDao>(relaxed = true)
     private val bpAndPulseDao = mockk<BpAndPulseDao>(relaxed = true)
     private val glucoseAndHbA1cDao = mockk<GlucoseAndHbA1cDao>(relaxed = true)
@@ -29,6 +31,7 @@ class HealthRepositoryTest {
     @Before
     fun setup() {
         repository = HealthRepository(
+            database,
             heightAndWeightDao,
             bpAndPulseDao,
             glucoseAndHbA1cDao,

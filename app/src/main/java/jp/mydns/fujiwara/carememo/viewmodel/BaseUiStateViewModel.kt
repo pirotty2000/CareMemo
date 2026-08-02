@@ -6,6 +6,7 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * ViewModel：BaseUiStateViewModel (基底クラス)
@@ -24,12 +26,15 @@ import kotlinx.coroutines.launch
  * CareMemo アプリ全体の ViewModel における「状態管理」と「実行制御」の共通基盤を提供します。
  * MVI (Model-View-Intent) アーキテクチャの思想を取り入れ、単一の UiState と型安全なイベント通知を実現します。
  *
- * 【主な機能】
+ * 【主要な機能】
  * ・UiState (S): 画面のすべての状態を一つのデータクラスで一元管理し、原子的な更新を保証。
- * ・ViewEvent (E): ナビゲーションやアニメーション開始等の「一過性のイベント」を型安全に通知。
+ * ・ViewEvent (E): ナビゲーションやアニメーション開始等の「一過性のイベント」を画面固有の型で通知。
  * ・UiEvent: ダイアログ表示やスナックバー等の「全画面共通の通知」を標準化。
  * ・safeLaunch / safeCollect: 例外ハンドリング、監査ログ記録、ローディング表示を自動化するコルーチン制御。
  * ・共通設定の自動提供: 氏名のマスキング設定やデフォルト記録者名など、全画面で必要となる設定を保持。
+ *
+ * 【依存している Repository】
+ * ・UserSettingsRepository: ユーザー設定（マスキング、ロック設定、デフォルト記録者等）の取得と管理。
  *
  * 【設計指針】
  * 1. 原子性の確保：`updateUiState` (update + copy) を通じてのみ状態を変更し、一時的な矛盾した状態の露出を防ぐ。
@@ -44,7 +49,7 @@ abstract class BaseUiStateViewModel<S, E>(
     initialState: S
 ) : ViewModel() {
 
-    /** 監査ログの記録に使用する機能名。子クラスで companion object 等の定数を指定すること。 */
+    /** 監査ログの記録に使用する機能名。子クラスで定数（"PersonDetail" 等）を指定すること。 */
     protected abstract val featureName: String
 
     /** 
@@ -59,7 +64,7 @@ abstract class BaseUiStateViewModel<S, E>(
     /** 外部（Composable）から購読可能な UI 状態のストリーム */
     val uiState: StateFlow<S> = _uiState.asStateFlow()
 
-    /** 現在の最新状態（参照専用） */
+    /** 現在の最新状態（参照専用。スナップショット的な利用に使用） */
     protected val currentState: S get() = _uiState.value
 
     /**
@@ -79,12 +84,19 @@ abstract class BaseUiStateViewModel<S, E>(
      * UI（Scaffold 等）はこの Flow を購読し、適切なダイアログやスナックバーを表示します。
      */
     sealed interface UiEvent {
+        /** スナックバー表示（直接文字列） */
         data class ShowSnackbar(val message: String) : UiEvent
+        /** スナックバー表示（リソースID） */
         data class ShowSnackbarRes(val resId: Int, val args: List<Any> = emptyList()) : UiEvent
+        /** 情報ダイアログ表示（直接文字列） */
         data class ShowInfoDialog(val title: String, val message: String) : UiEvent
+        /** 情報ダイアログ表示（リソースID） */
         data class ShowInfoDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
+        /** エラーダイアログ表示（直接文字列） */
         data class ShowErrorDialog(val title: String, val message: String) : UiEvent
+        /** エラーダイアログ表示（リソースID） */
         data class ShowErrorDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
+        /** 上書き確認等のコンファーム表示（コールバック付き） */
         data class ShowOverwriteConfirm(val onConfirm: () -> Unit) : UiEvent
         /** 保存成功などの標準的な完了通知 */
         object SaveSuccess : UiEvent
@@ -132,13 +144,14 @@ abstract class BaseUiStateViewModel<S, E>(
             initialValue = ""
         )
 
-    /** アプリロックを一時的にバイパスするかどうかを設定します（PDF共有時等に使用） */
+    /** アプリロックを一時的にバイパスするかどうかを設定します（PDF共有時や外部アプリ連携時に使用） */
     fun setLockBypassEnabled(enabled: Boolean) {
         userSettingsRepository.isLockBypassed = enabled
     }
 
     // --- 4. コルーチン実行制御 (safeLaunch / safeCollect) ---
 
+    /** ViewModelScope または 拡張用の子クラス提供スコープ */
     protected open val scope: CoroutineScope get() = viewModelScope
 
     /** 
@@ -149,7 +162,7 @@ abstract class BaseUiStateViewModel<S, E>(
 
     /** 
      * safeLaunch 等で利用するローディング状態管理プロキシ。
-     * この Flow の値が変化すると、自動的に copyWithLoadingState が呼び出されます。
+     * この Flow の値が変化すると、自動的に copyWithLoadingState が呼び出され UiState へ反映されます。
      */
     protected val loadingStateProxy: MutableStateFlow<Boolean> by lazy {
         val proxy = MutableStateFlow(false)
@@ -165,10 +178,10 @@ abstract class BaseUiStateViewModel<S, E>(
      * 安全にコルーチンを起動します。
      * 自動的に例外をキャッチし、ハンドラによる通知とログ記録、およびローディング状態の制御を行います。
      *
-     * @param operation 操作名（監査ログ用）
+     * @param operation 操作名（監査ログの operation カラムに記録される文字列）
      * @param loadingState ローディング状態を管理する MutableStateFlow（null の場合は loadingStateProxy を使用）
-     * @param contextBuilder 監査ログに含める追加情報（テーブル名等）を構築するラムダ
-     * @param block 実行する処理本体
+     * @param contextBuilder 監査ログに含める追加情報（テーブル名、影響ID等）を構築するラムダ
+     * @param block 実行する処理本体（suspend 関数）
      * @return 実行中の Job
      */
     open fun safeLaunch(
@@ -188,10 +201,11 @@ abstract class BaseUiStateViewModel<S, E>(
             try {
                 block()
             } catch (t: Throwable) {
-                // キャンセル例外は上位へ伝播させる（基盤ルール）
+                // キャンセル例外は上位へ伝播させる（コルーチン基盤の標準ルールに従う）
                 if (t is CancellationException) throw t
-                // それ以外の例外はハンドラに委譲
+                // それ以外の例外はハンドラ（ErrorHandler）に委譲して通知とログ記録を行う
                 coroutineErrorHandler.handleException(t, context)
+                // 致命的な Error は再送出
                 if (t is Error) throw t
             } finally {
                 actualLoadingState.value = false
@@ -204,17 +218,21 @@ abstract class BaseUiStateViewModel<S, E>(
      * safeLaunch と同様の例外保護と、モードに応じたローディング制御を提供します。
      *
      * @param operation 操作名（監査ログ用）
-     * @param mode コレクションモード（初回のみロードを表示するか等）
+     * @param mode コレクションモード（INITIAL: 開始時にローディング表示, MONITORING: 表示なし）
      * @param loadingState ローディング状態管理用 Flow
      * @param contextBuilder 追加のログコンテキスト
+     * @param retryCount エラー発生時の再試行回数（デフォルト 0）
+     * @param retryDelayMillis 再試行間の待機時間（ミリ秒）
      * @param flowProvider 購読対象の Flow を生成するラムダ
-     * @param action 値を受け取った際の処理本体
+     * @param action 値を受け取った際の処理本体（suspend 関数）
      */
     open fun <T> safeCollect(
         operation: String,
         mode: CollectMode,
         loadingState: MutableStateFlow<Boolean>? = null,
         contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
+        retryCount: Int = 0,
+        retryDelayMillis: Long = 1000L,
         flowProvider: () -> Flow<T>,
         action: suspend (T) -> Unit
     ): Job {
@@ -225,18 +243,34 @@ abstract class BaseUiStateViewModel<S, E>(
         val actualLoadingState = loadingState ?: loadingStateProxy
 
         return scope.launch {
-            if (mode == CollectMode.INITIAL) actualLoadingState.value = true
-            try {
-                flowProvider().collect { value ->
+            var currentRetry = 0
+            while (true) {
+                if (mode == CollectMode.INITIAL) actualLoadingState.value = true
+                try {
+                    flowProvider().collect { value ->
+                        // INITIAL モードの場合、最初のデータを受信した時点でローディングを解除する
+                        if (mode == CollectMode.INITIAL) actualLoadingState.value = false
+                        action(value)
+                    }
+                    // 正常終了（有限の Flow の場合）
+                    break
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+
+                    // 再試行が設定されている場合
+                    if (currentRetry < retryCount) {
+                        currentRetry++
+                        delay(retryDelayMillis.milliseconds)
+                        continue
+                    }
+
+                    // 規定回数の試行が失敗した後に例外をハンドル
+                    coroutineErrorHandler.handleException(t, context)
+                    if (t is Error) throw t
+                    break
+                } finally {
                     if (mode == CollectMode.INITIAL) actualLoadingState.value = false
-                    action(value)
                 }
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                coroutineErrorHandler.handleException(t, context)
-                if (t is Error) throw t
-            } finally {
-                if (mode == CollectMode.INITIAL) actualLoadingState.value = false
             }
         }
     }

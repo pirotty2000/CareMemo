@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.data.*
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -14,6 +15,7 @@ import java.time.Instant
  * ・身長・体重 (HeightAndWeight) の CRUD 操作。
  * ・血圧・脈拍・体温 (BpAndPulse) の CRUD 操作。
  * ・血糖値・HbA1c (GlucoseAndHbA1c) の CRUD 操作。
+ * ・健康記録の一括保存（トランザクション対応）。
  * ・各記録系統における、同一日時レコードの特定（重複チェック用）。
  * ・データ操作に応じた監査ログの自動生成。
  *
@@ -21,8 +23,10 @@ import java.time.Instant
  * 1. 独立性：3つの記録系統はそれぞれ独立した DAO で管理するが、一貫したリポジトリインターフェースを介して操作する。
  * 2. 透明性：すべてのデータ変更操作に対して、監査ログの詳細出力を試行する。
  * 3. 同期対応：保存時には `updatedAt` の自動更新と `isSynced = false` の設定を行い、外部同期に備える。
+ * 4. 原子性の保証：複数カテゴリの同時保存時はデータベーストランザクションを使用し、データの整合性を守る。
  */
 class HealthRepository(
+    private val database: AppDatabase,
     private val heightAndWeightDao: HeightAndWeightDao,
     private val bpAndPulseDao: BpAndPulseDao,
     private val glucoseAndHbA1cDao: GlucoseAndHbA1cDao,
@@ -152,5 +156,28 @@ class HealthRepository(
             details = "PersonId: ${item.personId}",
             resultType = "SUCCESS"
         )
+    }
+
+    /**
+     * 複数の健康記録データを一括で保存します（トランザクション対応）。
+     *
+     * ブロック内のすべての保存処理は一つのトランザクションとして実行され、
+     * いずれかが失敗した場合は全ての変更がロールバックされます。
+     * 監査ログは案Aを採用し、各エンティティの保存ごとに個別に生成されます。
+     *
+     * @param items 保存対象のエンティティ（HeightAndWeight, BpAndPulse, GlucoseAndHbA1c）のリスト
+     * @param featureName 監査ログ用機能名
+     * @param operation 監査ログ用操作名
+     */
+    suspend fun insertHealthDataBatch(items: List<Any>, featureName: String, operation: String) {
+        database.withTransaction {
+            for (item in items) {
+                when (item) {
+                    is HeightAndWeight -> insertHeightAndWeight(item, featureName, operation)
+                    is BpAndPulse -> insertBpAndPulse(item, featureName, operation)
+                    is GlucoseAndHbA1c -> insertGlucoseAndHbA1c(item, featureName, operation)
+                }
+            }
+        }
     }
 }

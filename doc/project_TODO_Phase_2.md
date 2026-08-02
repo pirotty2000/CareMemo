@@ -32,6 +32,7 @@ Android Jetpack の最新ライブラリを活用し、実行時の安定性と�
 - **Type-Safe Navigation & ViewEvent 一元化**:
     - 文字列ベースのルート定義を廃止し、Navigation 2.8.0+ の型安全な遷移に移行する。
     - 画面遷移を ViewModel から発行される `ViewEvent`（sealed interface）として一元管理し、UI側（Composable）の `LaunchedEffect` で `navController` を操作する形式に統一する。これにより、遷移ロジックのテスタビリティと一貫性を向上させる。
+    - `BaseUiStateViewModel.UiEvent.SaveSuccess` などの通知イベントを `data class` 化し、保存されたデータの ID 等を UI 側に伝播可能にすることで、遷移ロジックとの親和性を高める。
 - **SavedStateHandle**: ViewModel で引数を直接取得し、プロセス死からの復帰耐性を高める。LaunchedEffect での `loadPerson` 呼び出しを削減し、ViewModel を自己完結させる。
 
 ### パフォーマンス最適化

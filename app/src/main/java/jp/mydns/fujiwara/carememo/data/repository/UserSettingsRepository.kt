@@ -49,6 +49,8 @@ class UserSettingsRepository(private val context: Context) {
         private val THEME_SETTING = stringPreferencesKey("theme_setting")
         /** 監査ログを自動削除するまでの日数 */
         private val AUDIT_LOG_RETENTION_DAYS = intPreferencesKey("audit_log_retention_days")
+        /** 最後に監査ログのローテーションを実行した日付 (yyyy-MM-dd) */
+        private val LAST_AUDIT_LOG_ROTATION_DATE = stringPreferencesKey("last_audit_log_rotation_date")
         /** 健康記録詳細で「グラフ」ではなく「履歴」を優先表示するか */
         private val HEALTH_DISPLAY_MODE_IS_HISTORY = booleanPreferencesKey("health_display_mode_is_history")
     }
@@ -127,6 +129,12 @@ class UserSettingsRepository(private val context: Context) {
             preferences[AUDIT_LOG_RETENTION_DAYS] ?: 30
         }
 
+    /** 最後に監査ログローテーションを実行した日付を取得する Flow */
+    val lastAuditLogRotationDate: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[LAST_AUDIT_LOG_ROTATION_DATE] ?: ""
+        }
+
     /** 健康記録詳細のデフォルト表示モードが「履歴」かどうかを取得する Flow */
     val healthDisplayModeIsHistory: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -192,6 +200,12 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setAuditLogRetentionDays(days: Int) {
         context.dataStore.edit { preferences ->
             preferences[AUDIT_LOG_RETENTION_DAYS] = days
+        }
+    }
+
+    suspend fun setLastAuditLogRotationDate(date: String) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_AUDIT_LOG_ROTATION_DATE] = date
         }
     }
 

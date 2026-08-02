@@ -147,4 +147,34 @@ class DeleteOrRestorePersonRepository(
             resultType = "SUCCESS"
         )
     }
+
+    /**
+     * 指定された複数の利用者を一括で復帰させます（トランザクション対応）。
+     *
+     * @param personIds 対象の利用者IDリスト
+     * @param featureName ログ出力用の機能名
+     * @param operation ログ出力用の操作名
+     */
+    suspend fun restorePersonsBatch(personIds: List<String>, featureName: String = "", operation: String = "") {
+        database.withTransaction {
+            personIds.forEach { id ->
+                restorePerson(id, featureName, operation)
+            }
+        }
+    }
+
+    /**
+     * 指定された複数の利用者を一括で完全に抹消（物理削除）します（トランザクション対応）。
+     *
+     * @param personIds 対象の利用者IDリスト
+     * @param featureName ログ出力用の機能名
+     * @param operation ログ出力用の操作名
+     */
+    suspend fun permanentlyDeletePersonsBatch(personIds: List<String>, featureName: String = "", operation: String = "") {
+        database.withTransaction {
+            personIds.forEach { id ->
+                permanentlyDeletePerson(id, featureName, operation)
+            }
+        }
+    }
 }

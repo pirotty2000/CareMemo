@@ -69,18 +69,24 @@ import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import java.net.URLEncoder
 
+/**
+ * Activity：MainActivity
+ *
+ * 【役割】
+ * CareMemo アプリケーションのメインアクティビティであり、唯一のエントリーポイントです。
+ * システムレベルのセキュリティ設定、アプリ全体のテーマ、および画面遷移（Navigation）の定義を担当します。
+ * 生体認証フレームワークを利用するため、[FragmentActivity] を継承しています。
+ */
 class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // セキュリティ保護
-        // スクリーンショットの撮影や画面録画を防止します
+        // セキュリティ保護：
+        // スクリーンショットの撮影や画面録画をシステムレベルで防止します。
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         
-        // タスク説明のカスタマイズ
-        // 最近使用したアプリ一覧（履歴画面）での表示名やアイコン、カラーを設定しています
-        // （APIレベルに応じた分岐処理を含む）
+        // タスク説明（履歴画面）のカスタマイズ
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val taskDescription = ActivityManager.TaskDescription.Builder()
                 .setLabel(getString(R.string.app_name))
@@ -98,8 +104,7 @@ class MainActivity : FragmentActivity() {
             setTaskDescription(taskDescription)
         }
 
-        // 一時ファイルのクリーンアップ
-        // PdfExporter.clearOldExports(this)を呼び出し、古いエクスポートファイルを削除しています。
+        // PDF出力用一時ファイルのクリーンアップ
         PdfExporter.clearOldExports(this)
 
         enableEdgeToEdge()
@@ -111,17 +116,11 @@ class MainActivity : FragmentActivity() {
 }
 
 /**
- * CareMemoApp
+ * Composable：CareMemoApp
  *
- * (1)リポジトリと状態の管理
- *     CareMemoApplicationから各リポジトリを取得し、ViewModelに注入する準備をします
- *     userSettingsRepositoryを通じて、テーマ設定（ダークモード/ライトモード）や生体認証の設定を監視しています
- * (2)生体認証とアプリ・ロック
- *     Security by Default: 初回起動時にデバイスが認証可能であれば、自動的に生体認証を有効にします。
- *     自動ロック機能: アプリがバックグラウンドに回ってから一定時間（lockTimeoutMinutes）経過した場合に、再認証を要求する仕組みです。
- *     再認証プロンプト: 機密性の高い操作を行う際に呼び出せる共通関数 requestAuthentication が定義されています。
- * (3)ナビゲーション構造 (NavHost)
- *     Jetpack Compose Navigationを使用して、画面遷移を定義しています
+ * 【役割】
+ * アプリケーションの最上位コンポーザブルとして、リポジトリの注入、セキュリティ制御（アプリロック）、
+ * および [NavHost] による画面遷移定義を集約します。
  */
 @Composable
 fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass) {
@@ -149,27 +148,20 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
         
         var isAuthenticated by rememberSaveable { mutableStateOf(value = false) }
 
-        // 初回起動時の生体認証設定の自動最適化
-        // isBiometricSettingInitialized というフラグを監視し
-        // このフラグが false（未初期化）の場合のみ、中の処理が実行されます
-        // 一度初期化（true）されると、次回のアプリ起動時からはこのロジックはスキップされます
+        // 初回起動時の生体認証自動設定 (Security by Default)
         LaunchedEffect(isBiometricSettingInitialized) {
             if (!isBiometricSettingInitialized) {
                 val biometricManager = androidx.biometric.BiometricManager.from(activity)
                 val status = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                 if (status == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                    // 認証可能なデバイスならデフォルトON（Security by Default）
                     userSettingsRepository.setBiometricEnabled(true)
                 } else {
-                    // 非対応または未設定ならOFF
                     userSettingsRepository.setBiometricEnabled(false)
                 }
             }
         }
 
-        // アプリ・ロック：
-        // 最後にアプリを閉じてからどれくらい時間が経過したかを判定し、
-        // 必要であれば再認証（生体認証）を要求する
+        // アプリ・ロック：バックグラウンド待機時間に基づく再認証判定
         DisposableEffect(activity) {
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -196,14 +188,13 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             onDispose { activity.lifecycle.removeObserver(observer) }
         }
 
-        // アプリ・ロック
-        // 実際にロック画面を表示
+        // アプリ・ロック画面の実行制御
         LaunchedEffect(isBiometricEnabled, isAuthenticated) {
             if (!(!isBiometricEnabled || isAuthenticated)) {
                 val biometricManager = androidx.biometric.BiometricManager.from(activity)
                 val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                 
-                // デバイスが認証不可能な状態（ハードウェア故障、セキュリティ設定の削除など）に陥っている場合
+                // ロックアウト回避のためのフォールバック
                 if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
                     if (
                         (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE) ||
@@ -211,8 +202,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) ||
                         (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED)
                     ) {
-                        
-                        // ロックアウトを避けるため、認証成功とみなして設定をOFFにする
                         isAuthenticated = true
                         userSettingsRepository.setBiometricEnabled(false)
                         return@LaunchedEffect
@@ -245,16 +234,13 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             }
         }
 
-        //
-        // 認証が完了するまで、アプリのメインコンテンツ（画面）を一切生成・表示させません
-        //
+        // 認証ゲート
         if (!(!isAuthenticated && isBiometricEnabled)) {
-            // 認証要求を処理する共通関数
+            // 共通認証要求関数
             val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
                 val biometricManager = androidx.biometric.BiometricManager.from(activity)
                 val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
 
-                // デバイスが認証不可能な状態（ハードウェア故障、セキュリティ未設定など）なら即座に成功とする
                 if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
                     onSuccess()
                 } else {
@@ -279,10 +265,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
             }
 
             /**
-             * NavHost
-             *   (1)ナビゲーションの集約：画面の遷移と履歴(バックスタック)の整理
-             *   (2)依存注入(DI)：Screen必要とするViewModelを生成し、そこにRepositoryやContextを流し込む
-             *   (3)セキュリティ・ゲート：生体認証の成否に応じて NavHost 自体を表示するかどうかを制御
+             * NavHost：ナビゲーションルート定義
              */
             NavHost(navController = navController, startDestination = "main") {
 
@@ -300,14 +283,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             userSettingsRepository,
                             auditLogRepository))
                     MainScreen(
-                        // (1)onNavigateToDetail    ：身長・体重などの各カテゴリへ
-                        // (2)onNavigateToBatchInput：一括入力(SCR-M-002)へ
-                        // (3)onNavigateToAddPerson ：利用者編集(SCR-M-002)へ
-                        // (4)onNavigateToEditPerson：利用者編集(SCR-M-002)へ
-                        // (5)onNavigateToSettings  ：管理・設定(SCR-S-001)へ
                         viewModel = listViewModel,
                         onNavigateToDetail = { personId, category ->
-                            listViewModel.prepareDetailNavigation() // 遷移準備（表示モードのリセット）を実行
+                            listViewModel.prepareDetailNavigation()
                             val query = listViewModel.uiState.value.searchQuery
                             val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
                             navController.navigate(category.getRoute(personId, encodedQuery))
@@ -335,11 +313,9 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                     navArgument("personId") { type = NavType.StringType }
                 )) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val emergencyContactRepository = application.emergencyContactRepository
-                    
                     val medicalViewModel: EmergencyContactEditViewModel = viewModel(
                         factory = EmergencyContactEditViewModel.Factory(
-                            personId, emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
+                            personId, application.emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
 
                     EmergencyContactListScreen(
                         viewModel = medicalViewModel,
@@ -358,13 +334,10 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 )) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getString("personId") ?: ""
                     val contactIdRaw = backStackEntry.arguments?.getString("contactId") ?: "_new"
-                    
-                    val emergencyContactRepository = application.emergencyContactRepository
                     val medicalViewModel: EmergencyContactEditViewModel = viewModel(
                         factory = EmergencyContactEditViewModel.Factory(
-                            personId, emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
+                            personId, application.emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
 
-                    // 初期化
                     LaunchedEffect(contactIdRaw) {
                         if (contactIdRaw == "_new") {
                             medicalViewModel.startAdd()
@@ -373,8 +346,7 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                             if (contact != null) {
                                 medicalViewModel.startEdit(contact)
                             } else {
-                                // 万が一リストにない場合は取得を試みる
-                                emergencyContactRepository.getContactById(contactIdRaw)?.let {
+                                application.emergencyContactRepository.getContactById(contactIdRaw)?.let {
                                     medicalViewModel.startEdit(it)
                                 }
                             }
@@ -405,15 +377,14 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 }
 
                 // --------------------------------------------------------
-                // ----- 健康記録(身長・体重、バイタル、血糖値・HbA1c) (SCR-PH-001)
+                // ----- 健康記録 (SCR-PH-001) ------------------------------
                 // --------------------------------------------------------
                 composable("detail/{personId}/{categoryName}", arguments = listOf(
                     navArgument("personId") { type = NavType.StringType },
                     navArgument("categoryName") { type = NavType.StringType }
                 )) { backStackEntry ->
                     val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?:
-                        Category.BP_AND_PULSE.name
+                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
                     val category = Category.valueOf(categoryName)
                     
                     val detailViewModel: PersonDetailUiStateViewModel = viewModel(
@@ -423,15 +394,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         factory = PersonHealthViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
 
-                    // 初期データのロードとカテゴリ設定
                     LaunchedEffect(personId, category) {
                         detailViewModel.loadPerson(personId)
                         detailViewModel.setCategory(category)
                     }
 
                     PersonHealthScreen(
-                        // (1)onNavigateToCategory：SCR-M-001に戻ってから選択したカテゴリへ
-                        // (2)onNavigateToGraphExpansion：グラフ拡大表示(SCR-PH-002)へ
                         detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
                         widthSizeClass = widthSizeClass,
@@ -459,7 +427,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         factory = BatchInputViewModel.Factory(
                             personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
 
-                    // 利用者情報のロード（状態は ViewModel が管理する）
                     LaunchedEffect(personId) {
                         batchViewModel.loadPerson(personId)
                     }
@@ -513,16 +480,12 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         factory = PersonConditionViewModel.Factory(
                             personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
 
-                    // 初期データのロード
                     LaunchedEffect(personId) {
                         detailViewModel.loadPerson(personId)
                         detailViewModel.setCategory(Category.CONDITION_AT_VISIT)
                     }
 
                     PersonConditionScreen(
-                        // (1)onNavigateToCategory    ：SCR-M-001に戻ってから選択したカテゴリへ
-                        // (2)onNavigateToPhotoPreview：写真プレビュー(SCR-PC-002)へ
-                        // (3)onNavigateToFullScreen  ：写真全画面表示(SCR-PC-003)へ
                         detailViewModel = detailViewModel,
                         conditionViewModel = conditionViewModel,
                         initialQuery = initialQuery,
@@ -563,7 +526,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                         factory = PersonConditionViewModel.Factory(
                             personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
 
-                    // 利用者情報のロード
                     LaunchedEffect(personId) {
                         detailViewModel.loadPerson(personId)
                         conditionViewModel.loadPerson(personId)
@@ -638,10 +600,6 @@ fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass
                 composable("settings") {
                     val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
                     SettingsScreen(
-                        // (1)onNavigateToArchiveManagement：利用者管理(SCR-S-003)へ
-                        // (2)onNavigateToAuditLog         ：監査ログ(SCR-S-002)へ
-                        // (3)onNavigateToOrphanedPhotos   ：迷子写真の管理(SCR-S-004)へ
-                        // (4)
                         viewModel = settingsViewModel, 
                         navController = navController,
                         onNavigateToArchiveManagement = { mode ->

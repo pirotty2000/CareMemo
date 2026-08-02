@@ -3,9 +3,6 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
@@ -28,32 +25,25 @@ import java.time.Instant
  *
  * 【役割】
  * 健康記録の一括入力画面（SCR-PH-002）における状態管理と保存実行を制御します。
- * 身長体重、バイタル、血糖値の複数カテゴリにわたる入力内容を同時に扱い、整合性を保ちながら保存します。
+ * 身長体重、バイタル（血圧・脈拍等）、血糖値の複数カテゴリにわたる入力内容を同時に扱い、
+ * 一つの画面で効率的に記録できる機能を提供します。
  *
  * 【主要な機能】
- * ・複数カテゴリ（身長体重、バイタル、血糖）の入力状態の保持。
- * ・全カテゴリ一括でのバリデーション（範囲チェック等）の実施。
+ * ・複数カテゴリの入力状態の一元保持。
+ * ・全項目に対するバリデーション（範囲チェックおよび相関チェック）の実施。
  * ・保存前の「同一日時データ」の重複チェック（上書き防止仕様）。
- * ・成功時の一括クリア処理と、UI側への演出イベント通知。
+ * ・保存成功時のアニメーション演出イベントの通知および入力値のクリア。
  *
  * 【依存している Repository】
- * ・HealthRepository: 各健康データの取得（重複チェック）および保存。
- * ・PersonRepository: 対象利用者の基本情報取得（PersonBaseUiStateViewModel 経由）。
- * ・PersonSummaryRepository: 既存データの記録状況サマリー取得。
- * ・UserSettingsRepository: 共通設定の参照。
- * ・AuditLogRepository: 操作履歴の記録。
- *
- * 【依存している Logic】
- * ・BatchInputLogic: 一括入力固有の相関バリデーション、Entity 生成、変更検知。
- * ・HealthLogic: 個別の数値項目に対する範囲チェック。
+ * ・HealthRepository: 各健康データの取得（重複確認）および保存。
+ * ・PersonRepository / PersonSummaryRepository: 利用者情報およびサマリーの管理（基底クラスで使用）。
+ * ・AuditLogRepository: 保存・バリデーション失敗等の操作証跡を記録。
+ * ・UserSettingsRepository: 共通設定（氏名のマスキング等）の参照。
  *
  * 【設計指針】
- * 1. 整合性の優先：保存前に、入力された全カテゴリに対して同一日時の既存レコードがないかを確認する。
- *    一括入力画面は「新規追記」を主目的とするため、既存データがある場合は保存をブロック（重複エラー）する。
- * 2. 単純性の維持：DAO 層に複数テーブルを跨ぐ insertAll が存在しないため、現状は ViewModel 内でループして
- *    順次 insert を実行する。
- * 3. 将来の課題：ループ保存中に一部が失敗した場合のロールバックを実現するため、
- *    将来的にリポジトリ層で DB トランザクションを張る仕組みへの移行を検討する。
+ * 1. 整合性の優先：保存前に全カテゴリに対して同一日時の既存レコードがないかを確認し、不整合な上書きを防止する。
+ * 2. 入力効率の最大化：各項目の更新時に即座に `isValid` や `isChanged` を計算し、保存ボタンの活性状態を制御する。
+ * 3. 単一方向データフロー：`PersonBaseUiStateViewModel` の仕組みを利用し、利用者コンテキストに基づいたデータ管理を行う。
  */
 class BatchInputViewModel(
     private val healthRepository: HealthRepository,
@@ -70,18 +60,18 @@ class BatchInputViewModel(
 ) {
 
     companion object {
-        /** 監査ログ用機能名 */
+        /** 監査ログ・例外用：機能名 */
         private const val FEATURE_NAME = "BatchInput"
-        /** 監査ログ用操作名：一括保存 */
+        /** 監査ログ用：一括保存操作名 */
         private const val OP_SAVE_BATCH = "OP_SAVE_BATCH"
-        /** 監査ログ用対象テーブル（概念的なグループ名） */
+        /** 監査ログ用：対象概念テーブル名 */
         private const val TABLE_HEALTH = "health_db"
     }
 
     override val featureName: String = FEATURE_NAME
 
     init {
-        // 共通設定（氏名マスキング）の購読と UI 状態への反映
+        // 共通設定（氏名マスキング）の変更を購読し、UI 状態へ反映
         scope.launch {
             isNameMaskingEnabled.collect { enabled ->
                 updateUiState { it.copy(isNameMaskingEnabled = enabled) }
@@ -100,7 +90,7 @@ class BatchInputViewModel(
         person: Person,
         summary: PersonCategorySummary?
     ): BatchInputUiState {
-        // 利用者が切り替わった場合は入力をリセットし、日時を現在時刻にする
+        // 利用者が切り替わった場合は、以前の入力を全てリセットし、記録日時を現在時刻に設定する
         val isDifferentPerson = state.personId != person.id
         val next = if (isDifferentPerson) {
             val now = Instant.now()
@@ -115,20 +105,23 @@ class BatchInputViewModel(
                 initialRecordTime = now
             )
         } else {
+            // 同一利用者の再ロード時は、基本情報とサマリーのみ更新する
             state.copy(
                 personId = person.id,
                 currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
                 personSummary = summary
             )
         }
-        // 派生状態（isValid, isChanged）を再計算
+        
+        // 最新の状態に基づき、バリデーションと変更有無を再計算して返す
         return next.copy(
             isValid = BatchInputLogic.isValid(next),
             isChanged = BatchInputLogic.isChanged(next)
         )
     }
 
-    // --- UI 入力更新用メソッド群 (原子的な一括更新) ---
+    // --- UI 入力更新用メソッド群 ---
+    // 各項目の更新は updateState ヘルパーを介して原子的に行われ、派生状態も同時に更新されます。
 
     fun setRecordTime(time: Instant) = updateState { it.copy(recordTime = time) }
     fun updateHeight(v: String) = updateState { it.copy(height = v) }
@@ -142,7 +135,7 @@ class BatchInputViewModel(
     fun updateHbA1c(v: String) = updateState { it.copy(hba1c = v) }
 
     /**
-     * 状態更新時に自動的に派生状態（バリデーション成否、変更有無）を計算します。
+     * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
      */
     private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
         updateUiState { current ->
@@ -155,18 +148,14 @@ class BatchInputViewModel(
     }
 
     /**
-     * 入力された全データを一括保存します。
+     * 入力された全カテゴリのデータを一括保存します。
      * 
-     * 実行順序：
-     * 1. 共通バリデーション (BatchInputLogic.validate)
-     * 2. 重複チェック (既存レコードの存在確認)
-     * 3. 個別 Entity の保存 (healthRepository 内でのループ実行)
-     * 4. 成功通知および UI 状態のリセット
-     * 
-     * 【AuditLog の取り扱い】
-     * ・Repository 内で各項目（身長、バイタル等）ごとに個別の INSERT ログが発行されます。
-     * ・affectedId には "PersonId" が設定されますが、将来的には
-     *   "PersonId|Count:3|Types:H,V,G" のように詳細なサマリーを含めることを検討してください。
+     * 処理フロー：
+     * 1. 入力値の形式・範囲バリデーションの実施。
+     * 2. 指定された記録日時における既存データの重複チェック（上書き防止）。
+     * 3. ロジック層での各カテゴリ Entity の生成。
+     * 4. 各カテゴリのリポジトリメソッドを順次呼び出して保存を実行。
+     * 5. 成功時の UI 通知（エフェクト送出・スナックバー表示）および入力値のクリア。
      */
     fun saveBatch() {
         val state = currentState
@@ -180,15 +169,15 @@ class BatchInputViewModel(
                 affectedId = requiredPersonId
             }
         ) {
-            // 1. バリデーション（事実の判定）
+            // 1. 全体バリデーション実行
             val validationResult = BatchInputLogic.validate(state)
 
-            // 2. 失敗時の翻訳と例外スロー
+            // 2. バリデーションエラーがある場合は例外を送出（ハンドラで UI 通知される）
             if (validationResult != BatchInputValidationResult.SUCCESS) {
                 translateValidationResult(validationResult, state)
             }
 
-            // 3. 重複チェック（画面仕様：既存データがある場合は上書きせずブロックする）
+            // 3. 重複チェック：同一日時の既存レコードがあるカテゴリを特定する
             val effectiveCategories = BatchInputLogic.getEffectiveCategories(state)
             val duplicateResIds = mutableListOf<Int>()
 
@@ -209,7 +198,7 @@ class BatchInputViewModel(
                 }
             }
 
-            // いずれかのカテゴリで重複があればエラーとして中断
+            // 重複がある場合は保存をブロックし、重複カテゴリ名をメッセージに含めて通知する
             if (duplicateResIds.isNotEmpty()) {
                 val categoryNames = duplicateResIds.joinToString("、") { "__RES__$it" }
                 throw AppValidationException(
@@ -220,23 +209,16 @@ class BatchInputViewModel(
                 )
             }
             
-            // 4. 保存実行（各 Repository メソッドを順次呼び出し）
-            // 内部で Repository が AuditLog.log (SUCCESS) を発行します。
+            // 4. 保存の実行：入力のあるカテゴリの Entity を作成し、一括で保存する（トランザクション対応）
             val entities = BatchInputLogic.createEntities(requiredPersonId, time, state)
-            entities.forEach { entity ->
-                when (entity) {
-                    is HeightAndWeight -> healthRepository.insertHeightAndWeight(entity, featureName, OP_SAVE_BATCH)
-                    is BpAndPulse -> healthRepository.insertBpAndPulse(entity, featureName, OP_SAVE_BATCH)
-                    is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(entity, featureName, OP_SAVE_BATCH)
-                }
-            }
+            healthRepository.insertHealthDataBatch(entities, featureName, OP_SAVE_BATCH)
 
-            // 全て成功：成功イベント通知とスナックバー表示
+            // 全保存成功時のイベント通知
             sendViewEvent(BatchInputViewEvent.SaveSuccessEffects)
             sendUiEvent(UiEvent.SaveSuccess)
             showSnackbar(R.string.batch_msg_save_success)
             
-            // 保存後のリセット（日時は保持、数値はクリア、変更基準点を現在に更新）
+            // 入力値をクリアし、変更基準点を現在の時刻に更新して次の入力に備える
             updateUiState { current ->
                 current.copy(
                     height = "", weight = "", bpSystolic = "", bpDiastolic = "",
@@ -250,7 +232,7 @@ class BatchInputViewModel(
     }
 
     /**
-     * バリデーション失敗理由をリソース ID および詳細メッセージに翻訳します。
+     * 一括入力特有のバリデーション結果を、適切なリソース ID と引数に翻訳して例外を送出します。
      */
     private fun translateValidationResult(result: BatchInputValidationResult, state: BatchInputUiState) {
         val messageRes = when (result) {
@@ -260,6 +242,7 @@ class BatchInputViewModel(
 
         val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
             val details = mutableListOf<String>()
+            // どの項目のバリデーションが失敗したかを特定し、メッセージを構築する
             if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("身長・体重が範囲外です")
             if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("バイタルが範囲外です")
             if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("血糖値が範囲外です")
@@ -278,7 +261,7 @@ class BatchInputViewModel(
     }
 
     /**
-     * BatchInputViewModel 生成用の Factory クラス。
+     * BatchInputViewModel を生成するための Factory クラス。
      */
     class Factory(
         private val personRepository: PersonRepository,
