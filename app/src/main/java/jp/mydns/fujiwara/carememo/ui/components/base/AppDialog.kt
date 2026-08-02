@@ -1,31 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
-/**
- * Component：AppDialog
- *
- * 【役割】：
- * アプリ全体のダイアログの「器（コンテナ）」となる共通コンポーネント。
- * Material 3 の AlertDialog をラップし、CareMemo 標準のデザイン（形状、配色、スクロール制御）を適用する。
- *
- * 【主な機能】：
- * ・標準的なタイトル、アイコン、ボタン配置の提供。
- * ・コンテンツエリアの自動スクロール対応（AppDialogContent）。
- * ・業務固有の複雑な UI を content 引数として受け入れ可能。
- * ・ポジティブアクション（確定）とネガティブアクション（キャンセル）の視覚的差異の明示。
- *
- * 【標準ルール（UX）】：
- * 1. ポジティブアクション（保存、削除、実行等）は、右下に配置し、塗りつぶしボタンで目立たせる。
- * 2. ネガティブアクション（キャンセル、閉じる等）は、左側に配置し、文字のみのボタンとする。
- * 3. ポジティブアクションの色分け：保存系＝Primary、削除系＝Error、その他実行系＝Tertiary。
- *
- * 【想定する利用場所】：
- * アプリ内のすべてのダイアログ（AppInfoDialog, AppDeleteConfirmDialog, 各種入力ダイアログ等）の基盤。
- *
- * 【公開composable】：
- * ・AppDialog : ダイアログの外枠（コンテナ）
- * ・AppDialogContent : ダイアログ内部の標準的なコンテンツ（スクロール補助付き）
- */
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,17 +15,57 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 
 /**
+ * Component：AppDialog
+ *
+ * 【役割】
+ * アプリ全体のダイアログの「器（コンテナ）」となる共通コンポーネントです。
+ * Material 3 の AlertDialog をラップし、CareMemo 標準のデザイン（形状、配色、スクロール制御）を適用します。
+ *
+ * 【主な機能】
+ * ・標準的なタイトル、アイコン、ボタン配置の提供。
+ * ・コンテンツエリアの自動スクロール対応（AppDialogContent）。
+ * ・業務固有の複雑な UI を content 引数として受け入れ可能。
+ * ・ポジティブアクション（確定）とネガティブアクション（キャンセル）の視覚的差異の明示。
+ *
+ * 【標準ルール（UX）】
+ * 1. ポジティブアクション（保存、削除、実行等）：右下に配置し、塗りつぶしボタンで目立たせる。
+ * 2. ネガティブアクション（キャンセル、閉じる等）：左側に配置し、文字のみのボタンとする。
+ * 3. ポジティブアクションの色分け：保存系＝Primary、削除系＝Error、その他実行系＝Tertiary。
+ *
+ * 【想定する利用場所】
+ * アプリ内のすべてのダイアログ（AppInfoDialog, AppDeleteConfirmDialog, 各種入力ダイアログ等）の基盤。
+ */
+
+/**
  * ダイアログの確定ボタンの種類。
- * 操作の性質（セマンティクス）に応じて色を決定する。
+ * 操作の性質（セマンティクス）に応じて色を決定します。
  */
 enum class AppDialogActionType {
-    SAVE,   // 保存・確定系：テーマの Primary
-    DELETE, // 削除・破棄系：テーマの Error
-    ACTION  // 実行・出力系：テーマの Tertiary
+    /** 保存・確定系：テーマの Primary を使用 */
+    SAVE,
+    /** 削除・破棄系：テーマの Error を使用 */
+    DELETE,
+    /** 実行・出力系：テーマの Tertiary を使用 */
+    ACTION
 }
 
 /**
  * CareMemo 標準ダイアログコンテナ
+ *
+ * @param onDismissRequest ダイアログの外側をタップしたり戻るボタンを押した際のコールバック
+ * @param confirmButton 右側に配置されるポジティブアクションボタン（AppDialogConfirmButton 推奨）
+ * @param modifier 修飾子
+ * @param dismissButton 左側に配置されるネガティブアクションボタン（AppDialogDismissButton 推奨）
+ * @param icon タイトルの上に表示されるアイコン
+ * @param title ダイアログのタイトル
+ * @param text ダイアログの本文（AppDialogContent を使用することでスクロールに対応可能）
+ * @param shape ダイアログの形状
+ * @param containerColor 背景色
+ * @param iconContentColor アイコンの色
+ * @param titleContentColor タイトルの色
+ * @param textContentColor 本文の色
+ * @param tonalElevation トーンの高さ
+ * @param properties ダイアログのプロパティ（dismissOnClickOutside 等）
  */
 @Composable
 fun AppDialog(
@@ -90,7 +104,13 @@ fun AppDialog(
 
 /**
  * ダイアログ用の共通確定ボタン（ポジティブアクション）
- * 常に塗りつぶしボタン（Button）を使用し、視覚的に目立たせる。
+ * 常に塗りつぶしボタン（Button）を使用し、視覚的に目立たせます。
+ *
+ * @param text ボタンのラベル
+ * @param onClick クリック時のコールバック
+ * @param modifier 修飾子
+ * @param enabled 有効状態
+ * @param type ボタンの種類（色分けに影響）
  */
 @Composable
 fun AppDialogConfirmButton(
@@ -129,7 +149,11 @@ fun AppDialogConfirmButton(
 
 /**
  * ダイアログ用の共通キャンセル・閉じるボタン（ネガティブアクション）
- * 常に文字のみ（TextButton）とし、ポジティブアクションと対比させる。
+ * 常に文字のみ（TextButton）とし、ポジティブアクションと対比させます。
+ *
+ * @param text ボタンのラベル
+ * @param onClick クリック時のコールバック
+ * @param modifier 修飾子
  */
 @Composable
 fun AppDialogDismissButton(
@@ -147,6 +171,13 @@ fun AppDialogDismissButton(
 
 /**
  * ダイアログ内部の標準的なコンテンツエリア（スクロール補助付き）
+ *
+ * 縦方向に長いコンテンツが含まれる場合でも、ボタンエリアを固定したまま
+ * 内容のみをスクロール可能にします。
+ *
+ * @param modifier 修飾子
+ * @param text 本文として表示する文字列（簡易的な場合に使用）
+ * @param content 任意の Composable コンテンツ（複雑なレイアウトが必要な場合に使用）
  */
 @Composable
 fun AppDialogContent(
@@ -166,6 +197,7 @@ fun AppDialogContent(
             }
             content?.invoke()
         }
+        // スクロール可能なことを示すインジケータ（共通コンポーネント）を表示
         VerticalScrollIndicator(scrollState = scrollState, isCompact = true)
     }
 }

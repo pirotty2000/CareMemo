@@ -124,15 +124,18 @@ object PdfExporter {
 
         try {
             when (category) {
+                // 「身長・体重」「バイタル」「血糖値・HbA1c」
                 Category.HEIGHT_AND_WEIGHT, Category.BP_AND_PULSE, Category.GLUCOSE_AND_HBA1C -> {
                     drawHealthContent(pageContext, category, filteredRecords, order)
                 }
+                // 「所見メモ」
                 Category.CONDITION_AT_VISIT -> {
                     val casted = filteredRecords.filterIsInstance<ConditionAtVisit>()
                     val sorted =    if (order == ExportOrder.NEWEST_FIRST) casted.sortedByDescending { it.recordTime }
                                     else casted.sortedBy { it.recordTime }
                     drawConditionContent(pageContext, sorted, allPhotos)
                 }
+                // 「服薬管理」
                 Category.MEDICATION -> {
                     val casted = filteredRecords.filterIsInstance<MedicationRecord>()
                     drawMedicationContent(pageContext, casted)
@@ -158,7 +161,7 @@ object PdfExporter {
     }
 
     /**
-     * 健康記録系のコンテンツ（グラフ＋テーブル）を描画する。
+     * 「身長・体重」「バイタル」「血糖値・HbA1c」のコンテンツ（グラフ＋テーブル）を描画する。
      */
     private fun drawHealthContent(
         pageContext: PdfPageContext,
@@ -199,7 +202,7 @@ object PdfExporter {
     }
 
     /**
-     * 所見メモのコンテンツを描画する。
+     * 「所見メモ」のコンテンツを描画する。
      */
     private fun drawConditionContent(
         pageContext: PdfPageContext,
@@ -261,7 +264,7 @@ object PdfExporter {
     }
 
     /**
-     * 服薬記録のコンテンツを描画する（月間マトリックス）。
+     * 「服薬管理」のコンテンツを描画する（月間マトリックス）。
      */
     private fun drawMedicationContent(
         pageContext: PdfPageContext,
@@ -364,8 +367,11 @@ object PdfExporter {
         }
     }
 
-    // --- テーブル描画の各論 (Health) ---
+    // ---------------------------------------------------------------------------------------------
+    // 一覧表の描画
+    // ---------------------------------------------------------------------------------------------
 
+    // 「身長・体重」
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
         val hwSpec = AppSpecifications.Export.Pdf.TableConfig.HeightWeight
         val columns = listOf(
@@ -395,6 +401,7 @@ object PdfExporter {
         drawGenericTable(ctx, records, columns)
     }
 
+    // 「バイタル」
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
         val bpSpec = AppSpecifications.Export.Pdf.TableConfig.BpPulse
         val columns = listOf(
@@ -419,6 +426,7 @@ object PdfExporter {
         drawGenericTable(ctx, records, columns)
     }
 
+    // 「血糖値・HbA1c」
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
         val glSpec = AppSpecifications.Export.Pdf.TableConfig.Glucose
         val columns = listOf(
@@ -442,8 +450,11 @@ object PdfExporter {
         drawGenericTable(ctx, records, columns)
     }
 
-    // --- 共通部品とユーティリティ ---
+    // ---------------------------------------------------------------------------------------------
+    // 共通部品とユーティリティ
+    // ---------------------------------------------------------------------------------------------
 
+    // ヘッダー部分
     @Suppress("SameReturnValue")
     private fun drawHeader(ctx: PdfPageContext): Float {
         val paint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_PAGE_TITLE; isFakeBoldText = true }
@@ -461,8 +472,8 @@ object PdfExporter {
         return layoutSpec.HEADER_HEIGHT
     }
 
+    // 一覧表
     private data class TableColumn<T>(val header: String, val width: Float, val getBackgroundColor: ((T) -> Int?)? = null, val getValue: (T, Int) -> String)
-
     private fun <T> drawGenericTable(ctx: PdfPageContext, records: List<T>, columns: List<TableColumn<T>>) {
         val paint = Paint().apply { color = Color.BLACK; textSize = styleSpec.FONT_SIZE_TABLE_BODY; isAntiAlias = true; typeface = Typeface.MONOSPACE }
         val hp = Paint().apply { color = Color.BLACK; isFakeBoldText = true; textSize = styleSpec.FONT_SIZE_TABLE_HEADER; isAntiAlias = true }
@@ -489,6 +500,7 @@ object PdfExporter {
         }
     }
 
+    // 折れ線グラフの設定(データなど)
     private fun drawSingleGraphFromConfig(ctx: PdfPageContext, config: HealthChartConfig, height: Float, minX: Double?, maxX: Double?): Float {
         val lineDataList = config.dataList.map { line -> (line.points.map { it.x.toLong() to it.y }) to line.color.toArgb() }
         val ranges = config.ranges.map { (it.startValue to it.endValue) to it.color.toArgb() }
@@ -496,6 +508,7 @@ object PdfExporter {
         return drawSingleGraph(ctx.canvas, "${config.title} 推移", lineDataList, ctx.currentY, height, config.stepY, ranges, limits, !config.showDecimal, config.getSubtitleLines(), config.dataList.firstOrNull()?.unit ?: "", minX, maxX)
     }
 
+    // 折れ線グラフの描画
     private fun drawSingleGraph(canvas: Canvas, title: String, lineDataList: List<Pair<List<Pair<Long, Double>>, Int>>, startY: Float, height: Float, yStep: Double, ranges: List<Pair<Pair<Double, Double>, Int>>, limitLines: List<Triple<Double, DashPathEffect, String>>, isInteger: Boolean, subtitles: List<String>, unit: String, fixedMinX: Double?, fixedMaxX: Double?): Float {
         val paint = Paint().apply { isAntiAlias = true }
         paint.color = Color.BLACK; paint.textSize = 10f; paint.isFakeBoldText = true
@@ -567,6 +580,7 @@ object PdfExporter {
         return graphArea.bottom + 15f
     }
 
+
     private fun loadOptimizedBitmap(path: String, maxSize: Int): Bitmap? {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(path, options)
@@ -606,7 +620,15 @@ object PdfExporter {
         val items = records.filterIsInstance<HistoryRecord>()
         if (items.isEmpty()) return emptyList()
         val zone = ZoneId.systemDefault()
-        val getEffectiveTime: (HistoryRecord) -> Instant = { rec -> if (rec is MedicationRecord) { try { LocalDate.parse(rec.dosageDate).atStartOfDay(zone).toInstant() } catch (_: Exception) { rec.recordTime } } else rec.recordTime }
+        val getEffectiveTime: (HistoryRecord) -> Instant = { rec ->
+            if (rec is MedicationRecord) {
+                try {
+                    LocalDate.parse(rec.dosageDate).atStartOfDay(zone).toInstant()
+                } catch (_: Exception) {
+                rec.recordTime
+                }
+            } else rec.recordTime
+        }
         val sortedByEffective = items.sortedByDescending { getEffectiveTime(it) }
         if (range == ExportRange.LATEST) {
             val latest = sortedByEffective.firstOrNull() ?: return emptyList()

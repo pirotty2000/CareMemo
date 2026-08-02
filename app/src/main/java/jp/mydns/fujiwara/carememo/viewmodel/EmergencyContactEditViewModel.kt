@@ -36,7 +36,7 @@ sealed interface EmergencyContactViewEvent {
 }
 
 /**
- * 緊急連絡先管理画面 (SCR-M-003) および編集画面用の ViewModel
+ * 緊急連絡先管理画面(SCR-M-003)および編集画面(SCR-M-004)用の ViewModel
  */
 class EmergencyContactEditViewModel(
     private val personId: String,

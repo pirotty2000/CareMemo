@@ -3,21 +3,20 @@ package jp.mydns.fujiwara.carememo.ui.components.main
 /**
  * Component：CategoryBadges
  *
- * 【役割】：
- * 利用者の各カテゴリ（健康記録、所見メモ、服薬管理）における記録の有無を、色付きのバッジ（漢字一文字）で視覚的に表現する。
+ * 【役割】
+ * 利用者の各カテゴリ（健康記録、所見メモ、服薬管理）における記録の有無を、色付きの小型バッジ（漢字一文字）で視覚的に表現します。
  *
- * 【主な機能】：
- * ・「身」「バ」「糖」「メ」「薬」の各バッジを 2x2+1 のグリッド形式で表示。
- * ・記録データが存在する場合（isActive）は鮮やかなアクセントカラー、存在しない場合はグレーアウトして表示。
+ * 【主な機能】
+ * ・「身」「バ」「糖」「メ」「薬」の各バッジを 2x2+1 のグリッド形式でコンパクトに表示。
+ * ・記録データが存在する場合（isActive）は各カテゴリ固有のアクセントカラーで強調表示。
+ * ・記録データが存在しない場合はグレーアウト（透過表示）し、情報の有無を一目で判別可能にします。
+ * ・アクセシビリティ対応として、記録があるバッジには適切な読み上げテキスト（contentDescription）を付与。
  *
- * 【想定する利用場所】：
- * 利用者一覧画面（MainScreen）の各リストアイテム内。
+ * 【想定する利用場所】
+ * ・利用者一覧画面（MainScreen）の各リストアイテム内。
  *
- * 【このコンポーネントでは行わないこと】：
- * 個別の記録データの詳細表示や、バッジ自体のクリックイベント処理。
- *
- * 【公開composable】：
- * CategoryBadges
+ * 【このコンポーネントでは行わないこと】
+ * ・個別の記録データの詳細表示や、バッジ自体のクリックイベント処理。
  */
 
 import androidx.compose.foundation.layout.*
@@ -36,6 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 
+/**
+ * カテゴリバッジ一覧を表示するコンポーネント。
+ *
+ * @param summary 各カテゴリの記録有無を保持するサマリーデータ
+ * @param modifier 修飾子
+ */
 @Composable
 fun CategoryBadges(
     summary: PersonCategorySummary,
@@ -62,10 +67,19 @@ fun CategoryBadges(
     }
 }
 
+/**
+ * 個別のバッジ（漢字一文字）を描画するコンポーネント。
+ *
+ * @param text 表示する文字（例：「身」「薬」）
+ * @param isActive 記録が存在し、バッジを強調表示するかどうか
+ * @param color 記録あり（アクティブ）時の背景色
+ * @param contentDescription アクセシビリティ用の読み上げテキスト
+ */
 @Composable
 fun BadgeChar(text: String, isActive: Boolean, color: Color, contentDescription: String? = null) {
     Surface(
         shape = RoundedCornerShape(2.dp),
+        // 非アクティブ時は背景・文字ともに透過・グレーアウトさせて「情報の欠落」を表現
         color = if (isActive) color else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         contentColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
         modifier = Modifier

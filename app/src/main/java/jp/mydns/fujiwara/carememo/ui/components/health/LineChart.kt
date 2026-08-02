@@ -3,24 +3,23 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 /**
  * Component：LineChart
  *
- * 【役割】：
- * Canvas を使用して、時系列データの折れ線グラフを低レイヤーで描画する汎用エンジンを提供する。
+ * 【役割】
+ * Canvas を使用して、時系列データの折れ線グラフを低レイヤーで描画する汎用グラフエンジンを提供します。
+ * 標準のグラフライブラリに依存せず、アプリ固有のズーム・スクロール挙動とアクセシビリティを実現します。
  *
- * 【主な機能】：
+ * 【主な機能】
  * ・複数のデータ系列（dataList）の同時描画。
- * ・ピンチズームによるX軸の拡大・縮小、およびスワイプによるスクロール。
- * ・グラフ上の点をタップした際の詳細情報（ツールチップ）の表示。
- * ・目標値（limits）や背景ハイライト（ranges）の描画。
- * ・動的なY軸目盛りの計算と表示。
+ * ・ピンチズームによるX軸（時間軸）の拡大・縮小、およびスワイプによるスクロール。
+ * ・グラフ上の点をタップした際の詳細情報（ツールチップ）のオーバーレイ表示。
+ * ・判定基準に基づく背景ハイライト（ranges）および目標値等の補助線（limits）の描画。
+ * ・動的なY軸目盛りの計算と、軸外はみ出しのクリッピング制御。
+ * ・UIテスト検証用のセマンティクス（contentDescription）への数値出力。
  *
- * 【想定する利用場所】：
- * HealthGraphView 内、およびグラフ拡大表示画面。
+ * 【想定する利用場所】
+ * HealthGraphView（健康記録履歴）、GraphExpansionScreen（グラフ拡大表示）、PDF出力プレビュー。
  *
- * 【このコンポーネントでは行わないこと】：
- * データの加工ロジックや、カテゴリに応じた設定の生成（HealthChartHelper が担当）。
- *
- * 【公開composable】：
- * LineChart
+ * 【このコンポーネントでは行わないこと】
+ * データの加工ロジックや、カテゴリに応じた特定の設定生成（HealthChartHelper が担当）。
  */
 
 import android.annotation.SuppressLint
@@ -61,12 +60,31 @@ import java.util.*
 import kotlin.math.ceil
 import kotlin.math.floor
 
+/** グラフ上の1点を表すデータ */
 data class ChartPoint(val x: Double, val y: Double, val note: String? = null)
+/** 1つの折れ線（データ系列）を構成するデータ */
 data class ChartLineData(val label: String, val points: List<ChartPoint>, val color: Color, val unit: String = "")
+/** グラフ上に描画する水平補助線（目標値など） */
 data class ChartLimitLine(val label: String, val value: Double, val color: Color = Color.Gray, val isLabelAbove: Boolean)
+/** グラフ背景に描画するハイライト範囲 */
 data class ChartRangeHighlight(val startValue: Double, val endValue: Double, val color: Color)
+/** ユーザーに選択された点の詳細情報 */
 data class SelectedPoint(val x: Double, val y: Double, val color: Color, val label: String, val note: String? = null)
 
+/**
+ * 汎用折れ線グラフコンポーネント
+ *
+ * @param dataList 描画する系列データのリスト
+ * @param modifier 修飾子
+ * @param stepY Y軸のメモリ間隔
+ * @param limits 水平補助線のリスト
+ * @param ranges 背景ハイライトのリスト
+ * @param minYConstraint Y軸の最小表示値（nullの場合は自動計算）
+ * @param maxYConstraint Y軸の最大表示値（nullの場合は自動計算）
+ * @param fixedMinX X軸（時間）の最小値。複数グラフの軸を同期させる場合に使用。
+ * @param fixedMaxX X軸（時間）の最大値。複数グラフの軸を同期させる場合に使用。
+ * @param showDecimal Y軸の目盛りに小数を表示するかどうか
+ */
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun LineChart(
@@ -87,7 +105,7 @@ fun LineChart(
     val limitLabelStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Normal)
     val legendStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
-    // テストでの検証用に、描画される全テキストをセマンティクスに統合する
+    // UIテストでのデータ検証用に、グラフに含まれる全数値をセマンティクスに統合する
     val allLabelContent = remember(dataList, fixedMinX, fixedMaxX) {
         val labels = mutableListOf<String>()
         dataList.forEach { line ->
@@ -95,13 +113,13 @@ fun LineChart(
                 labels.add(if (showDecimal || stepY <= 1.0) "%.1f".format(p.y) else p.y.toInt().toString())
             }
         }
-        // 本来はX軸ラベル等も入れるべきだが、主要な数値のみで検証
         labels.joinToString(", ")
     }
 
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val axisColor = MaterialTheme.colorScheme.outline
     
+    // ズーム（scaleX）とスクロール（offsetX）の状態管理
     var scaleX by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var selectedPoint by remember { mutableStateOf<SelectedPoint?>(null) }
@@ -113,6 +131,7 @@ fun LineChart(
             .withZone(ZoneId.systemDefault())
     }
 
+    // 軸ラベル用の余白設定
     val paddingLeft = 40.dp
     val paddingTop = 20.dp
     val paddingBottom = 20.dp
@@ -126,10 +145,12 @@ fun LineChart(
     val allPoints = dataList.flatMap { it.points }
     if (allPoints.isEmpty() && (fixedMinX == null || fixedMaxX == null)) return
 
+    // X軸の範囲計算
     val minX = fixedMinX ?: (allPoints.minOfOrNull { it.x } ?: 0.0)
     val maxX = fixedMaxX ?: (allPoints.maxOfOrNull { it.x } ?: 0.0)
     val duration = if (maxX - minX == 0.0) 1.0 else maxX - minX
     
+    // Y軸の範囲計算（入力制約とデータの最大/最小を統合し、stepY 単位で丸める）
     val allYValues = if (allPoints.isNotEmpty()) {
         allPoints.map { it.y } + limits.map { it.value }
     } else {
@@ -151,10 +172,11 @@ fun LineChart(
         modifier = modifier
             .fillMaxSize()
             .semantics(mergeDescendants = true) { 
-                // テスト用に描画内容（数値文字列）を公開
+                // テスト用に描画内容の文字情報を公開
                 this.contentDescription = allLabelContent
             }
     ) {
+        // 凡例の表示（複数系列ある場合のみ）
         if (dataList.size > 1) {
             Box(modifier = Modifier.padding(start = paddingLeft, top = 4.dp, bottom = 4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -169,6 +191,7 @@ fun LineChart(
             }
         }
         Row(modifier = Modifier.weight(1f)) {
+            // Y軸ラベルの描画エリア
             Canvas(modifier = Modifier.width(paddingLeft).fillMaxHeight()) {
                 val chartHeight = size.height - paddingTopPx - paddingBottomPx
                 for (i in 0..yStepsCount) {
@@ -179,10 +202,12 @@ fun LineChart(
                     drawText(textLayout, topLeft = Offset(size.width - textLayout.size.width - 4.dp.toPx(), py - textLayout.size.height / 2))
                 }
             }
+            // グラフ本体の描画エリア（ジェスチャー対応）
             BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
                     .pointerInput(Unit) {
+                        // ズームとパンのジェスチャー処理
                         detectTransformGestures { _, pan, zoom, _ ->
                             scaleX = (scaleX * zoom).coerceAtLeast(1f)
                             val maxOffsetX = 0f
@@ -192,6 +217,7 @@ fun LineChart(
                         }
                     }
                     .pointerInput(Unit) {
+                        // タップ操作による詳細（ツールチップ）表示
                         detectTapGestures(
                             onDoubleTap = {
                                 scaleX = 1f
@@ -205,7 +231,7 @@ fun LineChart(
                                 val effectiveWidth = chartWidth - (horizontalPaddingPx * 2)
 
                                 var closest: SelectedPoint? = null
-                                var minDistance = with(density) { 24.dp.toPx() }
+                                var minDistance = with(density) { 24.dp.toPx() } // タップ判定の許容範囲
 
                                 dataList.forEach { lineData ->
                                     lineData.points.forEach { point ->
@@ -222,7 +248,7 @@ fun LineChart(
                                         }
                                     }
                                 }
-
+                                // トグル動作：同じ点をタップしたら閉じる
                                 selectedPoint = if (closest != null &&
                                     selectedPoint?.x == closest.x &&
                                     selectedPoint?.y == closest.y &&
@@ -235,7 +261,6 @@ fun LineChart(
                         )
                     }
             ) {
-                // BoxWithConstraintsScope の constraints を直接参照して Lint エラーを回避
                 val wPx = constraints.maxWidth.toFloat()
                 val hPx = constraints.maxHeight.toFloat()
 
@@ -245,7 +270,9 @@ fun LineChart(
                     val startX = leftBufferPx + offsetX
                     val effectiveWidth = chartWidth - (horizontalPaddingPx * 2)
 
+                    // clipRect により、スクロール時にグラフが軸の外側（ラベルエリアなど）に描画されないように制限
                     clipRect(left = leftBufferPx, top = 0f, right = size.width - rightBufferPx, bottom = size.height) {
+                        // 1. 背景ハイライトの描画
                         ranges.forEach { range ->
                             val pyStart = paddingTopPx + chartHeight - ((range.startValue - minY) / yRange).toFloat() * chartHeight
                             val pyEnd = paddingTopPx + chartHeight - ((range.endValue - minY) / yRange).toFloat() * chartHeight
@@ -260,6 +287,7 @@ fun LineChart(
                             }
                         }
 
+                        // 2. グリッド線（水平）の描画
                         for (i in 0..yStepsCount) {
                             val py = paddingTopPx + chartHeight - (i.toFloat() / yStepsCount) * chartHeight
                             drawLine(
@@ -270,6 +298,7 @@ fun LineChart(
                             )
                         }
                         
+                        // 3. X軸ラベルとグリッド線（垂直）の描画
                         val baseLabelCount = 4
                         val labelCount = (baseLabelCount * scaleX).toInt().coerceAtMost(20)
                         for (i in 0 until labelCount) {
@@ -289,6 +318,7 @@ fun LineChart(
                             }
                         }
 
+                        // 4. 水平補助線（limits）の描画
                         limits.forEach { limit ->
                             val py = paddingTopPx + chartHeight - ((limit.value - minY) / yRange).toFloat() * chartHeight
                             if (py in paddingTopPx..(paddingTopPx + chartHeight)) {
@@ -304,6 +334,7 @@ fun LineChart(
                             }
                         }
 
+                        // 5. データ系列（折れ線と点）の描画
                         dataList.forEach { lineData ->
                             val path = Path()
                             val sortedPoints = lineData.points.sortedBy { it.x }
@@ -316,7 +347,7 @@ fun LineChart(
                                 if (px in leftBufferPx..(size.width - rightBufferPx)) {
                                     drawCircle(lineData.color, radius = 3.dp.toPx(), center = Offset(px, py))
                                     
-                                    // 選択された点を強調
+                                    // 選択された点を強調表示
                                     if (selectedPoint?.x == point.x && selectedPoint?.y == point.y && selectedPoint?.color == lineData.color) {
                                         drawCircle(
                                             color = lineData.color,
@@ -326,6 +357,7 @@ fun LineChart(
                                         )
                                     }
 
+                                    // データラベル（数値）を各点の近傍に描画
                                     val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(point.y) else point.y.toInt().toString()
                                     val valueLayout = textMeasurer.measure(valueStr, valueLabelStyle.copy(color = lineData.color))
                                     drawText(valueLayout, topLeft = Offset(px - valueLayout.size.width / 2, py - valueLabelStyle.fontSize.toPx() - 2.dp.toPx()))
@@ -335,11 +367,12 @@ fun LineChart(
                         }
                     }
                     
+                    // L字型の軸線の描画
                     drawLine(axisColor, Offset(leftBufferPx, paddingTopPx), Offset(leftBufferPx, paddingTopPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                     drawLine(axisColor, Offset(leftBufferPx, paddingTopPx + chartHeight), Offset(size.width - rightBufferPx, paddingTopPx + chartHeight), strokeWidth = 1.5.dp.toPx())
                 }
 
-                // 吹き出し（ツールチップ）の表示
+                // 吹き出し（ツールチップ）の表示制御
                 selectedPoint?.let { point ->
                     val chartWidth = (wPx - leftBufferPx) * scaleX
                     val chartHeight = hPx - paddingTopPx - paddingBottomPx
@@ -355,6 +388,7 @@ fun LineChart(
                         Surface(
                             modifier = Modifier
                                 .offset {
+                                    // 吹き出しの幅と高さを考慮して配置位置を調整（画面端で切れないように coerceIn を使用）
                                     val tooltipWidth = if (dataList.size > 1) 120.dp.toPx() else 80.dp.toPx()
                                     val xOffset = (px - tooltipWidth / 2).toInt().coerceIn(
                                         0, 
@@ -377,7 +411,7 @@ fun LineChart(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 
-                                // 同一時刻(X軸)のデータを抽出して表示
+                                // 同一時刻(X軸)のデータを抽出して表示（血圧など）
                                 val pointsAtX = dataList.mapNotNull { lineData ->
                                     lineData.points.find { it.x == point.x }?.let { 
                                         Triple(lineData.label, it, lineData.color)
@@ -389,7 +423,6 @@ fun LineChart(
                                     val unit = lineData?.unit ?: ""
                                     val valueStr = if (showDecimal || stepY <= 1.0) "%.1f".format(p.y) else p.y.toInt().toString()
                                     
-                                    // 判定結果がある場合は、値の横に括弧書きで表示
                                     val noteSuffix = if (!p.note.isNullOrBlank()) " (${p.note})" else ""
                                     
                                     val displayText = when {
@@ -407,7 +440,7 @@ fun LineChart(
                                         color = color
                                     )
                                     
-                                    // 単一データかつ判定結果がある場合は、次行に表示
+                                    // 単一データかつ判定結果(note)がある場合は、次行に詳細を表示
                                     if (dataList.size == 1 && !p.note.isNullOrBlank()) {
                                         Text(
                                             text = p.note,

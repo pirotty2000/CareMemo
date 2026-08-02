@@ -5,38 +5,35 @@ import java.io.File
 import java.time.Instant
 
 /**
- * 迷子写真の分類
- */
-enum class OrphanedPhotoType {
-    /** DBレコードはあるが、condition_id が空（一時保存のまま放置） */
-    TEMPORARY,
-    /** DBレコードはあるが、親の所見メモが存在しない */
-    ORPHANED_RECORD,
-    /** 物理ファイルはあるが、DBレコードが存在しない */
-    FILE_ONLY
-}
-
-/**
- * 迷子写真の情報
- */
-data class OrphanedPhotoInfo(
-    val type: OrphanedPhotoType,
-    val photoId: String?,           // DBにある場合のみ
-    val personId: String?,          // DBにある場合のみ
-    val photoFileName: String,      // 物理ファイル名
-    val thumbnailFileName: String?,
-    val capturedAt: Instant,
-    val description: String
-)
-
-/**
- * メンテナンス機能（迷子写真管理）のドメインロジック
+ * Logic：ConditionMaintenanceLogic
+ *
+ * 【役割】
+ * 所見メモに関連するデータの整合性維持（メンテナンス）に関するドメインロジックを提供します。
+ * 主に、DBレコードと物理ストレージ上のファイルの不整合（迷子写真）を検出し、分類する役割を担います。
+ *
+ * 【主な機能】
+ * ・DBレコードと物理ファイルの突き合わせによる「迷子写真」の特定。
+ * ・不整合の原因に応じた分類（一時保存の放置、親記録の消失、未登録ファイル）。
+ * ・UI表示用のメタデータ（説明文、撮影日時）の構築。
+ *
+ * 【設計指針】
+ * 1. 本クラスは純粋なロジックのみを扱い、実際のファイル入出力やDBアクセスは行わない（引数として結果を受け取る）。
+ * 2. 物理ファイルのスキャンは、命名規則（img_ で始まる等）に基づき、メイン画像とサムネイルのペアを考慮して行う。
  */
 object ConditionMaintenanceLogic {
 
     /**
      * DBレコードと物理ファイルを突き合わせ、迷子写真を特定・分類します。
-     * ※このメソッドは純粋ロジックであり、I/O結果を引数として受け取ります。
+     *
+     * 分類ルール：
+     * 1. [OrphanedPhotoType.TEMPORARY]: DBにあるが、親の所見記録IDが空。
+     * 2. [OrphanedPhotoType.ORPHANED_RECORD]: DBにあるが、紐付け先の所見記録が既に削除されている。
+     * 3. [OrphanedPhotoType.FILE_ONLY]: ストレージにファイルはあるが、DBにレコードが存在しない。
+     *
+     * @param dbPhotos DBから取得された全写真レコードのリスト
+     * @param existingConditionIds 現在DBに存在する全所見記録のIDセット
+     * @param physicalFiles アプリの内部ストレージ（写真ディレクトリ）内の全ファイルリスト
+     * @return 検出された迷子写真情報のリスト（撮影日時の降順）
      */
     fun identifyOrphanedPhotos(
         dbPhotos: List<ConditionPhoto>,
@@ -51,7 +48,7 @@ object ConditionMaintenanceLogic {
             val type = when {
                 dbPhoto.conditionId.isEmpty() -> OrphanedPhotoType.TEMPORARY
                 dbPhoto.conditionId !in existingConditionIds -> OrphanedPhotoType.ORPHANED_RECORD
-                else -> null // 正常
+                else -> null // 正常な紐付け
             }
 
             if (type != null) {
@@ -74,7 +71,7 @@ object ConditionMaintenanceLogic {
         }
 
         // 2. 物理ファイルベースの分類 (FILE_ONLY)
-        // メイン画像 (img_xxx.jpg) のみを基準にスキャン
+        // メイン画像 (img_xxx.jpg) のみを基準にスキャンし、DBに名前がないものを抽出
         physicalFiles.filter { it.name.startsWith("img_") }.forEach { file ->
             if (file.name !in dbPhotoNames) {
                 results.add(
@@ -91,6 +88,7 @@ object ConditionMaintenanceLogic {
             }
         }
 
+        // 最新のものが上に来るようにソート
         return results.sortedByDescending { it.capturedAt }
     }
 }

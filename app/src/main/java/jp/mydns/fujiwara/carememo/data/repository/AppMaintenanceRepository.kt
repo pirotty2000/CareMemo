@@ -17,7 +17,23 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 /**
- * システムメンテナンス（バックアップ、リストア、全消去）を担当するリポジトリ
+ * Repository：AppMaintenanceRepository
+ *
+ * 【役割】
+ * アプリケーションのシステムメンテナンス（データのバックアップ、復元、全消去、および整合性修復）を担当します。
+ * 複数の DAO やファイルシステム、外部ストレージ（Uri）を横断的に操作し、アプリの状態を一括管理します。
+ *
+ * 【主な機能】
+ * ・DB 全体のエクスポート/インポート（JSON + 写真ファイルの ZIP 形式）。
+ * ・データの復元時におけるクレンジング（重複回避、生年月日正規化）。
+ * ・データベースの不整合（親を失った孤立レコード）のスキャンと一括修正。
+ * ・開発者向けのテスト用データ整合性破壊機能。
+ * ・全臨床データおよび監査ログの消去。
+ *
+ * 【設計指針】
+ * 1. 原始性：データの置き換えや削除は Room のトランザクション（withTransaction）内で行い、失敗時の状態を保証する。
+ * 2. 互換性：インポート時にはバックアップデータのバージョンチェックを行い、非互換なデータの混入を防止する。
+ * 3. 安全性：利用者データの一意制約を保護するため、インポート時に自動的に識別子を付記する救済ロジックを実装する。
  */
 class AppMaintenanceRepository(
     private val database: AppDatabase,
@@ -30,6 +46,11 @@ class AppMaintenanceRepository(
     private val medicationRecordDao: MedicationRecordDao,
     private val auditLogDao: AuditLogDao,
 ) {
+    /**
+     * 現在の DB 状態からバックアップ用のデータセット（DTO）を生成します。
+     *
+     * @return アプリ内の全 clinical データを保持する CareMemoBackup オブジェクト
+     */
     suspend fun getBackupData(): CareMemoBackup {
         return CareMemoBackup(
             version = 5, // UUID化に伴いバージョンアップ
@@ -46,14 +67,22 @@ class AppMaintenanceRepository(
 
     /**
      * バックアップデータをデータベースへ復元します。
-     * UUID化された新形式 (Version 5+) を前提としますが、クレンジング処理を継続して適用します。
+     * 既存のすべての臨床データ（監査ログ以外）を消去した上で、バックアップの内容を登録します。
+     *
+     * 処理ステップ：
+     * 1. 既存臨床データの全消去。
+     * 2. 利用者データのクレンジング（生年月日の正規化と、名前の重複に対する自動救済）。
+     * 3. 各健康記録および写真情報のバルクインサート。
+     * 4. 服薬記録のバリデーションフィルタリングと保存。
+     *
+     * @param backup 復元対象のバックアップデータ
      */
     suspend fun replaceAllData(backup: CareMemoBackup) {
         database.withTransaction {
             // 1. 既存データをクリア
             clearClinicalData()
             
-            // 2. DTO から Entity への単純マッピング（UUID をそのまま維持）
+            // 2. DTO から Entity へのマッピング（UUID は維持される）
             val persons = backup.persons.map { it.toEntity() }
             val heightAndWeights = backup.heightAndWeights.map { it.toEntity() }
             val bpAndPulses = backup.bpAndPulses.map { it.toEntity() }
@@ -62,7 +91,7 @@ class AppMaintenanceRepository(
             val conditionPhotos = backup.conditionPhotos.map { it.toEntity() }
             val medicationRecords = backup.medicationRecords.map { it.toEntity() }
 
-            // 3. 利用者データのクレンジング（生年月日の正規化と重複回避）
+            // 3. 利用者データのクレンジング
             val cleansedPersons = cleansePersonData(persons)
             personDao.insertAll(cleansedPersons)
 
@@ -80,7 +109,8 @@ class AppMaintenanceRepository(
     }
 
     /**
-     * アプリ内のすべてのデータを消去します（監査ログを含む）
+     * アプリ内のすべてのデータを完全に消去します。
+     * 臨床記録だけでなく、操作履歴（監査ログ）も対象となります。
      */
     suspend fun clearAllData() {
         database.withTransaction {
@@ -90,7 +120,8 @@ class AppMaintenanceRepository(
     }
 
     /**
-     * 利用者情報およびすべての臨床記録を消去します（監査ログは保持）
+     * 利用者情報およびすべての臨床記録を消去します。
+     * 監査ログは保持されます。
      */
     private suspend fun clearClinicalData() {
         medicationRecordDao.deleteAll()
@@ -104,8 +135,14 @@ class AppMaintenanceRepository(
 
     /**
      * 利用者データのクレンジングを行います。
-     * 1. 生年月日の時分秒を 00:00:00 (UTC) に正規化
-     * 2. 正規化の結果、一意制約に違反するデータが発生した場合、識別用メモを自動設定して救済
+     * 
+     * 【処理内容】
+     * 1. 生年月日の時分秒を 00:00:00 (UTC) に正規化します。
+     * 2. 正規化の結果、SQLite の一意制約（姓, 名, 生年月日, メモ）に違反するデータが発生した場合、
+     *    識別用メモ（[識別子:xxxx]）を自動設定してインポートの失敗を防ぎます。
+     *
+     * @param persons 処理対象の利用者リスト
+     * @return クレンジング後の利用者リスト
      */
     private fun cleansePersonData(persons: List<Person>): List<Person> {
         val seen = mutableSetOf<String>()
@@ -121,7 +158,7 @@ class AppMaintenanceRepository(
             var key = "${p.lastName}|${p.firstName}|${normalizedBirthday.toEpochMilli()}|$finalNote"
 
             if (seen.contains(key)) {
-                // 重複が発生した場合、救済措置としてメモに識別子を付記
+                // 重複が発生した場合、救済措置としてメモに短い UUID を付記
                 val identifier = UUID.randomUUID().toString().take(4)
                 val suffix = " [識別子:$identifier]"
                 finalNote = if (finalNote.length + suffix.length <= 255) {
@@ -140,11 +177,14 @@ class AppMaintenanceRepository(
 
     /**
      * データベースの不整合（孤立レコード）をスキャンします。
+     * 外部キー制約がありながら、論理削除等により親が事実上存在しなくなったレコードを特定します。
+     *
+     * @return 検出された不整合情報のリスト
      */
     suspend fun scanInconsistencies(): List<DatabaseInconsistency> {
         val result = mutableListOf<DatabaseInconsistency>()
 
-        // 各テーブルから親のいないレコードを取得
+        // 各テーブルから親のいない（利用者が存在しない）レコードを DAO 経由で取得
         heightAndWeightDao.getOrphanedRecords().forEach {
             result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, "利用者が存在しない身長・体重データ"))
         }
@@ -168,7 +208,9 @@ class AppMaintenanceRepository(
     }
 
     /**
-     * 検出された不整合レコードをすべて物理削除します。
+     * 検出された不整合レコードを物理削除します。
+     *
+     * @param inconsistencies 削除対象の不整合情報リスト
      */
     suspend fun cleanInconsistencies(inconsistencies: List<DatabaseInconsistency>) {
         database.withTransaction {
@@ -186,14 +228,15 @@ class AppMaintenanceRepository(
     }
 
     /**
-     * 【テスト用】あえて親のいない不整合レコードを挿入します。
+     * 【テスト用】意図的に外部キー制約に違反する不整合レコードを挿入します。
+     * scanInconsistencies の動作確認に使用します。
      */
     suspend fun insertTestInconsistency() = withContext(Dispatchers.IO) {
         val now = java.time.Instant.now().toEpochMilli()
         val db = database.openHelper.writableDatabase
         
         // PRAGMA foreign_keys はトランザクション内では変更できないため、
-        // 明示的な beginTransaction を使わずに実行します。
+        // 明示的な beginTransaction を使わずに実行
         try {
             // 一時的に外部キー制約を無効化
             db.execSQL("PRAGMA foreign_keys = OFF")
@@ -209,14 +252,20 @@ class AppMaintenanceRepository(
         }
     }
 
+    /** バックアップ用の JSON コンフィギュレーション */
     private val json = Json { 
         ignoreUnknownKeys = true 
         prettyPrint = true
-        encodeDefaults = true // デフォルト値（false等）も明示的に出力する
+        encodeDefaults = true // デフォルト値も明示的に出力することで将来の構造変更に備える
     }
 
     /**
-     * アプリ全体のデータをZIP形式でエクスポートします。
+     * アプリ全体のデータを ZIP 形式で外部ストレージへエクスポートします。
+     *
+     * @param context コンテキスト
+     * @param uri 保存先の Uri
+     * @param password ZIP 圧縮用のパスワード（null の場合はパスワードなし）
+     * @param onProgress 進捗状況を通知するコールバック (0-100)
      */
     suspend fun exportData(context: Context, uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
         val backup = getBackupData()
@@ -226,19 +275,22 @@ class AppMaintenanceRepository(
         tempDir.mkdirs()
         
         try {
-            // 元々の仕様に合わせて backup.json という名称で出力
+            // JSON データの出力
             val dataFile = File(tempDir, "backup.json")
             dataFile.writeText(jsonString)
             
+            // 写真ディレクトリの取得と追加
             val photosDir = ImageUtils.getPhotosDirPublic(context)
             val filesToZip = mutableListOf(dataFile)
             if (photosDir.exists() && photosDir.listFiles()?.isNotEmpty() == true) {
                 filesToZip.add(photosDir)
             }
             
+            // ZIP アーカイブの生成
             val tempZipFile = File(context.cacheDir, "export.zip")
             ZipUtils.zip(filesToZip, tempZipFile, password, onProgress)
             
+            // 外部ストレージへの書き出し
             context.contentResolver.openOutputStream(uri)?.use { output ->
                 tempZipFile.inputStream().use { input ->
                     input.copyTo(output)
@@ -246,12 +298,20 @@ class AppMaintenanceRepository(
             }
             tempZipFile.delete()
         } finally {
+            // 一時ディレクトリの清掃
             tempDir.deleteRecursively()
         }
     }
 
     /**
-     * ZIP形式のバックアップからデータをインポート（復元）します。
+     * 外部の ZIP バックアップからデータをインポートし、現在のアプリ状態を復元します。
+     *
+     * @param context コンテキスト
+     * @param uri 読み込み元の Uri
+     * @param password ZIP 解凍用のパスワード
+     * @param isDeveloperMode 開発者モードが有効か（バージョン不一致時の強制復元に関係）
+     * @param onProgress 進捗状況を通知するコールバック (0-100)
+     * @throws IOException ファイル読み込み失敗、解析失敗、またはバージョン非互換時にスロー
      */
     suspend fun importData(
         context: Context,
@@ -260,6 +320,7 @@ class AppMaintenanceRepository(
         isDeveloperMode: Boolean = false,
         onProgress: (Int) -> Unit = {}
     ) = withContext(Dispatchers.IO) {
+        // 1. Uri から一時ファイルへ ZIP をコピー
         val tempZipFile = File(context.cacheDir, "import.zip")
         context.contentResolver.openInputStream(uri)?.use { input ->
             tempZipFile.outputStream().use { output ->
@@ -271,13 +332,13 @@ class AppMaintenanceRepository(
         tempDir.mkdirs()
         
         try {
+            // 2. ZIP の解凍
             ZipUtils.unzip(tempZipFile, tempDir, password, onProgress)
             
-            // 探索対象のディレクトリ（ZIPの圧縮のされ方によって階層が深くなる場合があるため）
+            // 3. データの探索（解凍後のディレクトリ構造に対応）
             val searchDirs = mutableListOf(tempDir)
             tempDir.listFiles()?.filter { it.isDirectory }?.let { searchDirs.addAll(it) }
 
-            // 互換性のため backup.json を優先し、なければ data.json を探す
             var dataFile: File? = null
             for (dir in searchDirs) {
                 val f = File(dir, "backup.json").takeIf { it.exists() }
@@ -290,6 +351,7 @@ class AppMaintenanceRepository(
             
             if (dataFile == null) throw IOException("バックアップデータ(backup.json)が見つかりません。")
             
+            // 4. JSON のパースとバージョンチェック
             val jsonString = dataFile.readText()
             val backup = try {
                 json.decodeFromString(CareMemoBackup.serializer(), jsonString)
@@ -297,7 +359,6 @@ class AppMaintenanceRepository(
                 throw IOException("データの解析に失敗しました。ファイルが破損しているか、形式が異なります。", e)
             }
             
-            // アプリバージョンの互換性チェック（SettingsLogic を使用）
             val versionResult = jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic.validateVersion(
                 backupVersionCode = backup.appVersionCode,
                 currentVersionCode = BuildConfig.VERSION_CODE,
@@ -308,12 +369,11 @@ class AppMaintenanceRepository(
                 throw IOException("バックアップの作成バージョン(${backup.appVersionCode})が現在のアプリ(${BuildConfig.VERSION_CODE})より新しいため復元できません。")
             }
 
-            // データの置き換え実行
+            // 5. DB データの全置換実行
             replaceAllData(backup)
             
-            // 写真の差し替え
+            // 6. 写真ファイルの差し替え
             val photosDir = ImageUtils.getPhotosDirPublic(context)
-            // JSONファイルと同じ階層にある photos ディレクトリを探す
             val importedPhotosDir = File(dataFile.parentFile, AppSpecifications.Condition.Photo.DIR_NAME)
             
             if (importedPhotosDir.exists()) {

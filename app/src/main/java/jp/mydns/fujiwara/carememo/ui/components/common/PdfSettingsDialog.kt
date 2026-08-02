@@ -1,27 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
-/**
- * Component：PdfSettingsDialog
- *
- * 【役割】：
- * PDFを出力する際の詳細設定（期間、並び順、セキュリティ等）をユーザーが指定するためのダイアログを提供する。
- *
- * 【主な機能】：
- * ・抽出範囲の選択（全期間、直近、カスタム期間指定など）。
- * ・日付選択（DatePicker）によるカスタム期間の指定。
- * ・並び順（昇順/降順）および写真を含めるかどうかの設定。
- * ・出力されるPDFに対するパスワード保護（6桁以上）の設定。
- *
- * 【想定する利用場所】：
- * 各カテゴリ（健康、所見、服薬）の詳細画面からのPDF出力時。
- *
- * 【このコンポーネントでは行わないこと】：
- * 実際のPDF生成処理（PdfExporter が担当）。
- *
- * 【公開composable】：
- * PdfSettingsDialog
- */
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -46,20 +24,57 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * PDFの抽出範囲を定義する列挙型
+ */
 enum class ExportRange(val displayNameRes: Int) {
+    /** 全期間 */
     ALL(R.string.export_range_all),
+    /** 最新の1件のみ（所見メモ用） */
     LATEST(R.string.export_range_latest),
+    /** 直近1ヶ月 */
     ONE_MONTH(R.string.export_range_one_month),
+    /** 直近3ヶ月 */
     THREE_MONTHS(R.string.export_range_three_months),
+    /** 直近6ヶ月 */
     SIX_MONTHS(R.string.export_range_six_months),
+    /** カスタム期間指定 */
     CUSTOM(R.string.export_range_custom)
 }
 
+/**
+ * PDFの並び順を定義する列挙型
+ */
 enum class ExportOrder(val displayNameRes: Int) {
+    /** 日付の新しい順（降順） */
     NEWEST_FIRST(R.string.export_order_newest),
+    /** 日付の古い順（昇順） */
     OLDEST_FIRST(R.string.export_order_oldest)
 }
 
+/**
+ * Component：PdfSettingsDialog
+ *
+ * 【役割】
+ * PDFを出力する際の詳細設定（期間、並び順、セキュリティ等）をユーザーが指定するためのダイアログを提供します。
+ *
+ * 【主な機能】
+ * ・抽出範囲の選択（全期間、直近、カスタム期間指定など）。
+ * ・DatePicker によるカスタム期間（開始日・終了日）の指定。
+ * ・並び順（昇順/降順）および写真を含めるかどうかの設定。
+ * ・出力されるPDFに対するパスワード保護の設定（生体認証連携）。
+ *
+ * 【想定する利用場所】
+ * 各カテゴリ（健康、所見、服薬）の詳細画面からのPDF出力時。
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際のPDF生成処理（PdfExporter および PdfExportActionHandler が担当）。
+ *
+ * @param category 対象のカテゴリ
+ * @param onDismiss ダイアログを閉じる際のコールバック
+ * @param onRequireAuthentication セキュリティ設定の変更やパスワード表示に際して認証が必要な場合に呼び出されるコールバック
+ * @param onExport 設定完了後にPDF生成を開始するためのコールバック
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfSettingsDialog(
@@ -76,12 +91,13 @@ fun PdfSettingsDialog(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
-    // パスワード設定用 (デフォルトONに変更)
+    // パスワード設定用 (デフォルトONで、保護を推奨)
     var protectWithPassword by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     val isPasswordValid = password.length >= AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH
 
+    // --- 日付選択ダイアログ（開始日） ---
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDate ?: endDate ?: System.currentTimeMillis())
         DatePickerDialog(
@@ -100,6 +116,7 @@ fun PdfSettingsDialog(
             DatePicker(state = datePickerState)
         }
     }
+    // --- 日付選択ダイアログ（終了日） ---
     if (showEndDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endDate ?: startDate ?: System.currentTimeMillis())
         DatePickerDialog(
@@ -127,7 +144,7 @@ fun PdfSettingsDialog(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // --- セキュリティ（最上位に移動） ---
+                    // --- セキュリティ（最上位に配置） ---
                     Text(stringResource(R.string.security), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     Row(
                         modifier = Modifier
@@ -140,7 +157,7 @@ fun PdfSettingsDialog(
                                         protectWithPassword = true
                                         isPasswordVisible = false
                                     } else {
-                                        // OFFにする場合は認証を求める（責務を呼び出し元に委譲）
+                                        // OFFにする場合は認証を求める（誤操作による保護解除を防止）
                                         onRequireAuthentication(
                                             R.string.security_auth_title,
                                             R.string.security_auth_reason_change_settings
@@ -157,7 +174,7 @@ fun PdfSettingsDialog(
                         Text(stringResource(R.string.protect_pdf_with_password))
                         Switch(
                             checked = protectWithPassword,
-                            onCheckedChange = null // 行側の toggleable で制御するため null に設定
+                            onCheckedChange = null // 行側の toggleable で制御
                         )
                     }
 
@@ -183,7 +200,7 @@ fun PdfSettingsDialog(
                                     if (isPasswordVisible) {
                                         isPasswordVisible = false
                                     } else {
-                                        // 認証を求める（責務を呼び出し元に委譲）
+                                        // パスワードを表示する場合は認証を求める
                                         onRequireAuthentication(
                                             R.string.security_auth_title,
                                             R.string.security_auth_reason_show_password
@@ -207,7 +224,7 @@ fun PdfSettingsDialog(
                     Text(stringResource(R.string.extract_range), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     ExportRange.entries
                         .filter { range ->
-                            // 「最新の1件のみ」は所見メモ以外では除外する（意味がないため）
+                            // 「最新の1件のみ」は所見メモ以外では意味がないため除外
                             if (range == ExportRange.LATEST) {
                                 category == Category.CONDITION_AT_VISIT
                             } else {
@@ -231,6 +248,8 @@ fun PdfSettingsDialog(
                                 Text(text = stringResource(range.displayNameRes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
+                    
+                    // カスタム期間選択時の日付ボタン表示
                     if (selectedRange == ExportRange.CUSTOM) {
                         Row(
                             modifier = Modifier
@@ -249,6 +268,7 @@ fun PdfSettingsDialog(
                         }
                     }
 
+                    // --- オプション（写真の有無など） ---
                     if (category.hasOption) {
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         Row(
@@ -266,7 +286,7 @@ fun PdfSettingsDialog(
                             Text(stringResource(R.string.include_photos))
                             Switch(
                                 checked = includePhotos,
-                                onCheckedChange = null // 行側の toggleable で制御
+                                onCheckedChange = null
                             )
                         }
                     }
@@ -310,7 +330,9 @@ fun PdfSettingsDialog(
                     )
                 },
                 enabled = run {
+                    // カスタム期間の場合は少なくとも片方の入力が必要
                     val isCustomRangeValid = if (selectedRange == ExportRange.CUSTOM) (startDate != null || endDate != null) else true
+                    // パスワード保護時は桁数チェックを通過している必要がある
                     val isPasswordSetupValid = if (protectWithPassword) isPasswordValid else true
                     isCustomRangeValid && isPasswordSetupValid
                 }

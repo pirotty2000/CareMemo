@@ -1,27 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
-/**
- * Component：HistoryComponents
- *
- * 【役割】：
- * 時系列の履歴リストを表示するための、アプリ共通の基盤コンポーネントを提供する。
- *
- * 【主な機能】：
- * ・日付ごとの自動グルーピングと、粘着ヘッダー（stickyHeader）による視認性の向上。
- * ・スワイプによる削除操作（SwipeToDismissBox）の標準実装。
- * ・選択状態に応じた背景色の変更管理。
- * ・リストアイテムの内容を外部から自由に定義できるスロット（itemContent）の提供。
- *
- * 【想定する利用場所】：
- * 健康記録、所見メモなどの履歴リスト表示箇所。
- *
- * 【このコンポーネントでは行わないこと】：
- * 個別の記録データの具体的な描画（具体的な表示内容は呼び出し側が Composable として提供する）。
- *
- * 【公開composable】：
- * PersonHistoryList, HistoryItemWrapper
- */
-
 import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -48,13 +26,36 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import java.time.ZoneId
 
 /**
- * PersonHistoryList (履歴リストの枠)
- *  └─ HistoryItemWrapper (共通の振る舞い：スワイプ・選択・枠)
- *      └─ (別ファイル)HealthHistoryItemBody (健康記録専用の中身)
+ * Component：HistoryComponents
+ *
+ * 【役割】
+ * 時系列の履歴リストを表示するための、アプリ共通の基盤コンポーネントを提供します。
+ *
+ * 【主な機能】
+ * ・日付ごとの自動グルーピングと、粘着ヘッダー（stickyHeader）による視認性の向上。
+ * ・スワイプによる削除操作（SwipeToDismissBox）の標準実装。
+ * ・選択状態に応じた背景色の変更管理。
+ * ・リストアイテムの内容を外部から自由に定義できるスロット（itemContent）の提供。
+ *
+ * 【想定する利用場所】
+ * 健康記録、所見メモ、服薬記録などの履歴リスト表示箇所。
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 個別の記録データの具体的な描画（具体的な表示内容は呼び出し側が Composable として提供する）。
  */
 
 /**
  * 利用者情報の履歴リストを表示する汎用コンポーネント
+ *
+ * 内部でデータを日付単位にグルーピングし、日付見出し（stickyHeader）を付けて表示します。
+ *
+ * @param records 表示対象の履歴レコードリスト
+ * @param selectedRecordId 現在選択（強調）されているレコードのID
+ * @param onItemClick アイテムがタップされた際のコールバック
+ * @param onDeleteSwipe アイテムがスワイプ削除された際のコールバック
+ * @param isAnyDialogOpen ダイアログが開いているかどうか。開いた際にスワイプ状態をリセットするために使用。
+ * @param lazyListState リストのスクロール状態
+ * @param itemContent 各レコードの具体的な表示内容を定義する Composable スロット
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -67,19 +68,22 @@ fun PersonHistoryList(
     lazyListState: LazyListState = rememberLazyListState(),
     itemContent: @Composable (HistoryRecord) -> Unit
 ) {
+    // 記録を日付ごとにグループ化し、日付の降順（新しい順）かつ同一日は時刻の昇順でソート
     val groupedRecords = remember(records) {
         records.groupBy { it.recordTime.atZone(ZoneId.systemDefault()).toLocalDate() }
             .mapValues { entry -> entry.value.sortedBy { it.recordTime } }
             .toSortedMap(compareByDescending { it })
     }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag("PersonHistoryList"),
         state = lazyListState,
-        contentPadding = PaddingValues(bottom = 80.dp)
+        contentPadding = PaddingValues(bottom = 80.dp) // 下部のFABと重ならないよう余白を確保
     ) {
         groupedRecords.forEach { (date, items) ->
             val isSingle = items.size == 1
-            // スティッキー・ヘッダー
+            
+            // 日付区切り（スクロール時も画面上部に固定されるスティッキー・ヘッダー）
             stickyHeader {
                 Surface(
                     modifier = Modifier.fillMaxWidth().testTag("HistoryList_Header_${date}"),
@@ -98,8 +102,8 @@ fun PersonHistoryList(
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        // 同一日に1件しかない場合は、ヘッダーに時刻を表示して一覧性を高める
                         if (isSingle) {
-                            // ヘッダー右側：時刻
                             Text(
                                 text = formatTime(items.first().recordTime),
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
@@ -109,13 +113,15 @@ fun PersonHistoryList(
                     }
                 }
             }
-            // アイテム（健康記録・所見メモで共用）
+
+            // 個別の履歴アイテム
             items(items.size, key = { items[it].id }) { index ->
                 val record = items[index]
                 val isSelected = record.id == selectedRecordId
+                
                 HistoryItemWrapper(
                     record = record,
-                    showTime = !isSingle,
+                    showTime = !isSingle, // 同一日に複数ある場合のみ、アイテム内に時刻を表示
                     isSelected = isSelected,
                     onItemClick = { onItemClick(record) },
                     onDeleteSwipe = { onDeleteSwipe(record) },
@@ -124,6 +130,7 @@ fun PersonHistoryList(
                 ) {
                     itemContent(record)
                 }
+                
                 HorizontalDivider(
                     thickness = 0.5.dp,
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -134,7 +141,16 @@ fun PersonHistoryList(
 }
 
 /**
- * 履歴アイテムの枠組み（スワイプ削除、選択状態の背景管理）
+ * 履歴アイテムの枠組み（スワイプ削除、選択状態の背景管理、共通レイアウト）
+ *
+ * @param record 対象のレコード
+ * @param showTime アイテム内に時刻を表示するかどうか
+ * @param isSelected 選択状態かどうか
+ * @param onItemClick クリック時のコールバック
+ * @param onDeleteSwipe スワイプ削除時のコールバック
+ * @param isAnyDialogOpen 他のダイアログが表示された際に、スワイプ状態を閉じるために使用
+ * @param modifier 修飾子
+ * @param content アイテム内部のコンテンツ（itemContent から渡される）
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,15 +165,23 @@ fun HistoryItemWrapper(
     content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
+
+    // スワイプ完了時に削除処理を実行
     LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) onDeleteSwipe()
+        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+            onDeleteSwipe()
+        }
     }
+
+    // 他のダイアログ（削除確認など）が開いた際、または閉じられた際、スワイプが開いたままなら閉じる
+    // これにより、削除キャンセル後にアイテムが「スワイプされたまま」になるのを防ぐ
     LaunchedEffect(isAnyDialogOpen) {
         if (!isAnyDialogOpen && (dismissState.currentValue != SwipeToDismissBoxValue.Settled)) {
             dismissState.snapTo(SwipeToDismissBoxValue.Settled)
         }
     }
 
+    // 選択状態に応じたコンテナ色の決定
     val containerColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
     } else {
@@ -166,7 +190,7 @@ fun HistoryItemWrapper(
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = false,
+        enableDismissFromStartToEnd = false, // 左から右へのスワイプは無効
         modifier = modifier,
         backgroundContent = {
             val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
@@ -198,6 +222,7 @@ fun HistoryItemWrapper(
                     .fillMaxWidth()
                     .padding(start = 12.dp, top = 8.dp, end = 16.dp, bottom = 8.dp)
             ) {
+                // 必要に応じて時刻を表示
                 if (showTime) {
                     Text(
                         text = formatTime(record.recordTime),
@@ -206,6 +231,7 @@ fun HistoryItemWrapper(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
+                // 外部から渡された具体的な内容を描画
                 content()
             }
         }

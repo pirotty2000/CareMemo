@@ -3,23 +3,21 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 /**
  * Component：HealthChartHelper
  *
- * 【役割】：
- * 健康記録のグラフ描画に必要なデータ変換、設定生成、および配色 management を行うユーティリティ.
+ * 【役割】
+ * 健康記録のグラフ描画に必要なデータ変換、設定生成、および配色管理を行うユーティリティです。
+ * 描画ロジック（Canvas操作）とビジネスロジック（判定基準）の橋渡しを担います。
  *
- * 【主な機能】：
- * ・各健康カテゴリ（血圧、血糖値、BMI等）に応じたグラフ設定（HealthChartConfig）の生成.
- * ・原材料データ（HistoryRecord 等）からグラフ用座標データ（ChartPoint）への変換.
- * ・各テーマ（ライト/ダーク）に最適化したグラフ背景のハイライト色の定義.
- * ・判定基準（AppSpecifications）に基づくアラート範囲（VisualRange）のグラフ用マッピング.
+ * 【主な機能】
+ * ・各健康カテゴリ（血圧、血糖値、BMI等）に応じたグラフ設定（HealthChartConfig）の生成。
+ * ・原材料データ（HistoryRecord 等）からグラフ用座標データ（ChartPoint）への変換。
+ * ・各テーマ（ライト/ダーク）に最適化したグラフ背景のハイライト色の定義。
+ * ・判定基準（AppSpecifications）に基づくアラート範囲（VisualRange）のグラフ用マッピング。
  *
- * 【想定する利用場所】：
- * HealthGraphView, GraphExpansionScreen, PdfExporter.
+ * 【想定する利用場所】
+ * HealthGraphView（履歴画面のグラフ）、GraphExpansionScreen（拡大グラフ）、PdfExporter（PDF帳票出力）。
  *
- * 【このコンポーネントでは行わないこと】：
- * Canvas を用いた直接の描画処理（LineChart が担当）.
- *
- * 【公開composable】：
- * なし（ロジッククラス）
+ * 【このコンポーネントでは行わないこと】
+ * Canvas を用いた直接の描画処理（LineChart コンポーネントが担当）。
  */
 
 import android.content.Context
@@ -33,12 +31,27 @@ import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.theme.getHighlightColor
 
 /**
- * グラフ描画用の範囲定義
+ * グラフ描画用の視覚的範囲定義。
+ * 特定の値の範囲に対して、警告レベルに応じた背景ハイライトを適用するために使用します。
+ *
+ * @param start 範囲の開始値（下限）
+ * @param end 範囲の終了値（上限）
+ * @param level 対応するアラートレベル
  */
 data class VisualRange(val start: Double, val end: Double, val level: HealthAlertLevel)
 
 /**
- * グラフ描画用の設定情報を保持するクラス
+ * グラフ描画に必要なすべての設定情報を保持するデータクラス。
+ *
+ * @param title グラフのタイトル
+ * @param helpContent グラフの意味や判定基準を説明するテキスト（改行区切り）
+ * @param dataList 描画するデータ系列（折れ線）のリスト
+ * @param ranges 背景に描画する色付きの範囲ハイライト
+ * @param limits 目安として描画する補助線（上限線など）
+ * @param stepY Y軸のメモリ間隔
+ * @param minYConstraint Y軸の最小表示値（null の場合はデータから自動計算）
+ * @param maxYConstraint Y軸の最大表示値（null の場合はデータから自動計算）
+ * @param showDecimal Y軸のラベルに小数を表示するかどうか
  */
 data class HealthChartConfig(
     val title: String,
@@ -52,7 +65,8 @@ data class HealthChartConfig(
     val showDecimal: Boolean = false
 ) {
     /**
-     * サブタイトル（ヒント）を行ごとのリストとして取得する
+     * ヘルプコンテンツ（解説文）を行ごとのリストとして取得します。
+     * ダイアログ等でのリスト表示に使用します。
      */
     fun getSubtitleLines(): List<String> =
         if (helpContent.isNotBlank()) {
@@ -60,10 +74,17 @@ data class HealthChartConfig(
         } else emptyList()
 }
 
+/**
+ * 健康記録グラフの生成を支援するシングルトンオブジェクト。
+ */
 object HealthChartHelper {
 
     /**
-     * 全データを通じた共通のX軸（時間軸）の範囲を計算します
+     * 全データを通じた共通のX軸（時間軸）の範囲を計算します。
+     * 複数のグラフを同じ時間軸で並べる際の同期に使用します。
+     *
+     * @param records 履歴レコードのリスト
+     * @return 開始時間と終了時間のペア (エポックミリ秒の Double 値)
      */
     fun calculateGlobalXRange(records: List<Any>): Pair<Double?, Double?> {
         val allTimes = records.filterIsInstance<HistoryRecord>()
@@ -73,19 +94,29 @@ object HealthChartHelper {
     }
 
     /**
-     * カテゴリーごとのグラフ数を返します
+     * 指定されたカテゴリで表示すべきグラフの総数を返します。
+     *
+     * @param category 健康カテゴリ
+     * @return グラフの数
      */
     fun getGraphCount(category: Category): Int {
         return when (category) {
-            Category.BP_AND_PULSE -> 4
-            Category.GLUCOSE_AND_HBA1C -> 2
-            Category.HEIGHT_AND_WEIGHT -> 2
+            Category.BP_AND_PULSE -> 4 // 血圧、酸素飽和度、脈拍、体温
+            Category.GLUCOSE_AND_HBA1C -> 2 // 血糖値、HbA1c
+            Category.HEIGHT_AND_WEIGHT -> 2 // 体重、BMI
             Category.CONDITION_AT_VISIT, Category.MEDICATION -> 0
         }
     }
 
     /**
-     * 指定されたカテゴリーとインデックスに対応するグラフ設定を生成します
+     * 指定されたカテゴリとインデックスに対応するグラフ詳細設定（HealthChartConfig）を生成します。
+     *
+     * @param context Android コンテキスト（文字列リソース取得用）
+     * @param category カテゴリ
+     * @param index カテゴリ内でのグラフのインデックス
+     * @param records 全履歴データ
+     * @param isDark ダークモードかどうか（配色決定に使用）
+     * @return グラフ設定オブジェクト。該当がない場合は null。
      */
     fun getChartConfig(
         context: Context,
@@ -102,6 +133,9 @@ object HealthChartHelper {
         }
     }
 
+    /**
+     * 内部用：VisualRange リストをグラフ描画用の ChartRangeHighlight リストに変換します。
+     */
     private fun mapRanges(ranges: List<VisualRange>, isDark: Boolean): List<ChartRangeHighlight> {
         return ranges.map {
             val color = it.level.getHighlightColor(isDark)
@@ -109,13 +143,18 @@ object HealthChartHelper {
         }
     }
 
+    /**
+     * 内部用：HealthDisplayMapper の定義をグラフ描画用の ChartLimitLine リストに変換します。
+     */
     private fun mapLimits(limits: List<HealthDisplayMapper.GraphLimit>): List<ChartLimitLine> {
         return limits.map {
-            // ラベルに「上限」が含まれていれば線の上に、そうでなければ下にラベルを表示する
+            // ラベルの内容に基づき、線の上下どちらに文字を表示するかを決定
             val isAbove = it.label.contains("上限")
             ChartLimitLine(it.label, it.value, isLabelAbove = isAbove)
         }
     }
+
+    // --- 判定基準に基づく範囲定義の取得メソッド群 ---
 
     private fun getBpRanges(): List<VisualRange> {
         val spec = AppSpecifications.Health.BloodPressure
@@ -192,6 +231,8 @@ object HealthChartHelper {
             VisualRange(spec.THRESHOLD_OBESITY_3, graph.RANGE_MAX, HealthAlertLevel.ALERT)
         )
     }
+
+    // --- 各カテゴリの具体的なグラフ設定生成ロジック ---
 
     private fun getBpAndPulseConfig(context: Context, index: Int, data: List<BpAndPulse>, isDark: Boolean): HealthChartConfig? {
         val sortedData = data.sortedBy { it.recordTime }

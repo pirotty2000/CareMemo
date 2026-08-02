@@ -9,13 +9,30 @@ import androidx.security.crypto.MasterKey
 import java.security.SecureRandom
 
 /**
- * データベース暗号化用のパスフレーズを安全に管理するクラス
+ * Data：DatabaseKeyManager
+ *
+ * 【役割】
+ * SQLCipher によるデータベース暗号化に使用する「パスフレーズ（暗号化鍵）」を安全に生成・保持・管理します。
+ *
+ * 【主な機能】
+ * ・Android Keystore System と連携したマスターキーの管理。
+ * ・暗号化された SharedPreference (EncryptedSharedPreferences) を用いた鍵の永続化。
+ * ・初回起動時における 256ビット（32バイト）のセキュアなランダム鍵の自動生成。
+ *
+ * 【設計指針】
+ * 1. データベースの物理ファイルが盗難された場合でも、鍵がデバイス内の安全な領域（Keystore）に
+ *    隔離されていることで、データの機密性を担保する。
+ * 2. 開発者が直接パスフレーズを指定するのではなく、デバイスごとに固有のランダム値を生成することで、
+ *    ソースコードからの鍵漏洩リスクを排除する。
  */
 class DatabaseKeyManager(context: Context) {
+    
+    /** 鍵を暗号化するためのマスターキー（Android Keystore により保護される） */
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
+    /** 鍵自体を安全に保存するための暗号化済み SharedPreference */
     private val sharedPrefs = EncryptedSharedPreferences.create(
         context,
         "db_key_prefs",
@@ -25,16 +42,22 @@ class DatabaseKeyManager(context: Context) {
     )
 
     /**
-     * 保存されているパスフレーズを取得するか、存在しない場合は新規生成して保存します。
+     * データベース暗号化用のパスフレーズを取得します。
+     * まだ生成されていない（初回利用時）場合は、新規に生成して安全に保存します。
+     *
+     * @return 32バイト（256ビット）のバイナリ形式のパスフレーズ
      */
     fun getOrCreatePassphrase(): ByteArray {
         val key = sharedPrefs.getString("db_passphrase", null)
         return if (key != null) {
+            // 保存済みの鍵を Base64 デコードして復元
             Base64.decode(key, Base64.DEFAULT)
         } else {
-            // 256ビット（32バイト）のランダムなキーを生成
+            // 新規生成：256ビット（32バイト）の暗号学的に強力なランダム値を生成
             val newKey = ByteArray(32).apply { SecureRandom().nextBytes(this) }
             val encoded = Base64.encodeToString(newKey, Base64.DEFAULT)
+            
+            // 暗号化ストレージに保存
             sharedPrefs.edit {
                 putString("db_passphrase", encoded)
             }

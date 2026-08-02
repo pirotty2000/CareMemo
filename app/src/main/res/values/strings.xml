@@ -50,6 +50,7 @@
     <string name="main_menu_settings">設定</string>
     <string name="main_menu_help">ヘルプ</string>
     <string name="main_menu_version">バージョン情報</string>
+    <string name="main_quick_action_emergency_contact">医師・看護師・家族に連絡</string>
     <string name="main_dialog_version_title">バージョン情報</string>
     <string name="main_edit_user_info">利用者情報を編集</string>
     <string name="main_end_user_service">利用を終了する</string>

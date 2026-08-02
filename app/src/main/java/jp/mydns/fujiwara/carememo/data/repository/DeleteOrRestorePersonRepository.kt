@@ -5,7 +5,23 @@ import jp.mydns.fujiwara.carememo.data.*
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 利用者の復帰（論理削除解除）および完全抹消（物理削除）を担当するリポジトリ
+ * Repository：DeleteOrRestorePersonRepository
+ *
+ * 【役割】
+ * 利用者の「利用終了（論理削除）」、「復帰（論理削除解除）」、および「完全抹消（物理削除）」に関連する横断的な操作を担当します。
+ * 利用者本人だけでなく、紐付くすべての臨床データ（健康記録、所見メモ、服薬管理等）の一貫性を保ちながら削除・復元を行います。
+ *
+ * 【主な機能】
+ * ・論理削除済み（アーカイブ）利用者一覧の取得。
+ * ・利用者と全関連データのカスケード論理削除。
+ * ・利用者と全関連データのカスケード復元（アーカイブ復帰）。
+ * ・特定利用者、または全アーカイブ対象者の物理削除（完全消去）。
+ * ・各重要操作に対する監査ログの記録。
+ *
+ * 【設計指針】
+ * 1. 一貫性の保証：削除や復帰は Room のトランザクション内で実行し、本人とデータの不整合を防ぐ。
+ * 2. データの保護：誤操作に備え、一次的な削除は `deleted_at` カラムの更新（論理削除）として実装し、
+ *    物理削除はユーザーが明示的に「抹消」を選択した場合のみ実行する。
  */
 class DeleteOrRestorePersonRepository(
     private val database: AppDatabase,
@@ -20,19 +36,26 @@ class DeleteOrRestorePersonRepository(
 ) {
     /**
      * アーカイブ（論理削除）されている利用者一覧を取得します。
+     *
+     * @return 削除済み利用者リストを通知する Flow
      */
     fun getArchivedPersons(): Flow<List<Person>> = personDao.getDeletedPersons()
 
     /**
-     * 利用者を論理削除し、紐づくすべての記録も論理削除します（カスケード論理削除）。
-     * ※現在は主にSettingsScreenなどから利用されます。
+     * 利用者を論理削除し、紐づくすべての記録も同時に論理削除します（カスケード論理削除）。
+     *
+     * 内部でトランザクションを開始し、すべてのテーブルの `deleted_at` カラムに
+     * 同一のタイムスタンプを設定します。
+     *
+     * @param personId 対象の利用者ID
+     * @param featureName ログ出力用の機能名
+     * @param operation ログ出力用の操作名
      */
     suspend fun logicalDeletePerson(personId: String, featureName: String = "", operation: String = "") {
         database.withTransaction {
             val timestamp = System.currentTimeMillis()
-            // ここで本来は各テーブルの updatedAt も更新すべきだが、
-            // 現状の DAO は ID での更新 (deleted_at のセット) のみを行っている。
-            // 将来的なサーバー同期の厳密性を期すならば、DAO 側に updatedAt を更新する SQL も追加検討が必要。
+            
+            // 全テーブルの論理削除フラグを更新
             personDao.logicalDelete(personId, timestamp)
             heightAndWeightDao.logicalDeleteByPersonId(personId, timestamp)
             bpAndPulseDao.logicalDeleteByPersonId(personId, timestamp)
@@ -55,9 +78,16 @@ class DeleteOrRestorePersonRepository(
 
     /**
      * 論理削除された利用者と、紐づくすべての記録を復帰させます。
+     *
+     * 内部でトランザクションを開始し、すべてのテーブルの `deleted_at` カラムを null に戻します。
+     *
+     * @param personId 対象の利用者ID
+     * @param featureName ログ出力用の機能名
+     * @param operation ログ出力用の操作名
      */
     suspend fun restorePerson(personId: String, featureName: String = "", operation: String = "") {
         database.withTransaction {
+            // 全テーブルの論理削除フラグを解除
             personDao.restore(personId)
             heightAndWeightDao.restoreByPersonId(personId)
             bpAndPulseDao.restoreByPersonId(personId)
@@ -80,6 +110,11 @@ class DeleteOrRestorePersonRepository(
 
     /**
      * 指定された利用者を完全に抹消（物理削除）します。
+     * ※この操作は元に戻せません。
+     *
+     * @param personId 対象の利用者ID
+     * @param featureName ログ出力用の機能名
+     * @param operation ログ出力用の操作名
      */
     suspend fun permanentlyDeletePerson(personId: String, featureName: String = "", operation: String = "") {
         personDao.deletePersonPhysically(personId)
@@ -95,6 +130,10 @@ class DeleteOrRestorePersonRepository(
 
     /**
      * 全ての利用終了者（論理削除された利用者）と、そのすべての記録を物理削除します。
+     * ※この操作は元に戻せません。
+     *
+     * @param featureName ログ出力用の機能名
+     * @param operation ログ出力用の操作名
      */
     suspend fun deleteAllEndedPersons(featureName: String = "", operation: String = "") {
         personDao.deleteEndedPersons()

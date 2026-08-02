@@ -1,23 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
-/**
- * Component：AppCompactTextField
- *
- * 【役割】：
- * 数値を入力する際など、省スペースかつ整った見た目が必要な場面で使用される共通の入力フィールドを提供する。
- * 内部で AppTextField と同様のロジック（TextFieldValue 管理、フォーカス制御）を実装しており、
- * プロジェクト共通の入力ルールを継承している。
- *
- * 【主な機能】：
- * ・余白（padding）や文字配置（中央揃え）を最適化した軽量なテキスト入力。
- * ・フォーカス取得時のカーソル末尾移動。
- * ・最大桁数（maxLength）到達時の自動フォーカス移動。
- * ・入力タイプ（AppTextFieldType）に応じたキーボード、フィルタ、IMEアクションの自動設定。
- *
- * 【想定する利用場所】：
- * 生年月日入力、記録日時入力、および各種数値入力フィールド。
- */
-
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,6 +25,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+/**
+ * Component：AppCompactTextField
+ *
+ * 【役割】
+ * 数値を入力する際など、省スペースかつ整った見た目が必要な場面で使用される共通の入力フィールドを提供します。
+ * 内部で AppTextField と同様のロジック（TextFieldValue 管理、フォーカス制御）を実装しており、
+ * プロジェクト共通の入力ルールを継承しています。
+ *
+ * 【主な機能】
+ * ・余白（padding）や文字配置（中央揃え）を最適化した軽量なテキスト入力。
+ * ・フォーカス取得時のカーソル末尾移動（入力スムーズ化）。
+ * ・最大桁数（maxLength）到達時の自動フォーカス移動。
+ * ・入力タイプ（AppTextFieldType）に応じたキーボード、フィルタ、IMEアクションの自動設定。
+ *
+ * 【想定する利用場所】
+ * 生年月日入力、記録日時入力、および各種数値入力フィールド。
+ *
+ * @param value 入力されている文字列
+ * @param onValueChange 文字列が変更された際のコールバック
+ * @param modifier 修飾子
+ * @param type 入力制限のタイプ（INTEGER, DECIMAL, TEXT）
+ * @param label ラベル要素
+ * @param isError エラー状態かどうか
+ * @param readOnly 読み取り専用かどうか
+ * @param suffix 単位などの接尾辞要素
+ * @param maxLength 最大入力可能文字数
+ * @param imeAction IME アクション（Next, Done 等）
+ * @param autoMoveFocus maxLength 到達時に自動で次の要素へフォーカスを移すか
+ * @param keyboardActions カスタムのキーボードアクション（null の場合はデフォルト動作）
+ * @param onFocusChanged フォーカス状態が変化した際のコールバック
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AppCompactTextField(
@@ -70,6 +83,7 @@ fun AppCompactTextField(
         mutableStateOf(TextFieldValue(text = value, selection = TextRange(value.length)))
     }
 
+    // 外部からの value 変更を内部状態（textFieldValueState）に同期させる
     LaunchedEffect(value) {
         if (value != textFieldValueState.text) {
             textFieldValueState = textFieldValueState.copy(
@@ -79,7 +93,7 @@ fun AppCompactTextField(
         }
     }
 
-    // タイプに応じたキーボード設定
+    // 入力タイプに応じたキーボード設定の生成
     val keyboardOptions = remember(type, imeAction) {
         when (type) {
             AppTextFieldType.INTEGER -> KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number, imeAction = imeAction)
@@ -88,7 +102,7 @@ fun AppCompactTextField(
         }
     }
 
-    // デフォルトのキーボードアクション
+    // デフォルトのキーボードアクション設定（Nextなら次へ、Doneならフォーカス解除）
     val defaultKeyboardActions = remember(autoMoveFocus, imeAction) {
         KeyboardActions(
             onNext = {
@@ -107,19 +121,21 @@ fun AppCompactTextField(
     BasicTextField(
         value = textFieldValueState,
         onValueChange = { newValue ->
+            // タイプに応じたフィルタリング
             var filteredText = when (type) {
                 AppTextFieldType.INTEGER -> newValue.text.filter { it.isDigit() }
                 AppTextFieldType.DECIMAL -> newValue.text.filter { it.isDigit() || it == '.' }
                 else -> newValue.text
             }
 
+            // 最大文字数制限の適用
             if (filteredText.length > maxLength) {
                 filteredText = filteredText.take(maxLength)
             }
 
             val finalValue = if (filteredText != newValue.text) newValue.copy(text = filteredText) else newValue
             
-            // テキストが実際に変更されたか（再帰呼び出しや onBlur 時の重複処理を防止）
+            // テキストが実際に変更されたか（不要なコールバックを防止）
             val isTextChanged = finalValue.text != textFieldValueState.text
 
             textFieldValueState = finalValue
@@ -127,7 +143,7 @@ fun AppCompactTextField(
             if (isTextChanged) {
                 onValueChange(finalValue.text)
 
-                // maxLength 到達時の自動移動
+                // maxLength 到達時の自動フォーカス移動
                 if (autoMoveFocus && finalValue.text.length == maxLength && imeAction == ImeAction.Next) {
                     focusManager.moveFocus(FocusDirection.Next)
                 }
@@ -138,17 +154,18 @@ fun AppCompactTextField(
             .onFocusChanged { focusState ->
                 onFocusChanged(focusState)
                 if (focusState.isFocused) {
+                    // キーボード表示時にフィールドが隠れないよう可視領域へ移動
                     coroutineScope.launch {
                         requester.bringIntoView()
                     }
+                    // フォーカス取得時にカーソルを末尾に移動
+                    if (textFieldValueState.selection.start != textFieldValueState.text.length) {
+                        textFieldValueState = textFieldValueState.copy(
+                            selection = TextRange(textFieldValueState.text.length)
+                        )
+                    }
                 }
-                // フォーカス取得時にのみ実行し、かつ現在のカーソル位置が末尾でない場合のみ移動
-                if (focusState.isFocused && textFieldValueState.selection.start != textFieldValueState.text.length) {
-                textFieldValueState = textFieldValueState.copy(
-                    selection = TextRange(textFieldValueState.text.length)
-                )
-            }
-        },
+            },
         interactionSource = interactionSource,
         enabled = true,
         readOnly = readOnly,

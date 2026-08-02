@@ -9,7 +9,17 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * 健康記録画面用の UI 状態
+ * UI State：PersonHealthUiState
+ *
+ * 【役割】
+ * 健康記録画面における、表示データ、選択状態、および表示優先設定を保持します。
+ *
+ * @param personId 対象の利用者ID
+ * @param currentCategory 現在表示しているカテゴリ（身長体重、バイタル、血糖）
+ * @param records 履歴レコードのリスト
+ * @param preferredShowHistory グラフよりも履歴リストを優先して表示するかどうかの設定
+ * @param selectedRecordId 現在詳細表示または編集対象として選択されているレコードのID
+ * @param isLoading データの読み込み中フラグ
  */
 data class PersonHealthUiState(
     override val personId: String? = null,
@@ -21,29 +31,53 @@ data class PersonHealthUiState(
 ) : PersonAwareState
 
 /**
- * 健康記録画面固有のイベント
+ * View Event：PersonHealthViewEvent
+ *
+ * 【役割】
+ * 健康記録画面固有の、一過性のアクション（複雑なアニメーションの開始や、特定の外部画面への遷移等）を定義します。
  */
 sealed interface PersonHealthViewEvent {
     // 将来的に「特定の画面への遷移」や「複雑なアニメーションの開始」などのイベントが必要になる可能性があります。
 }
 
 /**
- * 健康記録のバリデーション結果
+ * 健康記録のバリデーション結果（事実）。
  */
 enum class HealthValidationResult {
+    /** バリデーション成功 */
     SUCCESS,
+    /** 数値が形式不正、または規定範囲外 */
     INVALID_VALUE,
+    /** 記録日時が不正 */
     INVALID_TIME,
+    /** 同一利用者の同一日時に既に別のレコードが存在する */
     DUPLICATE_TIME
 }
 
 /**
- * 健康記録画面固有のドメインロジック
+ * Logic：PersonHealthLogic
+ *
+ * 【役割】
+ * 健康記録画面（カテゴリA, C, D）における、バリデーション判定および Entity 構築のドメインロジックを提供します。
+ *
+ * 【主な機能】
+ * ・各記録型（身長体重、バイタル、血糖）に応じた数値範囲の妥当性判定。
+ * ・同一日時における重複レコードの検出。
+ * ・UI側での保存ボタン制御用のリアルタイムバリデーション。
+ * ・入力値からの適切な Entity（HeightAndWeight等）の生成と ID 管理。
+ *
+ * 【設計指針】
+ * 1. 数値の妥当性判定は、AppSpecifications に定義された各項目の MIN/MAX 値を基準とする。
+ * 2. 重複チェックでは、編集中の自分自身（ID一致）を除外することで、日時の変わらない更新を許容する。
+ * 3. createEntity メソッドにおいて、新規レコードに対する UUID 発行の責任を一元管理する。
  */
 object PersonHealthLogic {
 
     /**
-     * 入力内容の妥当性を判定します。
+     * レコード全体の内容（数値範囲）の妥当性を判定します。
+     *
+     * @param record 検証対象のレコード
+     * @return バリデーション結果
      */
     fun validate(record: HistoryRecord?): HealthValidationResult {
         if (record == null) return HealthValidationResult.INVALID_VALUE
@@ -79,7 +113,11 @@ object PersonHealthLogic {
     }
 
     /**
-     * 重複チェック（自分自身を除外）
+     * 重複チェックを行います（自分自身を除外）。
+     *
+     * @param current 現在編集中のレコード
+     * @param existing DBから取得された同一日時の既存レコード
+     * @return 同一日時に別のIDのレコードがあれば DUPLICATE_TIME、そうでなければ SUCCESS
      */
     fun validateDuplicate(current: HistoryRecord, existing: HistoryRecord?): HealthValidationResult {
         if (existing == null) return HealthValidationResult.SUCCESS
@@ -87,11 +125,11 @@ object PersonHealthLogic {
     }
 
     /**
-     * 各カテゴリの入力文字列を一括評価します。
-     * UI側での「保存ボタンの活性制御」や「エラー表示」に使用します。
+     * UI側の入力フィールド群（文字列マップ）を一括評価します。
+     * 「保存ボタンの活性制御」や「エラー表示」に使用します。
      *
      * @param category カテゴリ
-     * @param values 入力値のマップ（キーはフィールド名）
+     * @param values フィールド名をキーとした入力文字列のマップ
      * @return [HealthInputValidationResult]
      */
     fun validateInputs(
@@ -119,8 +157,16 @@ object PersonHealthLogic {
     }
 
     /**
-     * Entity を構築します。
-     * ID採番の責任を完全にこのメソッドが負います。
+     * 入力内容から永続化用 Entity を構築します。
+     * IDの新規採番（UUID）または既存IDの継承をこのメソッドが保証します。
+     *
+     * @param category カテゴリ
+     * @param personId 利用者ID
+     * @param recordId レコードID（新規なら新規用定数、既存ならそのIDを維持）
+     * @param recordTime 記録日時
+     * @param values 型変換済みの値のマップ
+     * @return 生成された Entity オブジェクト
+     * @throws IllegalArgumentException 未サポートのカテゴリの場合
      */
     fun createEntity(
         category: Category,

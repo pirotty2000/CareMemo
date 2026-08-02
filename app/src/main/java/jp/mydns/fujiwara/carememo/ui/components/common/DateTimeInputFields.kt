@@ -1,21 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
-/**
- * Component：DateTimeInputFields
- *
- * 【役割】：
- * 記録日時（年月日時分）を入力するためのUIコンポーネントと、その状態管理を提供する。
- *
- * 【主な機能】：
- * ・年、月、日、時、分の各数値入力フィールドの提供（AppCompactTextField を利用）。
- * ・入力完了時や最大桁数到達時の自動フォーカス移動。
- * ・入力値のバリデーションと、Instant への変換ロジック。
- * ・新規記録時や編集時における初期日時の柔軟な設定。
- *
- * 【想定する利用場所】：
- * 健康記録、所見メモ、一括入力画面などの記録日時設定箇所。
- */
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -34,7 +18,27 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 
 /**
+ * Component：DateTimeInputFields
+ *
+ * 【役割】
+ * 記録日時（年月日時分）を入力するためのUIコンポーネントと、その状態管理機能を提供します。
+ *
+ * 【主な機能】
+ * ・年、月、日、時、分の各数値入力フィールドの提供（AppCompactTextField を利用）。
+ * ・入力完了時や最大桁数到達時の自動フォーカス移動。
+ * ・入力値のバリデーションと、Instant への変換ロジックの内包。
+ * ・新規記録時や編集時における初期日時の柔軟な設定。
+ *
+ * 【想定する利用場所】
+ * 健康記録、所見メモ、服薬記録、一括入力画面などの記録日時設定箇所。
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 秒単位の入力管理（アプリの仕様として分単位までを記録対象とするため）。
+ */
+
+/**
  * 日時入力フィールドのステートを管理するクラス
+ * 5つの入力フィールドの状態をカプセル化し、業務ロジック（Instant変換等）を提供します。
  */
 class DateTimeInputState(
     val year: MutableState<String>,
@@ -44,8 +48,13 @@ class DateTimeInputState(
     val minute: MutableState<String>,
 ) {
     /**
-     * 入力値から Instant を生成する。不正な入力の場合は null を返す。
-     * 年・月・日は必須。時・分が未入力（空文字）の場合は 00 として扱う。
+     * 現在の入力値から Instant を生成します。
+     *
+     * ・年・月・日は必須です。
+     * ・時・分が未入力（空文字）の場合は 00 として扱います。
+     * ・不正な日付（例：2月30日）や数値以外が含まれる場合は null を返します。
+     *
+     * @return 生成された Instant、または不正な入力時は null
      */
     fun toInstant(): Instant? {
         val y = year.value.toIntOrNull() ?: return null
@@ -62,15 +71,17 @@ class DateTimeInputState(
                 ZoneId.systemDefault()
             ).toInstant()
         } catch (_: Exception) {
-            // 日付の妥当性（例：2月30日など）で失敗した場合は null を返す
+            // 日付の妥当性チェックで失敗した場合は null を返す
             null
         }
     }
 
     /**
-     * 指定された Instant で各フィールドの値を更新する。
+     * 指定された Instant で各フィールドの値を更新します。
      * 現在の入力値（論理値）が指定された Instant と既に一致している場合は、
-     * ユーザーの入力を妨げないよう、表示文字列の上書きをスキップする。
+     * ユーザーの入力を妨げないよう、表示文字列の上書きをスキップします。
+     *
+     * @param instant 更新対象の日時
      */
     fun updateFromInstant(instant: Instant) {
         if (toInstant() != instant) {
@@ -86,11 +97,15 @@ class DateTimeInputState(
 
 /**
  * DateTimeInputState を生成・保持する Composable
+ *
+ * @param initialInstant 初期日時（null の場合は現在日時が使用されます）
+ * @return 保持された DateTimeInputState
  */
 @Composable
 fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
     val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
     
+    // 画面回転やプロセス再生成に対応するため rememberSaveable を使用
     val year = rememberSaveable(initialInstant) { mutableStateOf(zdt.year.toString()) }
     val month = rememberSaveable(initialInstant) { mutableStateOf(zdt.monthValue.toString()) }
     val day = rememberSaveable(initialInstant) { mutableStateOf(zdt.dayOfMonth.toString()) }
@@ -102,6 +117,13 @@ fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputSt
     }
 }
 
+/**
+ * 日時入力フィールドのセットを表示する Composable
+ *
+ * @param state 日時入力の状態管理オブジェクト
+ * @param modifier 修飾子
+ * @param autoFocusHour 日の入力完了後、自動で時へフォーカスを移すか（日付のみの入力時は false を推奨）
+ */
 @Composable
 fun DateTimeInputFields(
     state: DateTimeInputState,
@@ -124,6 +146,9 @@ fun DateTimeInputFields(
     )
 }
 
+/**
+ * 日時入力フィールドのセットを表示する Composable（ステートレス版）
+ */
 @Composable
 fun DateTimeInputFields(
     year: String,
@@ -170,6 +195,7 @@ fun DateTimeInputFields(
                 maxLength = 2,
                 label = "日",
                 modifier = Modifier.weight(1f),
+                // 日付までで入力を止める場合は Done、時まで続ける場合は Next を指定
                 imeAction = if (autoFocusHour) ImeAction.Next else ImeAction.Done
             )
             DateTimeUnitField(
@@ -191,6 +217,9 @@ fun DateTimeInputFields(
     }
 }
 
+/**
+ * 各日時単位（年、月、日など）の入力用小型フィールド
+ */
 @Composable
 private fun DateTimeUnitField(
     value: String,

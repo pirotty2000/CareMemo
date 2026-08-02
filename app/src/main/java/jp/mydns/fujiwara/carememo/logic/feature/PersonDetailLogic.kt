@@ -6,7 +6,17 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 
 /**
- * 利用者詳細画面（共通フレームワーク）用の UI 状態
+ * UI State：PersonDetailUiState
+ *
+ * 【役割】
+ * 各利用者詳細画面（健康記録、所見メモ、服薬管理）の「共通フレームワーク」としての表示状態を管理します。
+ * 画面上部のヘッダー情報（氏名・年齢）や、カテゴリ選択バーの記録状況サマリーを保持します。
+ *
+ * @param personId 表示対象の利用者ID
+ * @param person 利用者の基本情報（氏名、生年月日等）
+ * @param personSummary カテゴリごとの記録有無を示すサマリーデータ（CategorySelectorBar で使用）
+ * @param currentCategory 現在表示しているカテゴリ
+ * @param isLoading データの読み込み中フラグ
  */
 data class PersonDetailUiState(
     override val personId: String? = null,
@@ -17,8 +27,28 @@ data class PersonDetailUiState(
 ) : PersonAwareState
 
 /**
- * 利用者詳細画面（共通フレームワーク）固有のイベント
+ * View Event：PersonDetailViewEvent
+ *
+ * 【役割】
+ * 利用者詳細画面（共通フレームワーク層）において発生する、一過性の通知やアクションを定義します。
  */
 sealed interface PersonDetailViewEvent {
-    // 必要に応じて定義
+    // 共通的な画面遷移やトースト通知が必要な場合にここに定義します
+}
+
+/**
+ * Logic：PersonDetailLogic
+ *
+ * 【役割】
+ * 利用者詳細画面における共通的なナビゲーションや情報の集約に関するドメインロジックを提供します。
+ *
+ * 【主な機能】
+ * ・（現時点では UiState と Event の定義が中心であり、動的な計算ロジックは必要に応じて各機能 ViewModel で実装）
+ *
+ * 【設計指針】
+ * 1. 複数の詳細画面で共通して必要となる「利用者コンテキスト（誰の情報を、どのカテゴリで見ているか）」を抽象化する。
+ * 2. `PersonAwareState` インターフェースを実装することで、ViewModel 間の状態共有をスムーズにする。
+ */
+object PersonDetailLogic {
+    // 必要に応じて、詳細画面共通の表示ロジック（例：特定の条件下でのカテゴリ制限など）をここに追加します
 }

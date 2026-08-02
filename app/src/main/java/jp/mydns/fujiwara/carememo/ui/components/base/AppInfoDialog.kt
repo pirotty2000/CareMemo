@@ -1,26 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
-/**
- * Component：AppInfoDialog
- *
- * 【役割】：
- * ユーザーに重要な情報やエラーメッセージを通知するための共通ダイアログを提供する。
- *
- * 【主な機能】：
- * ・タイトル（任意）と本文の表示。
- * ・閉じボタン（確定ボタン）のみのシンプルな構成。
- * ・多目的（情報、警告、成功報告、エラー）に利用可能。
- *
- * 【想定する利用場所】：
- * 登録成功時の報告、入力エラーの通知、システムからのメッセージ表示等、アプリ全般。
- *
- * 【このコンポーネントでは行わないこと】：
- * 選択肢（Yes/No）による分岐（選択が必要な場合は AppDialog や専用ダイアログを使用する）。
- *
- * 【公開composable】：
- * AppInfoDialog
- */
-
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,7 +7,25 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 
 /**
- * 情報通知またはエラー通知用の共通ダイアログ
+ * Component：AppInfoDialog
+ *
+ * 【役割】
+ * ユーザーに重要な情報や操作の結果（成功・失敗）、エラーメッセージを通知するための共通ダイアログを提供します。
+ *
+ * 【主な機能】
+ * ・タイトル（任意）と本文メッセージの表示。
+ * ・「閉じる」アクションのみのシンプルな構成。
+ * ・AppDialogContent による本文のスクロールサポート。
+ *
+ * 【想定する利用場所】
+ * 保存完了の報告、入力チェックエラーの通知、システムエラーの表示など、
+ * ユーザーの選択（Yes/No）を必要としない通知全般。
+ *
+ * @param title ダイアログのタイトル（不要な場合は null）
+ * @param message 表示する本文メッセージ
+ * @param onDismiss ダイアログを閉じる際のコールバック
+ * @param modifier 修飾子
+ * @param confirmButtonText ボタンのラベル（デフォルトは「閉じる」）
  */
 @Composable
 fun AppInfoDialog(
@@ -43,9 +40,11 @@ fun AppInfoDialog(
         modifier = modifier,
         title = title?.let { { Text(it) } },
         text = {
+            // 本文を表示（長いメッセージの場合はスクロール可能）
             AppDialogContent(text = message)
         },
         confirmButton = {
+            // 通知用ダイアログのため、強調しすぎない AppDialogDismissButton を使用
             AppDialogDismissButton(
                 text = confirmButtonText,
                 onClick = onDismiss

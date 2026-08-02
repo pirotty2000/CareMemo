@@ -3,14 +3,20 @@ package jp.mydns.fujiwara.carememo.ui.components.main
 /**
  * Component：MainComponents
  *
- * 【役割】：
- * 利用者一覧画面（MainScreen）で使用される、利用者情報の表示、編集、および機能選択（ランチャー）
- * に関する共通UIパーツ群を提供する。
+ * 【役割】
+ * 利用者一覧画面（MainScreen）において、利用者情報の概要表示と、
+ * 各機能（健康記録、所見メモ等）への遷移メニュー（ランチャー）を提供します。
  *
- * 【主な機能】：
- * ・利用者リストアイテム（UserListItem）：一覧における1名分の表示。
- * ・利用者編集ダイアログ（UserEditDialog）：利用者の新規登録および情報編集用のフォーム。
- * ・カテゴリ選択シート（CategorySelectionSheet）：機能遷移メニュー。
+ * 【主な機能】
+ * ・利用者カード（UserListItem）：氏名、年齢、誕生日通知、および各カテゴリの入力済みバッジの表示。
+ * ・クイックメニュー（CategorySelectionSheet）：特定の利用者に対する機能選択（一括入力含む）ボトムシート。
+ * ・操作メニュー（DropdownMenu）：情報の編集、緊急連絡先管理、利用終了の操作分岐。
+ *
+ * 【想定する利用場所】
+ * ・MainScreenContent（利用者一覧画面のメインリスト部分）
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・利用者情報自体の保存・削除処理（ViewModel 経由でラムダとして操作を受け取る）。
  */
 
 import android.annotation.SuppressLint
@@ -63,7 +69,17 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
  * [3-1] UserListItem (利用者カード)
- * 利用者カードを表示するコンポーネント（一覧用）。
+ * 利用者一覧における、1名分の情報を表示するカード型コンポーネント。
+ *
+ * @param person 利用者情報
+ * @param summary カテゴリごとのデータ存在有無サマリー
+ * @param isNameMaskingEnabled 氏名・ふりがなを伏せ字にするかどうか
+ * @param onClick カード全体（名前エリア）がタップされた際のコールバック（機能選択シートの表示を想定）
+ * @param onQuickMenuClick バッジ部分がタップされた際のコールバック
+ * @param onEmergencyContactManageClick 緊急連絡先管理が選択された際のコールバック
+ * @param onEditClick 利用者情報の編集が選択された際のコールバック
+ * @param onDeleteClick 利用終了（論理削除）が選択された際のコールバック
+ * @param modifier 修飾子
  */
 @Composable
 fun UserListItem(
@@ -77,6 +93,7 @@ fun UserListItem(
     onDeleteClick: () -> Unit,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
+    // 誕生日の通知判定（本日または近日）
     val isBirthdayToday = remember(person.birthday) {
         DateTimeUtils.isBirthdayToday(person.birthday)
     }
@@ -88,12 +105,13 @@ fun UserListItem(
 
     ListItem(
         modifier = modifier,
+        // 左側：バッジ（記録状況）と誕生日通知アイコン
         leadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // バッジ部分 (タップでクイックメニュー)
+                // 入力済み情報のバッジ部分 (タップでクイックメニューへ)
                 Box(
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
@@ -103,7 +121,7 @@ fun UserListItem(
                     CategoryBadges(summary = summary ?: PersonCategorySummary())
                 }
 
-                // CakeIcon (本日/近日誕生日の通知アイコン - 反応なし)
+                // 本日/近日誕生日の場合に表示されるアイコン
                 Box(
                     modifier = Modifier.width(20.dp),
                     contentAlignment = Alignment.Center
@@ -119,7 +137,7 @@ fun UserListItem(
                 }
             }
         },
-        // [表示情報] フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
+        // 中央：氏名（マスク対応）、識別メモ、生年月日、年齢
         headlineContent = {
             Column(
                 modifier = Modifier
@@ -160,9 +178,8 @@ fun UserListItem(
                 )
             } 
         },
-        // [操作メニュー] DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
+        // 右側：操作メニュー（鉛筆アイコン）
         trailingContent = {
-            // 鉛筆アイコン
             Box {
                 IconButton(
                     onClick = { showItemMenu = true },
@@ -185,7 +202,7 @@ fun UserListItem(
                         onClick = { showItemMenu = false; onEmergencyContactManageClick() },
                         modifier = Modifier.testTag("UserListItem_MenuItem_EmergencyContact")
                     )
-                    // 利用者を終了
+                    // 利用終了（論理削除）
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_end_user_service), color = MaterialTheme.colorScheme.error) }, 
                         leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, 
@@ -195,7 +212,7 @@ fun UserListItem(
                 }
             }
         },
-        // 背景色（誕生日・誕生日が近い･･･は色を変えている)
+        // 誕生日かどうかに応じた背景色の切り替え
         colors = ListItemDefaults.colors(
             containerColor = when {
                 isBirthdayToday -> MaterialTheme.colorScheme.tertiaryContainer
@@ -210,10 +227,13 @@ fun UserListItem(
     )
 }
 
-
 /**
  * [4] CategorySelectionSheet (機能選択：健康/服薬/所見/一括入力)
- * 利用者を選択した際に表示されるカテゴリ選択用のボトムシート。
+ * 利用者を選択した際に表示される、各機能への遷移メニュー（ボトムシート）。
+ *
+ * @param personName 選択された利用者の氏名（表示用）
+ * @param onCategorySelect 個別のカテゴリ（健康、服薬等）が選択された際のコールバック
+ * @param onBatchInputSelect 健康記録の一括入力が選択された際のコールバック
  */
 @Composable
 fun CategorySelectionSheet(
@@ -229,6 +249,7 @@ fun CategorySelectionSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // タイトル：だれの情報を入力するかを明示
         Text(
             text = stringResource(R.string.main_category_selection_title, personName),
             style = MaterialTheme.typography.titleLarge,
@@ -238,7 +259,7 @@ fun CategorySelectionSheet(
                 .testTag("CategorySelectionSheet_Title")
         )
 
-        // 一括入力ボタン
+        // 最優先のアクション：健康記録の一括入力
         Button(
             onClick = onBatchInputSelect,
             modifier = Modifier.fillMaxWidth().height(56.dp).testTag("CategorySelectionSheet_BatchInput"),
@@ -254,7 +275,7 @@ fun CategorySelectionSheet(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-        // 各カテゴリボタン
+        // 個別のカテゴリ詳細への遷移ボタン群
         Category.entries.forEach { category ->
             Button(
                 onClick = { onCategorySelect(category) },

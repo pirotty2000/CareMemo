@@ -3,17 +3,22 @@ package jp.mydns.fujiwara.carememo.ui.components.health
 /**
  * Component：PersonHealthComponents
  *
- * 【役割】：
- * 健康記録（身長・体重、バイタル、血糖値・HbA1c）に関連する履歴リスト、履歴アイテム、
- * および詳細表示・編集用の共通パーツ群を提供する。
+ * 【役割】
+ * 健康記録（身長・体重、バイタル、血糖値・HbA1c）に関連する履歴リストのアイテム表示、
+ * および詳細表示・編集用の共通パーツ群を提供します。
  *
- * 【主な機能】：
- * ・履歴リスト（PersonHistoryList）：時系列データのグルーピング表示とスワイプ削除、選択状態の管理。
- * ・履歴内容の描画（HealthHistoryItemBody）：カテゴリに応じた表示内容の動的な切り替え。
- * ・詳細編集（HealthRecordDetailPane）：新規登録および既存記録の編集用フォームの提供。
+ * 【主な機能】
+ * ・履歴内容の描画（HealthHistoryItemBody）：カテゴリに応じた表示内容の動的な切り替えと異常値判定の可視化。
+ * ・詳細パネル（HealthRecordDetailPane）：閲覧と編集のモード管理、変更検知による中断保護、入力値のバリデーション。
+ * ・閲覧表示（HealthRecordDisplayCard）：判定結果や単位を付与したレスポンシブな詳細レイアウト。
+ * ・編集フォーム（HealthRecordEditForm）：数値入力に最適化したキーボード制御とリアルタイムバリデーション。
  *
- * 【想定する利用場所】：
- * ・PersonHealthScreenContent（健康記録のメインコンテンツ領域）
+ * 【想定する利用場所】
+ * ・PersonHealthScreenContent（健康記録画面のメイン領域）
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・グラフの描画（HealthGraphView / LineChart が担当）。
+ * ・データベースへの直接アクセス（ViewModel 経由でラムダとして操作を受け取る）。
  */
 
 import androidx.compose.foundation.*
@@ -81,7 +86,10 @@ import java.time.Instant
 
 /**
  * [1]HealthHistoryItemBody
- * 健康記録のカテゴリに応じて、履歴リストの「中身」を出し分ける分岐用コンポーネント
+ * 健康記録のカテゴリに応じて、履歴リストの「中身」を出し分ける分岐用コンポーネント。
+ *
+ * @param category 表示対象のカテゴリ
+ * @param record 履歴レコード
  */
 @Composable
 fun HealthHistoryItemBody(category: Category, record: HistoryRecord) {
@@ -89,13 +97,13 @@ fun HealthHistoryItemBody(category: Category, record: HistoryRecord) {
         Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalRecordItemContent(it) }
         Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseRecordItemContent(it) }
         Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightRecordItemContent(it) }
-        else -> { /* カテゴリA以外はここでは扱わない */ }
+        else -> { /* 健康カテゴリ以外はここでは扱わない */ }
     }
 }
 
 /**
  * [1-1]HeightWeightRecordItemContent
- * 「身長・体重」記録の履歴アイテム表示
+ * 「身長・体重」記録の履歴アイテム表示。
  */
 @Composable
 private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
@@ -132,14 +140,17 @@ private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
 
 /**
  * [1-2]VitalRecordItemContent
- * 「バイタル」記録の履歴アイテム表示
+ * 「バイタル」記録の履歴アイテム表示。
+ * 複数の指標を1行にまとめ、下部に異常値判定インジケーターを配置します。
  */
 @Composable
 private fun VitalRecordItemContent(record: BpAndPulse) {
+    // 全指標の判定結果を一括取得
     val results = HealthLogic.evaluateVitalItems(record.bpSystolic, record.bpDiastolic, record.sat, record.pulse, record.bodyTemperature)
     val textStyle = MaterialTheme.typography.labelMedium
     val statusLabelStyle = MaterialTheme.typography.labelMedium
 
+    // 各判定ラベルの取得
     val highBpLabel = stringResource(HealthDisplayMapper.getVitalLabel(VitalStatus.HIGH_BP))
     val lowBpLabel = stringResource(HealthDisplayMapper.getVitalLabel(VitalStatus.LOW_BP))
     val tachycardiaLabel = stringResource(HealthDisplayMapper.getVitalLabel(VitalStatus.TACHYCARDIA))
@@ -151,32 +162,32 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
 
-            // 血圧(上/下)＋アイコン
+            // 血圧(上/下)
             Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${HealthLogic.formatBpValue(record.bpSystolic)}/${HealthLogic.formatBpValue(record.bpDiastolic)} ${AppSpecifications.Health.BloodPressure.UNIT}", style = textStyle)
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 酸素飽和度（アイコンなし）
+            // 酸素飽和度（SpO2）
             Text(text = "${HealthLogic.formatSat(record.sat)} ${AppSpecifications.Health.OxygenSaturation.UNIT}", style = textStyle)
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 脈拍＋アイコン
+            // 脈拍
             Icon(Icons.Rounded.MonitorHeart, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${HealthLogic.formatPulse(record.pulse)} ${AppSpecifications.Health.Pulse.UNIT}", style = textStyle)
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 体温＋アイコン
+            // 体温
             Icon(Icons.Rounded.Thermostat, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = "${HealthLogic.formatBodyTemp(record.bodyTemperature)} ${AppSpecifications.Health.BodyTemperature.UNIT}", style = textStyle)
         }
 
-        // 異常値判定インジケータ
+        // 異常値判定インジケータ（該当する項目のみ強調表示）
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             VitalStatusIndicator(label = highBpLabel, isActive = results.any { it.first == VitalStatus.HIGH_BP }, style = statusLabelStyle)
             VitalStatusIndicator(label = lowBpLabel, isActive = results.any { it.first == VitalStatus.LOW_BP }, style = statusLabelStyle)
@@ -191,7 +202,7 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
 
 /**
  * [1-2-1]VitalStatusIndicator
- * 「バイタル」記録の異常値判定インジケーター
+ * 「バイタル」記録の異常値判定インジケーター（各指標ごとのフラグ）。
  */
 @Composable
 private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall) {
@@ -209,7 +220,7 @@ private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androi
 
 /**
  * [1-3]GlucoseRecordItemContent
- * 「血糖値・HbA1c」記録の履歴アイテム表示
+ * 「血糖値・HbA1c」記録の履歴アイテム表示。
  */
 @Composable
 private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
@@ -217,6 +228,7 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
     val statusLabelStyle = MaterialTheme.typography.labelMedium
 
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // 血糖値
         Text(text = "${stringResource(R.string.health_label_glucose)}: ${record.glucose?.let { "${HealthLogic.formatGlucose(it)} ${AppSpecifications.Health.BloodGlucose.UNIT}" } ?: "---"}", style = textStyle)
         if (record.glucose != null) {
             val (status, alertLevel) = HealthLogic.evaluateGlucose(record.glucose)
@@ -226,6 +238,7 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
             Text(text = "($gLabel)", style = statusLabelStyle, color = gColor, fontWeight = if (alertLevel != HealthAlertLevel.NORMAL) FontWeight.Bold else FontWeight.Normal)
         }
         Spacer(modifier = Modifier.width(8.dp))
+        // HbA1c
         Text(text = "${stringResource(R.string.health_label_hba1c)}: ${record.hba1c?.let { "${HealthLogic.formatHbA1c(it)}${AppSpecifications.Health.HbA1c.UNIT}" } ?: "---"}", style = textStyle)
         if (record.hba1c != null) {
             val (status, alertLevel) = HealthLogic.evaluateHbA1c(record.hba1c)
@@ -241,7 +254,13 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
 
 /**
  * [2]HealthRecordDetailPane
- * 最上位：表示/編集のモード管理・状態保持
+ * 健康記録の詳細表示と編集モードを管理する最上位コンポーネント。
+ *
+ * @param category 対象のカテゴリ
+ * @param recordId 対象のレコードID（新規なら IdLogic.isNew が true）
+ * @param records 履歴リスト（新規作成時の最新値引き継ぎ等に使用）
+ * @param onCancel 閲覧モードの終了、または編集のキャンセル時のコールバック
+ * @param onSaveRecord 保存実行時のコールバック
  */
 @Composable
 fun HealthRecordDetailPane(
@@ -251,6 +270,7 @@ fun HealthRecordDetailPane(
     onCancel: () -> Unit,
     onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
 ) {
+    // recordId ごとにキーを振り、ID変更時に状態をリセットする
     key(recordId) {
         val record = remember(records, recordId) {
             if (IdLogic.isNew(recordId)) null
@@ -265,16 +285,18 @@ fun HealthRecordDetailPane(
         if (record == null && !IdLogic.isNew(recordId)) {
             LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         } else {
+            // 新規作成時は編集モードから開始
             var isEditing by remember(recordId) {
                 mutableStateOf(IdLogic.isNew(recordId))
             }
             val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
+            // 各入力項目の状態管理
             var heightText by remember(recordId, record) {
                 val initialValue = if (record is HeightAndWeight) {
                     record.height?.toString() ?: ""
                 } else if (IdLogic.isNew(recordId) && category == Category.HEIGHT_AND_WEIGHT) {
-                    // 身長の最新値引き継ぎロジック
+                    // 【UX向上】身長の最新値がある場合は、それをデフォルト値として引き継ぐ
                     records.filterIsInstance<HeightAndWeight>()
                         .filter { it.height != null }
                         .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
@@ -292,7 +314,8 @@ fun HealthRecordDetailPane(
             var glucoseText by remember(recordId, record) { mutableStateOf(if (record is GlucoseAndHbA1c) record.glucose?.toString() ?: "" else "") }
             var hba1cText by remember(recordId, record) { mutableStateOf(if (record is GlucoseAndHbA1c) record.hba1c?.toString() ?: "" else "") }
 
-            // 変更検知用の初期状態 (編集モード開始時の値を保持)
+            // 【重要】変更検知用の初期スナップショット
+            // 入力を途中で破棄しようとした際の警告ダイアログ判定に使用
             val initialHeightSnapshot = remember(recordId, record, isEditing) { heightText }
             val initialWeightSnapshot = remember(recordId, record, isEditing) { weightText }
             val initialBpSystolicSnapshot = remember(recordId, record, isEditing) { bpSystolicText }
@@ -317,11 +340,12 @@ fun HealthRecordDetailPane(
 
             var showDiscardDialog by remember { mutableStateOf(false) }
 
-            // システム戻るボタンの制御
+            // システム戻るボタンによる破棄保護
             androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
                 showDiscardDialog = true
             }
 
+            // 変更破棄の最終確認ダイアログ
             if (showDiscardDialog) {
                 AppDialog(
                     onDismissRequest = { showDiscardDialog = false },
@@ -349,13 +373,12 @@ fun HealthRecordDetailPane(
             }
 
             if (isEditing) {
-
-                // 編集画面
+                // [2-1] HealthRecordEditForm (記録の編集)
                 val scrollState = rememberScrollState()
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .imePadding() // キーボード回避
+                        .imePadding()
                         .testTag("HealthRecordDetailPane")
                 ) {
                     Column(
@@ -382,11 +405,7 @@ fun HealthRecordDetailPane(
                                 if (isChanged) {
                                     showDiscardDialog = true
                                 } else {
-                                    if (!IdLogic.isNew(recordId)) {
-                                        isEditing = false
-                                    } else {
-                                        onCancel()
-                                    }
+                                    if (!IdLogic.isNew(recordId)) isEditing = false else onCancel()
                                 }
                             },
                             onSave = {
@@ -408,7 +427,7 @@ fun HealthRecordDetailPane(
                     VerticalScrollIndicator(scrollState = scrollState)
                 }
             } else {
-                // 履歴の詳細
+                // [2-2] HealthRecordDisplayCard (記録の閲覧)
                 HealthRecordDisplayCard(
                     category = category,
                     record = record,
@@ -421,7 +440,8 @@ fun HealthRecordDetailPane(
 }
 
 /**
- * [2-1] HealthRecordEditForm (【編集モード】新規登録・既存修正用)。
+ * [2-1] HealthRecordEditForm
+ * 健康記録の入力フォーム。
  */
 @Composable
 private fun HealthRecordEditForm(
@@ -443,7 +463,7 @@ private fun HealthRecordEditForm(
 ) {
     val isDateTimeValid by remember(dateTimeState) { derivedStateOf { dateTimeState.toInstant() != null } }
 
-    // 入力値の検証
+    // 入力値のリアルタイム検証（保存ボタンの活性制御に使用）
     val validationResult = remember(
         category, heightText, weightText, bpSystolicText, bpDiastolicText, satText, pulseText, bodyTemperatureText, glucoseText, hba1cText) {
         val values = when (category) {
@@ -473,9 +493,10 @@ private fun HealthRecordEditForm(
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // 入力フォームの記録日時
                 DateTimeInputFields(state = dateTimeState)
-                // 横線
+                
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                // 入力フォーム
+                
+                // カテゴリ別の入力フィールド
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     when (category) {
                         // 身長・体重
@@ -519,7 +540,8 @@ private fun HealthRecordEditForm(
                         }
                         else -> {}
                     }
-                    // キャンセル・保存
+                    
+                    // アクションボタン（キャンセル・保存）
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).testTag("HealthField_CancelButton")) { Text(stringResource(R.string.common_cancel)) }
                         Button(
@@ -537,7 +559,8 @@ private fun HealthRecordEditForm(
 }
 
 /**
- * [2-2] HealthRecordDisplayCard (【閲覧モード】詳細表示用：Tabletモードで主に使用)
+ * [2-2] HealthRecordDisplayCard
+ * 健康記録の詳細閲覧用カード。
  */
 @Composable
 private fun HealthRecordDisplayCard(
@@ -556,6 +579,7 @@ private fun HealthRecordDisplayCard(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // ヘッダー部：戻るボタン、タイトル、編集ボタン
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -580,6 +604,7 @@ private fun HealthRecordDisplayCard(
                 }
             }
 
+            // 内容カード
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     record?.let { r ->
@@ -589,7 +614,7 @@ private fun HealthRecordDisplayCard(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        // 「記録の詳細」
+                        // [2-2-1] HealthDetailContent
                         HealthDetailContent(category, r)
                     }
                 }
@@ -600,7 +625,8 @@ private fun HealthRecordDisplayCard(
 }
 
 /**
- * [2-2-1] HealthDetailContent (カテゴリに応じた詳細表示の分岐)
+ * [2-2-1] HealthDetailContent
+ * カテゴリに応じた詳細表示の分岐用コンポーネント。
  */
 @Composable
 private fun HealthDetailContent(category: Category, record: HistoryRecord) {
@@ -614,6 +640,7 @@ private fun HealthDetailContent(category: Category, record: HistoryRecord) {
 
 /**
  * [2-2-1-1] HeightWeightDetailContent
+ * 「身長・体重」記録の詳細表示。
  */
 @Composable
 private fun HeightWeightDetailContent(record: HeightAndWeight) {
@@ -644,6 +671,7 @@ private fun HeightWeightDetailContent(record: HeightAndWeight) {
 
 /**
  * [2-2-1-2] VitalDetailContent
+ * 「バイタル」記録の詳細表示。
  */
 @Composable
 private fun VitalDetailContent(record: BpAndPulse) {
@@ -678,6 +706,7 @@ private fun VitalDetailContent(record: BpAndPulse) {
 
 /**
  * [2-2-1-3] GlucoseDetailContent
+ * 「血糖値・HbA1c」記録の詳細表示。
  */
 @Composable
 private fun GlucoseDetailContent(record: GlucoseAndHbA1c) {
@@ -697,6 +726,7 @@ private fun GlucoseDetailContent(record: GlucoseAndHbA1c) {
 
 /**
  * [2-2-1-*-1] DetailRow
+ * 詳細表示画面における1行分のラベルと値のセットを描画します。
  */
 @Composable
 private fun DetailRow(label: String, value: String, unit: String = "", color: Color = Color.Unspecified, isBold: Boolean = false) {
@@ -716,7 +746,3 @@ private fun DetailRow(label: String, value: String, unit: String = "", color: Co
         }
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-

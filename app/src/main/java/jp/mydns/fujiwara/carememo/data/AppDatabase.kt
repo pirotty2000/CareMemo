@@ -7,6 +7,25 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
+/**
+ * Data：AppDatabase
+ *
+ * 【役割】
+ * CareMemo アプリのメインとなる Room データベース基盤です。
+ * 全ての業務エンティティの管理、DAO の提供、および SQLCipher によるフルディスク暗号化を司ります。
+ *
+ * 【構成エンティティ】
+ * ・利用者基本情報 (Person) / 緊急連絡先 (EmergencyContact)
+ * ・健康記録 (HeightAndWeight, BpAndPulse, GlucoseAndHbA1c)
+ * ・所見管理 (ConditionAtVisit, ConditionPhoto)
+ * ・服薬管理 (MedicationRecord)
+ * ・システムログ (AuditLog)
+ *
+ * 【設計指針】
+ * 1. セキュリティ：SQLCipher を使用し、データベースファイルをバイナリレベルで暗号化する。
+ * 2. データの健全性：[Converters] を用いて、Instant 等の非プリミティブ型を SQLite 互換形式に変換する。
+ * 3. 保守性：古い開発版からの移行コードは廃止し、スキーマ不整合時は Destructive Migration により常に最新状態を維持する。
+ */
 @Database(
     entities = [
         Person::class,
@@ -35,49 +54,34 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun emergencyContactDao(): EmergencyContactDao
 
     companion object {
+        /** スレッドセーフなシングルトンインスタンス */
         @Volatile
         private var Instance: AppDatabase? = null
 
-        private val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE bp_and_pulse_db ADD COLUMN sat INTEGER")
-            }
-        }
-
-        private val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE audit_log_db ADD COLUMN result_type TEXT NOT NULL DEFAULT 'UNKNOWN'")
-            }
-        }
-
+        /**
+         * データベースインスタンスを取得します。
+         * 初回呼び出し時には SQLCipher のロードと暗号化キーの準備を行います。
+         */
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
-                // SQLCipher のロード
+                // SQLCipher ネイティブライブラリのロード
                 System.loadLibrary("sqlcipher")
 
                 val dbName = "care_memo_database"
                 val dbFile = context.getDatabasePath(dbName)
 
+                // Android Keystore から暗号化キーを取得（なければ生成）
                 val keyManager = DatabaseKeyManager(context)
                 val passphrase = keyManager.getOrCreatePassphrase()
 
-                /*
-                // デバッグ時のみDBキーをログ出力 (App Inspectionでの複合化に使用)
-                if (BuildConfig.DEBUG) {
-                    val hexKey = passphrase.joinToString("") { "%02x".format(it) }
-                    Log.d("AppDatabase", "Database Key for Inspector: x'$hexKey'")
-                }
-                */
-
                 val factory = SupportOpenHelperFactory(passphrase)
 
-                // 平文DBから暗号化DBへの切り替え時のクラッシュ対策
-                // 既存のファイルが平文の場合、SQLCipherで開くと SQLiteException (code 26) が発生する。
-                // 今回は「一旦空になってもよい」という方針のため、開けない場合は削除する。
+                // 【重要】平文DBから暗号化DBへの切り替え時のクラッシュ対策
+                // 暗号化されていない既存DBファイルを SQLCipher で開こうとすると SQLiteException が発生する。
+                // データの機密性を優先し、開けない（＝暗号化されていない、またはキー不一致）場合はファイルを削除して初期化する。
                 if (dbFile.exists()) {
                     try {
-                        // 読み取り専用で開いてみて、パスワードが通るかチェック
-                        // SQLCipher 4.x ではパスワードに ByteArray を受け取る。
+                        // 読み取り専用でテストオープンしてパスワードの妥当性をチェック
                         val db = net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
                             dbFile.absolutePath,
                             passphrase,
@@ -87,8 +91,7 @@ abstract class AppDatabase : RoomDatabase() {
                         )
                         db.close()
                     } catch (_: Exception) {
-                        // パスワードが一致しない、または平文DBの場合はここに来る
-                        // ファイルを削除して、Roomに再作成させる
+                        // パスワード不一致または平文DBの場合は、一度削除して Room に再作成させる
                         context.deleteDatabase(dbName)
                     }
                 }
@@ -99,7 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
                     dbName
                 )
                     .openHelperFactory(factory)
-                    .addMigrations(MIGRATION_9_10, MIGRATION_11_12)
+                    // スキーマの不整合（古い開発版等）が発生した場合は、テーブルを再作成する
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { Instance = it }

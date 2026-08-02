@@ -1,26 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
-/**
- * Component：LoadingScreen
- *
- * 【役割】：
- * データの読み込み中やバックグラウンド処理中に表示される、アプリ共通の待機画面を提供する。
- *
- * 【主な機能】：
- * ・中心に配置された円形プログレスインジケーター（CircularProgressIndicator）の表示。
- * ・待機メッセージ（デフォルトは「読み込み中...」）の表示。
- * ・画面中央への自動レイアウト。
- *
- * 【想定する利用場所】：
- * DBからの初期データ取得時、ネットワーク通信時（将来用）、大量データの加工処理時など。
- *
- * 【このコンポーネントでは行わないこと】：
- * 処理の実行制御（処理が完了したら Composable 自体が消えるように親側で制御する）。
- *
- * 【公開composable】：
- * LoadingScreen
- */
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +13,25 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 
 /**
- * アプリ共通のローディング画面
+ * Component：LoadingScreen
+ *
+ * 【役割】
+ * データの読み込み中やバックグラウンド処理中に表示される、アプリ共通の待機画面を提供します。
+ *
+ * 【主な機能】
+ * ・中心に配置された円形プログレスインジケーター（CircularProgressIndicator）の表示。
+ * ・待機メッセージ（デフォルトは「読み込み中...」）の表示。
+ * ・画面中央への自動レイアウト。
+ * ・UIテスト用のテストタグ（AppLoadingIndicator）の付与。
+ *
+ * 【想定する利用場所】
+ * DBからの初期データ取得時、ネットワーク通信時（将来用）、大量データの加工処理時など。
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 処理の実行制御（処理が完了したら Composable 自体が消えるように親側で制御する）。
+ *
+ * @param modifier 修飾子
+ * @param message 表示する待機メッセージ
  */
 @Composable
 fun LoadingScreen(
@@ -48,8 +45,10 @@ fun LoadingScreen(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // プログレスインジケーターの表示
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
+            // 待機メッセージの表示
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,

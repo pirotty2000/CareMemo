@@ -3,17 +3,48 @@ package jp.mydns.fujiwara.carememo.data
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Data：Dao (Data Access Objects)
+ *
+ * 【役割】
+ * CareMemo の SQLite データベース（Room）に対するすべての操作を定義します。
+ * 各エンティティに対応する DAO を提供し、業務ロジックからのデータアクセスを抽象化します。
+ *
+ * 【主な機能】
+ * ・標準的な CRUD（作成・取得・更新・削除）操作。
+ * ・「削除フラグ（deleted_at）」に基づく論理削除および復元ロジック。
+ * ・バックアップ・インポート用の一括処理機能。
+ * ・複数テーブルにまたがるサマリー情報の集計クエリ。
+ * ・データ整合性チェック（孤立レコードの検出）用の特殊クエリ。
+ *
+ * 【設計指針】
+ * 1. データの消失を防ぐため、原則として「論理削除」を採用し、deleted_at カラムで管理する。
+ * 2. 監視が必要なデータ（一覧画面等）には Flow を返し、リアクティブな UI 更新を可能にする。
+ * 3. 複雑な結合や集計は SQLite のネイティブクエリ（@Query）を活用して効率化する。
+ */
+
+/**
+ * 利用者の基本情報（Person）を管理する DAO
+ */
 @Dao
 interface PersonDao {
+    /** 有効な利用者（未削除）をふりがな順に取得 */
     @Query("SELECT * FROM person_db WHERE deleted_at IS NULL ORDER BY last_name_furigana ASC, first_name_furigana ASC")
     fun getAllPersons(): Flow<List<Person>>
 
+    /** 利用終了した利用者（論理削除済み）を削除日時の新しい順に取得 */
     @Query("SELECT * FROM person_db WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")
     fun getDeletedPersons(): Flow<List<Person>>
 
+    /** IDを指定して利用者を取得 */
     @Query("SELECT * FROM person_db WHERE id = :id")
     fun getPersonById(id: String): Flow<Person?>
 
+    /**
+     * 重複登録防止用の検索。
+     * 同姓同名、かつ同一生年月日、かつ同一備考（note）の人物を検索します。
+     * note は NULL の可能性があるため COALESCE で空文字として比較します。
+     */
     @Query("""
         SELECT * FROM person_db 
         WHERE last_name = :lastName 
@@ -37,22 +68,27 @@ interface PersonDao {
     @Update
     suspend fun update(person: Person)
 
+    /** 指定した利用者を論理削除（削除時刻を記録） */
     @Query("UPDATE person_db SET deleted_at = :timestamp WHERE id = :id")
     suspend fun logicalDelete(id: String, timestamp: Long)
 
+    /** 論理削除された利用者を一覧に復帰 */
     @Query("UPDATE person_db SET deleted_at = NULL WHERE id = :id")
     suspend fun restore(id: String)
 
     @Delete
     suspend fun delete(person: Person)
 
+    /** 指定した利用者を物理削除 */
     @Query("DELETE FROM person_db WHERE id = :id")
     suspend fun deletePersonPhysically(id: String)
 
+    /** 全ての論理削除済み利用者を物理削除（アーカイブ抹消） */
     @Query("DELETE FROM person_db WHERE deleted_at IS NOT NULL")
     suspend fun deleteEndedPersons()
 
     // --- バックアップ・インポート用 ---
+    
     @Query("SELECT * FROM person_db")
     suspend fun getAllRaw(): List<Person>
 
@@ -62,6 +98,10 @@ interface PersonDao {
     @Upsert
     suspend fun insertAll(items: List<Person>)
 
+    /**
+     * 利用者一覧に表示する「記録状況バッジ」用の情報を一括取得します。
+     * 各カテゴリに有効なデータが存在するかどうかを EXISTS 句で判定します。
+     */
     @Query("""
         SELECT 
             p.id,
@@ -76,8 +116,12 @@ interface PersonDao {
     fun getPersonCategorySummaries(): Flow<List<PersonSummaryQueryResult>>
 }
 
+/**
+ * 身長・体重記録を管理する DAO
+ */
 @Dao
 interface HeightAndWeightDao {
+    /** 特定の利用者の記録を日時の新しい順に取得 */
     @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
     fun getByPersonId(personId: String): Flow<List<HeightAndWeight>>
 
@@ -104,6 +148,8 @@ interface HeightAndWeightDao {
     suspend fun insertAll(items: List<HeightAndWeight>)
 
     // --- 整合性チェック用 ---
+    
+    /** 親となる利用者が存在しない「孤立レコード」を取得 */
     @Query("""
         SELECT h.* FROM height_and_weight_db h
         LEFT JOIN person_db p ON h.person_id = p.id
@@ -111,16 +157,21 @@ interface HeightAndWeightDao {
     """)
     suspend fun getOrphanedRecords(): List<HeightAndWeight>
 
+    /** 特定の利用者に有効なデータが存在するか判定 */
     @Query("SELECT EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: String): Flow<Boolean>
 
     @Query("DELETE FROM height_and_weight_db WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    /** 同一日時の既存データを検索（重複チェック用） */
     @Query("SELECT * FROM height_and_weight_db WHERE person_id = :personId AND record_time = :recordTime LIMIT 1")
     suspend fun findAtTime(personId: String, recordTime: java.time.Instant): HeightAndWeight?
 }
 
+/**
+ * 血圧・脈拍等のバイタル記録を管理する DAO
+ */
 @Dao
 interface BpAndPulseDao {
     @Query("SELECT * FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
@@ -166,6 +217,9 @@ interface BpAndPulseDao {
     suspend fun findAtTime(personId: String, recordTime: java.time.Instant): BpAndPulse?
 }
 
+/**
+ * 血糖値・HbA1c記録を管理する DAO
+ */
 @Dao
 interface GlucoseAndHbA1cDao {
     @Query("SELECT * FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
@@ -211,6 +265,9 @@ interface GlucoseAndHbA1cDao {
     suspend fun findAtTime(personId: String, recordTime: java.time.Instant): GlucoseAndHbA1c?
 }
 
+/**
+ * 所見メモ記録を管理する DAO
+ */
 @Dao
 interface ConditionAtVisitDao {
     @Query("SELECT * FROM condition_at_visit_db WHERE person_id = :personId AND deleted_at IS NULL ORDER BY record_time DESC")
@@ -246,6 +303,7 @@ interface ConditionAtVisitDao {
     """)
     suspend fun getOrphanedRecords(): List<ConditionAtVisit>
 
+    /** タイトルまたは本文のキーワードによる利用者IDの検索（利用者一覧の絞り込みに使用） */
     @Query("""
         SELECT DISTINCT person_id FROM condition_at_visit_db 
         WHERE deleted_at IS NULL 
@@ -266,14 +324,19 @@ interface ConditionAtVisitDao {
     suspend fun getAllIds(): List<String>
 }
 
+/**
+ * 所見メモに紐付く写真メタデータを管理する DAO
+ */
 @Dao
 interface ConditionPhotoDao {
+    /** 特定の所見メモに紐付く写真を撮影順に取得 */
     @Query("SELECT * FROM condition_photo_db WHERE condition_id = :conditionId AND deleted_at IS NULL ORDER BY captured_at ASC")
     fun getByConditionId(conditionId: String): Flow<List<ConditionPhoto>>
 
     @Upsert
     suspend fun insert(item: ConditionPhoto): Long
 
+    /** 一時保存中（親レコード確定前）の写真を正規の記録に紐付ける */
     @Query("UPDATE condition_photo_db SET condition_id = :newConditionId WHERE condition_id = '' AND person_id = :personId")
     suspend fun linkTemporaryPhotosToRecord(personId: String, newConditionId: String)
 
@@ -306,6 +369,7 @@ interface ConditionPhotoDao {
     suspend fun updateConditionId(photoId: String, conditionId: String)
 
     // --- 整合性チェック用 ---
+    /** 紐付け先の所見メモが存在しない「孤立写真」を取得 */
     @Query("""
         SELECT cp.* FROM condition_photo_db cp
         LEFT JOIN condition_at_visit_db c ON cp.condition_id = c.id
@@ -314,11 +378,15 @@ interface ConditionPhotoDao {
     suspend fun getOrphanedPhotos(): List<ConditionPhoto>
 }
 
+/**
+ * 服薬記録を管理する DAO
+ */
 @Dao
 interface MedicationRecordDao {
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL")
     fun getByPersonId(personId: String): Flow<List<MedicationRecord>>
 
+    /** 月単位での服薬記録の取得（カレンダー表示用） */
     @Query("SELECT * FROM medication_record_db WHERE person_id = :personId AND dosage_date LIKE :month || '%' AND deleted_at IS NULL")
     fun getByMonth(personId: String, month: String): Flow<List<MedicationRecord>>
 
@@ -359,14 +427,19 @@ interface MedicationRecordDao {
     suspend fun deleteById(id: String)
 }
 
+/**
+ * 操作ログ（監査ログ）を管理する DAO
+ */
 @Dao
 interface AuditLogDao {
     @Insert
     suspend fun insert(log: AuditLog)
 
+    /** ログを日時の降順で全件取得 */
     @Query("SELECT * FROM audit_log_db ORDER BY timestamp DESC")
     fun getAllLogs(): Flow<List<AuditLog>>
 
+    /** 指定日時より古いログを物理削除（ログの自動クリーンアップ用） */
     @Query("DELETE FROM audit_log_db WHERE timestamp < :threshold")
     suspend fun deleteOldLogs(threshold: java.time.Instant)
 
@@ -374,11 +447,14 @@ interface AuditLogDao {
     suspend fun deleteAll()
 }
 
+/**
+ * 緊急連絡先を管理する DAO
+ */
 @Dao
 interface EmergencyContactDao {
     /**
      * 利用者に紐付く連絡先一覧を取得する。
-     * ソート順: 種別定義順 ➔ 優先度 ➔ 施設名
+     * ソート順: 種別優先度 (CASE文) ➔ 表示優先度 (priority) ➔ 施設名
      */
     @Query("""
         SELECT * FROM emergency_contact_db 

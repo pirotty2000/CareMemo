@@ -1,37 +1,60 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 
 /**
- * 利用者復帰・抹消画面全体の表示状態
+ * 利用修了者（アーカイブ）の管理画面用 UI 状態。
+ *
+ * @param persons 全アーカイブ対象者のリスト
+ * @param filteredPersons 検索等で絞り込まれたリスト
+ * @param selectedPersonIds 現在選択されている利用者のIDセット
+ * @param searchQuery 検索キーワード
+ * @param isLoading 読み込み中フラグ
+ * @param isProcessing 削除や復旧の実行中フラグ
+ * @param isNameMaskingEnabled 氏名を伏せ字にするかどうか
  */
 data class DeleteOrRestorePersonUiState(
-    val isLoading: Boolean = false,
-    val mode: DeleteOrRestorePersonViewModel.OperationMode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE,
-    val archivedPersons: List<Person> = emptyList(),
-    val selectedIds: Set<String> = emptySet(),
+    val persons: List<Person> = emptyList(),
+    val filteredPersons: List<Person> = emptyList(),
+    val selectedPersonIds: Set<String> = emptySet(),
+    val searchQuery: String = "",
+    val isLoading: Boolean = true,
+    val isProcessing: Boolean = false,
     val isNameMaskingEnabled: Boolean = true
 )
 
 /**
- * 利用者復帰・抹消画面固有のイベント
+ * アーカイブ管理画面固有のナビゲーションイベント。
  */
 sealed interface DeleteOrRestorePersonViewEvent {
-    // 将来的な拡張用
+    /** 処理完了後の画面終了を要求する */
+    data object Finish : DeleteOrRestorePersonViewEvent
 }
 
 /**
- * 利用者復帰・抹消画面に関するドメインロジック。
+ * Logic：DeleteOrRestorePersonLogic
+ *
+ * 【役割】
+ * 利用終了者（アーカイブ）の復帰、または完全抹消を行う画面における選択管理とフィルタリングのロジックを提供します。
+ *
+ * 【主な機能】
+ * ・チェックボックスによる複数選択状態の管理。
+ * ・氏名およびフリガナに基づくリアルタイム検索。
+ * ・選択人数に応じた要約情報の生成。
+ *
+ * 【設計指針】
+ * 1. 大人数の利用者を扱う可能性があるため、選択状態は Set で高速に管理する。
+ * 2. 検索はユーザーの利便性を考慮し、漢字氏名と読み（ふりがな）の両方を対象とする。
+ * 3. 抹消や復元といった重大な操作を行うため、選択人数を常に明示的に算出する。
  */
 object DeleteOrRestorePersonLogic {
 
     /**
-     * 利用者の選択状態を切り替えます。
+     * 指定された利用者IDの選択状態を反転（トグル）させ、新しいIDセットを返します。
      *
-     * @param currentIds 現在選択されている ID のセット
-     * @param personId 切り替え対象の利用者 ID
-     * @return 新しい選択 ID のセット
+     * @param currentIds 現在の選択済みIDセット
+     * @param personId 対象の利用者ID
+     * @return 更新後のIDセット
      */
     fun toggleSelection(currentIds: Set<String>, personId: String): Set<String> {
         return if (currentIds.contains(personId)) {
@@ -42,45 +65,30 @@ object DeleteOrRestorePersonLogic {
     }
 
     /**
-     * リスト内のすべての利用者を全選択した状態の ID セットを生成します。
+     * アーカイブ対象者のリストを検索クエリでフィルタリングします。
+     * 氏名（姓・名）またはふりがな（せい・めい）のいずれかにクエリが含まれる人物を抽出します。
      *
-     * @param persons 利用者リスト
-     * @return すべての ID を含むセット
+     * @param persons 元のリスト
+     * @param query 検索キーワード
+     * @return フィルタリング後のリスト
      */
-    fun selectAll(persons: List<Person>): Set<String> {
-        return persons.map { it.id }.toSet()
-    }
-
-    /**
-     * 現在の選択状態に基づき、処理（復帰・抹消）の対象となる利用者を抽出します。
-     *
-     * @param persons 全利用者リスト
-     * @param selectedIds 選択されている ID のセット
-     * @return 処理対象の利用者リスト
-     */
-    fun filterTargets(persons: List<Person>, selectedIds: Set<String>): List<Person> {
-        return persons.filter { selectedIds.contains(it.id) }
-    }
-
-    /**
-     * バリデーション結果を示す Enum
-     */
-    enum class DeleteOrRestoreValidationResult {
-        SUCCESS,
-        NO_SELECTION
-    }
-
-    /**
-     * 選択状態のバリデーションを行います。
-     *
-     * @param selectedIds 選択されている ID のセット
-     * @return バリデーション結果
-     */
-    fun validate(selectedIds: Set<String>): DeleteOrRestoreValidationResult {
-        return if (selectedIds.isEmpty()) {
-            DeleteOrRestoreValidationResult.NO_SELECTION
-        } else {
-            DeleteOrRestoreValidationResult.SUCCESS
+    fun filterRecords(persons: List<Person>, query: String): List<Person> {
+        if (query.isBlank()) return persons
+        return persons.filter { person ->
+            val nameMatch = "${person.lastName}${person.firstName}".contains(query, ignoreCase = true)
+            val furiganaMatch = "${person.lastNameFurigana}${person.firstNameFurigana}".contains(query, ignoreCase = true)
+            nameMatch || furiganaMatch
         }
+    }
+
+    /**
+     * 現在の選択状況に基づいたサマリー情報を計算します。
+     * ボタンの活性化やメッセージ表示に使用します。
+     *
+     * @param selectedIds 選択中のIDセット
+     * @return 選択人数
+     */
+    fun calculateSummary(selectedIds: Set<String>): Int {
+        return selectedIds.size
     }
 }

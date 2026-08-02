@@ -4,12 +4,30 @@ import kotlinx.serialization.Serializable
 import java.time.Instant
 
 /**
- * バックアップ・復元専用のデータ転送オブジェクト (DTO)
- * 将来的な Entity の構造変更（UUID化など）からバックアップ形式を保護するために導入。
- * バージョン 5 以降、ID は String (UUID) 形式となる。
- * 更新日時 (updatedAt) および同期フラグ (isSynced) に対応。
+ * Data：BackupDto
+ *
+ * 【役割】
+ * バックアップ・復元処理において、外部（JSON形式のファイル）とやり取りするための専用データ転送オブジェクト (DTO) 群を提供します。
+ *
+ * 【導入の背景】
+ * データベースの内部構造（Room Entity）は、アプリの機能追加やリファクタリング（例：IDのUUID化、カラム名の変更等）
+ * に伴い頻繁に変化する可能性があります。Entity を直接バックアップに使用すると、古いバージョンのバックアップが
+ * 新しいアプリで復元できなくなる恐れがあるため、不変の「交換形式」として本 DTO を定義しています。
+ *
+ * 【主な機能】
+ * ・Kotlin Serialization による JSON へのシリアライズ/デシリアライズ。
+ * ・Entity と DTO の相互マッピング機能の提供。
+ * ・論理削除フラグ (deletedAt) や同期管理用フラグ (isSynced) への対応。
+ *
+ * 【設計指針】
+ * 1. 外部形式としての互換性を最優先し、Entity の構造が変わっても DTO の構造は極力維持する。
+ * 2. ID は一貫して String (UUID) 形式を採用し、将来の分散同期等に備える。
+ * 3. Instant 型のシリアライズには、プロジェクト共通の [InstantSerializer] を使用する。
  */
 
+/**
+ * 利用者情報のバックアップ用 DTO
+ */
 @Serializable
 data class PersonBackupDto(
     val id: String,
@@ -26,6 +44,9 @@ data class PersonBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 身長・体重記録のバックアップ用 DTO
+ */
 @Serializable
 data class HeightAndWeightBackupDto(
     val id: String,
@@ -40,6 +61,9 @@ data class HeightAndWeightBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 血圧・脈拍・バイタル記録のバックアップ用 DTO
+ */
 @Serializable
 data class BpAndPulseBackupDto(
     val id: String,
@@ -57,6 +81,9 @@ data class BpAndPulseBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 血糖値・HbA1c記録のバックアップ用 DTO
+ */
 @Serializable
 data class GlucoseAndHbA1cBackupDto(
     val id: String,
@@ -71,6 +98,9 @@ data class GlucoseAndHbA1cBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 所見メモ記録のバックアップ用 DTO
+ */
 @Serializable
 data class ConditionAtVisitBackupDto(
     val id: String,
@@ -86,6 +116,9 @@ data class ConditionAtVisitBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 所見写真メタデータのバックアップ用 DTO
+ */
 @Serializable
 data class ConditionPhotoBackupDto(
     val id: String,
@@ -102,6 +135,9 @@ data class ConditionPhotoBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 服薬記録のバックアップ用 DTO
+ */
 @Serializable
 data class MedicationRecordBackupDto(
     val id: String,
@@ -117,9 +153,9 @@ data class MedicationRecordBackupDto(
     val isSynced: Boolean = false
 )
 
-/**
- * DTO と Entity の相互マッピング用拡張関数
- */
+// ------------------------------------------------------------------------------------------------
+// DTO と Entity の相互マッピング用拡張関数
+// ------------------------------------------------------------------------------------------------
 
 fun Person.toBackupDto() = PersonBackupDto(
     id, lastName, firstName, lastNameFurigana, firstNameFurigana, birthday, note, deletedAt, updatedAt, isSynced

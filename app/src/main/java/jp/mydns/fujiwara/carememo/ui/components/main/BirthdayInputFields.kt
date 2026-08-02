@@ -3,14 +3,21 @@ package jp.mydns.fujiwara.carememo.ui.components.main
 /**
  * Component：BirthdayInputFields
  *
- * 【役割】：
- * 利用者の生年月日を入力するためのUIコンポーネントと、その状態管理を提供する。
+ * 【役割】
+ * 利用者の生年月日（和暦・西暦対応）を入力するためのUIコンポーネントと、その状態管理機能を提供します。
  *
- * 【主な機能】：
+ * 【主な機能】
  * ・元号（西暦、昭和、平成、令和）の選択ドロップダウンの提供。
- * ・年、月、日の数値入力フィールドの提供（AppCompactTextField を利用）。
+ * ・年、月、日の数値入力フィールド（AppCompactTextField）の提供。
+ * ・入力値のバリデーション（元号ごとの最大年数チェック、存在しない日付のチェック等）。
  * ・入力完了時や最大桁数到達時の自動フォーカス移動。
- * ・入力値のバリデーション（存在しない日付のチェック等）と、Instant への変換。
+ * ・入力値を Instant 形式へ変換するロジックの内包。
+ *
+ * 【想定する利用場所】
+ * ・利用者登録・編集画面（PersonEditScreenContent）。
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・氏名や性別など、生年月日以外の情報の管理。
  */
 
 import androidx.compose.foundation.layout.*
@@ -32,7 +39,13 @@ import java.time.Instant
 import java.time.ZoneOffset
 
 /**
- * 生年月日入力のステート管理クラス
+ * 生年月日入力のステートを管理するクラス。
+ * 和暦・西暦の選択状態と、それぞれの数値入力値を保持し、バリデーションを提供します。
+ *
+ * @property era 元号（西暦、昭和、平成、令和）の選択状態
+ * @property year 年の入力文字列
+ * @property month 月の入力文字列
+ * @property day 日の入力文字列
  */
 class BirthdayInputState(
     val era: MutableState<BirthEra>,
@@ -41,18 +54,23 @@ class BirthdayInputState(
     val day: MutableState<String>,
 ) {
     /**
-     * 入力内容を Instant に変換。不正な場合は null。
+     * 入力内容を Instant に変換します。
+     * 和暦の場合は西暦に変換した上で計算します。
+     *
+     * @return 変換後の Instant。入力が不完全または不正な日付（2月30日等）の場合は null。
      */
     fun toInstant(): Instant? {
         val y = year.value.toIntOrNull() ?: return null
         val m = month.value.toIntOrNull() ?: return null
         val d = day.value.toIntOrNull() ?: return null
 
+        // JapaneseDateLogic を使用して物理的妥当性を含めて変換
         return JapaneseDateLogic.toLocalDate(era.value, y, m, d)
             ?.atStartOfDay(ZoneOffset.UTC)
             ?.toInstant()
     }
 
+    /** 年の入力値が元号の範囲外、または数値でない場合に true */
     val isYearError: Boolean
         get() {
             val y = year.value.toIntOrNull() ?: return true
@@ -64,12 +82,14 @@ class BirthdayInputState(
             }
         }
 
+    /** 月の入力値が 1..12 の範囲外、または数値でない場合に true */
     val isMonthError: Boolean
         get() {
             val m = month.value.toIntOrNull() ?: return true
             return m !in 1..12
         }
 
+    /** 日の入力値が暦の上で存在しない場合（例: 2月30日）、または数値でない場合に true */
     val isDayError: Boolean
         get() {
             val yInput = year.value.toIntOrNull() ?: return true
@@ -83,7 +103,11 @@ class BirthdayInputState(
 }
 
 /**
- * 生年月日入力フィールド群
+ * 生年月日入力フィールド群を表示する Composable。
+ * 元号選択ドロップダウンと、年・月・日の数値フィールドをレイアウトします。
+ *
+ * @param state 入力状態を管理する BirthdayInputState
+ * @param modifier 修飾子
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,18 +118,22 @@ fun BirthdayInputFields(
     var eraExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.main_label_birthday), style = MaterialTheme.typography.labelMedium)
+        Text(
+            text = stringResource(R.string.main_label_birthday),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
         
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 元号選択
+            // --- 元号選択ドロップダウン ---
             ExposedDropdownMenuBox(
                 expanded = eraExpanded,
                 onExpandedChange = { eraExpanded = !eraExpanded },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1.2f)
             ) {
                 AppCompactTextField(
                     value = stringResource(BirthEraDisplayMapper.getDisplayNameRes(state.era.value)),
@@ -124,7 +152,12 @@ fun BirthdayInputFields(
                 ) {
                     BirthEra.entries.forEach { e ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(BirthEraDisplayMapper.getDisplayNameRes(e)), style = MaterialTheme.typography.bodyMedium) },
+                            text = { 
+                                Text(
+                                    text = stringResource(BirthEraDisplayMapper.getDisplayNameRes(e)),
+                                    style = MaterialTheme.typography.bodyMedium
+                                ) 
+                            },
                             onClick = {
                                 state.era.value = e
                                 eraExpanded = false
@@ -134,12 +167,13 @@ fun BirthdayInputFields(
                 }
             }
 
-            // 年入力
+            // --- 年入力フィールド ---
             AppCompactTextField(
                 value = state.year.value,
                 onValueChange = { state.year.value = it },
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthYear"),
                 type = AppTextFieldType.INTEGER,
+                // 西暦の場合は4桁、和暦の場合は2桁を上限とする
                 maxLength = if (state.era.value == BirthEra.AD) 4 else 2,
                 isError = state.isYearError,
                 suffix = { Text(stringResource(R.string.common_year_suffix), style = MaterialTheme.typography.labelSmall) }
@@ -151,7 +185,7 @@ fun BirthdayInputFields(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 月入力
+            // --- 月入力フィールド ---
             AppCompactTextField(
                 value = state.month.value,
                 onValueChange = { state.month.value = it },
@@ -162,7 +196,7 @@ fun BirthdayInputFields(
                 suffix = { Text(stringResource(R.string.common_month_suffix), style = MaterialTheme.typography.labelSmall) }
             )
 
-            // 日入力
+            // --- 日入力フィールド ---
             AppCompactTextField(
                 value = state.day.value,
                 onValueChange = { state.day.value = it },
