@@ -352,7 +352,12 @@ fun HealthRecordDetailPane(
 
                 // 編集画面
                 val scrollState = rememberScrollState()
-                Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDetailPane")) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .imePadding() // キーボード回避
+                        .testTag("HealthRecordDetailPane")
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()

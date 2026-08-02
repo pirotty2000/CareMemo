@@ -658,7 +658,12 @@ fun SettingsScreenContent(
         },
     ) { paddingValues ->
         val scrollState = rememberScrollState()
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .imePadding() // キーボード回避
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()

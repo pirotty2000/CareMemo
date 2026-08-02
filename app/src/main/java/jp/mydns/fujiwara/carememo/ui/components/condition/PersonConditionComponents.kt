@@ -410,7 +410,12 @@ private fun ConditionRecordEditForm(
     }
 
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize().testTag("ConditionDetailPane")) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding() // キーボード回避
+            .testTag("ConditionDetailPane")
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -602,7 +607,12 @@ private fun ConditionRecordDisplayCard(
     orphanedPhotoCount: Int = 0,
 ) {
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize().testTag("ConditionDetailPane")) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding() // キーボード回避
+            .testTag("ConditionDetailPane")
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()

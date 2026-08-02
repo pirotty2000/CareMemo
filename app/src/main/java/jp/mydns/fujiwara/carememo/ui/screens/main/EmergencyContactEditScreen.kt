@@ -87,104 +87,112 @@ fun EmergencyContactEditContent(
             )
         }
     ) { padding ->
-        Column(
+        val scrollState = rememberScrollState()
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .imePadding()
         ) {
-            // 種別選択
-            ContactTypeDropdown(
-                selectedType = contact.contactType,
-                onTypeSelect = { newType ->
-                    onUpdateContact { it.copy(contactType = newType) }
-                },
-                modifier = Modifier.testTag("EmergencyContact_TypeDropdown")
-            )
-
-            // 施設名・事業所名・続柄
-            AppTextField(
-                value = contact.facilityName,
-                onValueChange = { newValue ->
-                    onUpdateContact { it.copy(facilityName = newValue) }
-                },
-                label = { Text(stringResource(R.string.medical_contact_facility_label)) },
-                placeholder = { Text(stringResource(R.string.medical_contact_facility_placeholder)) },
-                maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_FACILITY_NAME,
-                modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_FacilityField")
-            )
-
-            // 担当者名・個人名
-            AppTextField(
-                value = contact.personName ?: "",
-                onValueChange = { newValue ->
-                    onUpdateContact { it.copy(personName = newValue) }
-                },
-                label = { Text(stringResource(R.string.medical_contact_person_label)) },
-                placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
-                maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PERSON_NAME,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // 電話番号
-            var isPhoneFocused by remember { mutableStateOf(false) }
-            AppTextField(
-                value = contact.phoneNumber ?: "",
-                onValueChange = { newValue ->
-                    onUpdateContact { it.copy(phoneNumber = newValue) }
-                },
-                type = AppTextFieldType.PHONE,
-                label = { Text(stringResource(R.string.medical_contact_phone_label)) },
-                placeholder = { Text(stringResource(R.string.medical_contact_phone_placeholder)) },
-                visualTransformation = if (isPhoneFocused) {
-                    VisualTransformation.None
-                } else {
-                    PhoneNumberVisualTransformation()
-                },
-                supportingText = { Text(stringResource(R.string.medical_contact_phone_note)) },
-                maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PHONE_NUMBER,
-                onFocusChanged = { isPhoneFocused = it.isFocused },
-                modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PhoneField")
-            )
-
-            // 優先度
-            AppTextField(
-                value = contact.priority.toString(),
-                onValueChange = { newValue ->
-                    val p = newValue.toIntOrNull() ?: AppSpecifications.MedicalContact.Validation.DEFAULT_PRIORITY
-                    onUpdateContact { it.copy(priority = p) }
-                },
-                type = AppTextFieldType.INTEGER,
-                label = { Text(stringResource(R.string.medical_contact_priority_label)) },
-                maxLength = 2,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // 操作ボタン
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedButton(
-                    onClick = handleBack,
-                    modifier = Modifier.weight(1f).testTag("EmergencyContact_CancelButton")
+                // 種別選択
+                ContactTypeDropdown(
+                    selectedType = contact.contactType,
+                    onTypeSelect = { newType ->
+                        onUpdateContact { it.copy(contactType = newType) }
+                    },
+                    modifier = Modifier.testTag("EmergencyContact_TypeDropdown")
+                )
+
+                // 施設名・事業所名・続柄
+                AppTextField(
+                    value = contact.facilityName,
+                    onValueChange = { newValue ->
+                        onUpdateContact { it.copy(facilityName = newValue) }
+                    },
+                    label = { Text(stringResource(R.string.medical_contact_facility_label)) },
+                    placeholder = { Text(stringResource(R.string.medical_contact_facility_placeholder)) },
+                    maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_FACILITY_NAME,
+                    modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_FacilityField")
+                )
+
+                // 担当者名・個人名
+                AppTextField(
+                    value = contact.personName ?: "",
+                    onValueChange = { newValue ->
+                        onUpdateContact { it.copy(personName = newValue) }
+                    },
+                    label = { Text(stringResource(R.string.medical_contact_person_label)) },
+                    placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
+                    maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PERSON_NAME,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 電話番号
+                var isPhoneFocused by remember { mutableStateOf(false) }
+                AppTextField(
+                    value = contact.phoneNumber ?: "",
+                    onValueChange = { newValue ->
+                        onUpdateContact { it.copy(phoneNumber = newValue) }
+                    },
+                    type = AppTextFieldType.PHONE,
+                    label = { Text(stringResource(R.string.medical_contact_phone_label)) },
+                    placeholder = { Text(stringResource(R.string.medical_contact_phone_placeholder)) },
+                    visualTransformation = if (isPhoneFocused) {
+                        VisualTransformation.None
+                    } else {
+                        PhoneNumberVisualTransformation()
+                    },
+                    supportingText = { Text(stringResource(R.string.medical_contact_phone_note)) },
+                    maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PHONE_NUMBER,
+                    onFocusChanged = { isPhoneFocused = it.isFocused },
+                    modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PhoneField")
+                )
+
+                // 優先度
+                AppTextField(
+                    value = contact.priority.toString(),
+                    onValueChange = { newValue ->
+                        val p = newValue.toIntOrNull() ?: AppSpecifications.MedicalContact.Validation.DEFAULT_PRIORITY
+                        onUpdateContact { it.copy(priority = p) }
+                    },
+                    type = AppTextFieldType.INTEGER,
+                    label = { Text(stringResource(R.string.medical_contact_priority_label)) },
+                    maxLength = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // 操作ボタン
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-                Button(
-                    onClick = onSaveClick,
-                    enabled = uiState.isValid,
-                    modifier = Modifier.weight(1f).testTag("EmergencyContact_SaveButton")
-                ) {
-                    Text(stringResource(R.string.common_save))
+                    OutlinedButton(
+                        onClick = handleBack,
+                        modifier = Modifier.weight(1f).testTag("EmergencyContact_CancelButton")
+                    ) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                    Button(
+                        onClick = onSaveClick,
+                        enabled = uiState.isValid,
+                        modifier = Modifier.weight(1f).testTag("EmergencyContact_SaveButton")
+                    ) {
+                        Text(stringResource(R.string.common_save))
+                    }
                 }
             }
+            VerticalScrollIndicator(scrollState = scrollState)
         }
     }
 

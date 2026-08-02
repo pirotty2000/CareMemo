@@ -204,7 +204,12 @@ fun PersonEditScreenContent(
             LoadingScreen()
         } else {
             val scrollState = rememberScrollState()
-            Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .imePadding() // キーボード回避
+                    .fillMaxSize()
+            ) {
                 Column(
                     modifier = Modifier
                         .verticalScroll(scrollState)

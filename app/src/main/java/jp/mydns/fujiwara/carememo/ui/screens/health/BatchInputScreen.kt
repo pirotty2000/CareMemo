@@ -174,7 +174,12 @@ fun BatchInputScreen(
         if (isLoading && uiState.personId == null) {
             LoadingScreen()
         } else {
-            Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .imePadding() // キーボード回避
+                    .fillMaxSize()
+            ) {
                 Column(
                     modifier = Modifier
                         .verticalScroll(scrollState)

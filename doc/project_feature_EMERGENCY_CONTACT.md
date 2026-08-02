@@ -9,15 +9,15 @@
 利用者に紐付く連絡先を 1:N で管理するため、専用の Entity を追加する。マスタテーブルは作成せず、アプリ内定数（Enum等）で種別を管理する。
 
 ### 2.1. EmergencyContact Entity
-| フィールド | 型 | 必須 | 説明 |
-| :--- | :--- | :---: | :--- |
-| `id` | String | ○ | プライマリキー（UUID） |
-| `personId` | String | ○ | 利用者ID（外部キー/UUID） |
-| `contactType` | String | ○ | 種別（下記 6 類型） |
-| `facilityName` | String | ○ | 病院名・事業所名・続柄（例：「○○クリニック」「長男」） |
-| `personName` | String | － | 担当者名・個人名（例：「田中先生」「佐藤太郎」） |
-| `phoneNumber` | String | － | 電話番号（任意だが発信機能には必須） |
-| `priority` | Int | ○ | 表示順序（デフォルト：99） |
+| フィールド          | 型      | 必須 | 説明                           |
+|:---------------|:-------|:--:|:-----------------------------|
+| `id`           | String | ○  | プライマリキー（UUID）                |
+| `personId`     | String | ○  | 利用者ID（外部キー/UUID）             |
+| `contactType`  | String | ○  | 種別（下記 6 類型）                  |
+| `facilityName` | String | ○  | 病院名・事業所名・続柄（例：「○○クリニック」「長男」） |
+| `personName`   | String | －  | 担当者名・個人名（例：「田中先生」「佐藤太郎」）     |
+| `phoneNumber`  | String | －  | 電話番号（任意だが発信機能には必須）           |
+| `priority`     | Int    | ○  | 表示順序（デフォルト：99）               |
 
 #### contactType の定義（6 類型）
 1. 病院
@@ -78,44 +78,44 @@
 ## 6. 実装完了ファイル一覧
 
 ### 6.1. Data レイヤー (仕様・Entity・DAO)
-| ファイルパス | 区分 | 概要 |
-| :--- | :---: | :--- |
-| `data/spec/EmergencyContactSpecifications.kt` | 新規 | 文字数制限、デフォルト優先度、種別定数。 |
-| `data/AppSpecifications.kt` | 修正 | 上記仕様への窓口追加。 |
-| `data/Entity.kt` | 修正 | `EmergencyContact` Entity の追加（テーブル: `emergency_contact_db`）。 |
-| `data/Dao.kt` | 修正 | `EmergencyContactDao` インターフェースの追加。 |
-| `data/AppDatabase.kt` | 修正 | Entity 登録、DAO メソッド追加、DB Version 15。 |
+| ファイルパス                                        | 区分 | 概要                                                           |
+|:----------------------------------------------|:--:|:-------------------------------------------------------------|
+| `data/spec/EmergencyContactSpecifications.kt` | 新規 | 文字数制限、デフォルト優先度、種別定数。                                         |
+| `data/AppSpecifications.kt`                   | 修正 | 上記仕様への窓口追加。                                                  |
+| `data/Entity.kt`                              | 修正 | `EmergencyContact` Entity の追加（テーブル: `emergency_contact_db`）。 |
+| `data/Dao.kt`                                 | 修正 | `EmergencyContactDao` インターフェースの追加。                           |
+| `data/AppDatabase.kt`                         | 修正 | Entity 登録、DAO メソッド追加、DB Version 15。                          |
 
 ### 6.2. Domain / Repository レイヤー
-| ファイルパス | 区分 | 概要 |
-| :--- | :---: | :--- |
-| `data/repository/EmergencyContactRepository.kt` | 新規 | 連絡先データアクセスの抽象化、監査ログ連携。 |
-| `logic/common/EmergencyContactLogic.kt` | 新規 | 共通ドメインルール（バリデーション、正規化、Enum定義）。 |
-| `logic/common/PhoneNumberVisualTransformation.kt` | 新規 | 電話番号の動的ハイフン整形（03/06系対応）。 |
+| ファイルパス                                            | 区分 | 概要                             |
+|:--------------------------------------------------|:--:|:-------------------------------|
+| `data/repository/EmergencyContactRepository.kt`   | 新規 | 連絡先データアクセスの抽象化、監査ログ連携。         |
+| `logic/common/EmergencyContactLogic.kt`           | 新規 | 共通ドメインルール（バリデーション、正規化、Enum定義）。 |
+| `logic/common/PhoneNumberVisualTransformation.kt` | 新規 | 電話番号の動的ハイフン整形（03/06系対応）。       |
 
 ### 6.3. ViewModel レイヤー
-| ファイルパス | 区分 | 概要 |
-| :--- | :---: | :--- |
-| `viewmodel/PersonListViewModel.kt` | 修正 | クイックメニュー制御、オンデマンドデータ取得。 |
+| ファイルパス                                       | 区分 | 概要                                     |
+|:---------------------------------------------|:--:|:---------------------------------------|
+| `viewmodel/PersonListViewModel.kt`           | 修正 | クイックメニュー制御、オンデマンドデータ取得。                |
 | `viewmodel/EmergencyContactEditViewModel.kt` | 新規 | 管理・編集画面の実行制御（BaseUiStateViewModel 継承）。 |
 
 ### 6.4. UI レイヤー (Screens / Components / Mapping)
-| ファイルパス | 区分 | 概要 |
-| :--- | :---: | :--- |
-| `ui/screens/main/EmergencyContactListScreen.kt` | 新規 | 管理画面 (SCR-M-003) の実装（Stateless 分離・Preview付）。 |
+| ファイルパス                                          | 区分 | 概要                                              |
+|:------------------------------------------------|:--:|:------------------------------------------------|
+| `ui/screens/main/EmergencyContactListScreen.kt` | 新規 | 管理画面 (SCR-M-003) の実装（Stateless 分離・Preview付）。    |
 | `ui/screens/main/EmergencyContactEditScreen.kt` | 新規 | 登録・編集画面 (SCR-M-004) の実装（Stateless 分離・Preview付）。 |
-| `ui/screens/main/MainScreen.kt` | 修正 | クイックメニュー選択後のボトムシート表示。 |
-| `ui/screens/main/MainScreenContent.kt` | 修正 | クイックメニュー部品の組み込み、イベント伝搬。 |
-| `ui/components/main/QuickActionMenu.kt` | 新規 | バッジタップ用クイックアクションメニュー部品。 |
-| `ui/components/main/MainComponents.kt` | 修正 | `UserListItem` のタップ領域分離、鉛筆メニュー拡張。 |
-| `ui/mapping/EmergencyContactMapping.kt` | 新規 | 種別ごとの日本語名・アイコン・番号整形定義。 |
+| `ui/screens/main/MainScreen.kt`                 | 修正 | クイックメニュー選択後のボトムシート表示。                           |
+| `ui/screens/main/MainScreenContent.kt`          | 修正 | クイックメニュー部品の組み込み、イベント伝搬。                         |
+| `ui/components/main/QuickActionMenu.kt`         | 新規 | バッジタップ用クイックアクションメニュー部品。                         |
+| `ui/components/main/MainComponents.kt`          | 修正 | `UserListItem` のタップ領域分離、鉛筆メニュー拡張。               |
+| `ui/mapping/EmergencyContactMapping.kt`         | 新規 | 種別ごとの日本語名・アイコン・番号整形定義。                          |
 
 ### 6.5. その他
-| ファイルパス | 区分 | 概要 |
-| :--- | :---: | :--- |
-| `res/values/strings.xml` | 修正 | 画面ラベル、メッセージ、種別名のリソース追加。 |
-| `CareMemoApplication.kt` | 修正 | `EmergencyContactRepository` の DI 登録。 |
-| `MainActivity.kt` | 修正 | NavHost へのルート追加（SCR-M-003, SCR-M-004）。 |
+| ファイルパス                   | 区分 | 概要                                     |
+|:-------------------------|:--:|:---------------------------------------|
+| `res/values/strings.xml` | 修正 | 画面ラベル、メッセージ、種別名のリソース追加。                |
+| `CareMemoApplication.kt` | 修正 | `EmergencyContactRepository` の DI 登録。  |
+| `MainActivity.kt`        | 修正 | NavHost へのルート追加（SCR-M-003, SCR-M-004）。 |
 
 ---
-最終更新日: 2026/08/01
+最終更新日: 2026/08/02

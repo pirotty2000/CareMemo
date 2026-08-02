@@ -1,5 +1,8 @@
 package jp.mydns.fujiwara.carememo.ui.components.base
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -15,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
+import kotlinx.coroutines.launch
 
 /**
  * AppTextField で扱う入力タイプ
@@ -64,6 +68,7 @@ enum class AppTextFieldType {
  * @param keyboardActions カスタムのキーボードアクション。指定しない場合は自動移動が適用される。
  * @param onFocusChanged フォーカス状態変更時のコールバック。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppTextField(
     value: String,
@@ -91,6 +96,8 @@ fun AppTextField(
     onFocusChanged: (FocusState) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
+    val coroutineScope = rememberCoroutineScope()
+    val requester = remember { BringIntoViewRequester() }
 
     // カーソル位置を制御するために TextFieldValue を内部で保持
     var textFieldValueState by remember {
@@ -175,10 +182,17 @@ fun AppTextField(
                 }
             }
         },
-        modifier = modifier.onFocusChanged { focusState ->
-            onFocusChanged(focusState)
-            // フォーカス取得時にのみ実行し、かつ現在のカーソル位置が末尾でない場合のみ移動
-            if (focusState.isFocused && textFieldValueState.selection.start != textFieldValueState.text.length) {
+        modifier = modifier
+            .bringIntoViewRequester(requester)
+            .onFocusChanged { focusState ->
+                onFocusChanged(focusState)
+                if (focusState.isFocused) {
+                    coroutineScope.launch {
+                        requester.bringIntoView()
+                    }
+                }
+                // フォーカス取得時にのみ実行し、かつ現在のカーソル位置が末尾でない場合のみ移動
+                if (focusState.isFocused && textFieldValueState.selection.start != textFieldValueState.text.length) {
                 textFieldValueState = textFieldValueState.copy(
                     selection = TextRange(textFieldValueState.text.length)
                 )
