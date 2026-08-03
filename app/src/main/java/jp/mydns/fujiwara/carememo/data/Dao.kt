@@ -458,7 +458,7 @@ interface EmergencyContactDao {
      */
     @Query("""
         SELECT * FROM emergency_contact_db 
-        WHERE person_id = :personId 
+        WHERE person_id = :personId AND deleted_at IS NULL
         ORDER BY 
             CASE contact_type 
                 WHEN 'DOCTOR' THEN 1 
@@ -479,6 +479,12 @@ interface EmergencyContactDao {
     @Update
     suspend fun update(item: EmergencyContact)
 
+    @Query("UPDATE emergency_contact_db SET deleted_at = :timestamp WHERE person_id = :personId")
+    suspend fun logicalDeleteByPersonId(personId: String, timestamp: Long)
+
+    @Query("UPDATE emergency_contact_db SET deleted_at = NULL WHERE person_id = :personId")
+    suspend fun restoreByPersonId(personId: String)
+
     @Delete
     suspend fun delete(item: EmergencyContact)
 
@@ -498,4 +504,17 @@ interface EmergencyContactDao {
 
     @Upsert
     suspend fun insertAll(items: List<EmergencyContact>)
+
+    // --- 整合性チェック用 ---
+
+    /** 親となる利用者が存在しない「孤立レコード」を取得 */
+    @Query("""
+        SELECT e.* FROM emergency_contact_db e
+        LEFT JOIN person_db p ON e.person_id = p.id
+        WHERE p.id IS NULL
+    """)
+    suspend fun getOrphanedRecords(): List<EmergencyContact>
+
+    @Query("DELETE FROM emergency_contact_db WHERE id = :id")
+    suspend fun deleteById(id: String)
 }

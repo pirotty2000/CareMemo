@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.data.repository
 
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.EmergencyContactDao
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -64,7 +65,12 @@ class EmergencyContactRepository(
      * @param operation ログ出力用の操作名
      */
     suspend fun insertContact(contact: EmergencyContact, featureName: String = "", operation: String = "") {
-        val itemToSave = contact.copy(updatedAt = Instant.now(), isSynced = false)
+        // IdLogic を使用して新規レコード判定を行い、ID が必要なら生成する
+        val itemToSave = if (IdLogic.isNew(contact.id)) {
+            contact.copy(id = java.util.UUID.randomUUID().toString(), updatedAt = Instant.now(), isSynced = false)
+        } else {
+            contact.copy(updatedAt = Instant.now(), isSynced = false)
+        }
         emergencyContactDao.insert(itemToSave)
         auditLogRepository?.log(
             featureName = featureName,

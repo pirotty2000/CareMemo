@@ -38,7 +38,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AuditLog::class,
         EmergencyContact::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -345,6 +345,7 @@ data class EmergencyContact(
     @ColumnInfo(name = "phone_number") val phoneNumber: String? = null,
     /** 表示順序 (デフォルト 99) */
     @ColumnInfo(name = "priority") val priority: Int = 99,
+    @ColumnInfo(name = "deleted_at") val deletedAt: Long? = null,
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
@@ -355,7 +356,7 @@ data class EmergencyContact(
  */
 @Serializable
 data class CareMemoBackup(
-    val version: Int = 4,
+    val version: Int = 5,
     val appVersionCode: Int = 0, // エクスポート時のアプリバージョンコード
     val persons: List<PersonBackupDto>,
     val heightAndWeights: List<HeightAndWeightBackupDto>,
@@ -363,7 +364,8 @@ data class CareMemoBackup(
     val glucoseAndHbA1cs: List<GlucoseAndHbA1cBackupDto>,
     val conditionAtVisits: List<ConditionAtVisitBackupDto>,
     val conditionPhotos: List<ConditionPhotoBackupDto> = emptyList(),
-    val medicationRecords: List<MedicationRecordBackupDto> = emptyList()
+    val medicationRecords: List<MedicationRecordBackupDto> = emptyList(),
+    val emergencyContacts: List<EmergencyContactBackupDto> = emptyList()
 )
 
 /**

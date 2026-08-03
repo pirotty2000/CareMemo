@@ -44,6 +44,7 @@ class AppMaintenanceRepository(
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
     private val medicationRecordDao: MedicationRecordDao,
+    private val emergencyContactDao: EmergencyContactDao,
     private val auditLogDao: AuditLogDao,
 ) {
     /**
@@ -62,6 +63,7 @@ class AppMaintenanceRepository(
             conditionAtVisits = conditionAtVisitDao.getAllRaw().map { it.toBackupDto() },
             conditionPhotos = conditionPhotoDao.getAllRaw().map { it.toBackupDto() },
             medicationRecords = medicationRecordDao.getAllRaw().map { it.toBackupDto() },
+            emergencyContacts = emergencyContactDao.getAllRaw().map { it.toBackupDto() },
         )
     }
 
@@ -90,6 +92,7 @@ class AppMaintenanceRepository(
             val conditionAtVisits = backup.conditionAtVisits.map { it.toEntity() }
             val conditionPhotos = backup.conditionPhotos.map { it.toEntity() }
             val medicationRecords = backup.medicationRecords.map { it.toEntity() }
+            val emergencyContacts = backup.emergencyContacts.map { it.toEntity() }
 
             // 3. 利用者データのクレンジング
             val cleansedPersons = cleansePersonData(persons)
@@ -101,6 +104,7 @@ class AppMaintenanceRepository(
             glucoseAndHbA1cDao.insertAll(glucoseAndHbA1cs)
             conditionAtVisitDao.insertAll(conditionAtVisits)
             conditionPhotoDao.insertAll(conditionPhotos)
+            emergencyContactDao.insertAll(emergencyContacts)
 
             // 5. 服薬記録のインポート（クレンジングを Logic へ委譲）
             val validMedicationRecords = MedicationLogic.filterValidRecords(medicationRecords)
@@ -124,6 +128,7 @@ class AppMaintenanceRepository(
      * 監査ログは保持されます。
      */
     private suspend fun clearClinicalData() {
+        emergencyContactDao.deleteAll()
         medicationRecordDao.deleteAll()
         conditionPhotoDao.deleteAll()
         conditionAtVisitDao.deleteAll()
@@ -200,6 +205,9 @@ class AppMaintenanceRepository(
         medicationRecordDao.getOrphanedRecords().forEach {
             result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, "利用者が存在しない服薬記録"))
         }
+        emergencyContactDao.getOrphanedRecords().forEach {
+            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, "利用者が存在しない緊急連絡先"))
+        }
         conditionPhotoDao.getOrphanedPhotos().forEach {
             result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, "所見メモが存在しない写真データ"))
         }
@@ -221,6 +229,7 @@ class AppMaintenanceRepository(
                     "glucose_and_hba1c_db" -> glucoseAndHbA1cDao.deleteById(inc.recordId)
                     "condition_at_visit_db" -> conditionAtVisitDao.deleteById(inc.recordId)
                     "medication_record_db" -> medicationRecordDao.deleteById(inc.recordId)
+                    "emergency_contact_db" -> emergencyContactDao.deleteById(inc.recordId)
                     "condition_photo_db" -> conditionPhotoDao.deleteById(inc.recordId)
                 }
             }

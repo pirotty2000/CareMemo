@@ -32,6 +32,7 @@ class DeleteOrRestorePersonRepository(
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
     private val medicationRecordDao: MedicationRecordDao,
+    private val emergencyContactDao: EmergencyContactDao,
     private val auditLogRepository: AuditLogRepository? = null
 ) {
     /**
@@ -63,6 +64,7 @@ class DeleteOrRestorePersonRepository(
             conditionAtVisitDao.logicalDeleteByPersonId(personId, timestamp)
             conditionPhotoDao.logicalDeleteByPersonId(personId, timestamp)
             medicationRecordDao.logicalDeleteByPersonId(personId, timestamp)
+            emergencyContactDao.logicalDeleteByPersonId(personId, timestamp)
 
             auditLogRepository?.log(
                 featureName = featureName,
@@ -95,6 +97,7 @@ class DeleteOrRestorePersonRepository(
             conditionAtVisitDao.restoreByPersonId(personId)
             conditionPhotoDao.restoreByPersonId(personId)
             medicationRecordDao.restoreByPersonId(personId)
+            emergencyContactDao.restoreByPersonId(personId)
 
             auditLogRepository?.log(
                 featureName = featureName,

@@ -8,6 +8,7 @@ import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -212,8 +213,8 @@ class EmergencyContactEditViewModel(
             // 保存直前にデータの正規化を実行（電話番号の整形など）
             val contactToSave = EmergencyContactLogic.createSaveEntity(contact)
             
-            // ID が空（または規定の初期値）の場合は新規、そうでなければ更新として扱う
-            if (contactToSave.id.isEmpty()) {
+            // IdLogic に基づき、新規登録か更新かを判定
+            if (IdLogic.isNew(contactToSave.id)) {
                 emergencyContactRepository.insertContact(contactToSave, featureName, OP_SAVE)
             } else {
                 emergencyContactRepository.updateContact(contactToSave, featureName, OP_SAVE)

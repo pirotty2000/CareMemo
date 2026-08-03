@@ -96,6 +96,7 @@ class CareMemoApplication : Application() {
             database.conditionAtVisitDao(),
             database.conditionPhotoDao(),
             database.medicationRecordDao(),
+            database.emergencyContactDao(),
             auditLogRepository
         )
     }
@@ -123,6 +124,7 @@ class CareMemoApplication : Application() {
             database.conditionAtVisitDao(),
             database.conditionPhotoDao(),
             database.medicationRecordDao(),
+            database.emergencyContactDao(),
             database.auditLogDao()
         )
     }

@@ -153,6 +153,24 @@ data class MedicationRecordBackupDto(
     val isSynced: Boolean = false
 )
 
+/**
+ * 緊急連絡先のバックアップ用 DTO
+ */
+@Serializable
+data class EmergencyContactBackupDto(
+    val id: String,
+    val personId: String,
+    val contactType: String,
+    val facilityName: String,
+    val personName: String? = null,
+    val phoneNumber: String? = null,
+    val priority: Int = 99,
+    val deletedAt: Long? = null,
+    @Serializable(with = InstantSerializer::class)
+    val updatedAt: Instant = Instant.now(),
+    val isSynced: Boolean = false
+)
+
 // ------------------------------------------------------------------------------------------------
 // DTO と Entity の相互マッピング用拡張関数
 // ------------------------------------------------------------------------------------------------
@@ -211,4 +229,12 @@ fun MedicationRecord.toBackupDto() = MedicationRecordBackupDto(
 
 fun MedicationRecordBackupDto.toEntity() = MedicationRecord(
     id, personId, dosageDate, timeSlot, status, recordTime, deletedAt, updatedAt, isSynced
+)
+
+fun EmergencyContact.toBackupDto() = EmergencyContactBackupDto(
+    id, personId, contactType, facilityName, personName, phoneNumber, priority, deletedAt, updatedAt, isSynced
+)
+
+fun EmergencyContactBackupDto.toEntity() = EmergencyContact(
+    id, personId, contactType, facilityName, personName, phoneNumber, priority, deletedAt, updatedAt, isSynced
 )

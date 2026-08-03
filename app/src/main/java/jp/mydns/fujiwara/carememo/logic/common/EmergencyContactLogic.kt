@@ -72,6 +72,7 @@ object EmergencyContactLogic {
      */
     fun createInitialEntity(personId: String): EmergencyContact {
         return EmergencyContact(
+            id = AppSpecifications.Id.NEW_RECORD_ID,
             personId = personId,
             contactType = EmergencyContactType.DOCTOR.value,
             facilityName = "",
