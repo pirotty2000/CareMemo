@@ -89,8 +89,8 @@ fun PersonHealthScreenContent(
     currentCategory: Category,
     preferredShowHistory: Boolean,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
-    selectedRecordId: String,
-    onSelectedRecordIdChange: (String) -> Unit,
+    selectedRecordId: String?,
+    onSelectedRecordIdChange: (String?) -> Unit,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
@@ -125,13 +125,13 @@ fun PersonHealthScreenContent(
             }
             // 右側: グラフ または 詳細入力 (比率 1.5)
             Box(modifier = Modifier.weight(1.5f)) {
-                if (selectedRecordId.isNotEmpty()) {
+                if (selectedRecordId != null) {
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
                             category = currentCategory,
                             recordId = selectedRecordId,
                             records = historyRecords,
-                            onCancel = { onSelectedRecordIdChange("") },
+                            onCancel = { onSelectedRecordIdChange(null) },
                             onSaveRecord = onSaveRecord
                         )
                     }
@@ -159,13 +159,13 @@ fun PersonHealthScreenContent(
         }
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
-        if (selectedRecordId.isNotEmpty()) {
+        if (selectedRecordId != null) {
             Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
             HealthRecordDetailPane(
                 category = currentCategory,
                 recordId = selectedRecordId,
                 records = historyRecords,
-                onCancel = { onSelectedRecordIdChange("") },
+                onCancel = { onSelectedRecordIdChange(null) },
                 onSaveRecord = onSaveRecord
             )
             }

@@ -87,8 +87,8 @@ fun PersonConditionScreenContent(
     isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    selectedId: String,
-    onSelectedIdChange: (String) -> Unit,
+    selectedId: String?,
+    onSelectedIdChange: (String?) -> Unit,
     conditionPhotoMap: Map<String, Boolean>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
@@ -163,7 +163,7 @@ fun PersonConditionScreenContent(
                     .testTag("Condition_DetailPane")
             ) {
                 ConditionDetailPane(
-                    conditionId = selectedId,
+                    conditionId = selectedId ?: "",
                     records = conditionRecords,
                     photos = photos,
                     isProcessing = isProcessing,
@@ -171,7 +171,7 @@ fun PersonConditionScreenContent(
                     onSaveRecord = onSaveRecord,
                     onDeletePhoto = onDeletePhoto,
                     onSelectedIdChange = { onSelectedIdChange(it) },
-                    onCancel = { onSelectedIdChange("") },
+                    onCancel = { onSelectedIdChange(null) },
                     onAddPhotoClick = onAddPhotoClick,
                     onPickPhotoClick = onPickPhotoClick,
                     onReattachPhoto = onReattachPhoto,

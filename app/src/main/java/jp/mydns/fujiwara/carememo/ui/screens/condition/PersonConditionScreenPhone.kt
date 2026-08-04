@@ -35,8 +35,8 @@ fun PersonConditionScreenPhone(
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
-    selectedId: String,
-    onSelectedIdChange: (String) -> Unit,
+    selectedId: String?,
+    onSelectedIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -65,18 +65,20 @@ fun PersonConditionScreenPhone(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (selectedId.isNotEmpty()) onSelectedIdChange("") else onBack() },
+                            onClick = { if (selectedId != null) onSelectedIdChange(null) else onBack() },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                         }
                     },
                     actions = {
-                        IconButton(
-                            onClick = onShowPdfSettings,
-                            modifier = Modifier.testTag("ConditionScreen_PdfButton")
-                        ) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF出力")
+                        if (selectedId == null) {
+                            IconButton(
+                                onClick = onShowPdfSettings,
+                                modifier = Modifier.testTag("ConditionScreen_PdfButton")
+                            ) {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF出力")
+                            }
                         }
                     },
                     colors = appTopAppBarColors()
@@ -90,7 +92,7 @@ fun PersonConditionScreenPhone(
             }
         },
         floatingActionButton = {
-            if (selectedId.isEmpty()) {
+            if (selectedId == null) {
                 FloatingActionButton(
                     onClick = { onSelectedIdChange(AppSpecifications.Id.NEW_RECORD_ID) },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
@@ -112,7 +114,7 @@ fun PersonConditionScreenPhone(
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,
                     selectedId = selectedId,
-                    onSelectedIdChange = { onSelectedIdChange(it) },
+                    onSelectedIdChange = onSelectedIdChange,
                     conditionPhotoMap = conditionPhotoMap,
                     photos = photos,
                     isProcessing = isProcessing,

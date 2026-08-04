@@ -82,8 +82,8 @@ fun PersonHealthScreen(
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            selectedRecordId = healthState.selectedRecordId ?: "",
-            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
+            selectedRecordId = healthState.selectedRecordId,
+            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
             onBack = onBack,
             onExpandGraph = { index ->
                 detailState.personId?.let { pid ->
@@ -109,8 +109,8 @@ fun PersonHealthScreen(
             isNameMaskingEnabled = isNameMaskingEnabled,
             preferredShowHistory = healthState.preferredShowHistory,
             onPreferredShowHistoryChange = { healthViewModel.updatePreferredShowHistory(it) },
-            selectedRecordId = healthState.selectedRecordId ?: "",
-            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
+            selectedRecordId = healthState.selectedRecordId,
+            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
             onBack = onBack,
             onExpandGraph = { index ->
                 detailState.personId?.let { pid ->

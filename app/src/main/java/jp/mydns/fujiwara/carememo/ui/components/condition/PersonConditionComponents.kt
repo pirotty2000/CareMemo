@@ -101,7 +101,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
 @Composable
 fun ConditionList(
     records: List<ConditionAtVisit>,
-    selectedId: String,
+    selectedId: String?,
     conditionPhotoMap: Map<String, Boolean>,
     isAnyDialogOpen: Boolean,
     onSelect: (String) -> Unit,
@@ -198,14 +198,14 @@ private fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
  */
 @Composable
 fun ConditionDetailPane(
-    conditionId: String,
+    conditionId: String?,
     records: List<ConditionAtVisit>,
     photos: List<ConditionPhoto>,
     isProcessing: Boolean,
     defaultRecorderName: String,
     onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
-    onSelectedIdChange: (String) -> Unit,
+    onSelectedIdChange: (String?) -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
@@ -215,12 +215,12 @@ fun ConditionDetailPane(
     onMicClick: () -> Unit,
 ) {
     val memo = remember(records, conditionId) {
-        if (IdLogic.isNew(conditionId)) null
+        if (conditionId == null || IdLogic.isNew(conditionId)) null
         else records.find { it.id == conditionId }
     }
 
     // データロード待ち
-    if (memo == null && !IdLogic.isNew(conditionId)) {
+    if (memo == null && conditionId != null && !IdLogic.isNew(conditionId)) {
         LoadingScreen()
         return
     }
@@ -272,7 +272,7 @@ fun ConditionDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        if (IdLogic.isNew(conditionId)) onSelectedIdChange("") else isEditing = false
+                        if (IdLogic.isNew(conditionId)) onSelectedIdChange(null) else isEditing = false
                     }
                 )
             },
@@ -288,7 +288,7 @@ fun ConditionDetailPane(
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
 
     // 未選択状態の表示
-    if (conditionId.isEmpty()) {
+    if (conditionId == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
@@ -327,7 +327,7 @@ fun ConditionDetailPane(
             },
             onCancel = {
                 if (isChanged) showDiscardDialog = true
-                else if (!IdLogic.isNew(conditionId)) isEditing = false else onSelectedIdChange("")
+                else if (!IdLogic.isNew(conditionId)) isEditing = false else onSelectedIdChange(null)
             },
             onAddPhotoClick = onAddPhotoClick,
             onPickPhotoClick = onPickPhotoClick,

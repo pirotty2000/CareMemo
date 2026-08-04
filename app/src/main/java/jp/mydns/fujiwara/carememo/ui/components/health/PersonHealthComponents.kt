@@ -265,7 +265,7 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
 @Composable
 fun HealthRecordDetailPane(
     category: Category,
-    recordId: String,
+    recordId: String?,
     records: List<HistoryRecord>,
     onCancel: () -> Unit,
     onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
@@ -273,7 +273,7 @@ fun HealthRecordDetailPane(
     // recordId ごとにキーを振り、ID変更時に状態をリセットする
     key(recordId) {
         val record = remember(records, recordId) {
-            if (IdLogic.isNew(recordId)) null
+            if (recordId == null || IdLogic.isNew(recordId)) null
             else when (category) {
                 Category.HEIGHT_AND_WEIGHT -> records.asSequence().filterIsInstance<HeightAndWeight>().find { it.id == recordId }
                 Category.BP_AND_PULSE -> records.asSequence().filterIsInstance<BpAndPulse>().find { it.id == recordId }
@@ -282,12 +282,12 @@ fun HealthRecordDetailPane(
             }
         }
 
-        if (record == null && !IdLogic.isNew(recordId)) {
+        if (record == null && recordId != null && !IdLogic.isNew(recordId)) {
             LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
         } else {
             // 新規作成時は編集モードから開始
             var isEditing by remember(recordId) {
-                mutableStateOf(IdLogic.isNew(recordId))
+                mutableStateOf(recordId != null && IdLogic.isNew(recordId))
             }
             val dateTimeState = rememberDateTimeInputState(initialInstant = record?.recordTime)
 
@@ -295,7 +295,7 @@ fun HealthRecordDetailPane(
             var heightText by remember(recordId, record) {
                 val initialValue = if (record is HeightAndWeight) {
                     record.height?.toString() ?: ""
-                } else if (IdLogic.isNew(recordId) && category == Category.HEIGHT_AND_WEIGHT) {
+                } else if (recordId != null && IdLogic.isNew(recordId) && category == Category.HEIGHT_AND_WEIGHT) {
                     // 【UX向上】身長の最新値がある場合は、それをデフォルト値として引き継ぐ
                     records.filterIsInstance<HeightAndWeight>()
                         .filter { it.height != null }
@@ -390,7 +390,7 @@ fun HealthRecordDetailPane(
                     ) {
                         HealthRecordEditForm(
                             category = category,
-                            recordId = recordId,
+                            recordId = recordId ?: "",
                             dateTimeState = dateTimeState,
                             heightText = heightText, onHeightChange = { heightText = it },
                             weightText = weightText, onWeightChange = { weightText = it },
@@ -405,7 +405,7 @@ fun HealthRecordDetailPane(
                                 if (isChanged) {
                                     showDiscardDialog = true
                                 } else {
-                                    if (!IdLogic.isNew(recordId)) isEditing = false else onCancel()
+                                    if (recordId != null && !IdLogic.isNew(recordId)) isEditing = false else onCancel()
                                 }
                             },
                             onSave = {
@@ -416,7 +416,7 @@ fun HealthRecordDetailPane(
                                         Category.GLUCOSE_AND_HBA1C -> mapOf("glucose" to glucoseText.toIntOrNull(), "hba1c" to hba1cText.toDoubleOrNull())
                                         else -> emptyMap()
                                     }
-                                    onSaveRecord(category, recordId, recordTime, values)
+                                    onSaveRecord(category, recordId ?: "", recordTime, values)
                                     isEditing = false
                                 }
                             },
