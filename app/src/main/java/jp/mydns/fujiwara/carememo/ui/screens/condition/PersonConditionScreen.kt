@@ -113,8 +113,7 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         if (success && tempPhotoUri != null) {
-            val cid = conditionState.selectedConditionId ?: ""
-            conditionViewModel.onPhotoCaptured(tempPhotoUri!!, cid)
+            conditionViewModel.onPhotoCaptured(tempPhotoUri!!, conditionState.selectedConditionId ?: "")
         } else {
             if (!success && tempPhotoUri != null) {
                 conditionViewModel.notifyPhotoError("写真の取得に失敗しました。")
@@ -126,8 +125,7 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            val cid = conditionState.selectedConditionId ?: ""
-            conditionViewModel.onPhotoCaptured(uri, cid)
+            conditionViewModel.onPhotoCaptured(uri, conditionState.selectedConditionId ?: "")
         }
     }
 
@@ -149,8 +147,8 @@ fun PersonConditionScreen(
             isProcessing = conditionState.isProcessing,
             isAnyDialogOpen = isAnyDialogOpen,
             defaultRecorderName = defaultRecorderName,
-            selectedId = conditionState.selectedConditionId ?: "",
-            onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(id.ifEmpty { null }) },
+            selectedId = conditionState.selectedConditionId,
+            onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             onAddPhotoClick = {
@@ -205,8 +203,8 @@ fun PersonConditionScreen(
             isProcessing = conditionState.isProcessing,
             isAnyDialogOpen = isAnyDialogOpen,
             defaultRecorderName = defaultRecorderName,
-            selectedId = conditionState.selectedConditionId ?: "",
-            onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(id.ifEmpty { null }) },
+            selectedId = conditionState.selectedConditionId,
+            onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
             onBack = onBack,
             onNavigateToCategory = onNavigateToCategory,
             // カメラ
@@ -347,8 +345,7 @@ fun PersonConditionScreen(
                         conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess)
                     },
                     onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
-                    onSelectedIdChange = { id: String -> conditionViewModel.setSelectedConditionId(
-                        id.ifEmpty { null }) },
+                    onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
                     onCancel = { conditionViewModel.setSelectedConditionId(null) },
                     onAddPhotoClick = {
                         try {

@@ -86,9 +86,9 @@ class PersonConditionScreenTest_3_Behavior {
 
     @Test
     fun bh01_save_action_calls_viewmodel() {
-        // 一覧画面が表示されるように、selectedConditionId を明示的に "" にする
+        // 一覧画面が表示されるように、selectedConditionId を明示的に null にする
         conditionUiStateFlow.value = conditionUiStateFlow.value.copy(
-            selectedConditionId = "",
+            selectedConditionId = null,
             records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now()))
         )
         setContent()

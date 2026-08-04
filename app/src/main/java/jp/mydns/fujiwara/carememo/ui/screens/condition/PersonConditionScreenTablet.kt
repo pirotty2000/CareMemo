@@ -35,8 +35,8 @@ fun PersonConditionScreenTablet(
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
-    selectedId: String,
-    onSelectedIdChange: (String) -> Unit,
+    selectedId: String?,
+    onSelectedIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -106,9 +106,7 @@ fun PersonConditionScreenTablet(
                 searchQuery = searchQuery,
                 onSearchQueryChange = onSearchQueryChange,
                 selectedId = selectedId,
-                onSelectedIdChange = { id -> 
-                    onSelectedIdChange(id)
-                },
+                onSelectedIdChange = onSelectedIdChange,
                 conditionPhotoMap = conditionPhotoMap,
                 photos = photos,
                 isProcessing = isProcessing,

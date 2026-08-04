@@ -77,8 +77,8 @@ fun PersonHealthScreenPhone(
     isNameMaskingEnabled: Boolean,
     preferredShowHistory: Boolean,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
-    selectedRecordId: String,
-    onSelectedRecordIdChange: (String) -> Unit,
+    selectedRecordId: String?,
+    onSelectedRecordIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onExpandGraph: (Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
@@ -104,7 +104,7 @@ fun PersonHealthScreenPhone(
                     // 戻る（←）アイコン
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (selectedRecordId.isNotEmpty()) onSelectedRecordIdChange("") else onBack() },
+                            onClick = { if (selectedRecordId != null) onSelectedRecordIdChange(null) else onBack() },
                             modifier = Modifier.testTag("HealthScreen_BackButton")
                         ) {
                             Icon(
@@ -116,7 +116,7 @@ fun PersonHealthScreenPhone(
                     colors = appTopAppBarColors(),
                     // PDF出力
                     actions = {
-                        if (selectedRecordId.isEmpty()) {
+                        if (selectedRecordId == null) {
                             IconButton(
                                 onClick = onShowPdfSettings,
                                 modifier = Modifier.testTag("HealthScreen_PdfButton")
@@ -140,7 +140,7 @@ fun PersonHealthScreenPhone(
         },
         // 右下のFAB
         floatingActionButton = {
-            if (selectedRecordId.isEmpty()) {
+            if (selectedRecordId == null) {
                 FloatingActionButton(
                     onClick = {
                         onSelectedRecordIdChange(AppSpecifications.Id.NEW_RECORD_ID)
@@ -165,9 +165,9 @@ fun PersonHealthScreenPhone(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = if (selectedRecordId.isEmpty()) 16.dp else 0.dp)
+                .padding(horizontal = if (selectedRecordId == null) 16.dp else 0.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId.isEmpty() && !isLoading) {
+            if (records.isEmpty() && selectedRecordId == null && !isLoading) {
                 EmptyState(
                     message = stringResource(R.string.p_detail_empty_records),
                     description = stringResource(R.string.p_detail_empty_records_desc),
@@ -216,7 +216,7 @@ fun PersonHealthScreenPhonePreview() {
             isNameMaskingEnabled = false,
             preferredShowHistory = true,
             onPreferredShowHistoryChange = {},
-            selectedRecordId = "",
+            selectedRecordId = null,
             onSelectedRecordIdChange = {},
             onBack = {},
             onExpandGraph = {},

@@ -61,7 +61,7 @@ import java.time.ZoneId
 @Composable
 fun PersonHistoryList(
     records: List<HistoryRecord>,
-    selectedRecordId: String = "",
+    selectedRecordId: String? = null,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     isAnyDialogOpen: Boolean,

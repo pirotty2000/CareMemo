@@ -62,8 +62,8 @@ fun PersonHealthScreenTablet(
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    selectedRecordId: String,
-    onSelectedRecordIdChange: (String) -> Unit,
+    selectedRecordId: String?,
+    onSelectedRecordIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onExpandGraph: (Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
@@ -126,7 +126,7 @@ fun PersonHealthScreenTablet(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {
-                        if (selectedRecordId == it.id) onSelectedRecordIdChange("")
+                        if (selectedRecordId == it.id) onSelectedRecordIdChange(null)
                         onDeleteRecord(it)
                     }
                 }
@@ -139,7 +139,7 @@ fun PersonHealthScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId.isEmpty() && !isLoading) {
+            if (records.isEmpty() && selectedRecordId == null && !isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
@@ -187,7 +187,7 @@ fun PersonHealthScreenTabletPreview() {
             ),
             personCategorySummary = null,
             isNameMaskingEnabled = false,
-            selectedRecordId = "",
+            selectedRecordId = null,
             onSelectedRecordIdChange = {},
             onBack = {},
             onExpandGraph = {},

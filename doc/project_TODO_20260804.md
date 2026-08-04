@@ -45,18 +45,18 @@
 - [x] `BatchInputLogic.kt` の修正。
 - [x] エミュレータおよび操作ログでの UUID 生成確認。
 
-### STEP 2: 共通コンポーネントの修正 (パターン1)
-- [ ] `HistoryComponents.kt` の `PersonHistoryList` および `HistoryItemWrapper` の引数を `String? = null` に変更。
+### STEP 2: 共通コンポーネントの修正 (パターン1)（実施済み）
+- [x] `HistoryComponents.kt` の `PersonHistoryList` および `HistoryItemWrapper` の引数を `String? = null` に変更。
 
-### STEP 3: 画面・ViewModel 連携層の修正 (パターン2, 3)
-- [ ] `PersonHealthScreen` / `PersonConditionScreen` 等において、ViewModel からの `null` 状態をそのまま UI コンポーネントへ渡すよう修正。
-- [ ] 選択解除ボタン（キャンセル等）のコールバックを `null` 送信に変更。
-- [ ] 各 ViewModel 側の `setSelectedId` で行っていた `ifEmpty { null }` などの変換処理を整理。
+### STEP 3: 画面・ViewModel 連携層の修正 (パターン2, 3)（実施済み）
+- [x] `PersonHealthScreen` / `PersonConditionScreen` 等において、ViewModel からの `null` 状態をそのまま UI コンポーネントへ渡すよう修正。
+- [x] 選択解除ボタン（キャンセル等）のコールバックを `null` 送信に変更。
+- [x] 各 ViewModel 側の `setSelectedId` で行っていた `ifEmpty { null }` などの変換処理を整理。
 
-### STEP 4: 動作確認
-- [ ] 修正後のアプリで一括入力を実行し、連続でデータが保存されること。
-- [ ] 保存直後、あるいは選択解除時に履歴のハイライトが正しく消えること。
-- [ ] 既存の単発入力（SCR-PH-001等）の保存・選択動作に影響がないこと。
+### STEP 4: 動作確認（実施済み）
+- [x] 修正後のアプリで一括入力を実行し、連続でデータが保存されること。
+- [x] 保存直後、あるいは選択解除時に履歴のハイライトが正しく消えること。
+- [x] 既存の単発入力（SCR-PH-001等）の保存・選択動作に影響がないこと。
 
 ## 4. 備考 (対象外事項)
 - **データベース上の空文字 ID (パターン4)**: 救済写真の `condition_id = ""` 等の仕様は、既存ロジックへの影響とマイグレーションのリスクを考慮し、今回の作業対象からは除外する。
