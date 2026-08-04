@@ -224,7 +224,6 @@ object BatchInputLogic {
         return if (validation == HealthInputValidationResult.SUCCESS) {
             CategoryResult.Valid(
                 HeightAndWeight(
-                    id = "", // Dao 層または ViewModel 層で採番することを想定
                     personId = personId,
                     height = state.height.toDoubleOrNull(),
                     weight = state.weight.toDoubleOrNull(),
@@ -250,7 +249,6 @@ object BatchInputLogic {
         return if (validation == HealthInputValidationResult.SUCCESS) {
             CategoryResult.Valid(
                 BpAndPulse(
-                    id = "",
                     personId = personId,
                     bpSystolic = state.bpSystolic.toIntOrNull(),
                     bpDiastolic = state.bpDiastolic.toIntOrNull(),
@@ -275,7 +273,6 @@ object BatchInputLogic {
         return if (validation == HealthInputValidationResult.SUCCESS) {
             CategoryResult.Valid(
                 GlucoseAndHbA1c(
-                    id = "",
                     personId = personId,
                     glucose = state.glucose.toIntOrNull(),
                     hba1c = state.hba1c.toDoubleOrNull(),
