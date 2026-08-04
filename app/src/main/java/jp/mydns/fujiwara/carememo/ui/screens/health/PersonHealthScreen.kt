@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler

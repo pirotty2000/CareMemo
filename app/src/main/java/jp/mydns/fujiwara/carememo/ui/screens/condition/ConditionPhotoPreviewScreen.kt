@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
