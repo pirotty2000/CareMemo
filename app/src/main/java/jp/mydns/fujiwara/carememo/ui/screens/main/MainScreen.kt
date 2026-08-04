@@ -10,29 +10,9 @@ package jp.mydns.fujiwara.carememo.ui.screens.main
  * 登録された利用者（ケア対象者）の一覧を表示し、各記録カテゴリへの橋渡しや、
  * 利用者情報の管理（登録・変更・サービス終了処理）を行うアプリのメインエントランス。
  *
- * 【主な機能】：
- * ・利用者一覧表示（名前のマスキング、年齢、最新記録状況のバッジ表示、誕生日通知）
- * ・絞り込み検索（五十音順インデックスおよび検索バーによるフリーワード検索）
- * ・利用者管理（論理削除とUndo機能）
- * ・カテゴリ遷移（利用者選択時のボトムシートから健康記録・所見メモ・服薬管理・一括入力へ遷移）
- *
  * 【遷移】：
- * → PersonHealthScreen (詳細画面：健康記録「身長・体重」「バイタル」「血糖値・HbA1c」)
- * → PersonConditionScreen (詳細画面：「所見メモ」)
- * → PersonMedicationScreen (詳細画面：「服薬管理」)
- * → BatchInputScreen (健康記録の一括入力)
- * → PersonEditScreen (利用者登録・編集)
- * → SettingsScreen (アプリ設定)
- *
- * 【使用するViewModel】：
- * PersonListViewModel
- *
- * 【備考】：
- * ViewModelとの接続、ナビゲーション、スナックバー／ダイアログのイベント制御を担当。
- * 実際のUIレイアウトは MainScreenContent.kt に委譲。
- *
- * ---
- * 最終更新日: 2026/07/20 (UUID対応)
+ * ViewModel から発行される ViewEvent (PersonListViewEvent) に基づき、
+ * Composable 側で NavHostController を操作して遷移を行う。
  */
 
 import androidx.compose.foundation.clickable
@@ -49,13 +29,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.coroutines.launch
@@ -68,12 +50,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     viewModel: PersonListViewModel,
-    onNavigateToDetail: (String, Category) -> Unit, // 各カテゴリ
-    onNavigateToBatchInput: (String) -> Unit,       // 一括入力画面
-    onNavigateToAddPerson: () -> Unit,              // 利用者の新規登録
-    onNavigateToEditPerson: (String) -> Unit,       // 利用者の編集
-    onNavigateToSettings: () -> Unit,               // 設定・管理画面
-    onNavigateToMedicalContacts: (String) -> Unit   // 緊急連絡先の管理
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -125,6 +102,32 @@ fun MainScreen(
         }
     }
 
+    // ViewModelからの画面遷移イベントを監視 (Type-safe)
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonListViewEvent.NavigateToDetail -> {
+                    navController.navigate(event.category.toDestination(event.personId, uiState.searchQuery))
+                }
+                is PersonListViewEvent.NavigateToBatchInput -> {
+                    navController.navigate(Destination.BatchInput(event.personId))
+                }
+                is PersonListViewEvent.NavigateToAddPerson -> {
+                    navController.navigate(Destination.PersonEdit(null))
+                }
+                is PersonListViewEvent.NavigateToEditPerson -> {
+                    navController.navigate(Destination.PersonEdit(event.personId))
+                }
+                is PersonListViewEvent.NavigateToSettings -> {
+                    navController.navigate(Destination.Settings)
+                }
+                is PersonListViewEvent.NavigateToMedicalContacts -> {
+                    navController.navigate(Destination.MedicalContacts(event.personId))
+                }
+            }
+        }
+    }
+
     //-- ui/screens/main/MainScreenContent.kt
     MainScreenContent(
         userList = uiState.userList,
@@ -134,18 +137,18 @@ fun MainScreen(
         selectedSection = uiState.selectedSection,
         selectedPersonForQuickMenu = uiState.selectedPersonForQuickMenu,
         isQuickActionMenuExpanded = uiState.isQuickActionMenuExpanded,
-        onSearchQueryChange = { viewModel.setSearchQuery(it) },                 // 所見メモ検索
-        onSectionSelect = { viewModel.setSelectedSection(it) },                 // 五十音カナ検索
-        snackbarHostState = snackbarHostState,                                  //
-        lazyListState = lazyListState,                                          //
-        onUserClick = { person -> selectedPerson = person; showSheet = true },  // 選択された利用者
+        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+        onSectionSelect = { viewModel.setSelectedSection(it) },
+        snackbarHostState = snackbarHostState,
+        lazyListState = lazyListState,
+        onUserClick = { person -> selectedPerson = person; showSheet = true },
         onQuickMenuClick = { person -> viewModel.showQuickMenu(person) },
         onEmergencyContactClick = { person -> viewModel.loadEmergencyContacts(person.id) },
-        onEmergencyContactManageClick = { person -> onNavigateToMedicalContacts(person.id) },
+        onEmergencyContactManageClick = { person -> viewModel.navigateToMedicalContacts(person.id) },
         onDismissQuickMenu = { viewModel.dismissQuickMenu() },
-        onEditUser = { person -> onNavigateToEditPerson(person.id) },           // 利用者情報の編集
-        onAddClick = { onNavigateToAddPerson() },                               // 新規利用者登録
-        onEndUser = { person ->                                                 // 利用終了
+        onEditUser = { person -> viewModel.navigateToEditPerson(person.id) },
+        onAddClick = { viewModel.navigateToAddPerson() },
+        onEndUser = { person ->
             viewModel.logicalDeletePerson(person)
             scope.launch {
                 val fullName = person.getMaskedName(uiState.isNameMaskingEnabled)
@@ -160,7 +163,7 @@ fun MainScreen(
                 }
             }
         },
-        onNavigateToSettings = onNavigateToSettings
+        onNavigateToSettings = { viewModel.navigateToSettings() }
     )
 
     // 通知ダイアログの表示
@@ -183,11 +186,11 @@ fun MainScreen(
                 personName = selectedPerson!!.getMaskedName(uiState.isNameMaskingEnabled),
                 onCategorySelect = { category -> 
                     showSheet = false
-                    onNavigateToDetail(selectedPerson!!.id, category) 
+                    viewModel.navigateToDetail(selectedPerson!!.id, category)
                 },
                 onBatchInputSelect = {
                     showSheet = false
-                    onNavigateToBatchInput(selectedPerson!!.id)
+                    viewModel.navigateToBatchInput(selectedPerson!!.id)
                 }
             )
         }
@@ -204,7 +207,6 @@ fun MainScreen(
                 contacts = uiState.emergencyContactsForSheet!!,
                 personName = uiState.selectedPersonForQuickMenu!!.getMaskedName(uiState.isNameMaskingEnabled),
                 onContactClick = { contact ->
-                    // ダイヤラー起動 (Activity 委譲は後ほど MainActivity 等で実装)
                     val tel = contact.phoneNumber
                     if (!tel.isNullOrBlank()) {
                         val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, "tel:$tel".toUri())
@@ -217,7 +219,7 @@ fun MainScreen(
                     viewModel.clearEmergencyContactState()
                 },
                 onManageClick = {
-                    onNavigateToMedicalContacts(uiState.selectedPersonForQuickMenu!!.id)
+                    viewModel.navigateToMedicalContacts(uiState.selectedPersonForQuickMenu!!.id)
                     viewModel.clearEmergencyContactState()
                 }
             )

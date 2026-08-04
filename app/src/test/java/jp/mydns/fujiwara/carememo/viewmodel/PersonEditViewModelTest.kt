@@ -3,6 +3,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -65,7 +66,12 @@ class PersonEditViewModelTest {
         // 既存データのロード中に例外が発生した際
         coEvery { personRepository.getPersonById(personId) } returns flow { throw RuntimeException("Load Error") }
 
-        val viewModel = PersonEditViewModel(personId, personRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonEditViewModel(
+            SavedStateHandle(mapOf("personId" to personId)),
+            personRepository,
+            userSettingsRepository,
+            auditLogRepository
+        )
         advanceUntilIdle()
 
         // isLoading が false になり、監査ログに記録されること

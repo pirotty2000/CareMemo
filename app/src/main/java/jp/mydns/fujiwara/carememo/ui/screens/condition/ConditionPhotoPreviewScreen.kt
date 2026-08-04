@@ -16,6 +16,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
@@ -28,10 +29,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 fun ConditionPhotoPreviewScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
-    uri: Uri,
-    conditionId: String,
-    onBack: () -> Unit,
-    onSaved: () -> Unit,
+    navController: NavHostController
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
@@ -41,6 +39,9 @@ fun ConditionPhotoPreviewScreen(
     val isProcessing = conditionState.isProcessing
     val errorMessage = conditionState.errorMessage
     val person = detailState.person
+    val uriString = conditionState.previewUri ?: return
+    val uri = android.net.Uri.parse(uriString)
+    val conditionId = conditionState.selectedConditionId ?: ""
 
     val initialCaption = remember(uri) { DateTimeUtils.getPhotoCaption(context, uri) }
     var caption by remember { mutableStateOf(initialCaption) }
@@ -49,11 +50,11 @@ fun ConditionPhotoPreviewScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDiscardConfirmDialog by remember { mutableStateOf(false) }
 
-    val handleBack = {
+    val handleBack: () -> Unit = {
         if (isModified) {
             showDiscardConfirmDialog = true
         } else {
-            onBack()
+            navController.popBackStack()
         }
     }
 
@@ -130,7 +131,7 @@ fun ConditionPhotoPreviewScreen(
                     Button(
                         onClick = {
                             conditionViewModel.processAndSavePhoto(context, uri, conditionId, caption)
-                            onSaved()
+                            navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
                     ) {
@@ -147,7 +148,7 @@ fun ConditionPhotoPreviewScreen(
             onDismiss = { showDeleteConfirmDialog = false },
             onDelete = {
                 showDeleteConfirmDialog = false
-                onBack()
+                navController.popBackStack()
             },
             message = "写真を削除しますか？"
         )
@@ -164,7 +165,7 @@ fun ConditionPhotoPreviewScreen(
                     text = stringResource(R.string.common_discard),
                     onClick = {
                         showDiscardConfirmDialog = false
-                        onBack()
+                        navController.popBackStack()
                     },
                     type = AppDialogActionType.DELETE
                 )

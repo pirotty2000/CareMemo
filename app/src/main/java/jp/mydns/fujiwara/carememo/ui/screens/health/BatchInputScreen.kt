@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun BatchInputScreen(
     viewModel: BatchInputViewModel,
-    onBack: () -> Unit
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
@@ -102,6 +103,9 @@ fun BatchInputScreen(
                             scrollState.animateScrollTo(0)
                         }
                     }
+                    BatchInputViewEvent.NavigateBack -> {
+                        navController.popBackStack()
+                    }
                 }
             }
         }
@@ -124,7 +128,7 @@ fun BatchInputScreen(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        onBack()
+                        viewModel.navigateBack()
                     },
                     modifier = Modifier.testTag("BatchInputScreen_DiscardConfirmButton")
                 )
@@ -162,7 +166,7 @@ fun BatchInputScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (isChanged) showDiscardDialog = true else onBack() }, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
+                    IconButton(onClick = { if (isChanged) showDiscardDialog = true else viewModel.navigateBack() }, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -296,7 +300,7 @@ fun BatchInputScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { if (isChanged) showDiscardDialog = true else onBack() },
+                            onClick = { if (isChanged) showDiscardDialog = true else viewModel.navigateBack() },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_CancelButton")
                         ) {
                             Text(stringResource(R.string.common_cancel))

@@ -39,7 +39,18 @@ data class PersonListUiState(
  * View Event：PersonListViewEvent
  */
 sealed interface PersonListViewEvent {
-    // 将来的な拡張用
+    /** 詳細画面（各カテゴリ）へ遷移 */
+    data class NavigateToDetail(val personId: String, val category: jp.mydns.fujiwara.carememo.data.Category) : PersonListViewEvent
+    /** 一括入力画面へ遷移 */
+    data class NavigateToBatchInput(val personId: String) : PersonListViewEvent
+    /** 利用者追加画面へ遷移 */
+    object NavigateToAddPerson : PersonListViewEvent
+    /** 利用者編集画面へ遷移 */
+    data class NavigateToEditPerson(val personId: String) : PersonListViewEvent
+    /** 設定画面へ遷移 */
+    object NavigateToSettings : PersonListViewEvent
+    /** 緊急連絡先画面へ遷移 */
+    data class NavigateToMedicalContacts(val personId: String) : PersonListViewEvent
 }
 
 /**

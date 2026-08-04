@@ -10,6 +10,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import androidx.lifecycle.SavedStateHandle
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
@@ -75,7 +76,8 @@ class PersonListViewModelTest {
 
         viewModel = PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
-            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository
+            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository,
+            SavedStateHandle()
         )
     }
 
@@ -98,7 +100,8 @@ class PersonListViewModelTest {
         
         val errorViewModel = PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
-            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository
+            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository,
+            SavedStateHandle()
         )
 
         errorViewModel.uiState.test {

@@ -32,6 +32,8 @@ data class DeleteOrRestorePersonUiState(
 sealed interface DeleteOrRestorePersonViewEvent {
     /** 処理完了後の画面終了を要求 */
     data object Finish : DeleteOrRestorePersonViewEvent
+    /** 前の画面に戻る */
+    data object NavigateBack : DeleteOrRestorePersonViewEvent
 }
 
 /**

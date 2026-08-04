@@ -37,7 +37,12 @@ data class PersonHealthUiState(
  * 健康記録画面固有の、一過性のアクション（複雑なアニメーションの開始や、特定の外部画面への遷移等）を定義します。
  */
 sealed interface PersonHealthViewEvent {
-    // 将来的に「特定の画面への遷移」や「複雑なアニメーションの開始」などのイベントが必要になる可能性があります。
+    /** グラフ拡大表示画面へ遷移 */
+    data class NavigateToGraphExpansion(
+        val personId: String,
+        val category: jp.mydns.fujiwara.carememo.data.Category,
+        val initialIndex: Int
+    ) : PersonHealthViewEvent
 }
 
 /**

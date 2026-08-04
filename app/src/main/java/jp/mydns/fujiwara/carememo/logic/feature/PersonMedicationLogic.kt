@@ -38,7 +38,8 @@ data class PersonMedicationUiState(
  * 服薬管理画面固有の、一過性のアクションや通知（特定の日付へのスクロール要求等）を定義します。
  */
 sealed interface PersonMedicationViewEvent {
-    // 必要に応じてアクションを定義
+    /** 一覧画面へ戻る */
+    object NavigateBackToMain : PersonMedicationViewEvent
 }
 
 /**

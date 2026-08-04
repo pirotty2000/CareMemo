@@ -49,6 +49,8 @@ data class PersonConditionUiState(
     val filteredRecords: List<ConditionAtVisit> = emptyList(),
     val searchQuery: String = "",
     val selectedConditionId: String? = null,
+    val initialPhotoId: String? = null,
+    val previewUri: String? = null,
     val currentConditionPhotos: List<ConditionPhoto> = emptyList(),
     val conditionPhotoMap: Map<String, Boolean> = emptyMap(),
     val orphanedPhotoCount: Int = 0,
@@ -67,6 +69,8 @@ sealed interface PersonConditionViewEvent {
     data class NavigateToPhotoPreview(val uri: Uri, val personId: String, val conditionId: String) : PersonConditionViewEvent
     /** 写真タップ時の全画面表示遷移 */
     data class NavigateToPhotoFullScreen(val photoId: String, val conditionId: String) : PersonConditionViewEvent
+    /** 一覧画面へ戻る */
+    object NavigateBackToMain : PersonConditionViewEvent
 }
 
 /**

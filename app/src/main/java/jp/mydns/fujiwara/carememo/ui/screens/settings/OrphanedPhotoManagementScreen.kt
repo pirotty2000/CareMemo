@@ -10,13 +10,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
+import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
 
@@ -27,10 +30,21 @@ import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
 @Composable
 fun OrphanedPhotoManagementScreen(
     viewModel: OrphanedPhotoViewModel,
-    onBack: () -> Unit
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var photoToDelete by remember { mutableStateOf<OrphanedPhotoInfo?>(null) }
+
+    // ViewModel からの画面遷移イベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is OrphanedPhotoViewEvent.NavigateBack -> {
+                    navController.popBackStack()
+                }
+            }
+        }
+    }
 
     // 削除確認ダイアログ
     photoToDelete?.let { info ->
@@ -45,7 +59,7 @@ fun OrphanedPhotoManagementScreen(
             TopAppBar(
                 title = { Text("迷子写真の確認") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { viewModel.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
                 }

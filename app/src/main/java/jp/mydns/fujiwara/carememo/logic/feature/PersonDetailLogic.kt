@@ -33,7 +33,10 @@ data class PersonDetailUiState(
  * 利用者詳細画面（共通フレームワーク層）において発生する、一過性の通知やアクションを定義します。
  */
 sealed interface PersonDetailViewEvent {
-    // 共通的な画面遷移やトースト通知が必要な場合にここに定義します
+    /** カテゴリを切り替える */
+    data class NavigateToCategory(val category: jp.mydns.fujiwara.carememo.data.Category) : PersonDetailViewEvent
+    /** 一覧画面へ戻る */
+    object NavigateBackToMain : PersonDetailViewEvent
 }
 
 /**

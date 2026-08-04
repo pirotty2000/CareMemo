@@ -5,6 +5,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
@@ -31,6 +32,7 @@ class BatchInputScreenTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var viewModel: BatchInputViewModel
+    private lateinit var navController: NavHostController
     private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
     private val viewEventFlow = MutableSharedFlow<BatchInputViewEvent>(extraBufferCapacity = 1)
     private val uiStateFlow = MutableStateFlow(BatchInputUiState(
@@ -46,6 +48,7 @@ class BatchInputScreenTest {
     @Before
     fun setup() {
         viewModel = mockk<BatchInputViewModel>(relaxed = true)
+        navController = mockk<NavHostController>(relaxed = true)
         
         every { viewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
         every { viewModel.viewEvent } returns viewEventFlow.asSharedFlow()
@@ -53,12 +56,12 @@ class BatchInputScreenTest {
         every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
     }
 
-    private fun setContent(onBack: () -> Unit = {}) {
+    private fun setContent() {
         composeTestRule.setContent {
             CareMemoTheme {
                 BatchInputScreen(
                     viewModel = viewModel,
-                    onBack = onBack
+                    navController = navController
                 )
             }
         }
@@ -124,7 +127,7 @@ class BatchInputScreenTest {
 
     @Test
     fun bh01_save_operation_calls_viewmodel() {
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = true, personId = "1") // personId も必要
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = true, personId = "1")
         setContent()
 
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().performClick()
@@ -184,13 +187,12 @@ class BatchInputScreenTest {
 
     @Test
     fun bh05_continuous_input_maintained() {
-        var backCalled = false
         uiStateFlow.value = BatchInputUiState(weight = "60.0", currentPersonName = "山田 太郎")
         
-        setContent(onBack = { backCalled = true })
+        setContent()
 
         // 成功イベント発行
-        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess)
+        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess())
         
         // ViewModel側でリセットされるのをシミュレート（日時は維持）
         val now = Instant.now()
@@ -198,8 +200,8 @@ class BatchInputScreenTest {
         
         composeTestRule.waitForIdle()
 
-        // 1. 画面が閉じられていないこと（連続入力のため）
-        assert(!backCalled)
+        // 1. 画面が閉じられていないこと（popBackStack が呼ばれていないこと）
+        verify(exactly = 0) { navController.popBackStack() }
         
         // 2. 入力フィールドがクリアされていること
         composeTestRule.onNodeWithTag("BatchInputScreen_WeightField").assertTextContains("")
@@ -207,13 +209,12 @@ class BatchInputScreenTest {
 
     @Test
     fun bh06_discard_confirmation_dialog() {
-        var backCalled = false
         // UIStateを「変更あり」の状態にする
         uiStateFlow.value = uiStateFlow.value.copy(isChanged = true)
         
-        setContent(onBack = { backCalled = true })
+        setContent()
 
-        // 戻るボタンタップ
+        // 戻るボタンタップ（ViewModel経由で遷移）
         composeTestRule.onNodeWithTag("BatchInputScreen_BackButton").performClick()
         
         // 破棄確認ダイアログが表示されること
@@ -222,23 +223,28 @@ class BatchInputScreenTest {
         // 「破棄して戻る」をタップ
         composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").performClick()
         
-        // 実際に onBack が呼ばれたこと
-        assert(backCalled)
+        // NavigateBack イベントが発行され、popBackStack が呼ばれたことを確認
+        viewEventFlow.tryEmit(BatchInputViewEvent.NavigateBack)
+        composeTestRule.waitForIdle()
+        verify { navController.popBackStack() }
     }
 
     @Test
     fun bh07_save_success_prevents_discard_dialog() {
-        var backCalled = false
         // 初期状態: 変更なし
         uiStateFlow.value = uiStateFlow.value.copy(isChanged = false)
         
-        setContent(onBack = { backCalled = true })
+        setContent()
 
         // 戻るボタンタップ
         composeTestRule.onNodeWithTag("BatchInputScreen_BackButton").performClick()
         
         // ダイアログが出ずに画面が閉じること
         composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").assertDoesNotExist()
-        assert(backCalled)
+        
+        // ViewModel経由でイベントが送出されるのをシミュレート
+        viewEventFlow.tryEmit(BatchInputViewEvent.NavigateBack)
+        composeTestRule.waitForIdle()
+        verify { navController.popBackStack() }
     }
 }

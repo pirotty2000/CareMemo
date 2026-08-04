@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,7 +26,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.data.AuditLog
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
@@ -41,9 +44,20 @@ import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 @Composable
 fun AuditLogScreen(
     viewModel: AuditLogViewModel,
-    onBack: () -> Unit,
+    navController: NavHostController,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // ViewModel からの画面遷移イベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is AuditLogViewEvent.NavigateBack -> {
+                    navController.popBackStack()
+                }
+            }
+        }
+    }
 
     AuditLogScreenContent(
         auditLogs = uiState.auditLogs,
@@ -57,7 +71,7 @@ fun AuditLogScreen(
         onResultSelect = { viewModel.setResultFilter(it) },
         onToggleSort = { viewModel.toggleSortOrder() },
         onClearFilters = { viewModel.clearFilters() },
-        onBack = onBack
+        onBack = { viewModel.navigateBack() }
     )
 }
 

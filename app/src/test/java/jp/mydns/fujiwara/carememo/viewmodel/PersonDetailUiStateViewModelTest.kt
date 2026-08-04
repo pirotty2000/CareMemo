@@ -3,6 +3,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.coVerify
 import io.mockk.every
@@ -59,7 +60,7 @@ class PersonDetailUiStateViewModelTest {
         every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
         every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
 
-        viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
+        viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
     }
 
     @After

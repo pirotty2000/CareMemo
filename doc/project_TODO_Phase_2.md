@@ -61,4 +61,51 @@ Material 3 の特性を活かし、開発効率とユーザー体験を向上さ
 - [ ] **KDoc の継続的な整備**: Logic, Repository, ViewModel 層のドキュメント化を完遂する。
 
 ---
-最終更新日: 2026/08/02
+
+## 🚀 実装ロードマップ：Type-safe Navigation & SavedStateHandle 移行 (Phase 2-1)
+
+この移行は「定義」→「ロジック(ViewModel)」「表示(UI)」「結合」の順に、段階的に実施する。各ステップの完了により、いつでも作業を中断・再開可能とする。
+
+### ステップ 1：共通基盤とナビゲーション定義の作成
+- [x] **ナビゲーション目的地の定義**: `ui.navigation.Destinations.kt` を作成し、全ルートを `@Serializable` な object/class として定義する。
+- [x] **基底クラスの拡張**: `BaseUiStateViewModel` において、`UiEvent.SaveSuccess` を `data class` に変更し、保存後に遷移が必要な ID 等を保持可能にする。
+
+### ステップ 2：ViewModel 層の近代化（SavedStateHandle 導入と ViewEvent 定義）
+各 ViewModel で `SavedStateHandle` から引数を取得し、遷移を `ViewEvent` で判断するように変更する。
+- [x] `PersonListViewModel` (SCR-M-001)
+- [x] `PersonEditViewModel` (SCR-M-002)
+- [x] `EmergencyContactEditViewModel` (SCR-M-003, 004)
+- [x] `PersonDetailUiStateViewModel` / `PersonHealthViewModel` (SCR-PH-001, 003)
+- [x] `BatchInputViewModel` (SCR-PH-002)
+- [x] `PersonConditionViewModel` (SCR-PM-001, 002, 003)
+- [x] `PersonMedicationViewModel` (SCR-PM-001)
+- [x] `SettingsViewModel` (SCR-S-001)
+- [x] `AuditLogViewModel` (SCR-S-002)
+- [x] `DeleteOrRestorePersonViewModel` (SCR-S-003)
+- [x] `OrphanedPhotoViewModel` (SCR-S-004)
+
+### ステップ 3：UI (Screen) 層の遷移ロジック一元化
+Composable の `LaunchedEffect` で ViewModel の `ViewEvent` を購読し、`navController.navigate()` を実行するように変更する。
+- [x] `MainScreen`
+- [x] `PersonEditScreen`
+- [x] `EmergencyContactListScreen` / `EmergencyContactEditScreen`
+- [x] `PersonHealthScreen` / `GraphExpansionScreen`
+- [x] `BatchInputScreen`
+- [x] `PersonConditionScreen` / `ConditionPhotoPreviewScreen` / `ConditionPhotoFullScreen`
+- [x] `PersonMedicationScreen`
+- [x] `SettingsScreen` / `AuditLogScreen` / `DeleteOrRestorePersonScreen` / `OrphanedPhotoManagementScreen`
+
+### ステップ 4：MainActivity での最終結合（システム切り替え）
+- [x] **NavHost 刷新**: `composable<T>` 形式に全面移行し、文字列ベースの定義を廃止する。
+- [x] **ViewModelFactory 整理**: 各 Factory 内での ID 抽出ロジックを削除し、コンストラクタ注入を簡素化する。
+- [x] **レガシーコードの削除**: 各 `Category` Enum 等に残る文字列ルート生成ロジック (`getRoute` 等) を完全に整理する。
+
+### ステップ 5：型安全ナビゲーションの純粋化と完全移行の仕上げ
+これまでの移行で構築した土台を活かし、不自然に残っている「接着コード」を排除して、真の型安全な構造を完成させる。
+- [x] **MainActivity の冗長な詰め替えを削除**: `backStackEntry.savedStateHandle["personId"] = args.personId` などの手動代入を廃止し、Navigation コンポーネントによる `SavedStateHandle` への自動連携に一本化する。
+- [x] **初期化ロジックの ViewModel への完全移管**: `MedicalContactEdit` 等の初期化（`startEdit` 呼び出し等）を `MainActivity` の `LaunchedEffect` から ViewModel 内の `SavedStateHandle` 監視（`startObservePersonId` 等のパターン）に移行し、ViewModel の自己完結性を高める。
+- [x] **Screen 引数の最適化と Source of Truth の一元化**: Composable 関数の引数から、ViewModel が `SavedStateHandle` 経由で既に保持している重複パラメータ（`personId`, `category`等）を整理し、ViewModel の状態を参照する形に統一する。
+- [x] **非推奨コード（Deprecated）の物理削除**: `Category.getRoute` などの旧ナビゲーション関連コードを完全に削除し、コードベースを最新の設計にクリーンアップする。
+
+---
+最終更新日: 2026/08/05

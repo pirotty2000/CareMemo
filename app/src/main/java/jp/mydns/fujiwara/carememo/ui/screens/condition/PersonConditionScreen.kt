@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
@@ -20,11 +21,13 @@ import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -36,26 +39,14 @@ import java.time.Instant
 fun PersonConditionScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
-    initialQuery: String = "",
+    navController: NavHostController,
     widthSizeClass: WindowWidthSizeClass,
-    onBack: () -> Unit,
-    onNavigateToCategory: (Category) -> Unit,
-    onNavigateToPhotoPreview: (Uri, String, String) -> Unit,
-    onNavigateToFullScreen: (String, String) -> Unit,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
     val defaultRecorderName by conditionViewModel.defaultRecorderName.collectAsStateWithLifecycle()
-
-    // 1.2.2項に基づき、ID変更時のみロードをトリガー
-    LaunchedEffect(detailState.personId) {
-        detailState.personId?.let { 
-            conditionViewModel.loadPerson(it)
-            conditionViewModel.updateSearchQuery(initialQuery)
-        }
-    }
 
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
@@ -71,38 +62,66 @@ fun PersonConditionScreen(
     val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
     val conditionCategoryName = stringResource(Category.CONDITION_AT_VISIT.displayNameRes)
 
-    // イベント監視
+    // 通知イベント監視
     LaunchedEffect(Unit) {
-        launch {
-            conditionViewModel.uiEventFlow.collect { event ->
-                when (event) {
-                    is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
-                        snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+        conditionViewModel.uiEventFlow.collect { event ->
+            when (event) {
+                is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
+                    snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
+                }
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialog -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
+                }
+                is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
+                    dialogTitle = context.getString(event.titleResId)
+                    dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
+                }
+                is BaseUiStateViewModel.UiEvent.ShowOverwriteConfirm -> {
+                    onConfirmOverwrite = event.onConfirm
+                }
+                else -> {}
+            }
+        }
+    }
+
+    // 共通的な画面遷移イベントを監視 (Type-safe)
+    LaunchedEffect(Unit) {
+        detailViewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonDetailViewEvent.NavigateToCategory -> {
+                    detailState.personId?.let { personId ->
+                        navController.navigate(event.category.toDestination(personId)) {
+                            popUpTo<Destination.Main>()
+                            launchSingleTop = true
+                        }
                     }
-                    is BaseUiStateViewModel.UiEvent.ShowErrorDialog -> {
-                        dialogTitle = event.title
-                        dialogMessage = event.message
-                    }
-                    is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes -> {
-                        dialogTitle = context.getString(event.titleResId)
-                        dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
-                    }
-                    is BaseUiStateViewModel.UiEvent.ShowOverwriteConfirm -> {
-                        onConfirmOverwrite = event.onConfirm
-                    }
-                    else -> {}
+                }
+                is PersonDetailViewEvent.NavigateBackToMain -> {
+                    navController.popBackStack(Destination.Main, inclusive = false)
                 }
             }
         }
-        launch {
-            conditionViewModel.viewEvent.collect { event ->
-                when (event) {
-                    is PersonConditionViewEvent.NavigateToPhotoPreview -> {
-                        onNavigateToPhotoPreview(event.uri, event.personId, event.conditionId)
+    }
+
+    // 所見メモ固有の画面遷移イベントを監視 (Type-safe)
+    LaunchedEffect(Unit) {
+        conditionViewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonConditionViewEvent.NavigateToPhotoPreview -> {
+                    detailState.personId?.let { personId ->
+                        navController.navigate(
+                            Destination.PhotoPreview(event.uri.toString(), personId, event.conditionId)
+                        )
                     }
-                    is PersonConditionViewEvent.NavigateToPhotoFullScreen -> {
-                        onNavigateToFullScreen(event.photoId, event.conditionId)
-                    }
+                }
+                is PersonConditionViewEvent.NavigateToPhotoFullScreen -> {
+                    navController.navigate(
+                        Destination.PhotoFull(event.conditionId, event.photoId)
+                    )
+                }
+                is PersonConditionViewEvent.NavigateBackToMain -> {
+                    detailViewModel.navigateBackToMain()
                 }
             }
         }
@@ -149,8 +168,8 @@ fun PersonConditionScreen(
             defaultRecorderName = defaultRecorderName,
             selectedId = conditionState.selectedConditionId,
             onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
-            onBack = onBack,
-            onNavigateToCategory = onNavigateToCategory,
+            onBack = { detailViewModel.navigateBackToMain() },
+            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onAddPhotoClick = {
                 try {
                     val uri = ImageUtils.getTempPhotoUri(context)
@@ -166,7 +185,7 @@ fun PersonConditionScreen(
                 galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
             onNavigateToFullScreen = { photoId, conditionId -> 
-                onNavigateToFullScreen(photoId, conditionId) 
+                conditionViewModel.navigateToPhotoFullScreen(photoId, conditionId) 
             },
             onShowPdfSettings = {
                 if (conditionState.records.isEmpty()) {
@@ -205,8 +224,8 @@ fun PersonConditionScreen(
             defaultRecorderName = defaultRecorderName,
             selectedId = conditionState.selectedConditionId,
             onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
-            onBack = onBack,
-            onNavigateToCategory = onNavigateToCategory,
+            onBack = { detailViewModel.navigateBackToMain() },
+            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             // カメラ
             onAddPhotoClick = {
                 try {
@@ -225,7 +244,7 @@ fun PersonConditionScreen(
             },
             // 写真のフルスクリーン表示
             onNavigateToFullScreen = { photoId, conditionId -> 
-                onNavigateToFullScreen(photoId, conditionId) 
+                conditionViewModel.navigateToPhotoFullScreen(photoId, conditionId) 
             },
             // PDF出力
             onShowPdfSettings = {
@@ -366,7 +385,9 @@ fun PersonConditionScreen(
                         conditionViewModel.reattachOrphanedPhoto(cid, info)
                     },
                     orphanedPhotos = conditionState.availableOrphanedPhotos,
-                    onNavigateToFullScreen = onNavigateToFullScreen,
+                    onNavigateToFullScreen = { photoId, condId ->
+                        conditionViewModel.navigateToPhotoFullScreen(photoId, condId)
+                    },
                     onMicClick = { conditionViewModel.setLockBypassEnabled(true) }
                 )
             }

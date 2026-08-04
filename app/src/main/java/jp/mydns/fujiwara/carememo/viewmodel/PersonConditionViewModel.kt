@@ -3,8 +3,12 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
@@ -24,6 +28,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 /**
@@ -39,17 +44,6 @@ import java.time.Instant
  * ・各メモに関連付けられた写真の管理（撮影、保存、削除）。
  * ・迷子写真（DBとの整合性が取れていないファイル）の特定と再紐付け機能。
  * ・バリデーション結果の UI メッセージ変換。
- *
- * 【依存している Repository】
- * ・ConditionRepository: 所見データおよび写真データの永続化と取得。
- * ・PersonRepository / PersonSummaryRepository: 利用者基本情報とサマリー情報の管理（基底クラスで使用）。
- * ・AuditLogRepository: 重要な操作（保存、削除等）の証跡を記録。
- * ・UserSettingsRepository: 共通設定の参照。
- *
- * 【設計指針】
- * 1. データの即時反映：Repository からの Flow を `safeCollect` し、DB の更新を即座に UI へ反映する。
- * 2. 整合性の担保：写真の保存時には物理ファイルと DB レコードの両方を原子的に扱い、不整合を最小限に抑える。
- * 3. ユーザー体験：保存成功時のスナックバー通知や、ナビゲーションイベントの送出により、操作感を向上させる。
  */
 class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
@@ -60,12 +54,14 @@ class PersonConditionViewModel(
     @param:SuppressLint("StaticFieldLeak")
     @field:SuppressLint("StaticFieldLeak")
     private val context: Context, // アプリケーションコンテキストを想定
+    savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
     auditLogRepository,
     PersonConditionUiState(),
+    savedStateHandle
 ) {
 
     companion object {
@@ -87,9 +83,54 @@ class PersonConditionViewModel(
         private const val OP_PHOTOS_FLOW = "photosFlow"
         /** 監査ログ用：対象テーブル名 */
         private const val TABLE_CONDITION = "condition_db"
+        /** 引数キー */
+        private const val KEY_PERSON_ID = "personId"
+        /** コンディションIDキー */
+        private const val KEY_CONDITION_ID = "conditionId"
+        /** 初期写真IDキー */
+        private const val KEY_INITIAL_PHOTO_ID = "initialPhotoId"
+        /** URIキー */
+        private const val KEY_URI = "uri"
+        /** クエリキー */
+        private const val KEY_QUERY = "query"
     }
 
     override val featureName: String = FEATURE_NAME
+
+    init {
+        // 引数から初期クエリを取得して反映
+        savedStateHandle.get<String>(KEY_QUERY)?.let { query ->
+            updateSearchQuery(query)
+        }
+
+        observeParams()
+        
+        // 最後に監視を開始 (featureName が初期化された後)
+        startObservePersonId()
+    }
+
+    private fun observeParams() {
+        // conditionId の監視
+        viewModelScope.launch {
+            savedStateHandle?.getStateFlow<String?>(KEY_CONDITION_ID, null)?.collect { id ->
+                if (id != null) {
+                    setSelectedConditionId(id)
+                }
+            }
+        }
+        // initialPhotoId の監視
+        viewModelScope.launch {
+            savedStateHandle?.getStateFlow<String?>(KEY_INITIAL_PHOTO_ID, null)?.collect { id ->
+                updateUiState { it.copy(initialPhotoId = id) }
+            }
+        }
+        // uri の監視 (Preview用)
+        viewModelScope.launch {
+            savedStateHandle?.getStateFlow<String?>(KEY_URI, null)?.collect { uri ->
+                updateUiState { it.copy(previewUri = uri) }
+            }
+        }
+    }
 
     /** 所見リスト購読用 Job */
     private var recordsJob: Job? = null
@@ -275,7 +316,7 @@ class PersonConditionViewModel(
             }
 
             showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
-            sendUiEvent(UiEvent.SaveSuccess)
+            sendUiEvent(UiEvent.SaveSuccess(if (isUpdate) record.id else newId))
             
             val finalId = if (isUpdate) record.id else newId
             setSelectedConditionId(finalId)
@@ -423,6 +464,16 @@ class PersonConditionViewModel(
         return conditionRepository.getAllPhotosByPersonId(requiredPersonId)
     }
 
+    /** 写真タップ時の全画面表示遷移イベントを送出します。 */
+    fun navigateToPhotoFullScreen(photoId: String, conditionId: String) {
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(photoId, conditionId))
+    }
+
+    /** 一覧画面へ戻ります。 */
+    fun navigateBackToMain() {
+        sendViewEvent(PersonConditionViewEvent.NavigateBackToMain)
+    }
+
     /**
      * PersonConditionViewModel を生成するための Factory クラス。
      */
@@ -435,14 +486,16 @@ class PersonConditionViewModel(
         private val context: Context
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            val savedStateHandle = extras.createSavedStateHandle()
             return PersonConditionViewModel(
                 conditionRepository,
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
                 auditLogRepository,
-                context
+                context,
+                savedStateHandle
             ) as T
         }
     }

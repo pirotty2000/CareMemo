@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
@@ -40,17 +41,12 @@ import kotlin.math.abs
 
 @Composable
 fun ConditionPhotoFullScreen(
-    conditionId: String,
-    initialPhotoId: String,
     viewModel: PersonConditionViewModel,
-    onBack: () -> Unit,
+    navController: NavHostController
 ) {
-    LaunchedEffect(conditionId) {
-        viewModel.setSelectedConditionId(conditionId)
-    }
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val photos = uiState.currentConditionPhotos
+    val initialPhotoId = uiState.initialPhotoId
 
     if (photos.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Loading"), contentAlignment = Alignment.Center) {
@@ -91,7 +87,7 @@ fun ConditionPhotoFullScreen(
         }
         
         IconButton(
-            onClick = onBack,
+            onClick = { navController.popBackStack() },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 32.dp, start = 16.dp)

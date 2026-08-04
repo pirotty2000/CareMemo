@@ -67,6 +67,8 @@ data class BatchInputUiState(
 sealed interface BatchInputViewEvent {
     /** 保存成功時の演出（画面リセット、スクロールトップ等）を要求する */
     data object SaveSuccessEffects : BatchInputViewEvent
+    /** 前の画面に戻る */
+    data object NavigateBack : BatchInputViewEvent
 }
 
 /**

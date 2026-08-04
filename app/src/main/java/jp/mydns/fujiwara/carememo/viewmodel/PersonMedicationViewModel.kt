@@ -1,8 +1,12 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
@@ -18,6 +22,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationViewEvent
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 
 /**
@@ -53,13 +58,15 @@ class PersonMedicationViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
-    auditLogRepository: AuditLogRepository
+    auditLogRepository: AuditLogRepository,
+    savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<PersonMedicationUiState, PersonMedicationViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
     auditLogRepository,
-    PersonMedicationUiState()
+    PersonMedicationUiState(),
+    savedStateHandle
 ) {
 
     companion object {
@@ -78,7 +85,23 @@ class PersonMedicationViewModel(
     /** 全レコード購読用 Job */
     private var allRecordsJob: Job? = null
 
-    // --- 基底クラスの抽象メソッド実装 ---
+    init {
+        // 引数（categoryName）の変更を購読
+        scope.launch {
+            savedStateHandle.getStateFlow<String?>(KEY_CATEGORY_NAME, null).collect { name ->
+                if (name != null) {
+                    try {
+                        setCategory(Category.valueOf(name))
+                    } catch (e: Exception) {
+                        // 無視
+                    }
+                }
+            }
+        }
+
+        // 最後に監視を開始 (featureName が初期化された後)
+        startObservePersonId()
+    }
 
     override fun copyWithLoadingState(state: PersonMedicationUiState, isLoading: Boolean): PersonMedicationUiState {
         return state.copy(isLoading = isLoading)
@@ -97,6 +120,12 @@ class PersonMedicationViewModel(
         refreshMonthlyRecords(next)
         refreshAllRecords(next)
         return next
+    }
+
+    fun setCategory(category: Category) {
+        if (currentState.currentCategory != category) {
+            updateUiState { it.copy(currentCategory = category) }
+        }
     }
 
     // --- 購読ロジック (原子的な反映) ---
@@ -220,6 +249,13 @@ class PersonMedicationViewModel(
     }
 
     /**
+     * 一覧画面へ戻ります。
+     */
+    fun navigateBackToMain() {
+        sendViewEvent(PersonMedicationViewEvent.NavigateBackToMain)
+    }
+
+    /**
      * PersonMedicationViewModel を生成するための Factory クラス。
      */
     class Factory(
@@ -230,13 +266,15 @@ class PersonMedicationViewModel(
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            val savedStateHandle = extras.createSavedStateHandle()
             return PersonMedicationViewModel(
                 medicationRepository,
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
-                auditLogRepository
+                auditLogRepository,
+                savedStateHandle
             ) as T
         }
     }

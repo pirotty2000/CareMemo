@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
@@ -66,7 +67,8 @@ class PersonHealthViewModelTest {
             personRepository,
             summaryRepository,
             userSettingsRepository,
-            auditLogRepository
+            auditLogRepository,
+            SavedStateHandle(mapOf("personId" to "1", "categoryName" to Category.HEIGHT_AND_WEIGHT.name))
         )
     }
 

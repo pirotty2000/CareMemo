@@ -29,7 +29,8 @@ data class AuditLogUiState(
  * 監査ログ画面固有のイベント定義。
  */
 sealed interface AuditLogViewEvent {
-    // 将来的なアクション（CSVエクスポート等）の拡張用
+    /** 前の画面に戻る */
+    data object NavigateBack : AuditLogViewEvent
 }
 
 /**

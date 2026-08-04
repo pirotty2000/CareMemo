@@ -15,9 +15,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputState
@@ -29,11 +31,15 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
  *
  * 【役割】：
  * 利用者の新規登録および情報編集を行うための独立した画面。
+ * 
+ * 【遷移】：
+ * ViewModel から発行される ViewEvent (PersonEditViewEvent) に基づき、
+ * Composable 側で NavHostController を操作して遷移を行う。
  */
 @Composable
 fun PersonEditScreen(
     viewModel: PersonEditViewModel,
-    onBack: () -> Unit
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -50,13 +56,10 @@ fun PersonEditScreen(
 
     val focusRequester = remember { FocusRequester() }
 
-    // ViewModel からのイベント監視
+    // ViewModel からの通知イベント監視
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
-                is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
-                    onBack()
-                }
                 is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
                     snackbarHostState.showSnackbar(context.getString(event.resId, *event.args.toTypedArray()))
                 }
@@ -68,6 +71,17 @@ fun PersonEditScreen(
                             event.titleResId == R.string.main_err_title_duplicate_archived_update)
                 }
                 else -> {}
+            }
+        }
+    }
+
+    // ViewModel からの画面遷移イベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonEditViewEvent.NavigateBack -> {
+                    navController.popBackStack()
+                }
             }
         }
     }
@@ -91,7 +105,7 @@ fun PersonEditScreen(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        onBack()
+                        navController.popBackStack()
                     }
                 )
             },
@@ -146,7 +160,7 @@ fun PersonEditScreen(
         onMonthChange = { viewModel.updateMonth(it) },
         onDayChange = { viewModel.updateDay(it) },
         onSave = { viewModel.save() },
-        onCancel = { if (isChanged) showDiscardDialog = true else onBack() },
+        onCancel = { if (isChanged) showDiscardDialog = true else navController.popBackStack() },
         snackbarHostState = snackbarHostState,
         noteFocusRequester = focusRequester
     )

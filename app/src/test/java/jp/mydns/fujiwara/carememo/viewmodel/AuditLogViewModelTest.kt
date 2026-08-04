@@ -9,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import androidx.lifecycle.SavedStateHandle
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -55,7 +56,8 @@ class AuditLogViewModelTest {
 
         viewModel = AuditLogViewModel(
             auditLogRepository,
-            userSettingsRepository
+            userSettingsRepository,
+            SavedStateHandle()
         )
     }
 
@@ -76,7 +78,7 @@ class AuditLogViewModelTest {
             throw RuntimeException("AuditLogs Flow Error")
         }
 
-        val errorViewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val errorViewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, SavedStateHandle())
 
         errorViewModel.uiState.test {
             awaitItem() // 初期値

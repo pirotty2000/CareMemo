@@ -3,6 +3,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -52,7 +53,7 @@ class DeleteOrRestorePersonViewModelTest {
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { repository.getArchivedPersons() } returns flowOf(listOf(testPerson))
 
-        viewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository)
+        viewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository, SavedStateHandle())
     }
 
     @After
@@ -123,7 +124,7 @@ class DeleteOrRestorePersonViewModelTest {
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(true)
         
         // 新しく ViewModel を作成して Flow を購読させる
-        val syncViewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository)
+        val syncViewModel = DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository, SavedStateHandle())
         
         assertEquals(true, syncViewModel.uiState.value.isNameMaskingEnabled)
     }

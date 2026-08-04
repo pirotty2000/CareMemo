@@ -83,6 +83,14 @@ sealed interface SettingsViewEvent {
     data object ExportSuccess : SettingsViewEvent
     /** データの復元（インポート）が完了した */
     data object ImportSuccess : SettingsViewEvent
+    /** アーカイブ管理画面へ遷移 */
+    data class NavigateToArchiveManagement(val mode: jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel.OperationMode) : SettingsViewEvent
+    /** 監査ログ画面へ遷移 */
+    data object NavigateToAuditLog : SettingsViewEvent
+    /** 迷子写真管理画面へ遷移 */
+    data object NavigateToOrphanedPhotos : SettingsViewEvent
+    /** 前の画面に戻る */
+    data object NavigateBack : SettingsViewEvent
 }
 
 /**

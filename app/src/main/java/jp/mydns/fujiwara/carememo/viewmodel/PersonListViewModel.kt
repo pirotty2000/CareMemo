@@ -1,9 +1,13 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
@@ -67,6 +71,7 @@ class PersonListViewModel(
     private val emergencyContactRepository: EmergencyContactRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
+    private val savedStateHandle: SavedStateHandle,
 ) : BaseUiStateViewModel<PersonListUiState, PersonListViewEvent>(
     userSettingsRepository,
     PersonListUiState()
@@ -218,7 +223,7 @@ class PersonListViewModel(
 
             // 3. 保存実行
             repository.insertPerson(person, featureName, OP_ADD)
-            sendUiEvent(UiEvent.SaveSuccess)
+            sendUiEvent(UiEvent.SaveSuccess(person.id))
             showSnackbar(R.string.main_msg_user_added, person.getMaskedName(isMasking))
         }
     }
@@ -344,13 +349,42 @@ class PersonListViewModel(
     }
 
     /**
-     * 詳細画面へ遷移する前の準備処理（設定のリセット等）を行います。
+     * 詳細画面（各カテゴリ）へ遷移します。
+     *
+     * @param personId 利用者ID
+     * @param category 遷移先のカテゴリ
      */
-    fun prepareDetailNavigation() {
+    fun navigateToDetail(personId: String, category: Category) {
         scope.launch {
             // 詳細画面へ行く際は、健康記録等の表示モードをデフォルト（履歴）に戻しておく
             userSettingsRepository.setHealthDisplayModeIsHistory(true)
+            sendViewEvent(PersonListViewEvent.NavigateToDetail(personId, category))
         }
+    }
+
+    /** 一括入力画面へ遷移します。 */
+    fun navigateToBatchInput(personId: String) {
+        sendViewEvent(PersonListViewEvent.NavigateToBatchInput(personId))
+    }
+
+    /** 利用者追加画面へ遷移します。 */
+    fun navigateToAddPerson() {
+        sendViewEvent(PersonListViewEvent.NavigateToAddPerson)
+    }
+
+    /** 利用者編集画面へ遷移します。 */
+    fun navigateToEditPerson(personId: String) {
+        sendViewEvent(PersonListViewEvent.NavigateToEditPerson(personId))
+    }
+
+    /** 設定画面へ遷移します。 */
+    fun navigateToSettings() {
+        sendViewEvent(PersonListViewEvent.NavigateToSettings)
+    }
+
+    /** 緊急連絡先管理画面へ遷移します。 */
+    fun navigateToMedicalContacts(personId: String) {
+        sendViewEvent(PersonListViewEvent.NavigateToMedicalContacts(personId))
     }
 
     /**
@@ -366,7 +400,8 @@ class PersonListViewModel(
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            val savedStateHandle = extras.createSavedStateHandle()
             return PersonListViewModel(
                 repository,
                 archivedRepository,
@@ -374,7 +409,8 @@ class PersonListViewModel(
                 conditionRepository,
                 emergencyContactRepository,
                 userSettingsRepository,
-                auditLogRepository
+                auditLogRepository,
+                savedStateHandle
             ) as T
         }
     }

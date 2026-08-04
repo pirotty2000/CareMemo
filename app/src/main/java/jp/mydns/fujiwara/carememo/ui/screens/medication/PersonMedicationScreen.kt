@@ -7,11 +7,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
@@ -25,18 +28,17 @@ import java.time.LocalDate
 fun PersonMedicationScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     medicationViewModel: PersonMedicationViewModel,
+    navController: NavHostController,
     widthSizeClass: WindowWidthSizeClass,
-    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
-    onBack: () -> Unit,
-    onNavigateToCategory: (Category) -> Unit
+    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> }
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val medicationState by medicationViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
 
-    // 1.2.2項に基づき、ID変更時のみロードをトリガー
-    LaunchedEffect(detailState.personId) {
-        detailState.personId?.let { medicationViewModel.loadPerson(it) }
+    // カテゴリ変更の同期
+    LaunchedEffect(detailState.currentCategory) {
+        medicationViewModel.setCategory(detailState.currentCategory)
     }
 
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
@@ -55,7 +57,7 @@ fun PersonMedicationScreen(
     val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
     val medicationCategoryName = stringResource(Category.MEDICATION.displayNameRes)
 
-    // イベント監視
+    // 通知イベント監視
     LaunchedEffect(Unit) {
         medicationViewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -75,6 +77,25 @@ fun PersonMedicationScreen(
         }
     }
 
+    // 共通的な画面遷移イベントを監視 (Type-safe)
+    LaunchedEffect(Unit) {
+        detailViewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonDetailViewEvent.NavigateToCategory -> {
+                    detailState.personId?.let { personId ->
+                        navController.navigate(event.category.toDestination(personId)) {
+                            popUpTo<Destination.Main>()
+                            launchSingleTop = true
+                        }
+                    }
+                }
+                is PersonDetailViewEvent.NavigateBackToMain -> {
+                    navController.popBackStack(Destination.Main, inclusive = false)
+                }
+            }
+        }
+    }
+
     if (isExpanded) {
         PersonMedicationScreenTablet(
             currentPerson = detailState.person,
@@ -85,8 +106,8 @@ fun PersonMedicationScreen(
             personCategorySummary = detailState.personSummary,
             onPreviousMonth = { medicationViewModel.previousMonth() },
             onNextMonth = { medicationViewModel.nextMonth() },
-            onBack = onBack,
-            onNavigateToCategory = onNavigateToCategory,
+            onBack = { detailViewModel.navigateBackToMain() },
+            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onShowPdfSettings = {
                 if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
@@ -111,8 +132,8 @@ fun PersonMedicationScreen(
             onHistoryModeChange = { isHistoryMode = it },
             onPreviousMonth = { medicationViewModel.previousMonth() },
             onNextMonth = { medicationViewModel.nextMonth() },
-            onBack = onBack,
-            onNavigateToCategory = onNavigateToCategory,
+            onBack = { detailViewModel.navigateBackToMain() },
+            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onShowPdfSettings = {
                 if (medicationState.allRecords.isEmpty()) {
                     scope.launch {

@@ -52,7 +52,8 @@ data class PersonEditUiState(
  * 利用者編集画面において、コルーチン等から一過性のアクションを通知するために使用します。
  */
 sealed interface PersonEditViewEvent {
-    // 現在は UiEvent.SaveSuccess を使用しているが、将来的な拡張のために定義
+    /** 前の画面に戻る */
+    object NavigateBack : PersonEditViewEvent
 }
 
 /**

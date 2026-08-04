@@ -6,25 +6,12 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
  * 【画面名】
  * 利用者の復帰・完全抹消画面
  *
- * 【役割】
- * アーカイブ（利用終了）された利用者のリストを表示し、
- * モードに応じて「利用者の復帰（論理削除解除）」または「データの完全抹消（物理削除）」を行う。
- *
- * 【主な機能】
- * ・モード切替（RESTORE / DELETE）：目的（復帰か抹消か）に応じてUIと挙動を動的に変更。
- * ・警告表示：DELETEモード時はTopBarと背景色を警告色に変更し、破壊的な操作であることを明示。
- * ・同姓同名識別：氏名に加え、生年月日と備考を表示し、対象者を確実に特定。
- * ・誤操作防止：DELETEモード時は「全選択」を禁止し、一人ずつのチェック選択を強制。さらに抹消実行前に最終確認ダイアログを表示。
- * ・一括操作：選択した複数の利用者に対して一括で復帰または抹消を実行。
- *
  * 【遷移】
  * ← SettingsScreen（戻るボタン、または操作完了後に自動遷移）
- *
- * 【使用するViewModel】
- * DeleteOrRestorePersonViewModel
- *
- * ---
- * 最終更新日: 2026/08/02
+ * 
+ * 【遷移】：
+ * ViewModel から発行される ViewEvent (DeleteOrRestorePersonViewEvent) に基づき、
+ * Composable 側で NavHostController を操作して遷移を行う。
  */
 
 import androidx.compose.foundation.background
@@ -46,8 +33,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
@@ -58,17 +46,14 @@ import kotlinx.coroutines.launch
  * 利用者の復帰・抹消画面のメイン Composable
  *
  * @param viewModel 操作と状態を管理する ViewModel
- * @param navController 画面遷移制御用の NavController
+ * @param navController 画面遷移制御用の NavHostController
  * @param mode 初期表示モード（RESTORE:復帰 / DELETE:完全抹消）
- * @param onBack 戻るボタン押下時のコールバック
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeleteOrRestorePersonScreen(
     viewModel: DeleteOrRestorePersonViewModel,
-    navController: NavController,
-    mode: DeleteOrRestorePersonViewModel.OperationMode,
-    onBack: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val archivedPersons = uiState.archivedPersons
@@ -94,16 +79,11 @@ fun DeleteOrRestorePersonScreen(
      * 戻る際の処理
      * 復帰や抹消が一度でも行われていれば、遷移元に更新を通知します。
      */
-    val handleBack = {
+    val handleBack: () -> Unit = {
         if (isRefreshNeeded) {
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
         }
-        onBack()
-    }
-
-    // ナビゲーション等から渡されたモードを ViewModel の状態に同期させる
-    LaunchedEffect(mode) {
-        viewModel.setMode(mode)
+        navController.popBackStack()
     }
 
     // ViewModel から発行される一過性のイベント（通知やダイアログ要求）を監視
@@ -136,6 +116,18 @@ fun DeleteOrRestorePersonScreen(
                     dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                 }
                 else -> {}
+            }
+        }
+    }
+
+    // ViewModel からの画面遷移イベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                DeleteOrRestorePersonViewEvent.NavigateBack,
+                DeleteOrRestorePersonViewEvent.Finish -> {
+                    handleBack()
+                }
             }
         }
     }
@@ -177,7 +169,7 @@ fun DeleteOrRestorePersonScreen(
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = handleBack, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
+                    IconButton(onClick = { viewModel.navigateBack() }, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                     }
                 },

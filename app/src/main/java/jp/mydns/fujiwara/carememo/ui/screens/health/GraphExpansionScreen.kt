@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
@@ -43,15 +44,15 @@ import kotlin.time.Duration.Companion.milliseconds
 fun GraphExpansionScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     healthViewModel: PersonHealthViewModel,
-    personId: String,
-    category: Category,
     initialGraphIndex: Int,
-    onBack: () -> Unit
+    navController: NavHostController
 ) {
     val context = LocalContext.current
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val healthState by healthViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+
+    val category = detailState.currentCategory
 
     val records by remember(category, healthState.personId) { 
         healthViewModel.getHealthRecords(category) 
@@ -67,13 +68,6 @@ fun GraphExpansionScreen(
         onDispose {
             activity?.requestedOrientation = originalOrientation
         }
-    }
-
-    LaunchedEffect(personId, category) {
-        detailViewModel.loadPerson(personId)
-        detailViewModel.setCategory(category)
-        healthViewModel.loadPerson(personId)
-        healthViewModel.setCategory(category)
     }
 
     val listState = rememberLazyListState()
@@ -103,7 +97,7 @@ fun GraphExpansionScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = onBack,
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier
                             .size(32.dp)
                             .testTag("GraphExpansion_BackButton")

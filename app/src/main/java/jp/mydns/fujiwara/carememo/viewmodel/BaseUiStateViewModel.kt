@@ -98,8 +98,11 @@ abstract class BaseUiStateViewModel<S, E>(
         data class ShowErrorDialogRes(val titleResId: Int, val messageResId: Int, val args: List<Any> = emptyList()) : UiEvent
         /** 上書き確認等のコンファーム表示（コールバック付き） */
         data class ShowOverwriteConfirm(val onConfirm: () -> Unit) : UiEvent
-        /** 保存成功などの標準的な完了通知 */
-        object SaveSuccess : UiEvent
+        /** 
+         * 保存成功などの標準的な完了通知
+         * @param id 保存されたデータの ID（遷移等に使用する場合）
+         */
+        data class SaveSuccess(val id: String? = null) : UiEvent
     }
 
     private val _uiEventFlow = MutableSharedFlow<UiEvent>()
@@ -176,13 +179,6 @@ abstract class BaseUiStateViewModel<S, E>(
 
     /**
      * 安全にコルーチンを起動します。
-     * 自動的に例外をキャッチし、ハンドラによる通知とログ記録、およびローディング状態の制御を行います。
-     *
-     * @param operation 操作名（監査ログの operation カラムに記録される文字列）
-     * @param loadingState ローディング状態を管理する MutableStateFlow（null の場合は loadingStateProxy を使用）
-     * @param contextBuilder 監査ログに含める追加情報（テーブル名、影響ID等）を構築するラムダ
-     * @param block 実行する処理本体（suspend 関数）
-     * @return 実行中の Job
      */
     open fun safeLaunch(
         operation: String,
@@ -190,7 +186,9 @@ abstract class BaseUiStateViewModel<S, E>(
         contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
         block: suspend CoroutineScope.() -> Unit
     ): Job {
-        val context = ErrorContextBuilder(featureName, operation)
+        // featureName が未初期化(null)の場合は安全なデフォルト値を使用する
+        val safeFeatureName = try { featureName } catch (e: Exception) { "Unknown" }
+        val context = ErrorContextBuilder(safeFeatureName ?: "Unknown", operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
 
@@ -236,7 +234,8 @@ abstract class BaseUiStateViewModel<S, E>(
         flowProvider: () -> Flow<T>,
         action: suspend (T) -> Unit
     ): Job {
-        val context = ErrorContextBuilder(featureName, operation)
+        val safeFeatureName = try { featureName } catch (e: Exception) { "Unknown" }
+        val context = ErrorContextBuilder(safeFeatureName ?: "Unknown", operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
 

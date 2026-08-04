@@ -5,6 +5,10 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
  *
  * 【画面名】
  * 設定・管理画面
+ *
+ * 【遷移】：
+ * ViewModel から発行される ViewEvent (SettingsViewEvent) に基づき、
+ * Composable 側で NavHostController を操作して遷移を行う。
  */
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,12 +37,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
@@ -50,12 +55,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    navController: NavController,
-    onNavigateToArchiveManagement: (DeleteOrRestorePersonViewModel.OperationMode) -> Unit,
-    onNavigateToAuditLog: () -> Unit,
-    onNavigateToOrphanedPhotos: () -> Unit,
+    navController: NavHostController,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
-    onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
@@ -72,12 +73,11 @@ fun SettingsScreen(
         ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
     // 戻る際の処理（親画面への通知準備）
-    val handleBack = {
+    val performBack: () -> Unit = {
         if (isChangedByMe || childRefreshRequested) {
-            // 親画面（MainScreen）の SavedStateHandle にフラグをセット
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
         }
-        onBack()
+        navController.popBackStack()
     }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -124,7 +124,7 @@ fun SettingsScreen(
                         dialogMessage = context.getString(event.messageResId, *event.args.toTypedArray())
                     }
                     is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
-                        onBack()
+                        performBack()
                     }
                     else -> {}
                 }
@@ -136,6 +136,18 @@ fun SettingsScreen(
                     SettingsViewEvent.RequestImportPassword -> showPasswordInputDialog = true
                     SettingsViewEvent.ExportSuccess -> {}
                     SettingsViewEvent.ImportSuccess -> {}
+                    is SettingsViewEvent.NavigateToArchiveManagement -> {
+                        navController.navigate(Destination.ArchiveManagement(event.mode.name))
+                    }
+                    SettingsViewEvent.NavigateToAuditLog -> {
+                        navController.navigate(Destination.AuditLog)
+                    }
+                    SettingsViewEvent.NavigateToOrphanedPhotos -> {
+                        navController.navigate(Destination.OrphanedPhotos)
+                    }
+                    SettingsViewEvent.NavigateBack -> {
+                        performBack()
+                    }
                 }
             }
         }
@@ -472,8 +484,8 @@ fun SettingsScreen(
             isChangedByMe = true
         },
         endedUserCount = uiState.endedUserCount,
-        onNavigateToRestore = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
-        onEraseClick = { onNavigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.DELETE) },
+        onNavigateToRestore = { viewModel.navigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
+        onEraseClick = { viewModel.navigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.DELETE) },
         isBackupPasswordEnabled = uiState.isBackupPasswordEnabled,
         backupPassword = uiState.backupPassword,
         isPasswordValid = isPasswordValid,
@@ -567,8 +579,8 @@ fun SettingsScreen(
         auditLogRetentionDays = uiState.auditLogRetentionDays,
         auditLogCount = uiState.auditLogCount,
         onRetentionClick = { showRetentionDialog = true },
-        onViewLogsClick = onNavigateToAuditLog,
-        onOrphanedPhotosClick = onNavigateToOrphanedPhotos,
+        onViewLogsClick = { viewModel.navigateToAuditLog() },
+        onOrphanedPhotosClick = { viewModel.navigateToOrphanedPhotos() },
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
         onImportSampleDataClick = {
@@ -588,7 +600,7 @@ fun SettingsScreen(
         isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
         isProcessing = uiState.isProcessing,
         processingProgress = uiState.processingProgress,
-        onBack = handleBack
+        onBack = { viewModel.navigateBack() }
     )
 }
 
