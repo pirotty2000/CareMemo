@@ -6,7 +6,6 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import androidx.navigation.toRoute
@@ -30,7 +29,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import java.time.Instant
 
 /**
