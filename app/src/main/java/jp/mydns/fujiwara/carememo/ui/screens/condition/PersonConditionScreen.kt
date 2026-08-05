@@ -116,9 +116,11 @@ fun PersonConditionScreen(
                     }
                 }
                 is PersonConditionViewEvent.NavigateToPhotoFullScreen -> {
-                    navController.navigate(
-                        Destination.PhotoFull(event.conditionId, event.photoId)
-                    )
+                    detailState.personId?.let { personId ->
+                        navController.navigate(
+                            Destination.PhotoFull(personId, event.conditionId, event.photoId)
+                        )
+                    }
                 }
                 is PersonConditionViewEvent.NavigateBackToMain -> {
                     detailViewModel.navigateBackToMain()

@@ -5,10 +5,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  *
  * 【画面名】
  * 写真フル画面表示画面
- *
- * 【役割】
- * 所見メモに関連付けられた写真を画面全体に表示し、拡大・縮小（ピンチズーム）等の操作で詳細を確認するための画面。
- * スワイプによる写真の切り替えに対応している。
  */
 
 import androidx.compose.foundation.background
@@ -47,10 +43,21 @@ fun ConditionPhotoFullScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val photos = uiState.currentConditionPhotos
     val initialPhotoId = uiState.initialPhotoId
+    val isLoading = uiState.isLoading
 
     if (photos.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Loading"), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color.White)
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Container"), contentAlignment = Alignment.Center) {
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.testTag("PhotoFullScreen_Spinner"))
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("表示できる写真がありません", color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { navController.popBackStack() }) {
+                        Text("戻る")
+                    }
+                }
+            }
         }
         return
     }

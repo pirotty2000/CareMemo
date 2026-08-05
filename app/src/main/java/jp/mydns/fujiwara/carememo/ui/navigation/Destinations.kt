@@ -35,7 +35,7 @@ sealed interface Destination {
     data class PhotoPreview(val uri: String, val personId: String, val conditionId: String) : Destination
 
     @Serializable
-    data class PhotoFull(val conditionId: String, val initialPhotoId: String) : Destination
+    data class PhotoFull(val personId: String, val conditionId: String, val initialPhotoId: String) : Destination
 
     @Serializable
     data class MedicationDetail(val personId: String, val categoryName: String) : Destination

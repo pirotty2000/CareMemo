@@ -34,7 +34,7 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
   - (A) `PersonHealthViewModel`
   - (B) `PersonConditionViewModel`
   - (C) `PersonMedicationViewModel`
-- **ViewModel間の連携**: `PersonDetailUiStateViewModel` が保持する `personId` を、Screen(Composable) 経由で専門 ViewModel の `loadPerson(id)`へ伝達し、利用者コンテキストの同期とデータロードを開始します。
+- **自律的な初期化と連携**: 各 ViewModel は、Type-safe Navigation によって `SavedStateHandle` に自動注入された引数（`personId` 等）を自ら取得し、自律的にデータロードを開始します。Screen (Composable) から手動で `loadPerson` をキックする必要はなく、システムによる自動初期化によって ViewModel が自己完結する構造を維持します。
 
 ## 1.3. レイヤー別責務定義
 
@@ -136,8 +136,8 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
   - **用途**: ダイアログ内の一時入力、検索フィルタ等。
   - **例外**: `AppTextField` 等の低レイヤー共通部品において、IME状態やカーソル位置の保持が最優先される場合は、内部状態との同期に `LaunchedEffect` を使用することを許容する（日本語入力の堅牢性維持のため）。
 - **パターン(3)：`LaunchedEffect` は「アクション」に限定**
-  - スナックバー表示、ナビゲーション、データロードの開始（`loadPerson`）など、「副作用を伴う一度きりの動作」にのみ使用する。
-  - **禁止**: `LaunchedEffect` 内で UI ローカルな `mutableStateOf` を書き換えて初期値をセットする行為。
+  - スナックバー表示、ナビゲーション、UI通知イベントの購読など、「副作用を伴う一度きりの動作」にのみ使用する。
+  - **禁止**: `LaunchedEffect` 内で UI ローカルな `mutableStateOf` を書き換えて初期値をセットしたり、手動で ViewModel のロード処理をキックする行為（ViewModel 側で SavedStateHandle を介して自律的にロードすること）。
 
 ### 3.3.2. 入力データの保護（破棄確認の必須化）
 - **原則**: 文字列入力（名前、メモ等）を伴う「新規作成」および「編集」画面・パネルにおいては、未保存の変更がある状態で「戻る」操作（システム戻るボタン、画面上のキャンセル/戻るボタン）を行った際、必ず**破棄確認ダイアログ**を表示すること。
@@ -163,9 +163,9 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 - **Flow監視の自動制御**: データのロード（継続的な監視）は **`flatMapLatest` を第一選択**とし、上流（IDや検索条件等）の変更に伴う古い Flow の自動キャンセルを徹底する。
 - **単発Jobの排他制御**: データの保存、同期、一過性の取得などの「単発処理」に限り、`Job` 変数で手動管理を行い、重複実行の防止や適切なタイミングでのキャンセル（`cancel()`）を担保する。基盤機能（`safeLaunch` 等）を用いた実行制御の詳細は第4章を参照。
 
-### 3.4.2. Screen (Composable) でのロードトリガー
-- **ID変更の監視**: `LaunchedEffect(personId)` を使用し、利用者が物理的に切り替わった場合のみ `loadPerson` を実行する。
-- **状態保持ガード**: `lastLoadedPersonId` を保持し、**「本当に利用者が変わったときだけ」**選択IDのリセット（`selectedId = -1`）を行うこと。これにより、写真撮影や外部アプリからの復帰時に選択状態が維持される。
+### 3.4.2. Screen (Composable) でのイベント監視
+- **遷移イベントの購読**: `LaunchedEffect(Unit)` を使用し、ViewModel から送出される `viewEvent` を監視します。遷移ロジック（`navController.navigate`）はこのブロック内でのみ実行し、Composable 内に直接記述しないようにします。
+- **状態保持ガード**: 画面遷移後、写真撮影や外部アプリからの復帰時に選択状態が維持されるよう、ViewModel の `SavedStateHandle` による状態保持を前提とした UI 構築を徹底してください。
 
 ## 3.5. Logic レイヤーによる責務の分離
 
@@ -348,16 +348,25 @@ CareMemo では、ユーザーの操作なしに「デフォルトで最も安�
 
 ---
 
-# 9. 画面遷移 (NAV) ルール
+# 9. 画面遷移 (NAV) ルール（Type-safe Navigation, SavedStateHandle, ViewEvent 一元化）
 
-- **Back Stack の遵守**: 本アプリは Android 標準の Back Stack に従う。
-- **遷移の局所化**: 画面遷移は原則として隣接する画面間のみ定義する。
-- **戻る操作の定義**:
-    - Android の「戻る」ボタン/ジェスチャーによる単純な戻りは NAV-ID を定義しない。
-    - **「保存」や「完了」といったボタン操作の結果、処理に成功して自動的に前の画面へ戻る挙動は、シナリオ上重要であるため NAV-ID を定義する。**
-- **NAV と SCN の関係**: 
-    - NAV は利用者の1操作に対する期待される状態遷移を定義する最小単位である。各 NAV は独立して Integration Test の対象とする。
-    - SCN（シナリオ）は、複数の NAV を組み合わせて利用者の業務フローを表現する。
+本プロジェクトの画面遷移は、堅牢性とテスタビリティを確保するため、以下の3つの柱に基づいた「Type-safe Navigation, SavedStateHandle, ViewEvent 一元化」構造を徹底します。
+
+- **(1) Type-safe Navigation（目的地）**: 
+    - すべての画面（目的地）は、`ui/navigation/Destinations.kt` に `@Serializable` な `object` または `data class` として定義すること。
+    - 画面が必要とする「必須データ（引数）」をこの定義に集約し、文字列ベースのルート指定を全廃する。
+- **(2) ViewEvent 一元化（トリガー）**:
+    - 画面遷移を実行する「判断（ロジック）」は ViewModel に閉じ込め、`ViewEvent`（一過性イベント）として UI へ送出すること。
+    - Composable 側は `LaunchedEffect(Unit)` 内でこのイベントを購読し、`navController.navigate()` を呼び出す。Composable 関数内でボタンの `onClick` 等から直接遷移処理を記述することは原則禁止とする。
+- **(3) SavedStateHandle（初期化）**:
+    - 目的地に到着した際の引数の受け取りは、Navigation ライブラリと `SavedStateHandle` の自動連携に一本化する。
+    - ViewModel は自ら `SavedStateHandle` から引数を抽出し、自律的にデータロードを開始する。
+    - `MainActivity` 内で `savedStateHandle` に対して手動で値をセットしたり、引数を抽出して Composable へ手動で渡したりしないこと。
+
+- **その他の運用ルール**:
+    - **Back Stack の遵守**: 本アプリは Android 標準の Back Stack に従う。
+    - **遷移の局所化**: 画面遷移は原則として隣接する画面間のみ定義する。
+    - **戻る操作の定義**: Android の「戻る」ボタンによる単純な戻りは NAV-ID を定義しないが、「保存成功後に自動で戻る」といった業務シナリオ上重要な遷移については NAV-ID を定義し、ViewEvent 経由で実行する。
 
 ---
 
@@ -370,4 +379,4 @@ CareMemo では、ユーザーの操作なしに「デフォルトで最も安�
 
 ---
 
-最終更新日: 2026/07/19
+最終更新日: 2026/08/05

@@ -12,28 +12,28 @@ CareMemo は「一貫性・責務分離・型安全性・保守性」を最優�
 
 プロジェクトの安定性と開発効率のバランスを考慮した優先順位です。
 
-| 項目                                          |  評価   |   優先度    |  コスト  | 段階的移行 | 取り組み方針                       |
-|:--------------------------------------------|:-----:|:--------:|:-----:|:-----:|:-----------------------------|
-| **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | 2 とセットで導入。全画面の遷移定義を刷新。       |
-| **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | 1 とセットで導入。ViewModel の初期化を変更。 |
-| **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** | UiState と関連コンポーネントを順次変更。     |
-| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** | 新規作成・改修時に都度適用。影響範囲は局所的。      |
-| **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** | プレビュー関数の書き換えが必要だが効果は絶大。      |
-| **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** | 現状維持（コストゼロ）。                 |
+| 項目                                          |  評価   |   優先度    |  コスト  | 段階的移行 |    進捗    | 取り組み方針                   |
+|:--------------------------------------------|:-----:|:--------:|:-----:|:-----:|:--------:|:-------------------------|
+| **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | **100%** | 完了。全画面の遷移定義を刷新。          |
+| **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。ViewModel の初期化を自律化。   |
+| **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** |    0%    | UiState と関連コンポーネントを順次変更。 |
+| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   10%    | 新規作成・改修時に都度適用。影響範囲は局所的。  |
+| **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** |    0%    | プレビュー関数の書き換えが必要だが効果は絶大。  |
+| **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。             |
 
 ---
 
 ## 🏗 アーキテクチャの現代化
 Android Jetpack の最新ライブラリを活用し、実行時の安定性と型安全性を強化します。
 
-### 戦略的セット：Type-safe Navigation × SavedStateHandle
+### 戦略的セット：Type-safe Navigation × SavedStateHandle [完了]
 これら2つは「画面間データ受け渡し」の入り口と出口の関係にあるため、セットでの移行を推奨します。
 
-- **Type-Safe Navigation & ViewEvent 一元化**:
+- **Type-Safe Navigation & ViewEvent 一元化 [完了]**:
     - 文字列ベースのルート定義を廃止し、Navigation 2.8.0+ の型安全な遷移に移行する。
     - 画面遷移を ViewModel から発行される `ViewEvent`（sealed interface）として一元管理し、UI側（Composable）の `LaunchedEffect` で `navController` を操作する形式に統一する。これにより、遷移ロジックのテスタビリティと一貫性を向上させる。
     - `BaseUiStateViewModel.UiEvent.SaveSuccess` などの通知イベントを `data class` 化し、保存されたデータの ID 等を UI 側に伝播可能にすることで、遷移ロジックとの親和性を高める。
-- **SavedStateHandle**: ViewModel で引数を直接取得し、プロセス死からの復帰耐性を高める。LaunchedEffect での `loadPerson` 呼び出しを削減し、ViewModel を自己完結させる。
+- **SavedStateHandle [完了]**: ViewModel で引数を直接取得し、プロセス死からの復帰耐性を高める。LaunchedEffect での `loadPerson` 呼び出しを削減し、ViewModel を自己完結させる。
 
 ### パフォーマンス最適化
 - **不変コレクション (ImmutableList) の導入**: `kotlinx.collections.immutable` を採用し、`UiState` 内のリストをすべて `ImmutableList` に置き換える。これにより、Compose コンパイラがリストを「安定（Stable）」と判定できるようになり、Compose Compiler が安定性を正しく判定できるようになり、不要な再コンポーズを抑制できる。

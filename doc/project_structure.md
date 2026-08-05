@@ -32,6 +32,7 @@
 ```text
 jp.mydns.fujiwara.carememo
 ├── ui/                 # UIレイヤー（Jetpack Compose）
+│   ├── navigation/     #  ├─ ナビゲーション定義（Type-safe Destinations）
 │   ├── screens/        #  ├─ 各画面のComposable（機能階層で分類）
 │   │   ├── main/       #  │   ├─ 利用者一覧画面
 │   │   ├── health/     #  │   ├─ (A)健康記録・一括入力・グラフ拡大
@@ -132,30 +133,26 @@ jp.mydns.fujiwara.carememo
 
 ```text
 ViewModel (androidx.lifecycle.ViewModel)
-└── BaseUiStateViewModel<S, E> (B系統: 新UI状態管理・型安全イベント基盤)
+└── BaseUiStateViewModel<S, E> (型安全なUI状態・イベント管理、SavedStateHandle 対応)
     ├── PersonListViewModel (利用者一覧)
     ├── PersonEditViewModel (利用者登録・編集)
+    ├── EmergencyContactEditViewModel (緊急連絡先管理)
     ├── SettingsViewModel (設定・保守)
     ├── AuditLogViewModel (操作ログ参照)
     ├── DeleteOrRestorePersonViewModel (利用修了者管理)
     ├── OrphanedPhotoViewModel (迷子写真確認)
     │
-    └── PersonBaseUiStateViewModel<S, E> (B系統: 新利用者コンテキスト基盤)
+    └── PersonBaseUiStateViewModel<S, E> (利用者コンテキストの自動同期基盤)
         ├── PersonDetailUiStateViewModel (詳細画面共通: ヘッダー、カテゴリ管理)
         ├── PersonHealthViewModel (専門: 健康記録)
         ├── PersonConditionViewModel (専門: 所見メモ)
         ├── PersonMedicationViewModel (専門: 服薬管理)
         └── BatchInputViewModel (専門: 一括入力)
 
-[エラーハンドリング基盤]
-├── CoroutineErrorHandler (例外処理の具体的振る舞いを定義するインターフェース)
-│   └── ViewModelCoroutineErrorHandler (具体的実装: 監査ログ記録・UI通知を実行)
-└── AppException (UI通知用の情報を保持する例外クラス群：ViewModelErrorHandling.kt)
-    ├── AppValidationException (バリデーション失敗)
-    ├── AppIOException (入出力エラー)
-    ├── AppDataException (データ不整合)
-    ├── AppExternalException (外部連携エラー)
-    └── AppSecurityException (権限・生体認証エラー)
+[特徴]
+・1画面1UiState(S): 画面の状態を一つのデータクラスで集約し、原子的に更新。
+・型安全イベント(E): 画面遷移等の副作用を ViewEvent として定義し、一元管理。
+・自律初期化: SavedStateHandle 経由で引数を取得し、プロセス死からの復旧に対応。
 ```
 
 
@@ -209,6 +206,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 
 ### **機能固有ロジック (logic/feature)**
 特定の画面や ViewModel の状態管理（UiState）に密結合したロジックです。
+※ 各 Logic クラスのファイルには、その画面の `UiState` および `ViewEvent` の定義も集約されています。
 
 | ファイル名                           | 役割・主な内容                                                  |
 |:--------------------------------|:---------------------------------------------------------|
@@ -216,7 +214,7 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 | `PersonEditLogic.kt`            | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。 |
 | `PersonDetailLogic.kt`          | 利用者詳細（A/B/C共通）のUI状態定義、カテゴリ管理、共通イベントの定義。                  |
 | `PersonHealthLogic.kt`          | 健康記録画面における新規・更新判定、および重複チェックロジック。                         |
-| `PersonConditionLogic.kt`       | 所見メモ画面における変更検知、バリデーション、Entity生成。                         |
+| `PersonConditionLogic.kt`       | 所見メモ画面における UI 状態定義、変更検知、バリデーション、Entity生成。                |
 | `PersonMedicationLogic.kt`      | 服薬管理画面における履歴の日付別グルーピング、UiStateへの変換。                      |
 | `BatchInputLogic.kt`            | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                    |
 | `DeleteOrRestorePersonLogic.kt` | 利用者管理（復帰・抹消）画面の表示状態定義。                                   |
@@ -356,4 +354,4 @@ ViewModel から「Android フレームワークやライフサイクルに依�
 
 ---
 
-最終更新日: 2026/08/02
+最終更新日: 2026/08/05

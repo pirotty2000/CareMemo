@@ -345,7 +345,7 @@ fun ConditionDetailPane(
             isProcessing = isProcessing,
             onCancel = onCancel,
             onEditClick = { isEditing = true },
-            onPhotoClick = { onNavigateToFullScreen(it.conditionId, it.id) },
+            onPhotoClick = { onNavigateToFullScreen(it.id, it.conditionId) },
             onAddPhotoClick = onAddPhotoClick,
             onPickPhotoClick = onPickPhotoClick,
             onReattachClick = { showOrphanedSelectDialog = true },
