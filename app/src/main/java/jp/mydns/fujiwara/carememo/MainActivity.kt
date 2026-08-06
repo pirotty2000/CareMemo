@@ -88,11 +88,10 @@ class MainActivity : FragmentActivity() {
                             lastPausedTime = System.currentTimeMillis()
                         } else if (event == Lifecycle.Event.ON_RESUME) {
                             if (isBiometricEnabled && !userSettingsRepository.isLockBypassed) {
-                                val timeout = lockTimeoutMinutes ?: 5
-                                if (timeout == 0) isAppLocked = true
-                                else if (timeout > 0) {
+                                if (lockTimeoutMinutes == 0) isAppLocked = true
+                                else if (lockTimeoutMinutes > 0) {
                                     val elapsedMillis = System.currentTimeMillis() - lastPausedTime
-                                    if (elapsedMillis > timeout * 60 * 1000) isAppLocked = true
+                                    if (elapsedMillis > lockTimeoutMinutes * 60 * 1000) isAppLocked = true
                                 }
                             }
                             userSettingsRepository.isLockBypassed = false
