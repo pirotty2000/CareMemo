@@ -248,12 +248,16 @@ class PersonMedicationViewModel(
         throw AppValidationException(R.string.common_error_title_save, messageRes, args, "Validation failed: $result")
     }
 
+    /*
     /**
      * 一覧画面へ戻ります。
+     * 現在はシステム側の戻るボタンやナビゲーションバーでの遷移が主であるため、
+     * 画面内に専用の「戻る」ボタンを配置してロジックを呼ぶ必要が生じた際に復活させるため保持。
      */
     fun navigateBackToMain() {
         sendViewEvent(PersonMedicationViewEvent.NavigateBackToMain)
     }
+    */
 
     /**
      * PersonMedicationViewModel を生成するための Factory クラス。

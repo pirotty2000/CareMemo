@@ -369,9 +369,16 @@ class PersonConditionViewModel(
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(photoId, conditionId))
     }
 
+    /*
+    /**
+     * 一覧画面へ戻ります。
+     * 現在はシステム側の戻るボタンやナビゲーションバーでの遷移が主であるため、
+     * 画面内に専用の「戻る」ボタンを配置してロジックを呼ぶ必要が生じた際に復活させるため保持。
+     */
     fun navigateBackToMain() {
         sendViewEvent(PersonConditionViewEvent.NavigateBackToMain)
     }
+    */
 
     class Factory(
         private val personRepository: PersonRepository,

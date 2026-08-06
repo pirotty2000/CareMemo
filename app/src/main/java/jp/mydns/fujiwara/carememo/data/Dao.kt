@@ -488,9 +488,11 @@ interface EmergencyContactDao {
     @Delete
     suspend fun delete(item: EmergencyContact)
 
+    /*
     /** 連絡先の存在確認 */
     @Query("SELECT EXISTS(SELECT 1 FROM emergency_contact_db WHERE person_id = :personId)")
     suspend fun hasDataForPerson(personId: String): Boolean
+    */
 
     @Query("SELECT * FROM emergency_contact_db WHERE id = :id")
     suspend fun getById(id: String): EmergencyContact?
