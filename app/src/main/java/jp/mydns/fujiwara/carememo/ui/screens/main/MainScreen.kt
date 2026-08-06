@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
@@ -38,6 +39,8 @@ import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.main.CategorySelectionSheet
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
+import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
+import jp.mydns.fujiwara.carememo.ui.navigation.NavigationKeys
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.coroutines.launch
@@ -70,6 +73,26 @@ fun MainScreen(
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
+
+    // ナビゲーションの結果（SavedStateHandle）を監視
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val editResultFlow = remember(navBackStackEntry) {
+        navBackStackEntry?.savedStateHandle?.getStateFlow<String?>(NavigationKeys.PERSON_EDIT_RESULT, null)
+    }
+    val editResult by editResultFlow?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(editResult) {
+        editResult?.let { result ->
+            val messageRes = if (result == EditResult.ADDED.name) {
+                R.string.main_msg_user_added
+            } else {
+                R.string.main_msg_user_updated
+            }
+            snackbarHostState.showSnackbar(context.getString(messageRes))
+            // 通知を消費
+            navBackStackEntry?.savedStateHandle?.remove<String>(NavigationKeys.PERSON_EDIT_RESULT)
+        }
+    }
 
     // ViewModelからのイベントを監視 (共通通知イベントを使用)
     LaunchedEffect(Unit) {

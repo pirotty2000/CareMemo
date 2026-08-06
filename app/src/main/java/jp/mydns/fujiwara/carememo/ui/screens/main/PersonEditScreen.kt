@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
+import jp.mydns.fujiwara.carememo.ui.navigation.NavigationKeys
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputState
@@ -48,6 +50,7 @@ fun PersonEditScreen(
     val isLoading = uiState.isLoading
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
     val context = androidx.compose.ui.platform.LocalContext.current
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
@@ -80,6 +83,12 @@ fun PersonEditScreen(
         viewModel.viewEvent.collect { event ->
             when (event) {
                 is PersonEditViewEvent.NavigateBack -> {
+                    if (event.result != null) {
+                        navController.previousBackStackEntry?.savedStateHandle?.set(
+                            NavigationKeys.PERSON_EDIT_RESULT,
+                            event.result.name
+                        )
+                    }
                     navController.popBackStack()
                 }
             }
@@ -159,8 +168,14 @@ fun PersonEditScreen(
         onYearChange = { viewModel.updateYear(it) },
         onMonthChange = { viewModel.updateMonth(it) },
         onDayChange = { viewModel.updateDay(it) },
-        onSave = { viewModel.save() },
-        onCancel = { if (isChanged) showDiscardDialog = true else navController.popBackStack() },
+        onSave = {
+            focusManager.clearFocus()
+            viewModel.save()
+        },
+        onCancel = {
+            focusManager.clearFocus()
+            if (isChanged) showDiscardDialog = true else navController.popBackStack()
+        },
         snackbarHostState = snackbarHostState,
         noteFocusRequester = focusRequester
     )

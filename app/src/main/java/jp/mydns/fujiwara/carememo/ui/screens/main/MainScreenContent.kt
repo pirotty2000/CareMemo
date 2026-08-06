@@ -86,6 +86,15 @@ fun MainScreenContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val changelog = remember {
+        try {
+            context.assets.open("change.log").bufferedReader().use { it.readText() }
+        } catch (_: Exception) {
+            ""
+        }
+    }
 
     // [6] VersionDialog (アプリ情報・バージョン表示：MainScreenContent内に定義)
     if (showVersionDialog) {
@@ -98,6 +107,26 @@ fun MainScreenContent(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         Text("バージョン: ${BuildConfig.VERSION_NAME}")
+                        Text("ビルド日時: ${BuildConfig.BUILD_TIME}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        
+                        if (changelog.isNotBlank()) {
+                            HorizontalDivider()
+                            Text("更新履歴:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            
+                            // 1行ずつ分解して「ぶら下げインデント」で描画
+                            changelog.lines().filter { it.isNotBlank() }.forEach { line ->
+                                val displayText = line.removePrefix("-").trim()
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text("・", style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        text = displayText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+
                         HorizontalDivider()
                         Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         Text("Android 15 (API 35)")

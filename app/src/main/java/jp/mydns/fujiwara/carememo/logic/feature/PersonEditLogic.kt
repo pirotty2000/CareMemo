@@ -4,6 +4,7 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
+import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import java.time.ZoneOffset
 
 /**
@@ -53,7 +54,7 @@ data class PersonEditUiState(
  */
 sealed interface PersonEditViewEvent {
     /** 前の画面に戻る */
-    object NavigateBack : PersonEditViewEvent
+    data class NavigateBack(val result: EditResult? = null) : PersonEditViewEvent
 }
 
 /**

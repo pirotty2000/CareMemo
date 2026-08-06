@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonEditLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
+import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -189,13 +190,13 @@ class PersonEditViewModel(
 
             if (personId == null) {
                 repository.insertPerson(person, featureName, OP_SAVE)
-                showSnackbar(R.string.main_msg_user_added, person.getMaskedName(state.isNameMaskingEnabled))
+                sendUiEvent(UiEvent.SaveSuccess(person.id))
+                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED))
             } else {
                 repository.updatePerson(person, featureName, OP_SAVE)
-                showSnackbar(R.string.main_msg_user_updated)
+                sendUiEvent(UiEvent.SaveSuccess(person.id))
+                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.UPDATED))
             }
-            sendUiEvent(UiEvent.SaveSuccess(person.id))
-            sendViewEvent(PersonEditViewEvent.NavigateBack)
         }
     }
 

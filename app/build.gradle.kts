@@ -1,3 +1,7 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinCompose)
@@ -14,8 +18,11 @@ android {
         minSdk = 31
         targetSdk = 35
         //noinspection HighAppVersionCode
-        versionCode = 2026080701
-        versionName = "3.1.3"
+        versionCode = 2026080702
+        versionName = "3.1.4"
+
+        val buildTime = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN).format(Date())
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

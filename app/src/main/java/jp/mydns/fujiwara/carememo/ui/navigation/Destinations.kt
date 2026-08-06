@@ -2,6 +2,27 @@ package jp.mydns.fujiwara.carememo.ui.navigation
 
 import kotlinx.serialization.Serializable
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * 編集画面からの実行結果を定義する Enum
+ */
+enum class EditResult {
+    /** 新規登録成功 */
+    ADDED,
+    /** 更新成功 */
+    UPDATED
+}
+
+/**
+ * ナビゲーション結果受け渡し用のキー
+ */
+object NavigationKeys {
+    const val PERSON_EDIT_RESULT = "person_edit_result"
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
  * CareMemo ナビゲーション目的地定義
  */
@@ -52,3 +73,5 @@ sealed interface Destination {
     @Serializable
     object OrphanedPhotos : Destination
 }
+
+

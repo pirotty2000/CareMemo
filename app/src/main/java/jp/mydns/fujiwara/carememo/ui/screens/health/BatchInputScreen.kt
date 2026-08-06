@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ fun BatchInputScreen(
     val isLoading = uiState.isLoading
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -166,7 +168,10 @@ fun BatchInputScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (isChanged) showDiscardDialog = true else viewModel.navigateBack() }, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
+                    IconButton(onClick = {
+                        focusManager.clearFocus()
+                        if (isChanged) showDiscardDialog = true else viewModel.navigateBack()
+                    }, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -300,13 +305,19 @@ fun BatchInputScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { if (isChanged) showDiscardDialog = true else viewModel.navigateBack() },
+                            onClick = {
+                                focusManager.clearFocus()
+                                if (isChanged) showDiscardDialog = true else viewModel.navigateBack()
+                            },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_CancelButton")
                         ) {
                             Text(stringResource(R.string.common_cancel))
                         }
                         Button(
-                            onClick = viewModel::saveBatch,
+                            onClick = {
+                                focusManager.clearFocus()
+                                viewModel.saveBatch()
+                            },
                             enabled = isValid,
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_SaveButton")
                         ) {
