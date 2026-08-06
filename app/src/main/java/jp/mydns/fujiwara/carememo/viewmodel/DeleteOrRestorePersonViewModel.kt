@@ -52,7 +52,7 @@ class DeleteOrRestorePersonViewModel(
             try {
                 val mode = OperationMode.valueOf(modeName)
                 updateUiState { it.copy(mode = mode) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
 

@@ -39,19 +39,10 @@ sealed interface PersonDetailViewEvent {
     object NavigateBackToMain : PersonDetailViewEvent
 }
 
-/**
- * Logic：PersonDetailLogic
- *
- * 【役割】
+/*
  * 利用者詳細画面における共通的なナビゲーションや情報の集約に関するドメインロジックを提供します。
- *
- * 【主な機能】
- * ・（現時点では UiState と Event の定義が中心であり、動的な計算ロジックは必要に応じて各機能 ViewModel で実装）
- *
- * 【設計指針】
- * 1. 複数の詳細画面で共通して必要となる「利用者コンテキスト（誰の情報を、どのカテゴリで見ているか）」を抽象化する。
- * 2. `PersonAwareState` インターフェースを実装することで、ViewModel 間の状態共有をスムーズにする。
- */
+ * 現時点では UiState と Event の定義が中心であり、動的なロジックが必要になった際に復活させるため保持。
 object PersonDetailLogic {
     // 必要に応じて、詳細画面共通の表示ロジック（例：特定の条件下でのカテゴリ制限など）をここに追加します
 }
+*/

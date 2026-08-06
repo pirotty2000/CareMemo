@@ -80,6 +80,7 @@ class SettingsViewModel(
                     auditLogRepository.getAuditLogCountFlow(),
                     archivedPersonRepository.getArchivedPersons()
                 ) { values ->
+                    @Suppress("UNCHECKED_CAST")
                     val archived = values[9] as List<Person>
                     currentState.copy(
                         isNameMaskingEnabled = values[0] as Boolean,

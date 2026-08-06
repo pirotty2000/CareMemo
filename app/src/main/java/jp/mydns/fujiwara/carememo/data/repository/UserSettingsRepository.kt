@@ -39,8 +39,10 @@ class UserSettingsRepository(private val context: Context) {
         private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
         /** 自動ロックまでの分（0は即時） */
         private val LOCK_TIMEOUT_MINUTES = intPreferencesKey("lock_timeout_minutes")
+        /*
         /** 最後にアプリを操作した時刻（ミリ秒） */
         private val LAST_ACTIVE_TIME = longPreferencesKey("last_active_time")
+        */
         /** バックアップ生成時のパスワード保護を有効にするか */
         private val IS_BACKUP_PASSWORD_ENABLED = booleanPreferencesKey("is_backup_password_enabled")
         /** バックアップ用パスワード（平文/暫定） */
@@ -88,11 +90,13 @@ class UserSettingsRepository(private val context: Context) {
             preferences[LOCK_TIMEOUT_MINUTES] ?: 0
         }
 
+    /*
     /** 最終アクティブ時刻を取得する Flow */
     val lastActiveTime: Flow<Long> = context.dataStore.data
         .map { preferences ->
             preferences[LAST_ACTIVE_TIME] ?: 0L
         }
+    */
 
     /** デフォルトの記録者名を取得する Flow */
     val defaultRecorderName: Flow<String> = context.dataStore.data
@@ -176,11 +180,17 @@ class UserSettingsRepository(private val context: Context) {
         }
     }
 
+    /*
+    /**
+     * アプリがバックグラウンドに回った際や、ユーザー操作があった際に時刻を更新し、
+     * 自動ロックの判定基準とするために使用。将来的なセキュリティ強化のために保持。
+     */
     suspend fun setLastActiveTime(timeMillis: Long) {
         context.dataStore.edit { preferences ->
             preferences[LAST_ACTIVE_TIME] = timeMillis
         }
     }
+    */
 
     suspend fun setDefaultRecorderName(name: String) {
         context.dataStore.edit { preferences ->
