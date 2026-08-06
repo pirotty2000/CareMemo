@@ -92,7 +92,7 @@ class PersonMedicationViewModel(
                 if (name != null) {
                     try {
                         setCategory(Category.valueOf(name))
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // 無視
                     }
                 }
