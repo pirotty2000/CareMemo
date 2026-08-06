@@ -76,7 +76,7 @@ class MainActivity : FragmentActivity() {
                 var isAppLocked by rememberSaveable { mutableStateOf(false) }
                 val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = false)
                 val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 5)
-                var lastPausedTime by rememberSaveable { mutableStateOf(0L) }
+                var lastPausedTime by rememberSaveable { mutableLongStateOf(0L) }
 
                 val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
                     authenticate(titleResId, subtitleResId, onSuccess)

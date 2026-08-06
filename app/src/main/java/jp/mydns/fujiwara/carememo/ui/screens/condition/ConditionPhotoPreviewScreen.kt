@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
 import androidx.activity.compose.BackHandler
+import androidx.core.net.toUri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +40,7 @@ fun ConditionPhotoPreviewScreen(
     val errorMessage = conditionState.errorMessage
     val person = detailState.person
     val uriString = conditionState.previewUri ?: return
-    val uri = android.net.Uri.parse(uriString)
+    val uri = uriString.toUri()
     val conditionId = conditionState.selectedConditionId ?: ""
 
     val initialCaption = remember(uri) { DateTimeUtils.getPhotoCaption(context, uri) }
