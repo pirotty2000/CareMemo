@@ -22,7 +22,7 @@ class DeleteOrRestorePersonViewModel(
     private val repository: DeleteOrRestorePersonRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
-    private val savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle
 ) : BaseUiStateViewModel<DeleteOrRestorePersonUiState, DeleteOrRestorePersonViewEvent>(
     userSettingsRepository,
     DeleteOrRestorePersonUiState()

@@ -1,10 +1,8 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogLogic
@@ -20,8 +18,7 @@ import kotlinx.coroutines.launch
  */
 class AuditLogViewModel(
     private val auditLogRepository: AuditLogRepository,
-    userSettingsRepository: UserSettingsRepository,
-    private val savedStateHandle: SavedStateHandle
+    userSettingsRepository: UserSettingsRepository
 ) : BaseUiStateViewModel<AuditLogUiState, AuditLogViewEvent>(
     userSettingsRepository,
     AuditLogUiState()
@@ -106,8 +103,7 @@ class AuditLogViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            val savedStateHandle = extras.createSavedStateHandle()
-            return AuditLogViewModel(auditLogRepository, userSettingsRepository, savedStateHandle) as T
+            return AuditLogViewModel(auditLogRepository, userSettingsRepository) as T
         }
     }
 }

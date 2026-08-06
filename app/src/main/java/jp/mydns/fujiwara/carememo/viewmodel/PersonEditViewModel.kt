@@ -29,7 +29,7 @@ import java.time.ZoneOffset
  * 入力バリデーション、和暦変換、重複チェック、およびデータの永続化処理を統合します。
  */
 class PersonEditViewModel(
-    private val savedStateHandle: SavedStateHandle,
+    savedStateHandle: SavedStateHandle,
     private val repository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository
@@ -194,7 +194,7 @@ class PersonEditViewModel(
                 repository.updatePerson(person, featureName, OP_SAVE)
                 showSnackbar(R.string.main_msg_user_updated)
             }
-            sendUiEvent(BaseUiStateViewModel.UiEvent.SaveSuccess(person.id))
+            sendUiEvent(UiEvent.SaveSuccess(person.id))
             sendViewEvent(PersonEditViewEvent.NavigateBack)
         }
     }

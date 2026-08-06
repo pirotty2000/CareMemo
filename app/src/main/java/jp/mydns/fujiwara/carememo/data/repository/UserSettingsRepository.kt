@@ -49,8 +49,10 @@ class UserSettingsRepository(private val context: Context) {
         private val THEME_SETTING = stringPreferencesKey("theme_setting")
         /** 監査ログを自動削除するまでの日数 */
         private val AUDIT_LOG_RETENTION_DAYS = intPreferencesKey("audit_log_retention_days")
+        /*
         /** 最後に監査ログのローテーションを実行した日付 (yyyy-MM-dd) */
         private val LAST_AUDIT_LOG_ROTATION_DATE = stringPreferencesKey("last_audit_log_rotation_date")
+        */
         /** 健康記録詳細で「グラフ」ではなく「履歴」を優先表示するか */
         private val HEALTH_DISPLAY_MODE_IS_HISTORY = booleanPreferencesKey("health_display_mode_is_history")
     }
@@ -70,14 +72,14 @@ class UserSettingsRepository(private val context: Context) {
             preferences[IS_BIOMETRIC_ENABLED] ?: false
         }
 
-    /**
-     * 生体認証設定が既にユーザーまたはシステムによって初期化済みかどうかを判定するための Flow。
-     * まだ一度も設定が行われていない（キーが存在しない）場合は false を返します。
-     */
+    /*
+     * 初回起動時の生体認証案内ダイアログの表示制御など、
+     * 「未設定状態」を明示的に判定する必要がある機能を追加する際に使用するため保持。
     val isBiometricSettingInitialized: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences.contains(IS_BIOMETRIC_ENABLED)
         }
+    */
 
     /** ロックタイムアウト（分）を取得する Flow */
     val lockTimeoutMinutes: Flow<Int> = context.dataStore.data
@@ -129,13 +131,20 @@ class UserSettingsRepository(private val context: Context) {
             preferences[AUDIT_LOG_RETENTION_DAYS] ?: 30
         }
 
-    /** 最後に監査ログローテーションを実行した日付を取得する Flow */
+    /*
+     * 監査ログの自動ローテーション処理において、
+     * 「前回の実行日」を厳格にチェックして多重実行を防止するロジックを実装する際に使用するため保持。
     val lastAuditLogRotationDate: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[LAST_AUDIT_LOG_ROTATION_DATE] ?: ""
         }
 
-    /** 健康記録詳細のデフォルト表示モードが「履歴」かどうかを取得する Flow */
+    suspend fun setLastAuditLogRotationDate(date: String) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_AUDIT_LOG_ROTATION_DATE] = date
+        }
+    }
+    */
     val healthDisplayModeIsHistory: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] ?: true
@@ -202,13 +211,13 @@ class UserSettingsRepository(private val context: Context) {
             preferences[AUDIT_LOG_RETENTION_DAYS] = days
         }
     }
-
+/*
     suspend fun setLastAuditLogRotationDate(date: String) {
         context.dataStore.edit { preferences ->
             preferences[LAST_AUDIT_LOG_ROTATION_DATE] = date
         }
     }
-
+*/
     suspend fun setHealthDisplayModeIsHistory(isHistory: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] = isHistory

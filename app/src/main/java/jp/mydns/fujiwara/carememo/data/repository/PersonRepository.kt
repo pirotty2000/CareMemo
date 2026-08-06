@@ -107,12 +107,11 @@ class PersonRepository(
         )
     }
 
-    /**
-     * 全利用者の各カテゴリ記録状況サマリーを取得します。
-     * 一覧画面でのバッジ表示（入力済み確認）に使用します。
-     *
-     * @return サマリー結果のリストを通知する Flow
-     */
+    /*
+     * 利用者一覧画面におけるバッジ表示（入力済み確認）のデータ取得元を、
+     * PersonRepository から専用の PersonSummaryRepository へ完全に移行したため、
+     * 過去のコードとの互換性やリファクタリング時の参照用に保持。
     fun getAllPersonCategorySummaries(): Flow<List<PersonSummaryQueryResult>> = 
         personDao.getPersonCategorySummaries()
+    */
 }

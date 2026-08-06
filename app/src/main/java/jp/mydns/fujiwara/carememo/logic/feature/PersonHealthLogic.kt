@@ -40,7 +40,7 @@ sealed interface PersonHealthViewEvent {
     /** グラフ拡大表示画面へ遷移 */
     data class NavigateToGraphExpansion(
         val personId: String,
-        val category: jp.mydns.fujiwara.carememo.data.Category,
+        val category: Category,
         val initialIndex: Int
     ) : PersonHealthViewEvent
 }
@@ -53,8 +53,10 @@ enum class HealthValidationResult {
     SUCCESS,
     /** 数値が形式不正、または規定範囲外 */
     INVALID_VALUE,
-    /** 記録日時が不正 */
+    /*
+     * 日時の妥当性チェック（未来日の禁止等）を厳格化する際に使用する可能性があるため保持。
     INVALID_TIME,
+    */
     /** 同一利用者の同一日時に既に別のレコードが存在する */
     DUPLICATE_TIME
 }

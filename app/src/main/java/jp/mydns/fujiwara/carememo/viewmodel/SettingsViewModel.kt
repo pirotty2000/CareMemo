@@ -5,12 +5,10 @@ import android.net.Uri
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
@@ -31,8 +29,7 @@ class SettingsViewModel(
     private val maintenanceRepository: AppMaintenanceRepository,
     private val archivedPersonRepository: DeleteOrRestorePersonRepository,
     private val auditLogRepository: AuditLogRepository,
-    userSettingsRepository: UserSettingsRepository,
-    private val savedStateHandle: SavedStateHandle
+    userSettingsRepository: UserSettingsRepository
 ) : BaseUiStateViewModel<SettingsUiState, SettingsViewEvent>(
     userSettingsRepository,
     SettingsUiState()
@@ -182,8 +179,7 @@ class SettingsViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            val savedStateHandle = extras.createSavedStateHandle()
-            return SettingsViewModel(maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository, savedStateHandle) as T
+            return SettingsViewModel(maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository) as T
         }
     }
 }

@@ -1,11 +1,9 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
@@ -71,7 +69,6 @@ class PersonListViewModel(
     private val emergencyContactRepository: EmergencyContactRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
-    private val savedStateHandle: SavedStateHandle,
 ) : BaseUiStateViewModel<PersonListUiState, PersonListViewEvent>(
     userSettingsRepository,
     PersonListUiState()
@@ -401,7 +398,6 @@ class PersonListViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            val savedStateHandle = extras.createSavedStateHandle()
             return PersonListViewModel(
                 repository,
                 archivedRepository,
@@ -409,8 +405,7 @@ class PersonListViewModel(
                 conditionRepository,
                 emergencyContactRepository,
                 userSettingsRepository,
-                auditLogRepository,
-                savedStateHandle
+                auditLogRepository
             ) as T
         }
     }

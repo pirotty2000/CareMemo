@@ -34,7 +34,7 @@ data class PersonDetailUiState(
  */
 sealed interface PersonDetailViewEvent {
     /** カテゴリを切り替える */
-    data class NavigateToCategory(val category: jp.mydns.fujiwara.carememo.data.Category) : PersonDetailViewEvent
+    data class NavigateToCategory(val category: Category) : PersonDetailViewEvent
     /** 一覧画面へ戻る */
     object NavigateBackToMain : PersonDetailViewEvent
 }

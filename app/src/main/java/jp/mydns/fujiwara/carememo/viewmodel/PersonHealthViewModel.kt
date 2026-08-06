@@ -185,7 +185,7 @@ class PersonHealthViewModel(
             translateValidationResult(duplicateResult)
 
             performSave(record, isUpdate)
-            sendUiEvent(BaseUiStateViewModel.UiEvent.SaveSuccess(record.personId))
+            sendUiEvent(UiEvent.SaveSuccess(record.personId))
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
         }
     }

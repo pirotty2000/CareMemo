@@ -2,11 +2,9 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.annotation.SuppressLint
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
-import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic
@@ -37,8 +35,7 @@ class OrphanedPhotoViewModel(
     private val conditionRepository: ConditionRepository,
     @param:SuppressLint("StaticFieldLeak")
     @field:SuppressLint("StaticFieldLeak")
-    private val context: Context,
-    private val savedStateHandle: SavedStateHandle
+    private val context: Context
 ) : BaseUiStateViewModel<OrphanedPhotoUiState, OrphanedPhotoViewEvent>(userSettingsRepository, OrphanedPhotoUiState()) {
 
     override val featureName: String = "OrphanedPhotoManagement"
@@ -88,12 +85,10 @@ class OrphanedPhotoViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            val savedStateHandle = extras.createSavedStateHandle()
             return OrphanedPhotoViewModel(
                 userSettingsRepository,
                 conditionRepository,
-                context,
-                savedStateHandle
+                context
             ) as T
         }
     }

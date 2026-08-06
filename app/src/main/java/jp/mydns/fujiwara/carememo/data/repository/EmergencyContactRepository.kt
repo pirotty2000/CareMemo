@@ -39,14 +39,12 @@ class EmergencyContactRepository(
     fun getContactsByPersonId(personId: String): Flow<List<EmergencyContact>> =
         emergencyContactDao.getByPersonId(personId)
 
-    /**
-     * 指定された利用者に連絡先が1件でも登録されているか確認します。
-     *
-     * @param personId 利用者ID
-     * @return 存在する場合は true
-     */
+    /* 
+     * 将来的に利用者一覧画面等で「緊急連絡先あり」アイコンを表示する等の
+     * 最適化された判定処理が必要になった際に復活させるため保持。
     suspend fun hasContacts(personId: String): Boolean =
         emergencyContactDao.hasDataForPerson(personId)
+    */
 
     /**
      * IDを指定して特定の連絡先情報を取得します。
