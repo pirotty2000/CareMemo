@@ -57,4 +57,4 @@
 | **Stateless Composable の Modifier 対応**: 下位コンポーネントが外部からレイアウト調整できるよう Modifier を受け取る。 | 各 `ui.components.*` | 10    |       |
 
 ---
-最終更新日: 2026/07/21
+最終更新日: 2026/08/06

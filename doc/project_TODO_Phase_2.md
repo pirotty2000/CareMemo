@@ -100,12 +100,13 @@ Composable の `LaunchedEffect` で ViewModel の `ViewEvent` を購読し、`na
 - [x] **ViewModelFactory 整理**: 各 Factory 内での ID 抽出ロジックを削除し、コンストラクタ注入を簡素化する。
 - [x] **レガシーコードの削除**: 各 `Category` Enum 等に残る文字列ルート生成ロジック (`getRoute` 等) を完全に整理する。
 
-### ステップ 5：型安全ナビゲーションの純粋化と完全移行の仕上げ
+### ステップ 5：型安全ナビゲーションの純粋化と完全移行の仕上げ [完了]
 これまでの移行で構築した土台を活かし、不自然に残っている「接着コード」を排除して、真の型安全な構造を完成させる。
 - [x] **MainActivity の冗長な詰め替えを削除**: `backStackEntry.savedStateHandle["personId"] = args.personId` などの手動代入を廃止し、Navigation コンポーネントによる `SavedStateHandle` への自動連携に一本化する。
 - [x] **初期化ロジックの ViewModel への完全移管**: `MedicalContactEdit` 等の初期化（`startEdit` 呼び出し等）を `MainActivity` の `LaunchedEffect` から ViewModel 内の `SavedStateHandle` 監視（`startObservePersonId` 等のパターン）に移行し、ViewModel の自己完結性を高める。
 - [x] **Screen 引数の最適化と Source of Truth の一元化**: Composable 関数の引数から、ViewModel が `SavedStateHandle` 経由で既に保持している重複パラメータ（`personId`, `category`等）を整理し、ViewModel の状態を参照する形に統一する。
 - [x] **非推奨コード（Deprecated）の物理削除**: `Category.getRoute` などの旧ナビゲーション関連コードを完全に削除し、コードベースを最新の設計にクリーンアップする。
+- [x] **コードインスペクションによる最終クリーンアップ**: 未使用の `savedStateHandle` パラメータ、冗長な型修飾子、未使用のシンボルの整理（コメントアウトまたは削除）を行い、型安全ナビゲーション移行に伴う残置コードを一掃。
 
 ---
-最終更新日: 2026/08/05
+最終更新日: 2026/08/06
