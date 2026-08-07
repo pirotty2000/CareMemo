@@ -43,7 +43,11 @@ data class PersonListUiState(
  */
 sealed interface PersonListViewEvent {
     /** 詳細画面（各カテゴリ）へ遷移 */
-    data class NavigateToDetail(val personId: String, val category: jp.mydns.fujiwara.carememo.data.Category) : PersonListViewEvent
+    data class NavigateToDetail(
+        val personId: String,
+        val category: jp.mydns.fujiwara.carememo.data.Category,
+        val query: String? = null
+    ) : PersonListViewEvent
     /** 一括入力画面へ遷移 */
     data class NavigateToBatchInput(val personId: String) : PersonListViewEvent
     /** 利用者追加画面へ遷移 */

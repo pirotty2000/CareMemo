@@ -131,7 +131,7 @@ fun MainScreen(
         viewModel.viewEvent.collect { event ->
             when (event) {
                 is PersonListViewEvent.NavigateToDetail -> {
-                    navController.navigate(event.category.toDestination(event.personId, uiState.searchQuery))
+                    navController.navigate(event.category.toDestination(event.personId, event.query))
                 }
                 is PersonListViewEvent.NavigateToBatchInput -> {
                     navController.navigate(Destination.BatchInput(event.personId))

@@ -356,7 +356,11 @@ class PersonListViewModel(
         scope.launch {
             // 詳細画面へ行く際は、健康記録等の表示モードをデフォルト（履歴）に戻しておく
             userSettingsRepository.setHealthDisplayModeIsHistory(true)
-            sendViewEvent(PersonListViewEvent.NavigateToDetail(personId, category))
+
+            // 現在の検索クエリを取得（空文字の場合は null とする）
+            val query = uiState.value.searchQuery.ifBlank { null }
+
+            sendViewEvent(PersonListViewEvent.NavigateToDetail(personId, category, query))
         }
     }
 
