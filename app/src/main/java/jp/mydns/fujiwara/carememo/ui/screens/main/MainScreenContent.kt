@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -90,11 +92,17 @@ fun MainScreenContent(
     var showVersionDialog by remember { mutableStateOf(false) }
     
     val context = androidx.compose.ui.platform.LocalContext.current
-    val changelog = remember {
-        try {
-            context.assets.open("change.log").bufferedReader().use { it.readText() }
-        } catch (_: Exception) {
-            ""
+    val historyLog = remember(showVersionDialog) {
+        if (!showVersionDialog) ""
+        else {
+            try {
+                val text = context.assets.open("change_history.log").bufferedReader().use { it.readText() }
+                android.util.Log.d("VersionDialog", "Successfully read change_history.log: ${text.length} chars")
+                text
+            } catch (e: Exception) {
+                android.util.Log.e("VersionDialog", "Failed to read change_history.log", e)
+                ""
+            }
         }
     }
 
@@ -106,35 +114,86 @@ fun MainScreenContent(
             title = { Text(stringResource(R.string.main_dialog_version_title)) },
             text = {
                 AppDialogContent {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // --- 固定ヘッダー部分 ---
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Text("バージョン: ${BuildConfig.VERSION_NAME}")
-                        Text("ビルド日時: ${BuildConfig.BUILD_TIME}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        
-                        if (changelog.isNotBlank()) {
-                            HorizontalDivider()
-                            Text("更新履歴:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = "ビルド日時: ${BuildConfig.BUILD_TIME}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        if (historyLog.isNotBlank()) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             
-                            // 1行ずつ分解して「ぶら下げインデント」で描画
-                            changelog.lines().filter { it.isNotBlank() }.forEach { line ->
-                                val displayText = line.removePrefix("-").trim()
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    Text("・", style = MaterialTheme.typography.bodySmall)
-                                    Text(
-                                        text = displayText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.weight(1f)
-                                    )
+                            // --- スクロール可能な履歴エリア ---
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp) // 最大高さを半分に調整
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(vertical = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                historyLog.lines().forEach { line ->
+                                    val trimmedLine = line.trim()
+                                    when {
+                                        // バージョンヘッダー (# Ver.x.x.x)
+                                        trimmedLine.startsWith("#") -> {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = trimmedLine.removePrefix("#").trim(),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        // 履歴詳細 (- 項目)
+                                        trimmedLine.startsWith("-") -> {
+                                            Row(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
+                                                Text("・", style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    text = trimmedLine.removePrefix("-").trim(),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                        // その他（空行など）
+                                        trimmedLine.isBlank() -> {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                        }
+                                        else -> {
+                                            Text(
+                                                text = trimmedLine,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                modifier = Modifier.padding(start = 8.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        HorizontalDivider()
-                        Text("ターゲット環境:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        Text("Android 15 (API 35)")
-                        Text("KYOCERA TORQUE G06 最適化済")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("(C) 2026 pirotty.galaxy", style = MaterialTheme.typography.bodySmall)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        
+                        // --- 固定フッター部分 ---
+                        Text("ターゲット環境: Android 15 (API 35)", style = MaterialTheme.typography.labelSmall)
+                        Text("KYOCERA TORQUE G06 最適化済", style = MaterialTheme.typography.labelSmall)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "(C) 2026 pirotty.galaxy",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             },
