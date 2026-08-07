@@ -71,7 +71,7 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
     *   `BaseUiStateViewModel` を継承し、Repository の呼び出し、非同期制御（`safeLaunch`）、UIイベントの発行を実装する。
 6.  **UIコンポーネントの実装 (`ui/components`, `ui/screens`)**
     *   `ui/components` にて、`UiState` を受け取って表示する Stateless な部品を作成し、プレビューを義務化する。
-    *   `ui/screens` にて、ViewModel と Component を結合し、画面遷移ロジックを記述する。
+    *   `ui/screens` にて、ViewModel と Component を結合し、ViewModel から送出される `ViewEvent` を購読して `navController` による遷移を実行する。
 
 ---
 
@@ -144,14 +144,16 @@ project_UI_GUIDELINES.mdの「UI設計思想」参照。
 - **実装**: `BackHandler` および `derivedStateOf` による変更検知（`isChanged`）を組み合わせて実装する。
 - **例外**: 「服薬管理」のカレンダー入力など、誤操作のリスクが低い選択主体の入力、またはデータが極めて軽量な場合は、この限りではない。
 
-### 3.3.3. リストデータの安定化
+### 3.3.3. リストデータの安定化と不変性の強制
 - ViewModel から取得したリストを Composable 内で加工（フィルタリング等）して子コンポーネントに渡す際は、インスタンスを安定化させ、不必要な再計算を防ぐ。
+- **不変コレクション (ImmutableList) の使用**:
+  - `UiState` 内で保持するリスト型、および Composable へ渡すリスト引数には、原則として **`ImmutableList`** (kotlinx.collections.immutable) を使用すること。
+  - 標準の `List` インターフェースは Compose コンパイラによって「不安定 (Unstable)」とみなされるため、明示的に不変な型を使用することで不要な再コンポーズを防止する。
 - **使い分け**:
   - **`derivedStateOf`**: 入力変更に伴う Boolean 判定など、軽量な派生状態の算出に優先して使用する。
-  - **`remember(records)`**: `filter` や `map` による新しいリスト生成を伴う場合に利用し、参照の同一性を維持する。
+  - **`remember(records)`**: `filter` や `map` による新しいリスト生成を伴う場合に利用し、参照の同一性を維持する。加工結果は `.toImmutableList()` で不変型に変換すること。
 - **キーの指定**: `remember` のキーには、Flow 等から取得した最新のソースリストを指定すること。
-- 加工後のリストは不変（Immutable）な状態を維持すること。
-- **理由**: 再コンポーズのたびに新しいリストインスタンスが生成されると、子コンポーネントの不要な再計算やスクロール位置のリセットを引き起こすため。
+- **理由**: 再コンポーズのたびに新しいリストインスタンスが生成されたり、型が不安定とみなされたりすると、子コンポーネントの不要な再計算やスクロール位置のリセットを引き起こすため。
  
 
 ## 3.4. 利用者コンテキストの確実な切り替え
@@ -180,6 +182,7 @@ ViewModel の肥大化を防ぎ、テストの信頼性を高めるため、計�
 
 ### 3.5.2. 実装ルールと禁止事項
 - **Pure Kotlin の徹底**: 原則として **Pure Kotlin** で実装し、`Context` や `LiveData/Flow` などの Android 依存、および Repository 依存を持たない。
+- **不変コレクションの返却**: 複数の結果（リスト）を返す関数は、戻り値の型として `ImmutableList` を使用すること。これにより UI 層での不要な詰め替えを防止する。
 - **副作用の禁止**: Logic クラス内で `MutableStateFlow` を更新したり、Toast を表示したりしてはならない。
 - **依存性の排除**: Android依存を持たせないことで、JUnit による高速な単体テストを可能にする。
 - **役割の分離**: ViewModel が「状態(State)の管理」を担当し、Logic が「ルールの判定(Calculation/Validation/Conversion/Entity生成)」を担当する。
@@ -282,6 +285,8 @@ AppException
 - **1画面 1UiState**:
   - 画面が表示に必要とする状態は、原則として一つの UiState データクラスに集約する。
   - 例：`loading`, `error`, `data`, `selectedItem` , `dialog表示状態`, `isValid`, `その他UI表示に必要な状態`等
+- **不変コレクションの強制**:
+  - UiState 内のリスト型プロパティには必ず `ImmutableList` を使用すること。標準の `List` を使用した場合は再コンポーズ最適化の対象外となるため禁止とする。
 - **原子的な更新**:
   - UiState の変更は、原則として `_uiState.update { it.copy(...) }` のみで行う。
   - 複数の MutableStateFlow を個別更新し、一時的に矛盾した状態をUIへ通知してはならない。

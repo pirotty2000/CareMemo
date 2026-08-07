@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 2026080702,
-      "versionName": "3.1.4-dev",
+      "versionCode": 2026080801,
+      "versionName": "3.1.5-dev",
       "outputFile": "app-dev-release.apk"
     }
   ],

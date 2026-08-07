@@ -102,89 +102,238 @@ class MainActivity : FragmentActivity() {
                 }
 
                 if (isAppLocked) {
+                    // ロック画面を表示
                     LockScreen(onUnlockRequest = { authenticate(onSuccess = { isAppLocked = false }) })
                 } else {
                     NavHost(navController = navController, startDestination = Destination.Main) {
 
+                        // SCR-M-001 利用者一覧画面
                         composable<Destination.Main> {
-                            val listViewModel: PersonListViewModel = viewModel(factory = PersonListViewModel.Factory(personRepository, deleteOrRestorePersonRepository, personSummaryRepository, conditionRepository, application.emergencyContactRepository, userSettingsRepository, auditLogRepository))
+                            val listViewModel: PersonListViewModel =
+                                viewModel(factory = PersonListViewModel.Factory(
+                                    personRepository,
+                                    deleteOrRestorePersonRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    application.emergencyContactRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
                             MainScreen(viewModel = listViewModel, navController = navController)
                         }
 
+                        // SCR-M-002 利用者登録・編集画面
                         composable<Destination.PersonEdit> {
-                            val editViewModel: PersonEditViewModel = viewModel(factory = PersonEditViewModel.Factory(personRepository, userSettingsRepository, auditLogRepository))
+                            val editViewModel: PersonEditViewModel =
+                                viewModel(factory = PersonEditViewModel.Factory(
+                                    personRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
                             PersonEditScreen(viewModel = editViewModel, navController = navController)
                         }
 
+                        // SCR-M-003 緊急連絡先・管理画面
                         composable<Destination.MedicalContacts> {
-                            val medicalViewModel: EmergencyContactEditViewModel = viewModel(factory = EmergencyContactEditViewModel.Factory(application.emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
+                            val medicalViewModel: EmergencyContactEditViewModel =
+                                viewModel(factory = EmergencyContactEditViewModel.Factory(
+                                    application.emergencyContactRepository,
+                                    personRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
                             EmergencyContactListScreen(viewModel = medicalViewModel, navController = navController)
                         }
 
+                        // SCR-M-004 緊急連絡先・登録編集画面
                         composable<Destination.MedicalContactEdit> {
-                            val medicalViewModel: EmergencyContactEditViewModel = viewModel(factory = EmergencyContactEditViewModel.Factory(application.emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
+                            val medicalViewModel: EmergencyContactEditViewModel =
+                                viewModel(factory = EmergencyContactEditViewModel.Factory(
+                                    application.emergencyContactRepository,
+                                    personRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
                             EmergencyContactEditScreen(viewModel = medicalViewModel, navController = navController)
                         }
 
+                        // SCR-PH-001 健康管理(身長・体重、バイタル、血糖値・HbA1c)
                         composable<Destination.HealthDetail> {
-                            val detailViewModel: PersonDetailUiStateViewModel = viewModel(factory = PersonDetailUiStateViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                            val healthViewModel: PersonHealthViewModel = viewModel(factory = PersonHealthViewModel.Factory(personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-                            PersonHealthScreen(detailViewModel = detailViewModel, healthViewModel = healthViewModel, navController = navController, widthSizeClass = widthSizeClass, onRequireAuthentication = requestAuthentication)
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val healthViewModel: PersonHealthViewModel =
+                                viewModel(factory = PersonHealthViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    healthRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            PersonHealthScreen(
+                                detailViewModel = detailViewModel,
+                                healthViewModel = healthViewModel,
+                                navController = navController,
+                                widthSizeClass = widthSizeClass,
+                                onRequireAuthentication = requestAuthentication)
                         }
 
+                        // SCR-PH-002 一括入力
                         composable<Destination.BatchInput> {
-                            val batchViewModel: BatchInputViewModel = viewModel(factory = BatchInputViewModel.Factory(personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
+                            val batchViewModel: BatchInputViewModel =
+                                viewModel(factory = BatchInputViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    healthRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
                             BatchInputScreen(viewModel = batchViewModel, navController = navController)
                         }
 
+                        // SCR-PH-003 グラフ拡大表示
                         composable<Destination.GraphExpansion> { backStackEntry ->
                             val args = backStackEntry.toRoute<Destination.GraphExpansion>()
-                            val detailViewModel: PersonDetailUiStateViewModel = viewModel(factory = PersonDetailUiStateViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                            val healthViewModel: PersonHealthViewModel = viewModel(factory = PersonHealthViewModel.Factory(personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-                            GraphExpansionScreen(detailViewModel = detailViewModel, healthViewModel = healthViewModel, initialGraphIndex = args.initialIndex, navController = navController)
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val healthViewModel: PersonHealthViewModel =
+                                viewModel(factory = PersonHealthViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    healthRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            GraphExpansionScreen(
+                                detailViewModel = detailViewModel,
+                                healthViewModel = healthViewModel,
+                                initialGraphIndex = args.initialIndex,
+                                navController = navController)
                         }
 
+                        // SCR-PC-001 所見メモ
                         composable<Destination.ConditionDetail> {
-                            val detailViewModel: PersonDetailUiStateViewModel = viewModel(factory = PersonDetailUiStateViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                            val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, applicationContext))
-                            PersonConditionScreen(detailViewModel = detailViewModel, conditionViewModel = conditionViewModel, navController = navController, widthSizeClass = widthSizeClass, onRequireAuthentication = requestAuthentication)
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val conditionViewModel: PersonConditionViewModel =
+                                viewModel(factory = PersonConditionViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository,
+                                    applicationContext))
+                            PersonConditionScreen(
+                                detailViewModel = detailViewModel,
+                                conditionViewModel = conditionViewModel,
+                                navController = navController,
+                                widthSizeClass = widthSizeClass,
+                                onRequireAuthentication = requestAuthentication)
                         }
 
+                        // SCR-PC-002 所見メモ・写真プレビュー画面
                         composable<Destination.PhotoPreview> {
-                            val detailViewModel: PersonDetailUiStateViewModel = viewModel(factory = PersonDetailUiStateViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                            val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, applicationContext))
-                            ConditionPhotoPreviewScreen(detailViewModel = detailViewModel, conditionViewModel = conditionViewModel, navController = navController)
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val conditionViewModel: PersonConditionViewModel =
+                                viewModel(factory = PersonConditionViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository,
+                                    applicationContext))
+                            ConditionPhotoPreviewScreen(
+                                detailViewModel = detailViewModel,
+                                conditionViewModel = conditionViewModel,
+                                navController = navController)
                         }
 
+                        // SCR-PC-003 所見メモ・写真全画面表示
                         @Suppress("UNUSED_VARIABLE")
                         composable<Destination.PhotoFull> {
-                            val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, applicationContext))
+                            val conditionViewModel: PersonConditionViewModel =
+                                viewModel(factory = PersonConditionViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository,
+                                    applicationContext))
                             ConditionPhotoFullScreen(viewModel = conditionViewModel, navController = navController)
                         }
 
+                        // SCR-PM-001 服薬管理
                         composable<Destination.MedicationDetail> {
-                            val detailViewModel: PersonDetailUiStateViewModel = viewModel(factory = PersonDetailUiStateViewModel.Factory(personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                            val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository, auditLogRepository))
-                            PersonMedicationScreen(detailViewModel = detailViewModel, medicationViewModel = medicationViewModel, navController = navController, widthSizeClass = widthSizeClass, onRequireAuthentication = requestAuthentication)
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val medicationViewModel: PersonMedicationViewModel =
+                                viewModel(factory = PersonMedicationViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    medicationRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            PersonMedicationScreen(
+                                detailViewModel = detailViewModel,
+                                medicationViewModel = medicationViewModel,
+                                navController = navController,
+                                widthSizeClass = widthSizeClass,
+                                onRequireAuthentication = requestAuthentication)
                         }
 
+                        // SCR-S-001 設定
                         composable<Destination.Settings> {
-                            val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
-                            SettingsScreen(viewModel = settingsViewModel, navController = navController, onRequireAuthentication = requestAuthentication)
+                            val settingsViewModel: SettingsViewModel =
+                                viewModel(factory = SettingsViewModel.Factory(
+                                    appMaintenanceRepository,
+                                    deleteOrRestorePersonRepository,
+                                    auditLogRepository,
+                                    userSettingsRepository))
+                            SettingsScreen(
+                                viewModel = settingsViewModel,
+                                navController = navController,
+                                onRequireAuthentication = requestAuthentication)
                         }
 
+                        // SCR-S-002 設定・監査ログ
                         composable<Destination.AuditLog> {
-                            val auditLogViewModel: AuditLogViewModel = viewModel(factory = AuditLogViewModel.Factory(auditLogRepository, userSettingsRepository))
+                            val auditLogViewModel: AuditLogViewModel =
+                                viewModel(factory = AuditLogViewModel.Factory(
+                                    auditLogRepository,
+                                    userSettingsRepository))
                             AuditLogScreen(viewModel = auditLogViewModel, navController = navController)
                         }
 
+                        // SCR-S-003 設定・終了利用者管理
                         composable<Destination.ArchiveManagement> {
-                            val archiveViewModel: DeleteOrRestorePersonViewModel = viewModel(factory = DeleteOrRestorePersonViewModel.Factory(deleteOrRestorePersonRepository, userSettingsRepository, auditLogRepository))
+                            val archiveViewModel: DeleteOrRestorePersonViewModel =
+                                viewModel(factory = DeleteOrRestorePersonViewModel.Factory(
+                                    deleteOrRestorePersonRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
                             DeleteOrRestorePersonScreen(viewModel = archiveViewModel, navController = navController)
                         }
 
+                        // SCR-S-004 設定・迷子写真管理
                         composable<Destination.OrphanedPhotos> {
-                            val orphanedViewModel: OrphanedPhotoViewModel = viewModel(factory = OrphanedPhotoViewModel.Factory(userSettingsRepository, conditionRepository, applicationContext))
+                            val orphanedViewModel: OrphanedPhotoViewModel =
+                                viewModel(factory = OrphanedPhotoViewModel.Factory(
+                                    userSettingsRepository,
+                                    conditionRepository,
+                                    applicationContext))
                             OrphanedPhotoManagementScreen(viewModel = orphanedViewModel, navController = navController)
                         }
                     }
@@ -193,6 +342,9 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /**
+     * セキュリティ保護の実行、認証方式の統合管理、コールバック制御
+     */
     private fun authenticate(titleResId: Int? = null, subtitleResId: Int? = null, onSuccess: () -> Unit) {
         val executor = ContextCompat.getMainExecutor(this)
         val biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
