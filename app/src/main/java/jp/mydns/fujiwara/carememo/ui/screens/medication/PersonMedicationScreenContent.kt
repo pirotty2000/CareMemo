@@ -25,6 +25,9 @@ import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationHistoryTabl
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -53,7 +56,7 @@ fun PersonMedicationScreenContent(
     isExpanded: Boolean,
     selectedMonth: YearMonth,
     isLoading: Boolean,
-    recordsByDate: Map<String, List<MedicationRecord>>,
+    recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
     isHistoryMode: Boolean,
     onHistoryModeChange: (Boolean) -> Unit,
     onPreviousMonth: () -> Unit,
@@ -257,7 +260,7 @@ fun PersonMedicationScreenContentPhonePreview() {
             isExpanded = false,
             selectedMonth = YearMonth.now(),
             isLoading = false,
-            recordsByDate = emptyMap(),
+            recordsByDate = persistentMapOf(),
             isHistoryMode = false,
             onHistoryModeChange = {},
             onPreviousMonth = {},
@@ -275,7 +278,7 @@ fun PersonMedicationScreenContentTabletPreview() {
             isExpanded = true,
             selectedMonth = YearMonth.now(),
             isLoading = false,
-            recordsByDate = emptyMap(),
+            recordsByDate = persistentMapOf(),
             isHistoryMode = false,
             onHistoryModeChange = {},
             onPreviousMonth = {},

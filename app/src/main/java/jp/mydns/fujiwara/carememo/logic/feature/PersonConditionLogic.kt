@@ -1,12 +1,15 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 
 /**
@@ -34,6 +37,7 @@ import java.time.Instant
  * @param errorMessage エラーメッセージ
  * @param isLoading 初期読み込み中フラグ
  */
+@Immutable
 data class PersonConditionUiState(
     // --- 入力フィールド (詳細パネル/編集フォーム用) ---
     val title: String = "",
@@ -45,16 +49,16 @@ data class PersonConditionUiState(
     override val personId: String? = null,
     override val currentCategory: Category = Category.CONDITION_AT_VISIT,
 
-    val records: List<ConditionAtVisit> = emptyList(),
-    val filteredRecords: List<ConditionAtVisit> = emptyList(),
+    val records: ImmutableList<ConditionAtVisit> = persistentListOf(),
+    val filteredRecords: ImmutableList<ConditionAtVisit> = persistentListOf(),
     val searchQuery: String = "",
     val selectedConditionId: String? = null,
     val initialPhotoId: String? = null,
     val previewUri: String? = null,
-    val currentConditionPhotos: List<ConditionPhoto> = emptyList(),
+    val currentConditionPhotos: ImmutableList<ConditionPhoto> = persistentListOf(),
     val conditionPhotoMap: Map<String, Boolean> = emptyMap(),
     val orphanedPhotoCount: Int = 0,
-    val availableOrphanedPhotos: List<OrphanedPhotoInfo> = emptyList(),
+    val availableOrphanedPhotos: ImmutableList<OrphanedPhotoInfo> = persistentListOf(),
 
     val isProcessing: Boolean = false,
     val errorMessage: String? = null,
@@ -189,6 +193,7 @@ object PersonConditionLogic {
  * データベースとの不整合（親記録の削除失敗やアプリの異常終了など）により、
  * 紐付けが失われたままストレージやDBに残っている写真を表します。
  */
+@Immutable
 data class OrphanedPhotoInfo(
     /** 迷子の発生原因/分類 */
     val type: OrphanedPhotoType,

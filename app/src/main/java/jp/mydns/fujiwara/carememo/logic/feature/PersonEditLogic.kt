@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
@@ -28,6 +29,7 @@ import java.time.ZoneOffset
  * @param isNameMaskingEnabled 氏名のマスキング（伏せ字）が有効か
  * @param isNew 新規登録モードかどうか
  */
+@Immutable
 data class PersonEditUiState(
     val lastName: String = "",
     val firstName: String = "",

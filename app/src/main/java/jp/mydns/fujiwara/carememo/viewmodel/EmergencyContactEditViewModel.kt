@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -12,16 +13,20 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.EmergencyContactLogic
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
  * UI State：EmergencyContactUiState
  */
+@Immutable
 data class EmergencyContactUiState(
     val isLoading: Boolean = false,
     val personId: String = "",
-    val contacts: List<EmergencyContact> = emptyList(),
+    val contacts: ImmutableList<EmergencyContact> = persistentListOf(),
     val editingContact: EmergencyContact? = null,
     val initialContact: EmergencyContact? = null,
     val isEditing: Boolean = false,
@@ -129,7 +134,7 @@ class EmergencyContactEditViewModel(
             contextBuilder = { tableName = TABLE_NAME; affectedId = id },
             flowProvider = { emergencyContactRepository.getContactsByPersonId(id) }
         ) { contacts ->
-            updateUiState { it.copy(contacts = contacts) }
+            updateUiState { it.copy(contacts = contacts.toImmutableList()) }
         }
     }
 

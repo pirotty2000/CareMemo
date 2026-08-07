@@ -43,6 +43,7 @@ import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import jp.mydns.fujiwara.carememo.ui.navigation.NavigationKeys
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 
 /**
@@ -255,7 +256,7 @@ fun MainScreen(
  */
 @Composable
 fun EmergencyContactSelectionSheet(
-    contacts: List<EmergencyContact>,
+    contacts: ImmutableList<EmergencyContact>,
     personName: String,
     onContactClick: (EmergencyContact) -> Unit,
     onManageClick: () -> Unit

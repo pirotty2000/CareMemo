@@ -40,6 +40,8 @@ import jp.mydns.fujiwara.carememo.ui.theme.getAuditActionColor
 import jp.mydns.fujiwara.carememo.ui.theme.getAuditResultMainColor
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun AuditLogScreen(
@@ -60,7 +62,7 @@ fun AuditLogScreen(
     }
 
     AuditLogScreenContent(
-        auditLogs = uiState.auditLogs,
+        auditLogs = uiState.filteredLogs, // filteredLogs を使用するように変更
         isLoading = uiState.isLoading,
         selectedFeature = uiState.selectedFeature,
         selectedResult = uiState.selectedResult,
@@ -78,13 +80,13 @@ fun AuditLogScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditLogScreenContent(
-    auditLogs: List<AuditLog>,
+    auditLogs: ImmutableList<AuditLog>,
     isLoading: Boolean,
     selectedFeature: String?,
     selectedResult: String?,
     isAscending: Boolean,
-    availableFeatures: List<String>,
-    availableResults: List<String>,
+    availableFeatures: ImmutableList<String>,
+    availableResults: ImmutableList<String>,
     onFeatureSelect: (String?) -> Unit,
     onResultSelect: (String?) -> Unit,
     onToggleSort: () -> Unit,
@@ -161,8 +163,8 @@ private fun AuditLogFilterBar(
     selectedFeature: String?,
     selectedResult: String?,
     isAscending: Boolean,
-    availableFeatures: List<String>,
-    availableResults: List<String>,
+    availableFeatures: ImmutableList<String>,
+    availableResults: ImmutableList<String>,
     onFeatureSelect: (String?) -> Unit,
     onResultSelect: (String?) -> Unit,
     onToggleSort: () -> Unit,
@@ -282,7 +284,7 @@ private fun AuditLogFilterBar(
 fun AuditLogScreenPreview() {
     CareMemoTheme {
         AuditLogScreenContent(
-            auditLogs = listOf(
+            auditLogs = persistentListOf(
                 AuditLog(
                     id = 1,
                     timestamp = java.time.Instant.now(),
@@ -320,8 +322,8 @@ fun AuditLogScreenPreview() {
             selectedFeature = null,
             selectedResult = null,
             isAscending = false,
-            availableFeatures = listOf("PersonList", "PersonHealth", "Settings"),
-            availableResults = listOf("SUCCESS", "DB_ERROR", "OTHER_ERROR"),
+            availableFeatures = persistentListOf("PersonList", "PersonHealth", "Settings"),
+            availableResults = persistentListOf("SUCCESS", "DB_ERROR", "OTHER_ERROR"),
             onFeatureSelect = {},
             onResultSelect = {},
             onToggleSort = {},

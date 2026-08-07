@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.base.*
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * 健康記録グラフ表示コンポーネント
@@ -47,7 +48,7 @@ import jp.mydns.fujiwara.carememo.ui.components.base.*
  */
 @Composable
 fun HealthGraphView(
-    records: List<Any>,
+    records: ImmutableList<Any>,
     categoryType: Category,
     onExpandGraph: ((Int) -> Unit)? = null
 ) {

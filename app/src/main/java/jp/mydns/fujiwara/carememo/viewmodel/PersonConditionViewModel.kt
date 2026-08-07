@@ -28,6 +28,8 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import java.time.Instant
 
@@ -132,9 +134,10 @@ class PersonConditionViewModel(
             flowProvider = { conditionRepository.getConditionAtVisitByPersonId(personId) }
         ) { records ->
             updateUiState { current ->
+                val immutableRecords = records.toImmutableList()
                 current.copy(
-                    records = records,
-                    filteredRecords = ConditionLogic.filterRecords(records, current.searchQuery)
+                    records = immutableRecords,
+                    filteredRecords = ConditionLogic.filterRecords(immutableRecords, current.searchQuery).toImmutableList()
                 )
             }
         }
@@ -170,7 +173,7 @@ class PersonConditionViewModel(
                 current.copy(
                     conditionPhotoMap = map, 
                     orphanedPhotoCount = adoptableOrphans.size,
-                    availableOrphanedPhotos = adoptableOrphans
+                    availableOrphanedPhotos = adoptableOrphans.toImmutableList()
                 )
             }
         }
@@ -188,10 +191,10 @@ class PersonConditionViewModel(
                 contextBuilder = { tableName = TABLE_CONDITION },
                 flowProvider = { conditionRepository.getConditionPhotosByConditionId(id) }
             ) { photos ->
-                updateUiState { it.copy(currentConditionPhotos = photos) }
+                updateUiState { it.copy(currentConditionPhotos = photos.toImmutableList()) }
             }
         } else {
-            updateUiState { it.copy(currentConditionPhotos = emptyList()) }
+            updateUiState { it.copy(currentConditionPhotos = persistentListOf()) }
         }
     }
 
@@ -199,7 +202,7 @@ class PersonConditionViewModel(
         updateUiState { current ->
             current.copy(
                 searchQuery = query,
-                filteredRecords = ConditionLogic.filterRecords(current.records, query)
+                filteredRecords = ConditionLogic.filterRecords(current.records, query).toImmutableList()
             )
         }
     }

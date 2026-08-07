@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -10,13 +11,17 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 /**
  * UI State：OrphanedPhotoUiState
  */
+@Immutable
 data class OrphanedPhotoUiState(
-    val orphanedPhotos: List<OrphanedPhotoInfo> = emptyList(),
+    val orphanedPhotos: ImmutableList<OrphanedPhotoInfo> = persistentListOf(),
     val isLoading: Boolean = false
 )
 
@@ -63,7 +68,7 @@ class OrphanedPhotoViewModel(
             physicalFiles = physicalFiles
         )
 
-        updateUiState { it.copy(orphanedPhotos = orphaned) }
+        updateUiState { it.copy(orphanedPhotos = orphaned.toImmutableList()) }
     }
 
     fun deletePhoto(info: OrphanedPhotoInfo) = safeLaunch(operation = "deletePhoto", loadingState = loadingStateProxy) {

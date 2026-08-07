@@ -24,6 +24,8 @@ import jp.mydns.fujiwara.carememo.ui.components.main.QuickActionMenu
 import jp.mydns.fujiwara.carememo.ui.components.main.UserListItem
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -63,7 +65,7 @@ import java.time.ZoneId
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
-    userList: List<PersonUiState>,
+    userList: ImmutableList<PersonUiState>,
     isLoading: Boolean,
     isNameMaskingEnabled: Boolean,
     searchQuery: String,
@@ -285,7 +287,7 @@ fun MainScreenPreview() {
     val birthdayToday = today.minusYears(80)
     val person3 = Person(id = "3", lastName = "田中", firstName = "梅", lastNameFurigana = "タナカ", firstNameFurigana = "ウメ", birthday = birthdayToday.atStartOfDay(zoneId).toInstant())
 
-    val mockUserList = listOf(
+    val mockUserList = persistentListOf(
         PersonUiState(
             person = person1,
             maskedName = "山○\u3000太○",

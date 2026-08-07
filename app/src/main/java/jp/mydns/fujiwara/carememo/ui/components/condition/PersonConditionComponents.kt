@@ -70,6 +70,8 @@ import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * コンポーネント構造ツリー：
@@ -100,7 +102,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
  */
 @Composable
 fun ConditionList(
-    records: List<ConditionAtVisit>,
+    records: ImmutableList<ConditionAtVisit>,
     selectedId: String?,
     conditionPhotoMap: Map<String, Boolean>,
     isAnyDialogOpen: Boolean,
@@ -199,8 +201,8 @@ private fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
 @Composable
 fun ConditionDetailPane(
     conditionId: String?,
-    records: List<ConditionAtVisit>,
-    photos: List<ConditionPhoto>,
+    records: ImmutableList<ConditionAtVisit>,
+    photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     defaultRecorderName: String,
     onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
@@ -210,7 +212,7 @@ fun ConditionDetailPane(
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit = {},
-    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo> = emptyList(),
+    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
@@ -393,7 +395,7 @@ private fun ConditionRecordEditForm(
     onAuthorChange: (String) -> Unit,
     condition: String,
     onConditionChange: (String) -> Unit,
-    photos: List<ConditionPhoto>,
+    photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     onSave: () -> Unit,
     onCancel: () -> Unit,
@@ -574,7 +576,7 @@ private fun ConditionRecordEditForm(
  */
 @Composable
 private fun PhotoGrid(
-    photos: List<ConditionPhoto>,
+    photos: ImmutableList<ConditionPhoto>,
     isEditable: Boolean,
     onPhotoClick: (ConditionPhoto) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
@@ -624,7 +626,7 @@ private fun PhotoGrid(
 @Composable
 private fun ConditionRecordDisplayCard(
     memo: ConditionAtVisit?,
-    photos: List<ConditionPhoto>,
+    photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     onCancel: () -> Unit,
     onEditClick: () -> Unit,
@@ -751,7 +753,7 @@ private fun ConditionRecordDisplayCard(
  */
 @Composable
 private fun OrphanedPhotoSelectionDialog(
-    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
+    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onDismiss: () -> Unit,
     onSelect: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit
 ) {
@@ -816,8 +818,8 @@ private fun PreviewConditionDetailPane() {
     MaterialTheme {
         ConditionDetailPane(
             conditionId = "1",
-            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "サンプル", condition = "内容", author = "A", recordTime = Instant.now())),
-            photos = emptyList(),
+            records = persistentListOf(ConditionAtVisit(id = "1", personId = "1", title = "サンプル", condition = "内容", author = "A", recordTime = Instant.now())),
+            photos = persistentListOf(),
             isProcessing = false,
             defaultRecorderName = "A",
             onSaveRecord = { _, _, _ -> },
@@ -827,7 +829,7 @@ private fun PreviewConditionDetailPane() {
             onAddPhotoClick = {},
             onPickPhotoClick = {},
             onReattachPhoto = {},
-            orphanedPhotos = emptyList(),
+            orphanedPhotos = persistentListOf(),
             onNavigateToFullScreen = { _, _ -> },
             onMicClick = {}
         )
@@ -847,7 +849,7 @@ private fun PreviewConditionRecordEditFormDirect() {
             onAuthorChange = {},
             condition = "経過良好です。",
             onConditionChange = {},
-            photos = emptyList(),
+            photos = persistentListOf(),
             isProcessing = false,
             orphanedPhotoCount = 2,
             onSave = {},

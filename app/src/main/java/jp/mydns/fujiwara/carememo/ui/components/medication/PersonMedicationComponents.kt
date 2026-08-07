@@ -57,6 +57,8 @@ import java.time.YearMonth
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 
 /**
  * 全体像：服薬管理（Medication）
@@ -89,7 +91,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
 @Composable
 fun CalendarGrid(
     yearMonth: YearMonth,
-    recordsByDate: Map<String, List<MedicationRecord>>,
+    recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
     onDayClick: (LocalDate) -> Unit
 ) {
     // 表示用の日付リスト（月初の空白を含む）を取得
@@ -300,7 +302,7 @@ private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationSta
 @Composable
 fun MedicationHistoryTable(
     yearMonth: YearMonth,
-    recordsByDate: Map<String, List<MedicationRecord>>,
+    recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
     lazyListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
@@ -429,7 +431,7 @@ fun MedicationHistoryTable(
 fun MedicationInputDialog(
     date: LocalDate,
     personId: String,
-    records: List<MedicationRecord>,
+    records: ImmutableList<MedicationRecord>,
     onDismiss: () -> Unit,
     onConfirm: (List<MedicationRecord?>) -> Unit
 ) {

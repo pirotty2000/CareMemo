@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
@@ -9,6 +10,8 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import java.time.Instant
 
 /**
@@ -35,6 +38,7 @@ import java.time.Instant
  * @param isChanged 初期状態から変更があるかどうか
  * @param isNameMaskingEnabled 氏名を伏せ字にするかどうか
  */
+@Immutable
 data class BatchInputUiState(
     override val personId: String? = null,
     override val currentCategory: Category? = null,
@@ -162,9 +166,9 @@ object BatchInputLogic {
      * @param state 現在のUI状態
      * @return [BatchInputCategory] のリスト
      */
-    fun getEffectiveCategories(state: BatchInputUiState): List<BatchInputCategory> {
+    fun getEffectiveCategories(state: BatchInputUiState): ImmutableList<BatchInputCategory> {
         val results = evaluateCategories("dummy", Instant.EPOCH, state)
-        return results.filter { it.value is CategoryResult.Valid }.keys.toList()
+        return results.filter { it.value is CategoryResult.Valid }.keys.toList().toImmutableList()
     }
 
     /**
@@ -190,7 +194,7 @@ object BatchInputLogic {
      * @return 生成された Entity オブジェクトのリスト
      * @throws IllegalArgumentException 不正な入力（Invalid）が一つでもある場合にスロー
      */
-    fun createEntities(personId: String, time: Instant, state: BatchInputUiState): List<Any> {
+    fun createEntities(personId: String, time: Instant, state: BatchInputUiState): ImmutableList<Any> {
         val results = evaluateCategories(personId, time, state).values
 
         // 不正な入力がある状態で呼び出された場合は異常系として扱う（呼び出し側でvalidate済みであることを期待）
@@ -198,7 +202,7 @@ object BatchInputLogic {
             throw IllegalArgumentException("Invalid input state")
         }
 
-        return results.filterIsInstance<CategoryResult.Valid>().map { it.entity }
+        return results.filterIsInstance<CategoryResult.Valid>().map { it.entity }.toImmutableList()
     }
 
     /**

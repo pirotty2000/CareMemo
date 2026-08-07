@@ -19,6 +19,8 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -161,9 +163,9 @@ class SettingsViewModel(
 
     fun clearAllData() { safeLaunch(OP_CLEAR_ALL) { maintenanceRepository.clearAllData(); showSnackbar(R.string.settings_msg_clear_all_success) } }
     fun importSampleData() { safeLaunch(OP_IMPORT_SAMPLE) { maintenanceRepository.replaceAllData(jp.mydns.fujiwara.carememo.logic.sample.SampleDataGenerator.generate()); showSnackbar(R.string.settings_msg_import_sample_success) } }
-    fun checkIntegrity() { safeLaunch(OP_INTEGRITY) { val results = maintenanceRepository.scanInconsistencies(); updateUiState { it.copy(inconsistencies = results) }; if (results.isEmpty()) showSnackbar(R.string.settings_msg_integrity_ok) } }
-    fun fixInconsistencies() { safeLaunch(OP_FIX_INCONSISTENCY) { maintenanceRepository.cleanInconsistencies(currentState.inconsistencies); val count = currentState.inconsistencies.size; updateUiState { it.copy(inconsistencies = emptyList()) }; showSnackbar(R.string.settings_msg_fix_success, count) } }
-    fun clearInconsistencyResults() { updateUiState { it.copy(inconsistencies = emptyList()) } }
+    fun checkIntegrity() { safeLaunch(OP_INTEGRITY) { val results = maintenanceRepository.scanInconsistencies(); updateUiState { it.copy(inconsistencies = results.toImmutableList()) }; if (results.isEmpty()) showSnackbar(R.string.settings_msg_integrity_ok) } }
+    fun fixInconsistencies() { safeLaunch(OP_FIX_INCONSISTENCY) { maintenanceRepository.cleanInconsistencies(currentState.inconsistencies); val count = currentState.inconsistencies.size; updateUiState { it.copy(inconsistencies = persistentListOf()) }; showSnackbar(R.string.settings_msg_fix_success, count) } }
+    fun clearInconsistencyResults() { updateUiState { it.copy(inconsistencies = persistentListOf()) } }
     fun insertTestInconsistency() { safeLaunch(OP_TEST_INCONSISTENCY) { maintenanceRepository.insertTestInconsistency(); showSnackbar(R.string.settings_msg_test_inconsistency_added) } }
     fun setAuditLogRetentionDays(days: Int) { viewModelScope.launch { userSettingsRepository.setAuditLogRetentionDays(days) } }
     fun canAuthenticate(context: Context): Boolean { val biometricManager = BiometricManager.from(context); return biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS }

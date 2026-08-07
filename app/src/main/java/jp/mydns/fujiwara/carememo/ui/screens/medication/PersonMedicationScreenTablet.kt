@@ -48,6 +48,9 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -59,7 +62,7 @@ fun PersonMedicationScreenTablet(
     isNameMaskingEnabled: Boolean,
     isLoading: Boolean,
     selectedMonth: YearMonth,
-    recordsByDate: Map<String, List<MedicationRecord>>,
+    recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
     personCategorySummary: PersonCategorySummary?,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -148,7 +151,7 @@ fun PersonMedicationScreenTabletPreview() {
             isNameMaskingEnabled = false,
             isLoading = false,
             selectedMonth = YearMonth.now(),
-            recordsByDate = emptyMap(),
+            recordsByDate = persistentMapOf(),
             personCategorySummary = null,
             onPreviousMonth = {},
             onNextMonth = {},

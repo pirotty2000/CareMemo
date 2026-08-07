@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
+import kotlinx.collections.immutable.ImmutableList
 import java.time.ZoneId
 
 /**
@@ -60,7 +61,7 @@ import java.time.ZoneId
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PersonHistoryList(
-    records: List<HistoryRecord>,
+    records: ImmutableList<HistoryRecord>,
     selectedRecordId: String? = null,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,

@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
@@ -18,6 +19,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
  * @param currentCategory 現在表示しているカテゴリ
  * @param isLoading データの読み込み中フラグ
  */
+@Immutable
 data class PersonDetailUiState(
     override val personId: String? = null,
     val person: Person? = null,

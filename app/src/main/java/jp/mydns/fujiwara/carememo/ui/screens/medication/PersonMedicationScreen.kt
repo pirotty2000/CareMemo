@@ -18,6 +18,7 @@ import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -166,7 +167,7 @@ fun PersonMedicationScreen(
         MedicationInputDialog(
             date = showDialog!!,
             personId = detailState.personId ?: "",
-            records = medicationState.recordsByDate[dateStr] ?: emptyList(),
+            records = medicationState.recordsByDate[dateStr] ?: persistentListOf(),
             onDismiss = { showDialog = null },
             onConfirm = { slotRecords ->
                 medicationViewModel.syncMedicationDay(dateStr, slotRecords)

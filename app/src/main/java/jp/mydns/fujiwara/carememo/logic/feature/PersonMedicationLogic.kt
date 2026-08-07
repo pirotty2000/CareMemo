@@ -1,8 +1,15 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import java.time.YearMonth
 
 /**
@@ -19,14 +26,15 @@ import java.time.YearMonth
  * @param allRecords 全期間の服薬記録リスト（統計や将来的な拡張用）
  * @param isLoading データの読み込み中フラグ
  */
+@Immutable
 data class PersonMedicationUiState(
     override val personId: String? = null,
     override val currentCategory: Category = Category.MEDICATION,
 
     val selectedMonth: YearMonth = YearMonth.now(),
-    val monthlyRecords: List<MedicationRecord> = emptyList(),
-    val recordsByDate: Map<String, List<MedicationRecord>> = emptyMap(),
-    val allRecords: List<MedicationRecord> = emptyList(),
+    val monthlyRecords: ImmutableList<MedicationRecord> = persistentListOf(),
+    val recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>> = persistentMapOf(),
+    val allRecords: ImmutableList<MedicationRecord> = persistentListOf(),
 
     override val isLoading: Boolean = false
 ) : PersonAwareState
@@ -65,7 +73,9 @@ object PersonMedicationLogic {
      * @param records 変換対象の履歴レコードリスト
      * @return 日付文字列をキー、その日のレコードリスト（最大4スロット分）を値とするマップ
      */
-    fun groupRecordsByDate(records: List<MedicationRecord>): Map<String, List<MedicationRecord>> {
+    fun groupRecordsByDate(records: List<MedicationRecord>): ImmutableMap<String, ImmutableList<MedicationRecord>> {
         return records.groupBy { it.dosageDate }
+            .mapValues { it.value.toImmutableList() }
+            .toImmutableMap()
     }
 }

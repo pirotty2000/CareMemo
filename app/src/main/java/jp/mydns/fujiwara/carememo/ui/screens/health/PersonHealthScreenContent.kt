@@ -45,7 +45,6 @@ import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -60,6 +59,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthRecordDetailPane
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * 全体像
@@ -84,7 +84,7 @@ import jp.mydns.fujiwara.carememo.ui.components.health.HealthRecordDetailPane
 @Composable
 fun PersonHealthScreenContent(
     isExpanded: Boolean,
-    records: List<Any>,
+    records: ImmutableList<HistoryRecord>,
     isLoading: Boolean,
     currentCategory: Category,
     preferredShowHistory: Boolean,
@@ -99,10 +99,8 @@ fun PersonHealthScreenContent(
 ) {
     val historyListState = rememberLazyListState()
 
-    // HistoryRecord のリストを安定化（再コンポーズごとに新しいリストが生成されるのを防ぐ）
-    val historyRecords = remember(records) {
-        records.filterIsInstance<HistoryRecord>()
-    }
+    // HistoryRecord のリストを安定化
+    val historyRecords = records
 
     if (isLoading) {
         LoadingScreen()

@@ -12,14 +12,14 @@ CareMemo は「一貫性・責務分離・型安全性・保守性」を最優�
 
 プロジェクトの安定性と開発効率のバランスを考慮した優先順位です。
 
-| 項目                                          |  評価   |   優先度    |  コスト  | 段階的移行 |    進捗    | 取り組み方針                   |
-|:--------------------------------------------|:-----:|:--------:|:-----:|:-----:|:--------:|:-------------------------|
-| **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | **100%** | 完了。全画面の遷移定義を刷新。          |
-| **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。ViewModel の初期化を自律化。   |
-| **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** |    0%    | UiState と関連コンポーネントを順次変更。 |
-| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   10%    | 新規作成・改修時に都度適用。影響範囲は局所的。  |
-| **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** |    0%    | プレビュー関数の書き換えが必要だが効果は絶大。  |
-| **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。             |
+| 項目                                          |  評価   |   優先度    |  コスト  | 段階的移行 |    進捗    | 取り組み方針                    |
+|:--------------------------------------------|:-----:|:--------:|:-----:|:-----:|:--------:|:--------------------------|
+| **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | **100%** | 完了。全画面の遷移定義を刷新。           |
+| **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。ViewModel の初期化を自律化。    |
+| **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。UiState と関連コンポーネントを刷新。 |
+| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   10%    | 新規作成・改修時に都度適用。影響範囲は局所的。   |
+| **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** |    0%    | プレビュー関数の書き換えが必要だが効果は絶大。   |
+| **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。              |
 
 ---
 
@@ -106,7 +106,38 @@ Composable の `LaunchedEffect` で ViewModel の `ViewEvent` を購読し、`na
 - [x] **初期化ロジックの ViewModel への完全移管**: `MedicalContactEdit` 等の初期化（`startEdit` 呼び出し等）を `MainActivity` の `LaunchedEffect` から ViewModel 内の `SavedStateHandle` 監視（`startObservePersonId` 等のパターン）に移行し、ViewModel の自己完結性を高める。
 - [x] **Screen 引数の最適化と Source of Truth の一元化**: Composable 関数の引数から、ViewModel が `SavedStateHandle` 経由で既に保持している重複パラメータ（`personId`, `category`等）を整理し、ViewModel の状態を参照する形に統一する。
 - [x] **非推奨コード（Deprecated）の物理削除**: `Category.getRoute` などの旧ナビゲーション関連コードを完全に削除し、コードベースを最新の設計にクリーンアップする。
-- [x] **コードインスペクションによる最終クリーンアップ**: 未使用の `savedStateHandle` パラメータ、冗長な型修飾子、未使用のシンボルの整理（コメントアウトまたは削除）を行い、型安全ナビゲーション移行に伴う残置コードを一掃。
+- [x] **コードインスペクションによる最終クリーンアップ**:
+    - 未使用の `savedStateHandle` パラメータ、冗長な型修飾子、未使用のシンボルの整理（コメントアウトまたは削除）を行い、型安全ナビゲーション移行に伴う残置コードを一掃。
+    - **[Phase 3 対応]** `minSdkVersion` (31) に対して不要となっていた `mipmap-anydpi-v26` リソースフォルダを `mipmap-anydpi` へ統合・整理。
+
+---
+
+## 🚀 実装ロードマップ：不変コレクション (ImmutableList) 導入 (Phase 3)
+
+UI 状態 (UiState) におけるリストの不変性を保証し、Compose コンパイラによる最適化（不要な再コンポーズの抑制）を促進する。
+
+### ステップ 1：準備と基盤整備
+- [x] **ライブラリ導入**: `kotlinx-collections-immutable` をプロジェクトに追加。
+- [x] **モデルの安定化判定 (@Immutable / @Stable)**: 
+    - 状態が変化しないことが保証されているドメインモデルおよび UI 専用モデル（`Person`, `PersonUiState` 等）へのアノテーション付与。
+    - Compose Runtime への依存を許容（Entity層）することを決定し、適用。
+
+### ステップ 2：各機能の UiState 移行
+各画面の `UiState` に含まれる `List` を `ImmutableList` に順次置き換える。
+- [x] `PersonList` (SCR-M-001)
+- [x] `PersonEdit` / `PersonDetail` (SCR-M-002, SCR-PH-001)
+- [x] `EmergencyContact` (SCR-M-003, 004)
+- [x] `PersonHealth` / `BatchInput` (SCR-PH-001, 002, 003)
+- [x] `PersonCondition` (SCR-PM-001, 002, 003)
+- [x] `PersonMedication` (SCR-PM-001)
+- [x] `Settings` / `AuditLog` / `DeleteOrRestorePerson` / `OrphanedPhoto` (SCR-S-001〜004)
+
+### ステップ 3：Logic 層・ViewModel 層の整合
+- [x] **Logic 戻り値の型変更**: リストを生成・返却する Logic メソッドの戻り値を `ImmutableList` に変更。
+- [x] **ViewModel の更新ロジック修正**: `it.copy(list = newList.toImmutableList())` 形式への統一、または `PersistentList` 操作への移行。
+
+### ステップ 4：UI コンポーネントの最適化
+- [x] **共通部品の引数型変更**: `AppLazyColumn` 等、リストを引数に取る主要な共通コンポーネントの引数型を `ImmutableList` に変更し、安定性を向上させる。
 
 ---
 最終更新日: 2026/08/06

@@ -41,7 +41,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -57,6 +56,7 @@ import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * 全体像：利用者所見記録（Condition）
@@ -83,14 +83,14 @@ import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
-    records: List<Any>,
+    records: ImmutableList<ConditionAtVisit>,
     isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     selectedId: String?,
     onSelectedIdChange: (String?) -> Unit,
     conditionPhotoMap: Map<String, Boolean>,
-    photos: List<ConditionPhoto>,
+    photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
@@ -100,16 +100,14 @@ fun PersonConditionScreenContent(
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
-    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
+    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
 
-    // ConditionAtVisit のリストをフィルタリング
-    val conditionRecords = remember(records) {
-        records.filterIsInstance<ConditionAtVisit>()
-    }
+    // ConditionAtVisit のリスト
+    val conditionRecords = records
 
     if (isLoading) {
         LoadingScreen()

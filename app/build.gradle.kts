@@ -18,8 +18,8 @@ android {
         minSdk = 31
         targetSdk = 35
         //noinspection HighAppVersionCode
-        versionCode = 2026080702
-        versionName = "3.1.4"
+        versionCode = 2026080801
+        versionName = "3.1.5"
 
         val buildTime = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN).format(Date())
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
@@ -82,6 +82,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.material3.windowsize)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
@@ -101,6 +102,7 @@ dependencies {
     implementation(libs.pdfbox.android)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.collections.immutable)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite.ktx)
 

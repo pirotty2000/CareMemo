@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -19,6 +20,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
+import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,12 +28,12 @@ fun PersonConditionScreenPhone(
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
-    records: List<Any>,
+    records: ImmutableList<ConditionAtVisit>,
     isLoading: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     conditionPhotoMap: Map<String, Boolean>,
-    photos: List<ConditionPhoto>,
+    photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
@@ -47,7 +49,7 @@ fun PersonConditionScreenPhone(
     onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
-    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
+    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {

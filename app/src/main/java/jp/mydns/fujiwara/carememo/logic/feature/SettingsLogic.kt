@@ -1,8 +1,11 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.DatabaseInconsistency
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * インポートデータのファイル形式検証結果。
@@ -48,6 +51,7 @@ enum class StorageValidationResult {
  * @param isForceImportEnabled バージョン互換性を無視した強制インポートを許可するか
  * @param errorMessage 画面に表示するエラーメッセージ
  */
+@Immutable
 data class SettingsUiState(
     // 1. 基本設定（UserSettingsRepository 由来）
     val isNameMaskingEnabled: Boolean = true,
@@ -62,7 +66,7 @@ data class SettingsUiState(
     val auditLogRetentionDays: Int = AppSpecifications.Constraints.System.AuditLog.DEFAULT_RETENTION_DAYS,
     val auditLogCount: Int = 0,
     val endedUserCount: Int = 0,
-    val inconsistencies: List<DatabaseInconsistency> = emptyList(),
+    val inconsistencies: ImmutableList<DatabaseInconsistency> = persistentListOf(),
 
     // 3. 制御状態
     val isLoading: Boolean = false,

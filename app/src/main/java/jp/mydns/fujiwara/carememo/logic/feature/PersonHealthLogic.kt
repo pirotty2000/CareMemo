@@ -1,10 +1,13 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 import java.util.UUID
 
@@ -21,10 +24,11 @@ import java.util.UUID
  * @param selectedRecordId 現在詳細表示または編集対象として選択されているレコードのID
  * @param isLoading データの読み込み中フラグ
  */
+@Immutable
 data class PersonHealthUiState(
     override val personId: String? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
-    val records: List<HistoryRecord> = emptyList(),
+    val records: ImmutableList<HistoryRecord> = persistentListOf(),
     val preferredShowHistory: Boolean = true,
     val selectedRecordId: String? = null,
     override val isLoading: Boolean = false

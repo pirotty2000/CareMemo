@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Component：PdfExportActionHandler
@@ -44,10 +46,10 @@ fun PdfExportActionHandler(
     onDismiss: () -> Unit,
     category: Category,
     person: Person?,
-    records: List<HistoryRecord>,
+    records: ImmutableList<HistoryRecord>,
     viewModel: BaseUiStateViewModel<*, *>,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, onSuccess -> onSuccess() },
-    photos: List<ConditionPhoto> = emptyList()
+    photos: ImmutableList<ConditionPhoto> = persistentListOf()
 ) {
     val context = LocalContext.current
 

@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 /**
@@ -163,7 +164,7 @@ class PersonListViewModel(
                 }
             }
         ) { newList ->
-            updateUiState { it.copy(userList = newList) }
+            updateUiState { it.copy(userList = newList.toImmutableList()) }
         }
     }
 
@@ -340,7 +341,7 @@ class PersonListViewModel(
                 showSnackbar(R.string.medical_msg_no_contacts)
                 clearEmergencyContactState()
             } else {
-                updateUiState { it.copy(emergencyContactsForSheet = contacts) }
+                updateUiState { it.copy(emergencyContactsForSheet = contacts.toImmutableList()) }
             }
         }
     }

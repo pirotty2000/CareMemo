@@ -23,10 +23,14 @@ import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -104,7 +108,7 @@ class PersonHealthViewModel(
     override fun onPrepareLoadPerson(state: PersonHealthUiState): PersonHealthUiState {
         return state.copy(
             personId = null,
-            records = emptyList(),
+            records = persistentListOf(),
             selectedRecordId = null,
             preferredShowHistory = true
         )
@@ -145,19 +149,19 @@ class PersonHealthViewModel(
                 }
             }
         ) { records ->
-            updateUiState { it.copy(records = records) }
+            updateUiState { it.copy(records = records.toImmutableList()) }
         }
     }
 
-    fun getHealthRecords(category: Category): StateFlow<List<HistoryRecord>> {
-        val personId = currentState.personId ?: return flowOf(emptyList<HistoryRecord>()).stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun getHealthRecords(category: Category): StateFlow<ImmutableList<HistoryRecord>> {
+        val personId = currentState.personId ?: return flowOf(persistentListOf<HistoryRecord>()).stateIn(scope, SharingStarted.WhileSubscribed(5000), persistentListOf())
 
         return when (category) {
             Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(personId)
             Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(personId)
             Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(personId)
             else -> flowOf(emptyList())
-        }.stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }.map { it.toImmutableList() }.stateIn(scope, SharingStarted.WhileSubscribed(5000), persistentListOf())
     }
 
     fun saveRecord(category: Category, recordId: String, recordTime: Instant, values: Map<String, Any?>) {

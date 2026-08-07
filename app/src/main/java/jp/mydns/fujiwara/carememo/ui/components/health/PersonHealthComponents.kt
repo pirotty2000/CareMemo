@@ -51,6 +51,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import kotlinx.collections.immutable.ImmutableList
 import java.time.Instant
 
 /**
@@ -266,7 +267,7 @@ private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
 fun HealthRecordDetailPane(
     category: Category,
     recordId: String?,
-    records: List<HistoryRecord>,
+    records: ImmutableList<HistoryRecord>,
     onCancel: () -> Unit,
     onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
 ) {

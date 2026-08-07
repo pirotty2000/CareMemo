@@ -30,6 +30,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * 緊急連絡先一覧画面 (SCR-M-003)
@@ -201,7 +202,7 @@ fun EmergencyContactListContentPreview_Normal() {
         EmergencyContactListContent(
             uiState = EmergencyContactUiState(
                 personName = "愛 植○",
-                contacts = listOf(
+                contacts = persistentListOf(
                     EmergencyContact(facilityName = "○○クリニック", personName = "○○先生", phoneNumber = "0311111111", contactType = "DOCTOR", personId = "1"),
                     EmergencyContact(facilityName = "長男の妻", personName = "○○さん", phoneNumber = "08011111111", contactType = "FAMILY", personId = "1", priority = 1)
                 )

@@ -64,13 +64,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenPhone(
     currentCategory: Category,
-    records: List<Any>,
+    records: ImmutableList<HistoryRecord>,
     isLoading: Boolean,
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
@@ -201,7 +203,7 @@ fun PersonHealthScreenPhonePreview() {
     CareMemoTheme {
         PersonHealthScreenPhone(
             currentCategory = Category.BP_AND_PULSE,
-            records = listOf(
+            records = persistentListOf(
                 BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
             ),
             isLoading = false,

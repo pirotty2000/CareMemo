@@ -65,7 +65,7 @@ class AuditLogViewModel(
         ) { (filtered, features, results) ->
             updateUiState { current ->
                 current.copy(
-                    auditLogs = filtered,
+                    filteredLogs = filtered,
                     availableFeatures = features,
                     availableResults = results
                 )

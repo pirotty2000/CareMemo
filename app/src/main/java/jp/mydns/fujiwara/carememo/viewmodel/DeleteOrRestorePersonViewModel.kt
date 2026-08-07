@@ -13,6 +13,8 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonLogic
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 /**
@@ -76,7 +78,7 @@ class DeleteOrRestorePersonViewModel(
             contextBuilder = { tableName = TABLE_PERSON },
             flowProvider = { repository.getArchivedPersons() }
         ) { newList ->
-            updateUiState { it.copy(archivedPersons = newList) }
+            updateUiState { it.copy(archivedPersons = newList.toImmutableList()) }
         }
     }
 
@@ -85,7 +87,7 @@ class DeleteOrRestorePersonViewModel(
     }
 
     fun setMode(newMode: OperationMode) {
-        updateUiState { it.copy(mode = newMode, selectedIds = emptySet()) }
+        updateUiState { it.copy(mode = newMode, selectedIds = persistentSetOf()) }
     }
 
     fun toggleSelection(personId: String) {
@@ -101,7 +103,7 @@ class DeleteOrRestorePersonViewModel(
     }
 
     fun clearSelection() {
-        updateUiState { it.copy(selectedIds = emptySet()) }
+        updateUiState { it.copy(selectedIds = persistentSetOf()) }
     }
 
     fun restoreSelectedPersons(persons: List<Person>) {

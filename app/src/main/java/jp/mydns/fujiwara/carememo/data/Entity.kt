@@ -1,6 +1,8 @@
 package jp.mydns.fujiwara.carememo.data
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -43,6 +45,7 @@ object InstantSerializer : KSerializer<Instant> {
 /**
  * すべての履歴データの基底インターフェース
  */
+@Stable
 interface HistoryRecord {
     val id: String
     val personId: String
@@ -54,6 +57,7 @@ interface HistoryRecord {
     tableName = "person_db",
     indices = [Index(value = ["last_name", "first_name", "birthday", "note"], unique = true)],
 )
+@Immutable
 data class Person(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "last_name") val lastName: String,
@@ -127,6 +131,7 @@ fun String.maskStartOnly(): String {
         Index(value = ["person_id", "record_time"], unique = true) // 分単位の一意制約（保存時に丸め込み前提）
     ]
 )
+@Immutable
 data class HeightAndWeight(
     @PrimaryKey override val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "person_id") override val personId: String,
@@ -156,6 +161,7 @@ data class HeightAndWeight(
         Index(value = ["person_id", "record_time"], unique = true)
     ]
 )
+@Immutable
 data class BpAndPulse(
     @PrimaryKey override val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "person_id") override val personId: String,
@@ -188,6 +194,7 @@ data class BpAndPulse(
         Index(value = ["person_id", "record_time"], unique = true)
     ]
 )
+@Immutable
 data class GlucoseAndHbA1c(
     @PrimaryKey override val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "person_id") override val personId: String,
@@ -217,6 +224,7 @@ data class GlucoseAndHbA1c(
         Index(value = ["person_id", "record_time"], unique = true)
     ]
 )
+@Immutable
 data class ConditionAtVisit(
     @PrimaryKey override val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "person_id") override val personId: String,
@@ -247,6 +255,7 @@ data class ConditionAtVisit(
         Index(value = ["person_id"])
     ]
 )
+@Immutable
 data class ConditionPhoto(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "condition_id") val conditionId: String,
@@ -279,6 +288,7 @@ data class ConditionPhoto(
         Index(value = ["person_id", "dosage_date", "time_slot"], unique = true)
     ]
 )
+@Immutable
 data class MedicationRecord(
     @PrimaryKey override val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "person_id") override val personId: String,
@@ -332,6 +342,7 @@ data class MedicationRecord(
         Index(value = ["person_id", "priority", "facility_name"])
     ]
 )
+@Immutable
 data class EmergencyContact(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     @ColumnInfo(name = "person_id") val personId: String,
@@ -373,6 +384,7 @@ data class CareMemoBackup(
  */
 @Serializable
 @Entity(tableName = "audit_log_db")
+@Immutable
 data class AuditLog(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -431,6 +443,7 @@ data class AuditLog(
  * 利用者ごとの記録有無サマリー
  * メイン画面のインジケーター（バッジ）点灯判定に使用
  */
+@Immutable
 data class PersonCategorySummary(
     val hasHeightWeight: Boolean = false,
     val hasBpAndPulse: Boolean = false,
