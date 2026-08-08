@@ -24,6 +24,9 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatDateHeader
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatTime
 import kotlinx.collections.immutable.ImmutableList
 import java.time.ZoneId
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
 /**
  * Component：HistoryComponents
@@ -235,6 +238,26 @@ fun HistoryItemWrapper(
                 // 外部から渡された具体的な内容を描画
                 content()
             }
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Previews
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewPersonHistoryList(
+    @PreviewParameter(HistoryPreviewParameterProvider::class) records: ImmutableList<HistoryRecord>
+) {
+    CareMemoTheme {
+        PersonHistoryList(
+            records = records,
+            onItemClick = {},
+            onDeleteSwipe = {}
+        ) { record ->
+            Text(text = "Record ID: ${record.id}", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

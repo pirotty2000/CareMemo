@@ -57,6 +57,11 @@ import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 import kotlinx.collections.immutable.ImmutableList
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * 全体像：利用者所見記録（Condition）
@@ -216,5 +221,40 @@ fun PersonConditionScreenContent(
                 }
             }
         }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Previews
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 800)
+@Composable
+private fun PreviewPersonConditionScreenContent(
+    @PreviewParameter(PersonConditionPreviewParameterProvider::class) state: PersonConditionPreviewState
+) {
+    CareMemoTheme {
+        PersonConditionScreenContent(
+            isExpanded = state.isExpanded,
+            records = state.records,
+            isLoading = state.isLoading,
+            searchQuery = "",
+            onSearchQueryChange = {},
+            selectedId = state.selectedRecordId,
+            onSelectedIdChange = {},
+            conditionPhotoMap = emptyMap(),
+            photos = persistentListOf<ConditionPhoto>(),
+            isProcessing = state.isLoading,
+            isAnyDialogOpen = false,
+            defaultRecorderName = "記録 太郎",
+            onDeleteRecord = {},
+            onSaveRecord = { _, _, _ -> },
+            onDeletePhoto = {},
+            onAddPhotoClick = {},
+            onReattachPhoto = {},
+            orphanedPhotos = persistentListOf<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>(),
+            onNavigateToFullScreen = { _, _ -> },
+            onMicClick = {}
+        )
     }
 }

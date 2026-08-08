@@ -60,6 +60,10 @@ import jp.mydns.fujiwara.carememo.ui.components.health.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthRecordDetailPane
 import kotlinx.collections.immutable.ImmutableList
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
 /**
  * 全体像
@@ -243,5 +247,33 @@ fun PersonHealthScreenContent(
                 }
             }
         }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Previews
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 800)
+@Composable
+private fun PreviewPersonHealthScreenContent(
+    @PreviewParameter(PersonHealthPreviewParameterProvider::class) state: PersonHealthPreviewState
+) {
+    CareMemoTheme {
+        PersonHealthScreenContent(
+            isExpanded = false,
+            records = state.records,
+            isLoading = state.isLoading,
+            currentCategory = state.category,
+            preferredShowHistory = state.preferredShowHistory,
+            onPreferredShowHistoryChange = {},
+            selectedRecordId = state.selectedRecordId,
+            onSelectedRecordIdChange = {},
+            onItemClick = {},
+            onDeleteSwipe = {},
+            onExpandGraph = {},
+            onSaveRecord = { _, _, _, _ -> },
+            isAnyDialogOpen = false
+        )
     }
 }

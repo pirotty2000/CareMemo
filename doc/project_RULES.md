@@ -316,6 +316,7 @@ AppException
 「動くコード」だけでなく「壊れないコード」を維持するため、以下のテスト戦略を遵守してください。
 
 - **プレビューの義務化：** すべての `*Content.kt` および主要な `Components` にには、**「正常系」「空状態」「エラー/注意状態」**を網羅する 1 つ以上の `@Preview` を含めること。
+- **PreviewParameterProvider の積極活用：** 複数の状態を網羅する際や、複雑なデータ構造を持つ Composable のプレビューでは `PreviewParameterProvider` を使用し、プレビュー関数の肥大化を防ぎつつ網羅性を担保すること。
 - **テストの作成・更新：** 新規機能追加や大規模な修正時は、`doc/test/project_TEST_GUIDELINES.md` に基づき、Logic Test (JUnit) と UI Test (ComposeTestRule) をセットで更新し、デグレードを防止すること。基底クラスの変更時は `BaseUiStateViewModelTest.kt` も確認すること。
 - **テスト容易性の確保：** ViewModel や Repository を Composable に直接渡さず、Stateless な Content 層を設けることで、プレビューおよびコンポーネントテストの容易性を維持すること。
 
@@ -413,6 +414,9 @@ Compose の再コンポーズ最適化（安定性の保証）を確実にし、
   - Logic 層で生成したリストを ViewModel や UI へ渡す際は、`.toImmutableList()` を用いて変換して返すこと。
   - Composable 内部で `filter` や `map` を行った結果を子コンポーネントに渡す場合も、同様に変換を行うこと。
   - 空のリストを初期値として定義する場合は、`persistentListOf()` を使用すること。
+- **プレビュー用モックデータの扱い**:
+  - プレビューで使用するテストデータは、原則として `ui/preview/MockData.kt` に集約し、各プレビュー関数で個別にハードコードしないこと。
+  - 大規模な画面（Screen層）のプレビューでは、引数をまとめた `PreviewState` クラスと `PreviewParameterProvider` を組み合わせ、一貫した状態管理を行うこと。
 - **マッピング**:
   - キーと値のペアを扱う場合も、同様の理由から `ImmutableMap<K, V>` および `persistentMapOf()` を使用すること。
 
@@ -422,4 +426,4 @@ Compose の再コンポーズ最適化（安定性の保証）を確実にし、
 
 ---
 
-最終更新日: 2026/08/08
+最終更新日: 2026/08/08 (PreviewParameterProvider 活用ルールの追加)

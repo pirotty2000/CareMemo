@@ -50,6 +50,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.MockData
+import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
+import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionPreviewParameterProvider
 import java.time.Instant
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.R
@@ -833,13 +837,15 @@ private fun OrphanedPhotoSelectionDialog(
 
 @Preview(showBackground = true, widthDp = 400)
 @Composable
-private fun PreviewConditionDetailPane() {
+private fun PreviewConditionDetailPane(
+    @PreviewParameter(PersonConditionPreviewParameterProvider::class) state: PersonConditionPreviewState
+) {
     MaterialTheme {
         ConditionDetailPane(
-            conditionId = "1",
-            records = persistentListOf(ConditionAtVisit(id = "1", personId = "1", title = "サンプル", condition = "内容", author = "A", recordTime = Instant.now())),
+            conditionId = state.selectedRecordId,
+            records = state.records,
             photos = persistentListOf(),
-            isProcessing = false,
+            isProcessing = state.isLoading,
             defaultRecorderName = "A",
             onSaveRecord = { _, _, _ -> },
             onDeletePhoto = {},
@@ -855,18 +861,18 @@ private fun PreviewConditionDetailPane() {
     }
 }
 
-@Preview(showBackground = true, widthDp = 400, name = "編集フォーム - 迷子写真あり")
+@Preview(showBackground = true, widthDp = 400, name = "編集フォーム")
 @Composable
 private fun PreviewConditionRecordEditFormDirect() {
     MaterialTheme {
         ConditionRecordEditForm(
-            conditionId = "1",
+            conditionId = "new",
             dateTimeState = rememberDateTimeInputState(),
-            title = "サンプル所見",
+            title = MockData.condition.title ?: "",
             onTitleChange = {},
-            author = "記録 太郎",
+            author = MockData.condition.author,
             onAuthorChange = {},
-            condition = "経過良好です。",
+            condition = MockData.condition.condition ?: "",
             onConditionChange = {},
             photos = persistentListOf(),
             isProcessing = false,
@@ -878,7 +884,7 @@ private fun PreviewConditionRecordEditFormDirect() {
             onReattachClick = {},
             onDeletePhoto = {},
             onMicClick = {},
-            isChanged = false
+            isChanged = true
         )
     }
 }

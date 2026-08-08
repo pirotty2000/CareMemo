@@ -61,6 +61,8 @@ import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -201,26 +203,20 @@ fun PersonHealthScreenPhone(
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
-fun PersonHealthScreenPhonePreview() {
+fun PersonHealthScreenPhonePreview(
+    @PreviewParameter(PersonHealthPreviewParameterProvider::class) state: PersonHealthPreviewState
+) {
     CareMemoTheme {
         PersonHealthScreenPhone(
-            currentCategory = Category.BP_AND_PULSE,
-            records = persistentListOf(
-                BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
-            ),
-            isLoading = false,
-            currentPerson = Person(
-                lastName = "山田", 
-                firstName = "太郎",
-                lastNameFurigana = "ヤマダ",
-                firstNameFurigana = "タロウ",
-                birthday = Instant.now()
-            ),
-            personCategorySummary = null,
+            currentCategory = state.category,
+            records = state.records,
+            isLoading = state.isLoading,
+            currentPerson = state.person,
+            personCategorySummary = state.summary,
             isNameMaskingEnabled = false,
-            preferredShowHistory = true,
+            preferredShowHistory = state.preferredShowHistory,
             onPreferredShowHistoryChange = {},
-            selectedRecordId = null,
+            selectedRecordId = state.selectedRecordId,
             onSelectedRecordIdChange = {},
             onBack = {},
             onExpandGraph = {},
