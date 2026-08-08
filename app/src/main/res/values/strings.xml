@@ -61,6 +61,7 @@
     <!-- 共通サフィックス -->
     <string name="common_honorific_san_suffix">%1$s さん</string>
     <string name="common_note_bracket_format"> [%1$s]</string>
+    <string name="common_identifier_suffix"> [識別子:%1$s]</string>
 
     <!-- MainScreen 詳細 -->
     <string name="main_dialog_version_build_time">ビルド日時: %1$s</string>
@@ -87,6 +88,7 @@
     <string name="common_day_suffix">日</string>
     <string name="common_hour_suffix">時</string>
     <string name="common_minute_suffix">分</string>
+    <string name="common_date_label">日付</string>
     <string name="common_date_time_label">記録日時</string>
     <string name="common_age_suffix">%1$d 歳</string>
     <string name="common_birthday_format">%1$s生　%2$s</string>
@@ -552,6 +554,29 @@
     <string name="medical_contact_type_other">その他</string>
     <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
     <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
+
+    <!-- 迷子写真タイプ -->
+    <string name="orphaned_photo_type_temporary">一時保存中の写真</string>
+    <string name="orphaned_photo_type_orphaned">紐付け先が消失した写真</string>
+    <string name="orphaned_photo_db_unregistered">DB未登録の画像ファイル</string>
+
+    <!-- メンテナンス・不整合レポート用 -->
+    <string name="maintenance_err_orphaned_height_weight">利用者が存在しない身長・体重データ</string>
+    <string name="maintenance_err_orphaned_vital">利用者が存在しないバイタルデータ</string>
+    <string name="maintenance_err_orphaned_glucose">利用者が存在しない血糖値・HbA1cデータ</string>
+    <string name="maintenance_err_orphaned_condition">利用者が存在しない所見メモ</string>
+    <string name="maintenance_err_orphaned_medication">利用者が存在しない服薬記録</string>
+    <string name="maintenance_err_orphaned_contact">利用者が存在しない緊急連絡先</string>
+    <string name="maintenance_err_orphaned_photo">所見メモが存在しない写真データ</string>
+    <string name="maintenance_err_file_read">ファイルの読み込みに失敗しました。</string>
+    <string name="maintenance_err_no_json">バックアップデータ(backup.json)が見つかりません。</string>
+    <string name="maintenance_err_json_parse">データの解析に失敗しました。ファイルが破損しているか、形式が異なります。</string>
+    <string name="maintenance_err_newer_version">バックアップの作成バージョン(%1$d)が現在のアプリ(%2$d)より新しいです。アプリを更新してください。</string>
+
+    <!-- PDF 出力詳細 -->
+    <string name="pdf_err_no_data">出力対象のデータが存在しません。</string>
+    <string name="pdf_err_no_app">PDFファイルを共有できるアプリが見つかりません。</string>
+    <string name="pdf_label_trend">%1$s 推移</string>
 
     <!-- Orphaned Photo -->
     <string name="orphaned_photo_title">迷子写真の確認</string>

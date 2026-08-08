@@ -811,7 +811,7 @@ private fun OrphanedPhotoSelectionDialog(
                                     )
                                 }
                                 Text(
-                                    text = info.description,
+                                    text = stringResource(info.descriptionResId),
                                     style = MaterialTheme.typography.labelSmall,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis

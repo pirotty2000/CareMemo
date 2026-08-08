@@ -97,7 +97,7 @@ fun OrphanedPhotoItem(
 
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
-                    text = info.description,
+                    text = stringResource(info.descriptionResId),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.error
                 )

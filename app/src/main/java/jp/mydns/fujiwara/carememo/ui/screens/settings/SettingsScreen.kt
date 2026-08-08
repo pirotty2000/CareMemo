@@ -259,7 +259,7 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
                                     Text(
-                                        text = inc.description,
+                                        text = stringResource(inc.descriptionResId),
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.labelMedium
                                     )

@@ -113,7 +113,7 @@ object PdfExporter {
 
         val filteredRecords = filterAnyRecords(category, records, range, customStartDate, customEndDate)
         if (filteredRecords.isEmpty()) {
-            throw IllegalArgumentException("出力対象のデータが存在しません。")
+            throw IllegalArgumentException(context.getString(R.string.pdf_err_no_data))
         }
 
         val document = PdfDocument()
@@ -375,7 +375,7 @@ object PdfExporter {
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
         val hwSpec = AppSpecifications.Export.Pdf.TableConfig.HeightWeight
         val columns = listOf(
-            TableColumn<HeightAndWeight>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
+            TableColumn<HeightAndWeight>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
             TableColumn("${ctx.context.getString(R.string.health_label_height)}(cm)", hwSpec.HEIGHT_WIDTH) { rec, _ -> rec.height?.toString() ?: "---" },
@@ -405,7 +405,7 @@ object PdfExporter {
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
         val bpSpec = AppSpecifications.Export.Pdf.TableConfig.BpPulse
         val columns = listOf(
-            TableColumn<BpAndPulse>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
+            TableColumn<BpAndPulse>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
             TableColumn(ctx.context.getString(R.string.health_label_systolic_short), bpSpec.SYS_WIDTH) { rec, _ -> rec.bpSystolic?.toString() ?: "---" },
@@ -430,7 +430,7 @@ object PdfExporter {
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
         val glSpec = AppSpecifications.Export.Pdf.TableConfig.Glucose
         val columns = listOf(
-            TableColumn<GlucoseAndHbA1c>("日付", tableSpec.DATE_COL_WIDTH) { rec, _ ->
+            TableColumn<GlucoseAndHbA1c>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
             },
             TableColumn("${ctx.context.getString(R.string.health_label_glucose)}(mg/dL)", glSpec.GLUCOSE_WIDTH) { rec, idx ->
@@ -505,7 +505,7 @@ object PdfExporter {
         val lineDataList = config.dataList.map { line -> (line.points.map { it.x.toLong() to it.y }) to line.color.toArgb() }
         val ranges = config.ranges.map { (it.startValue to it.endValue) to it.color.toArgb() }
         val limits = config.limits.map { Triple(it.value, DashPathEffect(floatArrayOf(5f, 5f), 0f), it.label) }
-        return drawSingleGraph(ctx.canvas, "${config.title} 推移", lineDataList, ctx.currentY, height, config.stepY, ranges, limits, !config.showDecimal, config.getSubtitleLines(), config.dataList.firstOrNull()?.unit ?: "", minX, maxX)
+        return drawSingleGraph(ctx.canvas, ctx.context.getString(R.string.pdf_label_trend, config.title), lineDataList, ctx.currentY, height, config.stepY, ranges, limits, !config.showDecimal, config.getSubtitleLines(), config.dataList.firstOrNull()?.unit ?: "", minX, maxX)
     }
 
     // 折れ線グラフの描画
@@ -680,7 +680,7 @@ object PdfExporter {
         try {
             context.startActivity(chooser)
         } catch (e: ActivityNotFoundException) {
-            throw IOException("PDFファイルを共有できるアプリが見つかりません。", e)
+            throw IOException(context.getString(R.string.pdf_err_no_app), e)
         }
     }
 

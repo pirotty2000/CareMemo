@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import java.io.File
 import java.time.Instant
@@ -60,10 +61,10 @@ object ConditionMaintenanceLogic {
                         photoFileName = dbPhoto.photoFileName,
                         thumbnailFileName = dbPhoto.thumbnailFileName,
                         capturedAt = dbPhoto.capturedAt,
-                        description = when (type) {
-                            OrphanedPhotoType.TEMPORARY -> "一時保存中の写真"
-                            OrphanedPhotoType.ORPHANED_RECORD -> "紐付け先が消失した写真"
-                            else -> ""
+                        descriptionResId = when (type) {
+                            OrphanedPhotoType.TEMPORARY -> R.string.orphaned_photo_type_temporary
+                            OrphanedPhotoType.ORPHANED_RECORD -> R.string.orphaned_photo_type_orphaned
+                            else -> 0
                         }
                     )
                 )
@@ -82,7 +83,7 @@ object ConditionMaintenanceLogic {
                         photoFileName = file.name,
                         thumbnailFileName = "thumb_" + file.name.removePrefix("img_"),
                         capturedAt = Instant.ofEpochMilli(file.lastModified()),
-                        description = "DB未登録の画像ファイル"
+                        descriptionResId = R.string.orphaned_photo_db_unregistered
                     )
                 )
             }

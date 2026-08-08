@@ -31,6 +31,7 @@ class AppMaintenanceRepositoryTest {
         personDao = db.personDao()
         
         maintenanceRepository = AppMaintenanceRepository(
+            context,
             db,
             personDao,
             db.heightAndWeightDao(),
@@ -39,6 +40,7 @@ class AppMaintenanceRepositoryTest {
             db.conditionAtVisitDao(),
             db.conditionPhotoDao(),
             db.medicationRecordDao(),
+            db.emergencyContactDao(),
             db.auditLogDao()
         )
     }

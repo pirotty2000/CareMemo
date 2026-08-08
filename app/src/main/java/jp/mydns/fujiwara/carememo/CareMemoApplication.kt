@@ -116,6 +116,7 @@ class CareMemoApplication : Application() {
     /** システムメンテナンス（エクスポート、インポート、整合性チェック）用リポジトリ */
     val appMaintenanceRepository: AppMaintenanceRepository by lazy {
         AppMaintenanceRepository(
+            this,
             database,
             database.personDao(),
             database.heightAndWeightDao(),

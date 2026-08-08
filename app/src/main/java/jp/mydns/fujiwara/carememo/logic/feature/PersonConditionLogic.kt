@@ -207,8 +207,8 @@ data class OrphanedPhotoInfo(
     val thumbnailFileName: String?,
     /** 撮影日時（ファイル更新日時またはレコード記録日時） */
     val capturedAt: Instant,
-    /** UIに表示する説明文（「一時保存中の写真」などの補足） */
-    val description: String
+    /** UIに表示する説明文のリソースID */
+    val descriptionResId: Int
 )
 
 /**

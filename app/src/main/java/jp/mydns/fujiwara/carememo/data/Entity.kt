@@ -472,7 +472,7 @@ data class DatabaseInconsistency(
     val recordId: String,
     val personId: String?,
     val recordTime: Instant?,
-    val description: String
+    val descriptionResId: Int
 )
 
 // --- 計算・判定用拡張関数（HealthLogic を使用） ---

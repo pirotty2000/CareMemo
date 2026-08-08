@@ -192,7 +192,12 @@ private fun AuditLogFilterBar(
                 FilterChip(
                     selected = selectedResult != null,
                     onClick = { showResultMenu = true },
-                    label = { Text(selectedResult?.let { stringResource(it.toResultLabelRes) } ?: "結果: 全て") },
+                    label = { 
+                        Text(
+                            selectedResult?.let { stringResource(it.toResultLabelRes) } 
+                                ?: stringResource(R.string.audit_log_filter_result_prefix, stringResource(R.string.audit_log_filter_all))
+                        ) 
+                    },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedResult != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
@@ -227,7 +232,12 @@ private fun AuditLogFilterBar(
                 FilterChip(
                     selected = selectedFeature != null,
                     onClick = { showFeatureMenu = true },
-                    label = { Text(selectedFeature?.let { stringResource(it.toFeatureLabelRes) } ?: "機能: 全て") },
+                    label = { 
+                        Text(
+                            selectedFeature?.let { stringResource(it.toFeatureLabelRes) } 
+                                ?: stringResource(R.string.audit_log_filter_feature_prefix, stringResource(R.string.audit_log_filter_all))
+                        ) 
+                    },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedFeature != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }

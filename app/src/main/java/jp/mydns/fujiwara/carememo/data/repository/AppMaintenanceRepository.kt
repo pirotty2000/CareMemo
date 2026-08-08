@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
@@ -36,6 +37,7 @@ import java.util.UUID
  * 3. 安全性：利用者データの一意制約を保護するため、インポート時に自動的に識別子を付記する救済ロジックを実装する。
  */
 class AppMaintenanceRepository(
+    private val context: Context,
     private val database: AppDatabase,
     private val personDao: PersonDao,
     private val heightAndWeightDao: HeightAndWeightDao,
@@ -165,7 +167,7 @@ class AppMaintenanceRepository(
             if (seen.contains(key)) {
                 // 重複が発生した場合、救済措置としてメモに短い UUID を付記
                 val identifier = UUID.randomUUID().toString().take(4)
-                val suffix = " [識別子:$identifier]"
+                val suffix = context.getString(R.string.common_identifier_suffix, identifier)
                 finalNote = if (finalNote.length + suffix.length <= 255) {
                     finalNote + suffix
                 } else {
@@ -191,25 +193,25 @@ class AppMaintenanceRepository(
 
         // 各テーブルから親のいない（利用者が存在しない）レコードを DAO 経由で取得
         heightAndWeightDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, "利用者が存在しない身長・体重データ"))
+            result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_height_weight))
         }
         bpAndPulseDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("bp_and_pulse_db", it.id, it.personId, it.recordTime, "利用者が存在しないバイタルデータ"))
+            result.add(DatabaseInconsistency("bp_and_pulse_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_vital))
         }
         glucoseAndHbA1cDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("glucose_and_hba1c_db", it.id, it.personId, it.recordTime, "利用者が存在しない血糖値データ"))
+            result.add(DatabaseInconsistency("glucose_and_hba1c_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_glucose))
         }
         conditionAtVisitDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("condition_at_visit_db", it.id, it.personId, it.recordTime, "利用者が存在しない所見メモ"))
+            result.add(DatabaseInconsistency("condition_at_visit_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_condition))
         }
         medicationRecordDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, "利用者が存在しない服薬記録"))
+            result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_medication))
         }
         emergencyContactDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, "利用者が存在しない緊急連絡先"))
+            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, R.string.maintenance_err_orphaned_contact))
         }
         conditionPhotoDao.getOrphanedPhotos().forEach {
-            result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, "所見メモが存在しない写真データ"))
+            result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, R.string.maintenance_err_orphaned_photo))
         }
 
         return result
@@ -335,7 +337,7 @@ class AppMaintenanceRepository(
             tempZipFile.outputStream().use { output ->
                 input.copyTo(output)
             }
-        } ?: throw IOException("ファイルの読み込みに失敗しました。")
+        } ?: throw IOException(context.getString(R.string.maintenance_err_file_read))
         
         val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
         tempDir.mkdirs()
@@ -358,14 +360,14 @@ class AppMaintenanceRepository(
                 }
             }
             
-            if (dataFile == null) throw IOException("バックアップデータ(backup.json)が見つかりません。")
+            if (dataFile == null) throw IOException(context.getString(R.string.maintenance_err_no_json))
             
             // 4. JSON のパースとバージョンチェック
             val jsonString = dataFile.readText()
             val backup = try {
                 json.decodeFromString(CareMemoBackup.serializer(), jsonString)
             } catch (e: Exception) {
-                throw IOException("データの解析に失敗しました。ファイルが破損しているか、形式が異なります。", e)
+                throw IOException(context.getString(R.string.maintenance_err_json_parse), e)
             }
             
             val versionResult = jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic.validateVersion(
@@ -375,7 +377,7 @@ class AppMaintenanceRepository(
             )
             
             if (versionResult == jp.mydns.fujiwara.carememo.logic.feature.ImportValidationResult.INCOMPATIBLE) {
-                throw IOException("バックアップの作成バージョン(${backup.appVersionCode})が現在のアプリ(${BuildConfig.VERSION_CODE})より新しいため復元できません。")
+                throw IOException(context.getString(R.string.maintenance_err_newer_version, backup.appVersionCode, BuildConfig.VERSION_CODE))
             }
 
             // 5. DB データの全置換実行
