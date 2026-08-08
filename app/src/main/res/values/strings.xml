@@ -251,6 +251,100 @@
     <string name="p_med_label_check_time">確認日時: %1$s</string>
 
     <!-- SettingsScreen -->
+    <string name="settings_title">設定</string>
+    <string name="settings_section_display_record">表示・記録設定</string>
+    <string name="settings_item_name_masking_title">氏名の伏せ字表示</string>
+    <string name="settings_item_name_masking_desc">一覧などの画面で氏名の一部を「○」で表示します</string>
+    <string name="settings_item_default_recorder_title">記録者の名前(デフォルト)</string>
+    <string name="settings_item_default_recorder_placeholder">例: 山田</string>
+    <string name="settings_item_default_recorder_desc">所見メモ作成時に自動入力されます</string>
+
+    <string name="settings_section_person_management">利用者管理</string>
+    <string name="settings_item_restore_archived_title">利用終了者の復帰</string>
+    <string name="settings_item_restore_archived_desc">現在 %1$d 名が利用終了となっています</string>
+    <string name="settings_item_permanent_delete_archived_title">利用修了者の完全抹消</string>
+    <string name="settings_item_permanent_delete_archived_desc">「利用終了」の方のデータを個別に選択して物理削除します</string>
+
+    <string name="settings_section_data_management">データ管理</string>
+    <string name="settings_item_backup_password_title">バックアップにパスワードを設定</string>
+    <string name="settings_item_backup_password_desc">Zipファイルを暗号化して保護します</string>
+    <string name="settings_item_backup_password_off_warning">※OFFの場合、別の端末では復元できない可能性があります</string>
+    <string name="settings_item_default_password_title">デフォルトのパスワード</string>
+    <string name="settings_item_default_password_placeholder">%1$d桁以上の数字を推奨</string>
+    <string name="settings_item_default_password_error">%1$d文字以上で入力してください</string>
+    <string name="settings_item_default_password_hint">バックアップ作成時に使用されます</string>
+    <string name="settings_item_export_title">データのバックアップ (保存)</string>
+    <string name="settings_item_export_desc">全データと写真をZip書き出しします</string>
+    <string name="settings_item_import_title">データの復元 (読込)</string>
+    <string name="settings_item_import_desc">バックアップからデータを読み込みます</string>
+
+    <string name="settings_section_security">セキュリティ</string>
+    <string name="settings_item_app_lock_title">アプリのロック</string>
+    <string name="settings_item_app_lock_desc">起動時・復帰時に認証を求めます</string>
+    <string name="settings_item_lock_timeout_title">再ロックまでの時間</string>
+    <string name="settings_item_lock_timeout_desc">指定時間が経過するとロックがかかります</string>
+    <string name="settings_item_lock_timeout_warning">※画面消灯設定を短くするとより安全です</string>
+
+    <string name="settings_section_theme">テーマ</string>
+    <string name="settings_item_theme_selection_title">配色とモード</string>
+
+    <string name="settings_section_other">その他</string>
+    <string name="settings_item_version_title">バージョン情報</string>
+
+    <string name="settings_section_dev_tools">管理者向けツール</string>
+    <string name="settings_dev_audit_log_desc">※ 操作ログの管理を行います。</string>
+    <string name="settings_dev_audit_log_count">現在の記録件数: %1$d 件</string>
+    <string name="settings_dev_rotate_logs_desc">即座に古いログを消去して整理します</string>
+    <string name="settings_dev_clear_logs_desc">全ての操作ログを物理削除します</string>
+    <string name="settings_dev_data_maintenance_desc">※ データメンテナンスを行います。</string>
+    <string name="settings_dev_import_sample_desc">12名分のサンプルデータを生成して取り込みます</string>
+    <string name="settings_item_orphaned_photos_title">迷子写真の確認</string>
+    <string name="settings_item_orphaned_photos_desc">紐付けが途切れた写真の確認と削除</string>
+    <string name="settings_item_force_import_title">バージョン不一致を無視してインポート</string>
+    <string name="settings_item_force_import_desc">インポート元のバックアップデータが、現在のアプリより新しいバージョンであっても強制的に取り込みます。スキーマの不整合によりアプリが起動できなくなる恐れがあります。</string>
+    <string name="settings_item_integrity_check_title">データベース整合性チェック</string>
+    <string name="settings_item_integrity_check_desc">孤立したデータの検出とレポート作成</string>
+    <string name="settings_item_insert_inconsistency_title">[テスト] 不整合データを挿入</string>
+    <string name="settings_item_insert_inconsistency_desc">検証用の孤立レコード(バイタル)を1件作成します</string>
+    <string name="settings_dev_clear_all_warning">※ 全データと写真が完全に消去されます。</string>
+    <string name="settings_item_clear_all_title">■要注意■ 全データ消去</string>
+
+    <!-- Settings Dialogs -->
+    <string name="settings_dialog_theme_title">配色とモードの選択</string>
+    <string name="settings_dialog_lock_timeout_title">再ロックまでの時間</string>
+    <string name="settings_dialog_restore_confirm_title">データの復元</string>
+    <string name="settings_dialog_restore_confirm_msg">現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？</string>
+    <string name="settings_dialog_restore_confirm_btn">復元を実行</string>
+    <string name="settings_dialog_permanent_delete_confirm_title">個人情報の完全抹消</string>
+    <string name="settings_dialog_permanent_delete_confirm_msg">現在「利用終了」となっている %1$d 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？</string>
+    <string name="settings_dialog_permanent_delete_confirm_btn">対象者 (%1$d名) を抹消する</string>
+    <string name="settings_dialog_clear_all_confirm_title">(管理者) 全データ消去</string>
+    <string name="settings_dialog_clear_all_confirm_msg">全データの消去を実行します。取り消せません。</string>
+    <string name="settings_dialog_inconsistency_report_title">データベース不整合レポート</string>
+    <string name="settings_dialog_inconsistency_report_intro">以下の %1$d 件の孤立したデータが見つかりました：</string>
+    <string name="settings_dialog_inconsistency_person_id">元利用者ID: %1$s</string>
+    <string name="settings_dialog_inconsistency_table">テーブル: %1$s</string>
+    <string name="settings_dialog_inconsistency_record_time">記録日時: %1$s</string>
+    <string name="settings_dialog_inconsistency_summary">これらは親データ（利用者）が存在しない無効な記録です。クリーンアップを実行して削除することをお勧めします。</string>
+    <string name="settings_dialog_inconsistency_cleanup_btn">クリーンアップ実行</string>
+    <string name="settings_dialog_import_password_title">パスワードの入力</string>
+    <string name="settings_dialog_import_password_msg">このファイルはパスワード保護されています。入力してください。</string>
+    <string name="settings_dialog_import_password_label">パスワード</string>
+    <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n(C) 2025-2026 pirotty.galaxy</string>
+
+    <string name="settings_timeout_immediate">即時</string>
+    <string name="settings_timeout_none">ロックしない</string>
+    <string name="settings_timeout_minutes">%1$d分</string>
+
+    <string name="settings_retention_none">残さない</string>
+    <string name="settings_retention_one_week">1週間</string>
+    <string name="settings_retention_two_weeks">2週間</string>
+    <string name="settings_retention_one_month">1ヶ月</string>
+    <string name="settings_retention_three_months">3ヶ月</string>
+    <string name="settings_retention_half_year">半年</string>
+    <string name="settings_retention_one_year">1年</string>
+    <string name="settings_retention_days">%1$d日間</string>
+
     <string name="settings_err_title_biometric">設定できません</string>
     <string name="settings_err_biometric_unsupported">このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。</string>
 
@@ -279,6 +373,21 @@
     <string name="settings_import_sample_confirm_msg">現在のデータはすべて消去され、12名分のサンプルデータに置き換わります（※写真は含まれません）。よろしいですか？</string>
 
     <!-- Archive (DeleteOrRestorePerson) -->
+    <string name="archive_title_restore">利用者の復帰</string>
+    <string name="archive_title_delete">利用者の完全抹消</string>
+    <string name="archive_btn_select_all">全選択</string>
+    <string name="archive_btn_deselect_all">全解除</string>
+    <string name="archive_action_restore_label">復帰させる</string>
+    <string name="archive_action_delete_label">完全に抹消する</string>
+    <string name="archive_action_confirm_btn_format">選択した利用者 (%1$d名) を%2$s</string>
+    <string name="archive_empty_msg">終了した利用者はいません</string>
+    <string name="archive_permanent_delete_warning">抹消した利用者のデータ（記録、写真）は二度と復元できません。一人ずつ慎重に選択してください。</string>
+    <string name="archive_dialog_restore_confirm_msg">選択された %1$d 名の利用者を利用者一覧（アクティブ）に戻します。よろしいですか？</string>
+    <string name="archive_dialog_restore_confirm_btn">復帰を実行する</string>
+    <string name="archive_dialog_delete_confirm_title">データの完全抹消</string>
+    <string name="archive_dialog_delete_confirm_msg">選択された %1$d 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？</string>
+    <string name="archive_dialog_delete_confirm_btn">抹消を実行する</string>
+
     <string name="archive_msg_restored">%1$d 名の利用者を一覧に戻しました</string>
     <string name="archive_msg_deleted">%1$d 名の利用者を完全に抹消しました</string>
     <string name="archive_err_restore_failure">利用者の復帰に失敗しました: %1$s</string>
@@ -296,9 +405,20 @@
     <string name="common_err_duplicate_blocked_simple">指定された日時には既にデータが存在するため、保存できません。日時を変更するか、既存のデータを履歴から編集してください。</string>
 
     <!-- Audit Log -->
+    <string name="audit_log_title">操作ログ</string>
     <string name="settings_msg_audit_log_cleared">操作ログをすべて消去しました。</string>
     <string name="settings_msg_rotate_success">古い操作ログを削除しました。</string>
     <string name="audit_log_empty">ログはありません</string>
+    <string name="audit_log_empty_filtered_msg">条件に合うログはありません</string>
+    <string name="audit_log_empty_filtered_desc">フィルター設定を変更してください</string>
+    <string name="audit_log_empty_desc">操作を行うとここに履歴が記録されます</string>
+    <string name="audit_log_filter_all">全て</string>
+    <string name="audit_log_filter_result_prefix">結果: %1$s</string>
+    <string name="audit_log_filter_feature_prefix">機能: %1$s</string>
+    <string name="audit_log_sort_asc">古い順</string>
+    <string name="audit_log_sort_desc">新しい順</string>
+    <string name="audit_log_filter_clear">フィルター解除</string>
+
     <string name="audit_log_label_retention">ログの保持期間</string>
     <string name="audit_log_retention_desc">指定した日数より前のログを自動的に削除します</string>
     <string name="audit_log_clear_confirm_title">操作ログの全消去</string>
@@ -365,4 +485,8 @@
     <string name="medical_contact_type_other">その他</string>
     <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
     <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
+
+    <!-- Orphaned Photo -->
+    <string name="orphaned_photo_title">迷子写真の確認</string>
+    <string name="orphaned_photo_empty_msg">迷子写真は見つかりませんでした。</string>
 </resources>

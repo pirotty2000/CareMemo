@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
@@ -104,10 +105,10 @@ fun AuditLogScreenContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("操作ログ", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.audit_log_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("AuditLogScreen_BackButton")) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 colors = appTopAppBarColors(),
@@ -137,9 +138,9 @@ fun AuditLogScreenContent(
                 }
             } else if (auditLogs.isEmpty()) {
                 EmptyState(
-                    message = if (isFiltered) "条件に合うログはありません" else "ログはありません",
+                    message = if (isFiltered) stringResource(R.string.audit_log_empty_filtered_msg) else stringResource(R.string.audit_log_empty),
                     icon = Icons.Rounded.History,
-                    description = if (isFiltered) "フィルター設定を変更してください" else "操作を行うとここに履歴が記録されます",
+                    description = if (isFiltered) stringResource(R.string.audit_log_empty_filtered_desc) else stringResource(R.string.audit_log_empty_desc),
                     modifier = Modifier.weight(1f).testTag("AuditLog_EmptyState"),
                 )
             } else {
@@ -200,7 +201,7 @@ private fun AuditLogFilterBar(
                 )
                 DropdownMenu(expanded = showResultMenu, onDismissRequest = { showResultMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("全て") },
+                        text = { Text(stringResource(R.string.audit_log_filter_all)) },
                         onClick = {
                             onResultSelect(null)
                             showResultMenu = false
@@ -235,7 +236,7 @@ private fun AuditLogFilterBar(
                 )
                 DropdownMenu(expanded = showFeatureMenu, onDismissRequest = { showFeatureMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("全て") },
+                        text = { Text(stringResource(R.string.audit_log_filter_all)) },
                         onClick = {
                             onFeatureSelect(null)
                             showFeatureMenu = false
@@ -263,7 +264,7 @@ private fun AuditLogFilterBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.SwapVert,
-                    contentDescription = if (isAscending) "古い順" else "新しい順",
+                    contentDescription = if (isAscending) stringResource(R.string.audit_log_sort_asc) else stringResource(R.string.audit_log_sort_desc),
                     tint = if (isAscending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -275,7 +276,7 @@ private fun AuditLogFilterBar(
                 IconButton(onClick = onClear, modifier = Modifier.testTag("AuditLog_FilterClear")) {
                     Icon(
                         Icons.Rounded.ClearAll,
-                        contentDescription = "フィルター解除",
+                        contentDescription = stringResource(R.string.audit_log_filter_clear),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }

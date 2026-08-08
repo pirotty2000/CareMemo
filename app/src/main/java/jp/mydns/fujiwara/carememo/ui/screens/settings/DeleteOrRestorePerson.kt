@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -166,13 +167,13 @@ fun DeleteOrRestorePersonScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        text = if (isDeleteMode) "利用者の完全抹消" else "利用者の復帰", 
+                        text = if (isDeleteMode) stringResource(R.string.archive_title_delete) else stringResource(R.string.archive_title_restore), 
                         fontWeight = FontWeight.Bold 
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 colors = topBarColors,
@@ -191,7 +192,7 @@ fun DeleteOrRestorePersonScreen(
                             modifier = Modifier.testTag("DeleteOrRestore_SelectAllButton")
                         ) {
                             Text(
-                                text = if (isAllSelected) "全解除" else "全選択",
+                                text = if (isAllSelected) stringResource(R.string.archive_btn_deselect_all) else stringResource(R.string.archive_btn_select_all),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
@@ -222,8 +223,8 @@ fun DeleteOrRestorePersonScreen(
                             .testTag("DeleteOrRestore_ActionButton"),
                         colors = if (isDeleteMode) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()
                     ) {
-                        val actionLabel = if (isDeleteMode) "完全に抹消する" else "復帰させる"
-                        Text("選択した利用者 (${selectedIds.size}名) を$actionLabel")
+                        val actionLabel = if (isDeleteMode) stringResource(R.string.archive_action_delete_label) else stringResource(R.string.archive_action_restore_label)
+                        Text(stringResource(R.string.archive_action_confirm_btn_format, selectedIds.size, actionLabel))
                     }
                 }
             }
@@ -238,7 +239,7 @@ fun DeleteOrRestorePersonScreen(
             if (archivedPersons.isEmpty()) {
                 // アーカイブ対象がいない場合の表示
                 EmptyState(
-                    message = "終了した利用者はいません",
+                    message = stringResource(R.string.archive_empty_msg),
                     icon = Icons.Outlined.PersonOff,
                     modifier = Modifier.testTag("DeleteOrRestore_EmptyState")
                 )
@@ -259,7 +260,7 @@ fun DeleteOrRestorePersonScreen(
                             ) {
                                 Icon(Icons.Rounded.Warning, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Text(
-                                    text = "抹消した利用者のデータ（記録、写真）は二度と復元できません。一人ずつ慎重に選択してください。",
+                                    text = stringResource(R.string.archive_permanent_delete_warning),
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
@@ -330,13 +331,13 @@ fun DeleteOrRestorePersonScreen(
     if (showRestoreConfirmDialog) {
         AppDialog(
             onDismissRequest = { showRestoreConfirmDialog = false },
-            title = { Text("利用者の復帰") },
+            title = { Text(stringResource(R.string.archive_title_restore)) },
             text = {
-                AppDialogContent(text = "選択された ${selectedIds.size} 名の利用者を利用者一覧（アクティブ）に戻します。よろしいですか？")
+                AppDialogContent(text = stringResource(R.string.archive_dialog_restore_confirm_msg, selectedIds.size))
             },
             confirmButton = {
                 AppDialogConfirmButton(
-                    text = "復帰を実行する",
+                    text = stringResource(R.string.archive_dialog_restore_confirm_btn),
                     onClick = {
                         showRestoreConfirmDialog = false
                         viewModel.restoreSelectedPersons(archivedPersons)
@@ -345,7 +346,7 @@ fun DeleteOrRestorePersonScreen(
             },
             dismissButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = { showRestoreConfirmDialog = false }
                 )
             }
@@ -357,13 +358,13 @@ fun DeleteOrRestorePersonScreen(
         AppDialog(
             onDismissRequest = { showFinalConfirmDialog = false },
             icon = { Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("データの完全抹消", modifier = Modifier.testTag("DeleteOrRestore_ConfirmDialog")) },
+            title = { Text(stringResource(R.string.archive_dialog_delete_confirm_title), modifier = Modifier.testTag("DeleteOrRestore_ConfirmDialog")) },
             text = {
-                AppDialogContent(text = "選択された ${selectedIds.size} 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？")
+                AppDialogContent(text = stringResource(R.string.archive_dialog_delete_confirm_msg, selectedIds.size))
             },
             confirmButton = {
                 AppDialogConfirmButton(
-                    text = "抹消を実行する",
+                    text = stringResource(R.string.archive_dialog_delete_confirm_btn),
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showFinalConfirmDialog = false
@@ -373,7 +374,7 @@ fun DeleteOrRestorePersonScreen(
             },
             dismissButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = { showFinalConfirmDialog = false }
                 )
             }

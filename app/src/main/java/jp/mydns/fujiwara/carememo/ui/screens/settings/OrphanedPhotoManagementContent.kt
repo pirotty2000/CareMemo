@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
@@ -37,7 +39,7 @@ fun OrphanedPhotoManagementContent(
 
     if (uiState.orphanedPhotos.isEmpty()) {
         EmptyState(
-            message = "迷子写真は見つかりませんでした。",
+            message = stringResource(R.string.orphaned_photo_empty_msg),
             icon = Icons.Default.Info,
             modifier = modifier.fillMaxSize()
         )
@@ -89,7 +91,7 @@ fun OrphanedPhotoItem(
                         .align(Alignment.TopEnd)
                         .background(Color.Black.copy(alpha = 0.5f))
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = "削除", tint = Color.White)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete), tint = Color.White)
                 }
             }
 

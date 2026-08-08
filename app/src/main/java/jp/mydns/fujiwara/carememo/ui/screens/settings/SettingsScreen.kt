@@ -167,20 +167,20 @@ fun SettingsScreen(
                 dialogMessage = null
                 dialogTitle = null
             },
-            confirmButtonText = "OK",
+            confirmButtonText = stringResource(R.string.common_close),
         )
     }
 
     if (showImportUri != null) {
         AppDialog(
             onDismissRequest = { showImportUri = null },
-            title = { Text("データの復元") },
+            title = { Text(stringResource(R.string.settings_dialog_restore_confirm_title)) },
             text = {
-                AppDialogContent(text = "現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？")
+                AppDialogContent(text = stringResource(R.string.settings_dialog_restore_confirm_msg))
             },
             confirmButton = {
                 AppDialogConfirmButton(
-                    text = "復元を実行",
+                    text = stringResource(R.string.settings_dialog_restore_confirm_btn),
                     onClick = {
                         pendingImportUri = showImportUri
                         viewModel.importData(context, showImportUri!!)
@@ -190,7 +190,7 @@ fun SettingsScreen(
             },
             dismissButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = { showImportUri = null }
                 )
             }
@@ -201,9 +201,9 @@ fun SettingsScreen(
         AppDeleteConfirmDialog(
             onDismiss = { showEraseConfirm = false },
             onDelete = { viewModel.deleteEndedPersons() },
-            title = "個人情報の完全抹消",
-            message = "現在「利用終了」となっている ${uiState.endedUserCount} 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？",
-            confirmButtonText = "対象者 (${uiState.endedUserCount}名) を抹消する"
+            title = stringResource(R.string.settings_dialog_permanent_delete_confirm_title),
+            message = stringResource(R.string.settings_dialog_permanent_delete_confirm_msg, uiState.endedUserCount),
+            confirmButtonText = stringResource(R.string.settings_dialog_permanent_delete_confirm_btn, uiState.endedUserCount)
         )
     }
 
@@ -211,9 +211,9 @@ fun SettingsScreen(
         AppDeleteConfirmDialog(
             onDismiss = { showDevClearConfirm = false },
             onDelete = { viewModel.clearAllData() },
-            title = "(管理者) 全データ消去",
-            message = "全てのデータおよび写真を物理削除します。取り消せません。",
-            confirmButtonText = "実行する"
+            title = stringResource(R.string.settings_dialog_clear_all_confirm_title),
+            message = stringResource(R.string.settings_dialog_clear_all_confirm_msg),
+            confirmButtonText = stringResource(R.string.decision)
         )
     }
 
@@ -241,12 +241,12 @@ fun SettingsScreen(
     if (uiState.inconsistencies.isNotEmpty()) {
         AppDialog(
             onDismissRequest = { viewModel.clearInconsistencyResults() },
-            title = { Text("データベース不整合レポート") },
+            title = { Text(stringResource(R.string.settings_dialog_inconsistency_report_title)) },
             text = {
                 AppDialogContent {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            "以下の ${uiState.inconsistencies.size} 件の孤立したデータが見つかりました：",
+                            stringResource(R.string.settings_dialog_inconsistency_report_intro, uiState.inconsistencies.size),
                             style = MaterialTheme.typography.bodySmall
                         )
 
@@ -265,14 +265,15 @@ fun SettingsScreen(
                                     )
                                     Text(
                                         text = buildString {
-                                            append("元利用者ID: ${inc.personId ?: "不明"}")
-                                            append(" | テーブル: ${inc.tableName}")
+                                            append(stringResource(R.string.settings_dialog_inconsistency_person_id, inc.personId ?: stringResource(R.string.audit_result_unknown)))
+                                            append(" | ")
+                                            append(stringResource(R.string.settings_dialog_inconsistency_table, inc.tableName))
                                         },
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                     inc.recordTime?.let { time ->
                                         Text(
-                                            text = "記録日時: ${DateTimeUtils.formatRecordTime(time)}",
+                                            text = stringResource(R.string.settings_dialog_inconsistency_record_time, DateTimeUtils.formatRecordTime(time)),
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
@@ -280,7 +281,7 @@ fun SettingsScreen(
                             }
                         }
                         Text(
-                            "これらは親データ（利用者）が存在しない無効な記録です。クリーンアップを実行して削除することをお勧めします。",
+                            stringResource(R.string.settings_dialog_inconsistency_summary),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -289,13 +290,13 @@ fun SettingsScreen(
             },
             confirmButton = {
                 AppDialogConfirmButton(
-                    text = "クリーンアップ実行",
+                    text = stringResource(R.string.settings_dialog_inconsistency_cleanup_btn),
                     onClick = { viewModel.fixInconsistencies() }
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
-                    text = "閉じる",
+                    text = stringResource(R.string.common_close),
                     onClick = { viewModel.clearInconsistencyResults() }
                 )
             }
@@ -304,8 +305,8 @@ fun SettingsScreen(
 
     if (showVersionDialog) {
         AppInfoDialog(
-            title = "バージョン情報",
-            message = "CareMemo\nバージョン ${BuildConfig.VERSION_NAME}\n\n(C) 2025-2026 pirotty.galaxy",
+            title = stringResource(R.string.main_dialog_version_title),
+            message = stringResource(R.string.settings_version_msg, BuildConfig.VERSION_NAME),
             onDismiss = { showVersionDialog = false }
         )
     }
@@ -314,10 +315,15 @@ fun SettingsScreen(
         val options = AppSpecifications.Settings.LOCK_TIMEOUT_OPTIONS
         AppDialog(
             onDismissRequest = { showTimeoutDialog = false },
-            title = { Text("再ロックまでの時間") },
+            title = { Text(stringResource(R.string.settings_dialog_lock_timeout_title)) },
             text = {
                 AppDialogContent {
                     options.forEach { (minutes, label) ->
+                        val displayLabel = when (minutes) {
+                            0 -> stringResource(R.string.settings_timeout_immediate)
+                            -1 -> stringResource(R.string.settings_timeout_none)
+                            else -> stringResource(R.string.settings_timeout_minutes, minutes)
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -345,14 +351,14 @@ fun SettingsScreen(
                         ) {
                             RadioButton(selected = uiState.lockTimeoutMinutes == minutes, onClick = null)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(label)
+                            Text(displayLabel)
                         }
                     }
                 }
             },
             confirmButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = { showTimeoutDialog = false }
                 )
             }
@@ -362,7 +368,7 @@ fun SettingsScreen(
     if (showThemeDialog) {
         AppDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("配色とモードの選択") },
+            title = { Text(stringResource(R.string.settings_dialog_theme_title)) },
             text = {
                 AppDialogContent {
                     ThemeSetting.entries.forEach { selectionOption ->
@@ -418,7 +424,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = { showRetentionDialog = false }
                 )
             }
@@ -429,16 +435,16 @@ fun SettingsScreen(
         var isInputPasswordVisible by remember { mutableStateOf(false) }
         AppDialog(
             onDismissRequest = { showPasswordInputDialog = false },
-            title = { Text("パスワードの入力") },
+            title = { Text(stringResource(R.string.settings_dialog_import_password_title)) },
             text = {
                 AppDialogContent {
-                    Text("このファイルはパスワード保護されています。入力してください。")
+                    Text(stringResource(R.string.settings_dialog_import_password_msg))
                     Spacer(modifier = Modifier.height(16.dp))
                     AppTextField(
                         value = inputPasswordForImport,
                         onValueChange = { inputPasswordForImport = it },
                         type = AppTextFieldType.PASSWORD,
-                        label = { Text("パスワード") },
+                        label = { Text(stringResource(R.string.settings_dialog_import_password_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         trailingIcon = {
                             IconButton(onClick = { isInputPasswordVisible = !isInputPasswordVisible }) {
@@ -453,7 +459,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 AppDialogConfirmButton(
-                    text = "実行",
+                    text = stringResource(R.string.decision),
                     onClick = {
                         pendingImportUri?.let { viewModel.importData(context, it, inputPasswordForImport) }
                         showPasswordInputDialog = false
@@ -464,7 +470,7 @@ fun SettingsScreen(
             },
             dismissButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = {
                         showPasswordInputDialog = false
                         inputPasswordForImport = ""
@@ -662,13 +668,13 @@ fun SettingsScreenContent(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("設定・管理", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.audit_feature_settings), fontWeight = FontWeight.Bold) },
                 navigationIcon = { 
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier.testTag("SettingsScreen_BackButton")
                     ) { 
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る") 
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back)) 
                     } 
                 },
                 colors = appTopAppBarColors(),
@@ -764,7 +770,7 @@ fun SettingsScreenContent(
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false
             ),
-            title = { Text("処理中...") },
+            title = { Text(stringResource(R.string.common_loading)) },
             text = {
                 AppDialogContent {
                     Column(
@@ -793,10 +799,10 @@ private fun DisplayAndRecordingSection(
     onRecorderNameChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "表示・記録設定", modifier = modifier) {
+    SettingsSection(title = stringResource(R.string.settings_section_display_record), modifier = modifier) {
         ListItem(
-            headlineContent = { Text("氏名の伏せ字表示") },
-            supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") },
+            headlineContent = { Text(stringResource(R.string.settings_item_name_masking_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_name_masking_desc)) },
             trailingContent = { 
                 Switch(
                     checked = isMaskingEnabled, 
@@ -815,9 +821,9 @@ private fun DisplayAndRecordingSection(
             value = defaultRecorderName,
             onValueChange = onRecorderNameChange,
             type = AppTextFieldType.TEXT,
-            label = { Text("記録者の名前(デフォルト)") },
-            placeholder = { Text("例: 山田") },
-            supportingText = { Text("所見メモ作成時に自動入力されます") },
+            label = { Text(stringResource(R.string.settings_item_default_recorder_title)) },
+            placeholder = { Text(stringResource(R.string.settings_item_default_recorder_placeholder)) },
+            supportingText = { Text(stringResource(R.string.settings_item_default_recorder_desc)) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("Settings_RecorderName")
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -831,16 +837,16 @@ private fun UserManagementSection(
     onEraseClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "利用者管理", modifier = modifier) {
+    SettingsSection(title = stringResource(R.string.settings_section_person_management), modifier = modifier) {
         ListItem(
-            headlineContent = { Text("利用終了者の復帰") },
-            supportingContent = { Text("現在 $endedUserCount 名が利用終了となっています") },
+            headlineContent = { Text(stringResource(R.string.settings_item_restore_archived_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_restore_archived_desc, endedUserCount)) },
             trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
             modifier = Modifier.clickable { onNavigateToRestore() }
         )
         ListItem(
-            headlineContent = { Text("利用修了者の完全抹消", color = MaterialTheme.colorScheme.error) },
-            supportingContent = { Text("「利用終了」の方のデータを個別に選択して物理削除します") },
+            headlineContent = { Text(stringResource(R.string.settings_item_permanent_delete_archived_title), color = MaterialTheme.colorScheme.error) },
+            supportingContent = { Text(stringResource(R.string.settings_item_permanent_delete_archived_desc)) },
             trailingContent = { 
                 IconButton(onClick = onEraseClick, enabled = endedUserCount > 0) { 
                     Icon(
@@ -868,15 +874,15 @@ private fun DataManagementSection(
     onImportClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "データ管理", modifier = modifier) {
+    SettingsSection(title = stringResource(R.string.settings_section_data_management), modifier = modifier) {
         ListItem(
-            headlineContent = { Text("バックアップにパスワードを設定") },
+            headlineContent = { Text(stringResource(R.string.settings_item_backup_password_title)) },
             supportingContent = { 
                 Column {
-                    Text("Zipファイルを暗号化して保護します")
+                    Text(stringResource(R.string.settings_item_backup_password_desc))
                     if (!isBackupPasswordEnabled) {
                         Text(
-                            text = "※OFFの場合、別の端末では復元できない可能性があります",
+                            text = stringResource(R.string.settings_item_backup_password_off_warning),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -901,12 +907,12 @@ private fun DataManagementSection(
                 value = backupPassword,
                 onValueChange = onBackupPasswordChange,
                 type = AppTextFieldType.PASSWORD,
-                label = { Text("デフォルトのパスワード") },
-                placeholder = { Text("${AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH}桁以上の数字を推奨") },
+                label = { Text(stringResource(R.string.settings_item_default_password_title)) },
+                placeholder = { Text(stringResource(R.string.settings_item_default_password_placeholder, AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH)) },
                 supportingText = { 
                     if (!isPasswordValid && backupPassword.isNotEmpty()) 
-                        Text("${AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH}文字以上で入力してください", color = MaterialTheme.colorScheme.error) 
-                    else Text("バックアップ作成時に使用されます") 
+                        Text(stringResource(R.string.settings_item_default_password_error, AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH), color = MaterialTheme.colorScheme.error) 
+                    else Text(stringResource(R.string.settings_item_default_password_hint)) 
                 },
                 isError = !isPasswordValid && backupPassword.isNotEmpty(),
                 maxLength = AppSpecifications.Constraints.System.Security.MAX_PASSWORD_LENGTH,
@@ -922,8 +928,8 @@ private fun DataManagementSection(
         }
         val canExport = !isBackupPasswordEnabled || isPasswordValid
         ListItem(
-            headlineContent = { Text("データのバックアップ (保存)") },
-            supportingContent = { Text("全データと写真をZip書き出しします") },
+            headlineContent = { Text(stringResource(R.string.settings_item_export_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_export_desc)) },
             trailingContent = { 
                 IconButton(onClick = onExportClick, enabled = canExport, modifier = Modifier.testTag("Settings_BackupButton")) { 
                     Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) 
@@ -932,8 +938,8 @@ private fun DataManagementSection(
             modifier = Modifier.clickable(enabled = canExport) { onExportClick() }
         )
         ListItem(
-            headlineContent = { Text("データの復元 (読込)") },
-            supportingContent = { Text("バックアップからデータを読み込みます") },
+            headlineContent = { Text(stringResource(R.string.settings_item_import_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_import_desc)) },
             trailingContent = { IconButton(onClick = onImportClick, modifier = Modifier.testTag("Settings_ImportButton")) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } },
             modifier = Modifier.clickable { onImportClick() }
         )
@@ -948,10 +954,10 @@ private fun SecuritySection(
     onTimeoutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "セキュリティ", modifier = modifier) {
+    SettingsSection(title = stringResource(R.string.settings_section_security), modifier = modifier) {
         ListItem(
-            headlineContent = { Text("アプリのロック") },
-            supportingContent = { Text("起動時・復帰時に認証を求めます") },
+            headlineContent = { Text(stringResource(R.string.settings_item_app_lock_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_app_lock_desc)) },
             trailingContent = { 
                 Switch(
                     checked = isBiometricEnabled, 
@@ -965,14 +971,18 @@ private fun SecuritySection(
                 onValueChange = onBiometricEnabledChange
             )
         )
-        val timeoutLabel = when (lockTimeoutMinutes) { 0 -> "即時"; -1 -> "ロックしない"; else -> "${lockTimeoutMinutes}分" }
+        val timeoutLabel = when (lockTimeoutMinutes) {
+            0 -> stringResource(R.string.settings_timeout_immediate)
+            -1 -> stringResource(R.string.settings_timeout_none)
+            else -> stringResource(R.string.settings_timeout_minutes, lockTimeoutMinutes)
+        }
         ListItem(
-            headlineContent = { Text("再ロックまでの時間", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
-            supportingContent = { Text("指定時間が経過するとロックがかかります", color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) },
+            headlineContent = { Text(stringResource(R.string.settings_item_lock_timeout_title), color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_lock_timeout_desc), color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) },
             trailingContent = { Text(text = timeoutLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) },
             modifier = Modifier.clickable(enabled = isBiometricEnabled) { onTimeoutClick() }.testTag("Settings_TimeoutRow")
         )
-        Text(text = "※画面消灯設定を短くするとより安全です", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(text = stringResource(R.string.settings_item_lock_timeout_warning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
     }
 }
 
@@ -982,14 +992,14 @@ private fun ThemeSection(
     onThemeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "テーマ", modifier = modifier) {
+    SettingsSection(title = stringResource(R.string.settings_section_theme), modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onThemeClick() }.testTag("Settings_ThemeRow")) {
             OutlinedTextField(
                 value = stringResource(ThemeDisplayMapper.getLabelRes(themeSetting)),
                 onValueChange = {},
                 readOnly = true,
                 enabled = false,
-                label = { Text("配色とモード") },
+                label = { Text(stringResource(R.string.settings_item_theme_selection_title)) },
                 trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -1009,9 +1019,9 @@ private fun OtherSection(
     onVersionClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "その他", modifier = modifier) {
+    SettingsSection(title = stringResource(R.string.settings_section_other), modifier = modifier) {
         ListItem(
-            headlineContent = { Text("バージョン情報") },
+            headlineContent = { Text(stringResource(R.string.settings_item_version_title)) },
             leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
             modifier = Modifier.clickable { onVersionClick() }.testTag("Settings_VersionRow")
         )
@@ -1035,70 +1045,69 @@ private fun ResetSection(
     onForceImportEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    SettingsSection(title = "管理者向けツール", modifier = modifier.testTag("Settings_DevSection")) {
-        Text(text = "※ 操作ログの管理を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    SettingsSection(title = stringResource(R.string.settings_section_dev_tools), modifier = modifier.testTag("Settings_DevSection")) {
+        Text(text = stringResource(R.string.settings_dev_audit_log_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         
         val retentionLabel = when (auditLogRetentionDays) {
-            0 -> "残さない"
-            7 -> "1週間"
-            14 -> "2週間"
-            30 -> "1ヶ月"
-            90 -> "3ヶ月"
-            180 -> "半年"
-            365 -> "1年"
-            else -> "${auditLogRetentionDays}日間"
+            0 -> stringResource(R.string.settings_retention_none)
+            7 -> stringResource(R.string.settings_retention_one_week)
+            14 -> stringResource(R.string.settings_retention_two_weeks)
+            30 -> stringResource(R.string.settings_retention_one_month)
+            90 -> stringResource(R.string.settings_retention_three_months)
+            180 -> stringResource(R.string.settings_retention_half_year)
+            365 -> stringResource(R.string.settings_retention_one_year)
+            else -> stringResource(R.string.settings_retention_days, auditLogRetentionDays)
         }
         
         ListItem(
-            headlineContent = { Text(context.getString(R.string.audit_log_label_retention)) },
-            supportingContent = { Text(context.getString(R.string.audit_log_retention_desc)) },
+            headlineContent = { Text(stringResource(R.string.audit_log_label_retention)) },
+            supportingContent = { Text(stringResource(R.string.audit_log_retention_desc)) },
             trailingContent = { Text(text = retentionLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
             modifier = Modifier.clickable { onRetentionClick() }
         )
         
         ListItem(
-            headlineContent = { Text(context.getString(R.string.settings_btn_view_audit_logs)) },
-            supportingContent = { Text("現在の記録件数: $auditLogCount 件") },
+            headlineContent = { Text(stringResource(R.string.settings_btn_view_audit_logs)) },
+            supportingContent = { Text(stringResource(R.string.settings_dev_audit_log_count, auditLogCount)) },
             leadingContent = { Icon(Icons.Rounded.History, contentDescription = null) },
             modifier = Modifier.clickable { onViewLogsClick() }.testTag("Settings_AuditLogButton")
         )
 
         ListItem(
-            headlineContent = { Text(context.getString(R.string.settings_btn_rotate_logs)) },
-            supportingContent = { Text("即座に古いログを消去して整理します") },
+            headlineContent = { Text(stringResource(R.string.settings_btn_rotate_logs)) },
+            supportingContent = { Text(stringResource(R.string.settings_dev_rotate_logs_desc)) },
             leadingContent = { Icon(Icons.Rounded.CleaningServices, contentDescription = null) },
             modifier = Modifier.clickable { onRotateLogsClick() }
         )
         
         ListItem(
-            headlineContent = { Text(context.getString(R.string.audit_log_clear_confirm_title), color = MaterialTheme.colorScheme.error) },
-            supportingContent = { Text("全ての操作ログを物理削除します") },
+            headlineContent = { Text(stringResource(R.string.audit_log_clear_confirm_title), color = MaterialTheme.colorScheme.error) },
+            supportingContent = { Text(stringResource(R.string.settings_dev_clear_logs_desc)) },
             leadingContent = { Icon(Icons.Rounded.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             modifier = Modifier.clickable { onClearLogsClick() }
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
-        Text(text = "※ データメンテナンスを行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(text = stringResource(R.string.settings_dev_data_maintenance_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
         ListItem(
-            headlineContent = { Text(context.getString(R.string.settings_btn_import_sample_data)) },
-            supportingContent = { Text("12名分のサンプルデータを生成して取り込みます") },
+            headlineContent = { Text(stringResource(R.string.settings_btn_import_sample_data)) },
+            supportingContent = { Text(stringResource(R.string.settings_dev_import_sample_desc)) },
             leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
             modifier = Modifier.clickable { onImportSampleDataClick() }.testTag("Settings_ImportSampleButton")
         )
         
         ListItem(
-            headlineContent = { Text("迷子写真の確認") },
-            supportingContent = { Text("紐付けが途切れた写真の確認と削除") },
+            headlineContent = { Text(stringResource(R.string.settings_item_orphaned_photos_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_orphaned_photos_desc)) },
             leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
             modifier = Modifier.clickable { onOrphanedPhotosClick() }.testTag("Settings_OrphanedPhotosButton")
         )
 
         ListItem(
-            headlineContent = { Text("バージョン不一致を無視してインポート") },
-            supportingContent = { Text("インポート元のバックアップデータが、現在のアプリより新しいバージョンであっても強制的に取り込みます。スキーマの不整合によりアプリが起動できなくなるリスクがあるため、事前に必ず現在の状態をエクスポートしてください。") },
+            headlineContent = { Text(stringResource(R.string.settings_item_force_import_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_force_import_desc)) },
             leadingContent = { Icon(Icons.Rounded.PublishedWithChanges, contentDescription = null) },
             trailingContent = {
                 Switch(
@@ -1115,24 +1124,24 @@ private fun ResetSection(
         )
 
         ListItem(
-            headlineContent = { Text("データベース整合性チェック") },
-            supportingContent = { Text("孤立したデータの検出とレポート作成") },
+            headlineContent = { Text(stringResource(R.string.settings_item_integrity_check_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_integrity_check_desc)) },
             leadingContent = { Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null) },
             modifier = Modifier.clickable { onCheckIntegrity() }.testTag("Settings_IntegrityCheckButton")
         )
 
         ListItem(
-            headlineContent = { Text("[テスト] 不整合データを挿入") },
-            supportingContent = { Text("検証用の孤立レコード(バイタル)を1件作成します") },
+            headlineContent = { Text(stringResource(R.string.settings_item_insert_inconsistency_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_insert_inconsistency_desc)) },
             leadingContent = { Icon(Icons.Rounded.BugReport, contentDescription = null) },
             modifier = Modifier.clickable { onInsertTestInconsistency() }
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
         
-        Text(text = "※ 全データと写真が完全に消去されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Text(text = stringResource(R.string.settings_dev_clear_all_warning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         ListItem(
-            headlineContent = { Text("■要注意■ 全データ消去", color = MaterialTheme.colorScheme.error) },
+            headlineContent = { Text(stringResource(R.string.settings_item_clear_all_title), color = MaterialTheme.colorScheme.error) },
             leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             modifier = Modifier.clickable { onClearAllClick() }.testTag("Settings_ClearAllButton")
         )

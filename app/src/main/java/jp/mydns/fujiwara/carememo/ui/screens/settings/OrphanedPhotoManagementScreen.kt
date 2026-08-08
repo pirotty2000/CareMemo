@@ -18,6 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
 import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
@@ -59,10 +61,10 @@ fun OrphanedPhotoManagementScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("迷子写真の確認") },
+                title = { Text(stringResource(R.string.orphaned_photo_title)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )

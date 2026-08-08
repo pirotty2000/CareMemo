@@ -1,5 +1,6 @@
 # Ver.3.1.9 (2026/08/08)
 - collectAsStateWithLifecycle への完全置換を実施
+- ハードコードされた日本語を集約
 
 # Ver.3.1.8 (2026/08/08)
 - PreviewParameterProviderの導入
