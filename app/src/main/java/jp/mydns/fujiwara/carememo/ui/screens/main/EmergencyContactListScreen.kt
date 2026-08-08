@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
@@ -182,7 +183,10 @@ fun EmergencyContactItem(
         trailingContent = {
             Box {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー")
+                    Icon(
+                        imageVector = Icons.Rounded.ModeEdit,
+                        contentDescription = stringResource(R.string.main_desc_op_menu)
+                    )
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(

@@ -16,8 +16,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -187,11 +187,11 @@ fun MainScreenContent(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         
                         // --- 固定フッター部分 ---
-                        Text("ターゲット環境: Android 15 (API 35)", style = MaterialTheme.typography.labelSmall)
-                        Text("KYOCERA TORQUE G06 最適化済", style = MaterialTheme.typography.labelSmall)
+                                    Text(stringResource(R.string.main_dialog_version_build_time, BuildConfig.BUILD_TIME), style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.main_dialog_version_optimized_device), style = MaterialTheme.typography.labelSmall)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "(C) 2026 pirotty.galaxy",
+                            text = stringResource(R.string.main_dialog_version_copyright),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -218,7 +218,15 @@ fun MainScreenContent(
                 colors = appTopAppBarColors(),
                 // ハンバーガー・メニュー
                 actions = {
-                    IconButton(onClick = { showMenu = true }, modifier = Modifier.testTag("MainScreen_MenuButton")) { Icon(Icons.Rounded.Menu, contentDescription = "メニュー") }
+                    IconButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.testTag("MainScreen_MenuButton")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Menu,
+                            contentDescription = stringResource(R.string.main_desc_op_menu)
+                        )
+                    }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         // 設定
                         DropdownMenuItem(

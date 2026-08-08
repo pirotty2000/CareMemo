@@ -128,7 +128,7 @@ fun UserListItem(
                     if (isBirthdaySoon || isBirthdayToday) {
                         Icon(
                             imageVector = Icons.Rounded.Cake,
-                            contentDescription = "誕生日通知",
+                            contentDescription = stringResource(R.string.main_desc_birthday_alert),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.tertiary
                         )
@@ -155,7 +155,9 @@ fun UserListItem(
                 Text(
                     text = buildString { 
                         append(person.getMaskedName(isNameMaskingEnabled))
-                        if (person.note.isNotBlank()) append(" (${person.note})") 
+                        if (person.note.isNotBlank()) {
+                            append(stringResource(R.string.common_note_bracket_format, person.note))
+                        }
                     }, 
                     style = MaterialTheme.typography.titleMedium, 
                     fontWeight = FontWeight.Bold, 
@@ -184,7 +186,10 @@ fun UserListItem(
                     onClick = { showItemMenu = true },
                     modifier = Modifier.testTag("UserListItem_MenuButton")
                 ) { 
-                    Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") 
+                    Icon(
+                        imageVector = Icons.Rounded.ModeEdit,
+                        contentDescription = stringResource(R.string.main_desc_op_menu)
+                    ) 
                 }
                 DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
                     // 利用者情報を編集
@@ -270,7 +275,7 @@ fun CategorySelectionSheet(
         ) {
             Icon(Icons.Rounded.EditNote, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("健康記録の一括入力", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.main_category_selection_batch_input), style = MaterialTheme.typography.titleMedium)
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

@@ -58,6 +58,25 @@
     <string name="medication_btn_next_month">次月</string>
     <string name="medication_history_day_format">%1$d(%2$s)</string>
 
+    <!-- 共通サフィックス -->
+    <string name="common_honorific_san_suffix">%1$s さん</string>
+    <string name="common_note_bracket_format"> [%1$s]</string>
+
+    <!-- MainScreen 詳細 -->
+    <string name="main_dialog_version_build_time">ビルド日時: %1$s</string>
+    <string name="main_dialog_version_optimized_device">KYOCERA TORQUE G06 最適化済</string>
+    <string name="main_dialog_version_copyright">&#169; 2026 pirotty.galaxy</string>
+    <string name="main_category_selection_batch_input">健康記録の一括入力</string>
+    <string name="main_desc_birthday_alert">誕生日通知</string>
+    <string name="main_desc_op_menu">操作メニュー</string>
+
+    <!-- カテゴリバッジアクセシビリティ -->
+    <string name="health_badge_desc_height_weight">身長・体重の記録あり</string>
+    <string name="health_badge_desc_vital">バイタルの記録あり</string>
+    <string name="health_badge_desc_glucose">血糖値の記録あり</string>
+    <string name="health_badge_desc_condition">所見メモの記録あり</string>
+    <string name="health_badge_desc_medication">服薬管理の記録あり</string>
+
     <!-- 日付・単位関連 -->
     <string name="common_era_ad">西暦</string>
     <string name="common_era_showa">昭和</string>

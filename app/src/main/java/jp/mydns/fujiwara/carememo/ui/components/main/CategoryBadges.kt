@@ -33,6 +33,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 
 /**
@@ -52,17 +54,17 @@ fun CategoryBadges(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             // 身 -> 身長・体重, バ -> バイタル
-            BadgeChar(text = "身", isActive = summary.hasHeightWeight, color = Color(0xFFE91E63), contentDescription = "身長・体重の記録あり")
-            BadgeChar(text = "バ", isActive = summary.hasBpAndPulse, color = Color(0xFF2196F3), contentDescription = "血圧・脈拍の記録あり")
+            BadgeChar(text = "身", isActive = summary.hasHeightWeight, color = Color(0xFFE91E63), contentDescription = stringResource(R.string.health_badge_desc_height_weight))
+            BadgeChar(text = "バ", isActive = summary.hasBpAndPulse, color = Color(0xFF2196F3), contentDescription = stringResource(R.string.health_badge_desc_vital))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             // 糖 -> 血糖・HbA1c, メ -> 所見メモ
-            BadgeChar(text = "糖", isActive = summary.hasGlucoseAndHbA1c, color = Color(0xFFFF9800), contentDescription = "血糖・HbA1cの記録あり")
-            BadgeChar(text = "メ", isActive = summary.hasCondition, color = Color(0xFF4CAF50), contentDescription = "所見メモの記録あり")
+            BadgeChar(text = "糖", isActive = summary.hasGlucoseAndHbA1c, color = Color(0xFFFF9800), contentDescription = stringResource(R.string.health_badge_desc_glucose))
+            BadgeChar(text = "メ", isActive = summary.hasCondition, color = Color(0xFF4CAF50), contentDescription = stringResource(R.string.health_badge_desc_condition))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             // 薬 -> 服薬
-            BadgeChar(text = "薬", isActive = summary.hasMedication, color = Color(0xFF673AB7), contentDescription = "服薬の記録あり")
+            BadgeChar(text = "薬", isActive = summary.hasMedication, color = Color(0xFF673AB7), contentDescription = stringResource(R.string.health_badge_desc_medication))
         }
     }
 }
