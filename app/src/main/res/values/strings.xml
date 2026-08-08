@@ -330,7 +330,7 @@
     <string name="settings_dialog_import_password_title">パスワードの入力</string>
     <string name="settings_dialog_import_password_msg">このファイルはパスワード保護されています。入力してください。</string>
     <string name="settings_dialog_import_password_label">パスワード</string>
-    <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n(C) 2025-2026 pirotty.galaxy</string>
+    <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n&#169; 2025&#8211;2026 pirotty.galaxy</string>
 
     <string name="settings_timeout_immediate">即時</string>
     <string name="settings_timeout_none">ロックしない</string>
