@@ -318,7 +318,7 @@ fun SettingsScreen(
             title = { Text(stringResource(R.string.settings_dialog_lock_timeout_title)) },
             text = {
                 AppDialogContent {
-                    options.forEach { (minutes, label) ->
+                    options.forEach { (minutes, _) ->
                         val displayLabel = when (minutes) {
                             0 -> stringResource(R.string.settings_timeout_immediate)
                             -1 -> stringResource(R.string.settings_timeout_none)
@@ -404,7 +404,17 @@ fun SettingsScreen(
             title = { Text(context.getString(R.string.audit_log_label_retention)) },
             text = {
                 AppDialogContent {
-                    options.forEach { (days, label) ->
+                    options.forEach { (days, _) ->
+                        val displayLabel = when (days) {
+                            0 -> stringResource(R.string.settings_retention_none)
+                            7 -> stringResource(R.string.settings_retention_one_week)
+                            14 -> stringResource(R.string.settings_retention_two_weeks)
+                            30 -> stringResource(R.string.settings_retention_one_month)
+                            90 -> stringResource(R.string.settings_retention_three_months)
+                            180 -> stringResource(R.string.settings_retention_half_year)
+                            365 -> stringResource(R.string.settings_retention_one_year)
+                            else -> stringResource(R.string.settings_retention_days, days)
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -417,7 +427,7 @@ fun SettingsScreen(
                         ) {
                             RadioButton(selected = uiState.auditLogRetentionDays == days, onClick = null)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(label)
+                            Text(displayLabel)
                         }
                     }
                 }
