@@ -42,6 +42,7 @@ fun PersonConditionScreen(
     conditionViewModel: PersonConditionViewModel,
     navController: NavHostController,
     widthSizeClass: WindowWidthSizeClass,
+    modifier: Modifier = Modifier,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
@@ -208,7 +209,8 @@ fun PersonConditionScreen(
             },
             orphanedPhotos = conditionState.availableOrphanedPhotos,
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     } else {
         // Phone
@@ -274,7 +276,8 @@ fun PersonConditionScreen(
             orphanedPhotos = conditionState.availableOrphanedPhotos,
             // マイク
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     }
 

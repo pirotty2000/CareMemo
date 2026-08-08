@@ -38,7 +38,8 @@ import kotlin.math.abs
 @Composable
 fun ConditionPhotoFullScreen(
     viewModel: PersonConditionViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val photos = uiState.currentConditionPhotos
@@ -71,7 +72,7 @@ fun ConditionPhotoFullScreen(
     var isAnyImageZoomed by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
@@ -132,7 +133,8 @@ fun ConditionPhotoFullScreen(
 fun ZoomableImage(
     photo: ConditionPhoto,
     isCurrentPage: Boolean,
-    onZoomStateChanged: (Boolean) -> Unit
+    onZoomStateChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val photoFile = remember(photo.photoFileName) {
@@ -151,7 +153,7 @@ fun ZoomableImage(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .testTag("PhotoFullScreen_Image_${photo.id}")
             .pointerInput(Unit) {

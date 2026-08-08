@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -62,10 +61,11 @@ import java.time.ZoneId
 @Composable
 fun PersonHistoryList(
     records: ImmutableList<HistoryRecord>,
+    modifier: Modifier = Modifier,
     selectedRecordId: String? = null,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
-    isAnyDialogOpen: Boolean,
+    isAnyDialogOpen: Boolean = false,
     lazyListState: LazyListState = rememberLazyListState(),
     itemContent: @Composable (HistoryRecord) -> Unit
 ) {
@@ -77,7 +77,7 @@ fun PersonHistoryList(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().testTag("PersonHistoryList"),
+        modifier = modifier.testTag("PersonHistoryList"),
         state = lazyListState,
         contentPadding = PaddingValues(bottom = 80.dp) // 下部のFABと重ならないよう余白を確保
     ) {
@@ -157,12 +157,12 @@ fun PersonHistoryList(
 @Composable
 fun HistoryItemWrapper(
     record: HistoryRecord,
-    showTime: Boolean,
+    modifier: Modifier = Modifier,
+    showTime: Boolean = true,
     isSelected: Boolean = false,
-    onItemClick: () -> Unit,
-    onDeleteSwipe: () -> Unit,
-    isAnyDialogOpen: Boolean,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
+    onItemClick: () -> Unit = {},
+    onDeleteSwipe: () -> Unit = {},
+    isAnyDialogOpen: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()

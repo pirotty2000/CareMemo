@@ -30,7 +30,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
 @Composable
 fun OrphanedPhotoManagementScreen(
     viewModel: OrphanedPhotoViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var photoToDelete by remember { mutableStateOf<OrphanedPhotoInfo?>(null) }
@@ -55,6 +56,7 @@ fun OrphanedPhotoManagementScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("迷子写真の確認") },

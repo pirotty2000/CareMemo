@@ -62,17 +62,18 @@ fun PersonMedicationScreenContent(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // 記録が1件でもあるか判定
     val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
 
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize().testTag("Medication_Loading")) {
+        Box(modifier = modifier.fillMaxSize().testTag("Medication_Loading")) {
             LoadingScreen()
         }
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: カレンダー
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val calendarScrollState = rememberScrollState()
@@ -140,7 +141,7 @@ fun PersonMedicationScreenContent(
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 月の選択

@@ -80,6 +80,7 @@ enum class ExportOrder(val displayNameRes: Int) {
 fun PdfSettingsDialog(
     category: Category,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
     onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean, String?) -> Unit,
 ) {
@@ -137,7 +138,7 @@ fun PdfSettingsDialog(
     }
     AppDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.testTag("PdfSettingsDialog"),
+        modifier = modifier.testTag("PdfSettingsDialog"),
         title = { Text(stringResource(R.string.pdf_settings_title, stringResource(category.displayNameRes))) },
         text = {
             AppDialogContent {

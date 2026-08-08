@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -25,6 +26,7 @@ fun PersonHealthScreen(
     healthViewModel: PersonHealthViewModel,
     navController: NavHostController,
     widthSizeClass: WindowWidthSizeClass,
+    modifier: Modifier = Modifier,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> }
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
@@ -124,7 +126,8 @@ fun PersonHealthScreen(
             onSaveRecord = { cat, recordId, time, values -> 
                 healthViewModel.saveRecord(cat, recordId, time, values) 
             },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     } else {
         // Phone
@@ -151,7 +154,8 @@ fun PersonHealthScreen(
             onSaveRecord = { cat, recordId, time, values -> 
                 healthViewModel.saveRecord(cat, recordId, time, values) 
             },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     }
 

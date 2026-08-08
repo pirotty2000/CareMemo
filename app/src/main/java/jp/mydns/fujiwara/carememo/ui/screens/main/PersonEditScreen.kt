@@ -41,7 +41,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 @Composable
 fun PersonEditScreen(
     viewModel: PersonEditViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -177,7 +178,8 @@ fun PersonEditScreen(
             if (isChanged) showDiscardDialog = true else navController.popBackStack()
         },
         snackbarHostState = snackbarHostState,
-        noteFocusRequester = focusRequester
+        noteFocusRequester = focusRequester,
+        modifier = modifier,
     )
 }
 
@@ -208,9 +210,11 @@ fun PersonEditScreenContent(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
     noteFocusRequester: FocusRequester = remember { FocusRequester() }
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -351,7 +355,8 @@ private fun BirthdayInputSection(
     onEraChange: (BirthEra) -> Unit,
     onYearChange: (String) -> Unit,
     onMonthChange: (String) -> Unit,
-    onDayChange: (String) -> Unit
+    onDayChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // 外部（ViewModel）からの値を常に最新状態で参照するための State
     val currentEra by rememberUpdatedState(era)
@@ -400,5 +405,5 @@ private fun BirthdayInputSection(
         )
     }
 
-    BirthdayInputFields(state = birthdayState)
+    BirthdayInputFields(state = birthdayState, modifier = modifier)
 }

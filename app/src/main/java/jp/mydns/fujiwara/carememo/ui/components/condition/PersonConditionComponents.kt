@@ -108,11 +108,13 @@ fun ConditionList(
     isAnyDialogOpen: Boolean,
     onSelect: (String) -> Unit,
     onDelete: (HistoryRecord) -> Unit,
+    modifier: Modifier = Modifier,
     lazyListState: LazyListState = rememberLazyListState()
 ) {
     // 共通の履歴リスト基盤を使用
     PersonHistoryList(
         records = records,
+        modifier = modifier,
         selectedRecordId = selectedId,
         onItemClick = { onSelect(it.id) },
         onDeleteSwipe = onDelete,
@@ -131,8 +133,12 @@ fun ConditionList(
  * 所見メモの履歴リスト内カードコンテンツ。
  */
 @Composable
-private fun ConditionMemoContent(record: ConditionAtVisit, hasPhoto: Boolean) {
-    Column {
+private fun ConditionMemoContent(
+    record: ConditionAtVisit,
+    hasPhoto: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
         // タイトル（ある場合のみ）
         if (!record.title.isNullOrBlank()) {
             Text(
@@ -205,6 +211,7 @@ fun ConditionDetailPane(
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     defaultRecorderName: String,
+    modifier: Modifier = Modifier,
     onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onSelectedIdChange: (String?) -> Unit,
@@ -223,7 +230,7 @@ fun ConditionDetailPane(
 
     // データロード待ち
     if (memo == null && conditionId != null && !IdLogic.isNew(conditionId)) {
-        LoadingScreen()
+        LoadingScreen(modifier = modifier)
         return
     }
 
@@ -291,7 +298,7 @@ fun ConditionDetailPane(
 
     // 未選択状態の表示
     if (conditionId == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
                     Icons.Rounded.Description,
@@ -320,6 +327,7 @@ fun ConditionDetailPane(
             onConditionChange = { condition = it },
             photos = photos,
             isProcessing = isProcessing,
+            modifier = modifier,
             onSave = {
                 val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
                 onSaveRecord(conditionId, currentState) { newId ->
@@ -345,6 +353,7 @@ fun ConditionDetailPane(
             memo = memo,
             photos = photos,
             isProcessing = isProcessing,
+            modifier = modifier,
             onCancel = onCancel,
             onEditClick = { isEditing = true },
             onPhotoClick = { onNavigateToFullScreen(it.id, it.conditionId) },
@@ -397,6 +406,7 @@ private fun ConditionRecordEditForm(
     onConditionChange: (String) -> Unit,
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
+    modifier: Modifier = Modifier,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -423,7 +433,7 @@ private fun ConditionRecordEditForm(
 
     val scrollState = rememberScrollState()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .imePadding()
             .testTag("ConditionDetailPane")
@@ -578,12 +588,18 @@ private fun ConditionRecordEditForm(
 private fun PhotoGrid(
     photos: ImmutableList<ConditionPhoto>,
     isEditable: Boolean,
+    modifier: Modifier = Modifier,
     onPhotoClick: (ConditionPhoto) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
 ) {
     val context = LocalContext.current
     val rows = photos.chunked(3)
-    Column(modifier = Modifier.fillMaxWidth().testTag("Condition_PhotoList"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("Condition_PhotoList"),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         rows.forEach { rowPhotos ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 rowPhotos.forEach { photo ->
@@ -628,6 +644,7 @@ private fun ConditionRecordDisplayCard(
     memo: ConditionAtVisit?,
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
+    modifier: Modifier = Modifier,
     onCancel: () -> Unit,
     onEditClick: () -> Unit,
     onPhotoClick: (ConditionPhoto) -> Unit,
@@ -638,7 +655,7 @@ private fun ConditionRecordDisplayCard(
 ) {
     val scrollState = rememberScrollState()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .imePadding()
             .testTag("ConditionDetailPane")
@@ -754,12 +771,14 @@ private fun ConditionRecordDisplayCard(
 @Composable
 private fun OrphanedPhotoSelectionDialog(
     orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
+    modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onSelect: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit
 ) {
     val context = LocalContext.current
     AppDialog(
         onDismissRequest = onDismiss,
+        modifier = modifier,
         title = { Text("迷子写真の再登録") },
         text = {
             AppDialogContent {

@@ -50,6 +50,7 @@ import kotlinx.collections.immutable.ImmutableList
 fun HealthGraphView(
     records: ImmutableList<Any>,
     categoryType: Category,
+    modifier: Modifier = Modifier,
     onExpandGraph: ((Int) -> Unit)? = null
 ) {
     var showHelpDialog by remember { mutableStateOf<String?>(null) }
@@ -87,7 +88,7 @@ fun HealthGraphView(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -146,6 +147,7 @@ fun HealthGraphView(
  * @param title グラフのタイトル
  * @param helpContent ヘルプダイアログに表示する内容。空文字の場合はヘルプアイコンを表示しません。
  * @param onShowHelp ヘルプアイコンが押された際のコールバック。
+ * @param modifier 修飾子
  * @param onExpand 拡大アイコンが押された際のコールバック。null の場合は拡大アイコンを表示しません。
  */
 @Composable
@@ -153,9 +155,13 @@ private fun GraphTitleWithHelp(
     title: String,
     helpContent: String,
     onShowHelp: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onExpand: (() -> Unit)? = null
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         
         // ヘルプボタン（目安の表示）

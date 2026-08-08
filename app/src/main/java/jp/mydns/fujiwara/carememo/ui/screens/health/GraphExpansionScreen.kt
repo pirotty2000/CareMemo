@@ -45,7 +45,8 @@ fun GraphExpansionScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     healthViewModel: PersonHealthViewModel,
     initialGraphIndex: Int,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
@@ -83,6 +84,7 @@ fun GraphExpansionScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             Surface(
                 modifier = Modifier.statusBarsPadding(),

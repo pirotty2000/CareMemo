@@ -34,7 +34,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 @Composable
 fun EmergencyContactEditScreen(
     viewModel: EmergencyContactEditViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -57,7 +58,8 @@ fun EmergencyContactEditScreen(
         onUpdateContact = { reducer -> viewModel.updateEditingContact(reducer) },
         onSaveClick = {
             viewModel.saveContact()
-        }
+        },
+        modifier = modifier,
     )
 }
 
@@ -70,7 +72,8 @@ fun EmergencyContactEditContent(
     uiState: EmergencyContactUiState,
     onNavigateBack: () -> Unit,
     onUpdateContact: ((EmergencyContact) -> EmergencyContact) -> Unit,
-    onSaveClick: () -> Unit
+    onSaveClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val contact = uiState.editingContact ?: return
     var showDiscardDialog by remember { mutableStateOf(false) }
@@ -87,6 +90,7 @@ fun EmergencyContactEditContent(
     BackHandler(onBack = handleBack)
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { 

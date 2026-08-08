@@ -47,6 +47,7 @@ import kotlinx.collections.immutable.persistentListOf
 fun AuditLogScreen(
     viewModel: AuditLogViewModel,
     navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -73,7 +74,8 @@ fun AuditLogScreen(
         onResultSelect = { viewModel.setResultFilter(it) },
         onToggleSort = { viewModel.toggleSortOrder() },
         onClearFilters = { viewModel.clearFilters() },
-        onBack = { viewModel.navigateBack() }
+        onBack = { viewModel.navigateBack() },
+        modifier = modifier
     )
 }
 
@@ -92,11 +94,13 @@ fun AuditLogScreenContent(
     onToggleSort: () -> Unit,
     onClearFilters: () -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val lazyListState = rememberLazyListState()
     val isFiltered = (selectedFeature != null) || (selectedResult != null)
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text("操作ログ", fontWeight = FontWeight.Bold) },
@@ -334,7 +338,10 @@ fun AuditLogScreenPreview() {
 }
 
 @Composable
-fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
+fun AuditLogItem(
+    log: AuditLog,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(

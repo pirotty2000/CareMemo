@@ -93,11 +93,15 @@ import java.time.Instant
  * @param record 履歴レコード
  */
 @Composable
-fun HealthHistoryItemBody(category: Category, record: HistoryRecord) {
+fun HealthHistoryItemBody(
+    category: Category,
+    record: HistoryRecord,
+    modifier: Modifier = Modifier
+) {
     when (category) {
-        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalRecordItemContent(it) }
-        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseRecordItemContent(it) }
-        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightRecordItemContent(it) }
+        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalRecordItemContent(it, modifier) }
+        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseRecordItemContent(it, modifier) }
+        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightRecordItemContent(it, modifier) }
         else -> { /* 健康カテゴリ以外はここでは扱わない */ }
     }
 }
@@ -107,12 +111,18 @@ fun HealthHistoryItemBody(category: Category, record: HistoryRecord) {
  * 「身長・体重」記録の履歴アイテム表示。
  */
 @Composable
-private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
+private fun HeightWeightRecordItemContent(
+    record: HeightAndWeight,
+    modifier: Modifier = Modifier
+) {
     val bmi = record.calculateBMI()
     val textStyle = MaterialTheme.typography.labelMedium
     val bmiLabelStyle = MaterialTheme.typography.labelMedium
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         // --- 身長セクション ---
         Icon(Icons.Rounded.Height, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(4.dp))
@@ -145,7 +155,10 @@ private fun HeightWeightRecordItemContent(record: HeightAndWeight) {
  * 複数の指標を1行にまとめ、下部に異常値判定インジケーターを配置します。
  */
 @Composable
-private fun VitalRecordItemContent(record: BpAndPulse) {
+private fun VitalRecordItemContent(
+    record: BpAndPulse,
+    modifier: Modifier = Modifier
+) {
     // 全指標の判定結果を一括取得
     val results = HealthLogic.evaluateVitalItems(record.bpSystolic, record.bpDiastolic, record.sat, record.pulse, record.bodyTemperature)
     val textStyle = MaterialTheme.typography.labelMedium
@@ -160,7 +173,10 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
     val feverLabel = stringResource(HealthDisplayMapper.getVitalLabel(VitalStatus.FEVER))
     val hypothermiaLabel = stringResource(HealthDisplayMapper.getVitalLabel(VitalStatus.HYPOTHERMIA))
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
 
             // 血圧(上/下)
@@ -206,11 +222,17 @@ private fun VitalRecordItemContent(record: BpAndPulse) {
  * 「バイタル」記録の異常値判定インジケーター（各指標ごとのフラグ）。
  */
 @Composable
-private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall) {
+private fun VitalStatusIndicator(
+    label: String,
+    isActive: Boolean,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelSmall
+) {
     val level = HealthDisplayMapper.getVitalIndicatorLevel(isActive)
     val color = level.getDisplayColor()
     Text(
         text = label,
+        modifier = modifier,
         style = style.copy(
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
             fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Normal
@@ -224,11 +246,17 @@ private fun VitalStatusIndicator(label: String, isActive: Boolean, style: androi
  * 「血糖値・HbA1c」記録の履歴アイテム表示。
  */
 @Composable
-private fun GlucoseRecordItemContent(record: GlucoseAndHbA1c) {
+private fun GlucoseRecordItemContent(
+    record: GlucoseAndHbA1c,
+    modifier: Modifier = Modifier
+) {
     val textStyle = MaterialTheme.typography.labelMedium
     val statusLabelStyle = MaterialTheme.typography.labelMedium
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         // 血糖値
         Text(text = "${stringResource(R.string.health_label_glucose)}: ${record.glucose?.let { "${HealthLogic.formatGlucose(it)} ${AppSpecifications.Health.BloodGlucose.UNIT}" } ?: "---"}", style = textStyle)
         if (record.glucose != null) {
@@ -268,6 +296,7 @@ fun HealthRecordDetailPane(
     category: Category,
     recordId: String?,
     records: ImmutableList<HistoryRecord>,
+    modifier: Modifier = Modifier,
     onCancel: () -> Unit,
     onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
 ) {
@@ -284,7 +313,7 @@ fun HealthRecordDetailPane(
         }
 
         if (record == null && recordId != null && !IdLogic.isNew(recordId)) {
-            LoadingScreen(modifier = Modifier.testTag("HealthDetail_Loading"))
+            LoadingScreen(modifier = modifier.testTag("HealthDetail_Loading"))
         } else {
             // 新規作成時は編集モードから開始
             var isEditing by remember(recordId) {
@@ -377,7 +406,7 @@ fun HealthRecordDetailPane(
                 // [2-1] HealthRecordEditForm (記録の編集)
                 val scrollState = rememberScrollState()
                 Box(
-                    modifier = Modifier
+                    modifier = modifier
                         .fillMaxSize()
                         .imePadding()
                         .testTag("HealthRecordDetailPane")
@@ -432,6 +461,7 @@ fun HealthRecordDetailPane(
                 HealthRecordDisplayCard(
                     category = category,
                     record = record,
+                    modifier = modifier,
                     onCancel = onCancel,
                     onEditClick = { isEditing = true }
                 )
@@ -449,6 +479,7 @@ private fun HealthRecordEditForm(
     category: Category,
     recordId: String,
     dateTimeState: DateTimeInputState,
+    modifier: Modifier = Modifier,
     heightText: String, onHeightChange: (String) -> Unit,
     weightText: String, onWeightChange: (String) -> Unit,
     bpSystolicText: String, onBpSystolicChange: (String) -> Unit,
@@ -482,7 +513,10 @@ private fun HealthRecordEditForm(
         PersonHealthLogic.validateInputs(category, values)
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Text(
             text = if (IdLogic.isNew(recordId)) "新規作成" else "記録の編集",
             style = MaterialTheme.typography.titleLarge,
@@ -567,11 +601,16 @@ private fun HealthRecordEditForm(
 private fun HealthRecordDisplayCard(
     category: Category,
     record: HistoryRecord?,
+    modifier: Modifier = Modifier,
     onCancel: () -> Unit,
     onEditClick: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize().testTag("HealthRecordDisplayCard")) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("HealthRecordDisplayCard")
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -630,11 +669,15 @@ private fun HealthRecordDisplayCard(
  * カテゴリに応じた詳細表示の分岐用コンポーネント。
  */
 @Composable
-private fun HealthDetailContent(category: Category, record: HistoryRecord) {
+private fun HealthDetailContent(
+    category: Category,
+    record: HistoryRecord,
+    modifier: Modifier = Modifier
+) {
     when (category) {
-        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightDetailContent(it) }
-        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalDetailContent(it) }
-        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseDetailContent(it) }
+        Category.HEIGHT_AND_WEIGHT -> (record as? HeightAndWeight)?.let { HeightWeightDetailContent(it, modifier) }
+        Category.BP_AND_PULSE -> (record as? BpAndPulse)?.let { VitalDetailContent(it, modifier) }
+        Category.GLUCOSE_AND_HBA1C -> (record as? GlucoseAndHbA1c)?.let { GlucoseDetailContent(it, modifier) }
         else -> {}
     }
 }
@@ -644,9 +687,15 @@ private fun HealthDetailContent(category: Category, record: HistoryRecord) {
  * 「身長・体重」記録の詳細表示。
  */
 @Composable
-private fun HeightWeightDetailContent(record: HeightAndWeight) {
+private fun HeightWeightDetailContent(
+    record: HeightAndWeight,
+    modifier: Modifier = Modifier
+) {
     val bmi = record.calculateBMI()
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         DetailRow(
             label = stringResource(R.string.health_label_height),
             value = record.height?.let { HealthLogic.formatHeight(it) } ?: "---",
@@ -675,8 +724,14 @@ private fun HeightWeightDetailContent(record: HeightAndWeight) {
  * 「バイタル」記録の詳細表示。
  */
 @Composable
-private fun VitalDetailContent(record: BpAndPulse) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun VitalDetailContent(
+    record: BpAndPulse,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         DetailRow(
             label = stringResource(R.string.health_label_bp_systolic),
             value = HealthLogic.formatBpValue(record.bpSystolic),
@@ -710,8 +765,14 @@ private fun VitalDetailContent(record: BpAndPulse) {
  * 「血糖値・HbA1c」記録の詳細表示。
  */
 @Composable
-private fun GlucoseDetailContent(record: GlucoseAndHbA1c) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun GlucoseDetailContent(
+    record: GlucoseAndHbA1c,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         DetailRow(
             label = stringResource(R.string.health_label_glucose),
             value = record.glucose?.let { HealthLogic.formatGlucose(it) } ?: "---",
@@ -730,8 +791,18 @@ private fun GlucoseDetailContent(record: GlucoseAndHbA1c) {
  * 詳細表示画面における1行分のラベルと値のセットを描画します。
  */
 @Composable
-private fun DetailRow(label: String, value: String, unit: String = "", color: Color = Color.Unspecified, isBold: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+private fun DetailRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    unit: String = "",
+    color: Color = Color.Unspecified,
+    isBold: Boolean = false
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row {
             Text(

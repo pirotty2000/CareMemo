@@ -95,7 +95,8 @@ fun PersonHealthScreenContent(
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
     onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
-    isAnyDialogOpen: Boolean
+    isAnyDialogOpen: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val historyListState = rememberLazyListState()
 
@@ -103,10 +104,10 @@ fun PersonHealthScreenContent(
     val historyRecords = records
 
     if (isLoading) {
-        LoadingScreen()
+        LoadingScreen(modifier = modifier)
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: 履歴リスト (比率 1)
             Box(modifier = Modifier.weight(1f).testTag("HealthScreen_HistoryList")) {
                 PersonHistoryList(
@@ -158,7 +159,7 @@ fun PersonHealthScreenContent(
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
         if (selectedRecordId != null) {
-            Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
+            Box(modifier = modifier.testTag("HealthScreen_InputForm")) {
             HealthRecordDetailPane(
                 category = currentCategory,
                 recordId = selectedRecordId,
@@ -168,7 +169,10 @@ fun PersonHealthScreenContent(
             )
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = modifier,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 // 表示切り替えボタン
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth().testTag("HealthScreen_HistoryGraphSwitch")

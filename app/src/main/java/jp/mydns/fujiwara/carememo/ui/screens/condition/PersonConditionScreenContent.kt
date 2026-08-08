@@ -94,6 +94,7 @@ fun PersonConditionScreenContent(
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
+    modifier: Modifier = Modifier,
     onDeleteRecord: (HistoryRecord) -> Unit,
     onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
@@ -110,11 +111,11 @@ fun PersonConditionScreenContent(
     val conditionRecords = records
 
     if (isLoading) {
-        LoadingScreen()
+        LoadingScreen(modifier = modifier)
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(16.dp)
                 .testTag("Condition_TabletLayout"),
@@ -182,7 +183,7 @@ fun PersonConditionScreenContent(
     } else {
         // スマホ用レイアウト
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)

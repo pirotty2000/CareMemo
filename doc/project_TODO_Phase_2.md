@@ -17,7 +17,7 @@ CareMemo は「一貫性・責務分離・型安全性・保守性」を最優�
 | **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | **100%** | 完了。全画面の遷移定義を刷新。           |
 | **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。ViewModel の初期化を自律化。    |
 | **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。UiState と関連コンポーネントを刷新。 |
-| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   10%    | 新規作成・改修時に都度適用。影響範囲は局所的。   |
+| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   100%   | 全ての Components層および Screen層（Content等）で適用完了。 |
 | **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** |    0%    | プレビュー関数の書き換えが必要だが効果は絶大。   |
 | **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。              |
 
@@ -140,4 +140,31 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 - [x] **共通部品の引数型変更**: `AppLazyColumn` 等、リストを引数に取る主要な共通コンポーネントの引数型を `ImmutableList` に変更し、安定性を向上させる。
 
 ---
-最終更新日: 2026/08/06
+
+## 🚀 実装ロードマップ：Modifier ルールの厳格化 (Phase 4)
+
+コンポーネントの再利用性と予測可能性を高めるため、すべての Composable 関数における `modifier` の扱いを統一する。
+
+### ステップ 1：UI Components の残り (基盤・共通部品の完遂) [完了]
+- [x] **ダイアログ系の対応**: `AppDeleteConfirmDialog`, `PdfSettingsDialog` 等に `modifier` 引数を追加。
+- [x] **小型部品・内部部品の対応**: `BadgeChar`, `QuickActionMenu`, `HealthGraphView` 等への適用。
+- [x] **論理部品の検討**: `PdfExportActionHandler` 等、UIを持たないが `modifier` 伝播が関与しうる箇所の整理。
+- [x] **主要共通部品の完了**: `HistoryComponents`, `CategorySelectorBar`, `UserListItem` 等は対応済。
+
+### ステップ 2：利用者一覧・編集系 Screen (SCR-M-xxx) [完了]
+- [x] **MainScreen**: `MainScreenContent`, `EmergencyContactSelectionSheet` への `modifier` 導入とルート Box 適用。
+- [x] **PersonEdit**: `PersonEditScreenContent`, `BirthdayInputSection` への適用。
+- [x] **EmergencyContact**: `EmergencyContactListContent`, `EmergencyContactItem`, `EmergencyContactEditContent` への適用。
+
+### ステップ 3：詳細3カテゴリ Screen (SCR-PH/PC/PM-xxx) [完了]
+- [x] **健康記録 (Health)**: `Phone`, `Tablet`, `Content` の各レイアウトへの適用。`BatchInputScreen`, `GraphExpansionScreen` を含む。
+- [x] **所見メモ (Condition)**: `Phone`, `Tablet`, `Content` および `PhotoPreview`, `PhotoFullScreen` への適用。
+- [x] **服薬管理 (Medication)**: `Phone`, `Tablet`, `Content` への適用。
+
+### ステップ 4：設定・管理系 Screen (SCR-S-xxx) [完了]
+- [x] **Settings**: `SettingsScreenContent` および内部セクションへの適用。
+- [x] **AuditLog**: `AuditLogScreenContent` への適用。
+- [x] **その他**: `DeleteOrRestorePersonScreen`, `OrphanedPhotoManagementScreen` への適用。
+
+---
+最終更新日: 2026/08/08

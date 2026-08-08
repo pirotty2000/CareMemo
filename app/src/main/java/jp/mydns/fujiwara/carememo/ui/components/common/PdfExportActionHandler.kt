@@ -17,6 +17,8 @@ import kotlinx.collections.immutable.persistentListOf
  * 【役割】
  * PDF出力（帳票生成）および共有アクションを共通で処理するハンドラーコンポーネントです。
  * UIを持たない論理的なコンポーネントですが、設定ダイアログの表示と実際の出力処理の橋渡しを行います。
+ * 
+ * ※ UIを持たないため、modifier 引数は持ちません。
  *
  * 【主な機能】
  * ・PDF出力設定ダイアログ（PdfSettingsDialog）の表示管理。

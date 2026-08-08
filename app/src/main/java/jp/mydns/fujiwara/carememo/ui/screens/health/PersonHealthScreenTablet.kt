@@ -73,8 +73,10 @@ fun PersonHealthScreenTablet(
     onDeleteRecord: (HistoryRecord) -> Unit,
     onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {

@@ -37,6 +37,7 @@ fun PersonConditionScreenTablet(
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
+    modifier: Modifier = Modifier,
     selectedId: String?,
     onSelectedIdChange: (String?) -> Unit,
     onBack: () -> Unit,
@@ -54,6 +55,7 @@ fun PersonConditionScreenTablet(
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {

@@ -57,6 +57,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     navController: NavHostController,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
@@ -600,7 +601,8 @@ fun SettingsScreen(
         isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
         isProcessing = uiState.isProcessing,
         processingProgress = uiState.processingProgress,
-        onBack = { viewModel.navigateBack() }
+        onBack = { viewModel.navigateBack() },
+        modifier = modifier
     )
 }
 
@@ -650,9 +652,11 @@ fun SettingsScreenContent(
     isDeveloperModeEnabled: Boolean,
     isProcessing: Boolean,
     processingProgress: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -784,9 +788,10 @@ private fun DisplayAndRecordingSection(
     isMaskingEnabled: Boolean,
     defaultRecorderName: String,
     onMaskingChange: (Boolean) -> Unit,
-    onRecorderNameChange: (String) -> Unit
+    onRecorderNameChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "表示・記録設定") {
+    SettingsSection(title = "表示・記録設定", modifier = modifier) {
         ListItem(
             headlineContent = { Text("氏名の伏せ字表示") },
             supportingContent = { Text("一覧などの画面で氏名の一部を「○」で表示します") },
@@ -821,9 +826,10 @@ private fun DisplayAndRecordingSection(
 private fun UserManagementSection(
     endedUserCount: Int,
     onNavigateToRestore: () -> Unit,
-    onEraseClick: () -> Unit
+    onEraseClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "利用者管理") {
+    SettingsSection(title = "利用者管理", modifier = modifier) {
         ListItem(
             headlineContent = { Text("利用終了者の復帰") },
             supportingContent = { Text("現在 $endedUserCount 名が利用終了となっています") },
@@ -857,9 +863,10 @@ private fun DataManagementSection(
     onBackupPasswordChange: (String) -> Unit,
     onPasswordVisibilityToggle: () -> Unit,
     onExportClick: () -> Unit,
-    onImportClick: () -> Unit
+    onImportClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "データ管理") {
+    SettingsSection(title = "データ管理", modifier = modifier) {
         ListItem(
             headlineContent = { Text("バックアップにパスワードを設定") },
             supportingContent = { 
@@ -936,9 +943,10 @@ private fun SecuritySection(
     isBiometricEnabled: Boolean,
     lockTimeoutMinutes: Int,
     onBiometricEnabledChange: (Boolean) -> Unit,
-    onTimeoutClick: () -> Unit
+    onTimeoutClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "セキュリティ") {
+    SettingsSection(title = "セキュリティ", modifier = modifier) {
         ListItem(
             headlineContent = { Text("アプリのロック") },
             supportingContent = { Text("起動時・復帰時に認証を求めます") },
@@ -969,9 +977,10 @@ private fun SecuritySection(
 @Composable
 private fun ThemeSection(
     themeSetting: ThemeSetting,
-    onThemeClick: () -> Unit
+    onThemeClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "テーマ") {
+    SettingsSection(title = "テーマ", modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onThemeClick() }.testTag("Settings_ThemeRow")) {
             OutlinedTextField(
                 value = themeSetting.label,
@@ -995,9 +1004,10 @@ private fun ThemeSection(
 
 @Composable
 private fun OtherSection(
-    onVersionClick: () -> Unit
+    onVersionClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SettingsSection(title = "その他") {
+    SettingsSection(title = "その他", modifier = modifier) {
         ListItem(
             headlineContent = { Text("バージョン情報") },
             leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
@@ -1020,10 +1030,11 @@ private fun ResetSection(
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
     isForceImportEnabled: Boolean,
-    onForceImportEnabledChange: (Boolean) -> Unit
+    onForceImportEnabledChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    SettingsSection(title = "管理者向けツール", modifier = Modifier.testTag("Settings_DevSection")) {
+    SettingsSection(title = "管理者向けツール", modifier = modifier.testTag("Settings_DevSection")) {
         Text(text = "※ 操作ログの管理を行います。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         
         val retentionLabel = when (auditLogRetentionDays) {

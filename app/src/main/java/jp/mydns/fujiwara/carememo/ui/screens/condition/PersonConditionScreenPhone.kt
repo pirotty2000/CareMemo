@@ -37,6 +37,7 @@ fun PersonConditionScreenPhone(
     isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
     defaultRecorderName: String,
+    modifier: Modifier = Modifier,
     selectedId: String?,
     onSelectedIdChange: (String?) -> Unit,
     onBack: () -> Unit,
@@ -54,6 +55,7 @@ fun PersonConditionScreenPhone(
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             Column {
                 TopAppBar(

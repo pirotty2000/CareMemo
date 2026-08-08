@@ -54,7 +54,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     viewModel: PersonListViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -187,7 +188,8 @@ fun MainScreen(
                 }
             }
         },
-        onNavigateToSettings = { viewModel.navigateToSettings() }
+        onNavigateToSettings = { viewModel.navigateToSettings() },
+        modifier = modifier,
     )
 
     // 通知ダイアログの表示
@@ -259,10 +261,11 @@ fun EmergencyContactSelectionSheet(
     contacts: ImmutableList<EmergencyContact>,
     personName: String,
     onContactClick: (EmergencyContact) -> Unit,
-    onManageClick: () -> Unit
+    onManageClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {

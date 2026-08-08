@@ -87,6 +87,7 @@ fun MainScreenContent(
     onAddClick: () -> Unit,
     onEndUser: (Person) -> Unit,
     onNavigateToSettings: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
@@ -208,6 +209,7 @@ fun MainScreenContent(
 
     // [Scaffold] ----------------------------------------------------------------------------------
     Scaffold(
+        modifier = modifier,
         topBar = {
             // --TopAppBar (アプリタイトル、設定・バージョンメニュー)
             TopAppBar(

@@ -53,7 +53,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun DeleteOrRestorePersonScreen(
     viewModel: DeleteOrRestorePersonViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val archivedPersons = uiState.archivedPersons
@@ -159,6 +160,7 @@ fun DeleteOrRestorePersonScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(

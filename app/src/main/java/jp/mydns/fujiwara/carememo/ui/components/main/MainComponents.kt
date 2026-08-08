@@ -19,7 +19,6 @@ package jp.mydns.fujiwara.carememo.ui.components.main
  * ・利用者情報自体の保存・削除処理（ViewModel 経由でラムダとして操作を受け取る）。
  */
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -84,14 +83,14 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 @Composable
 fun UserListItem(
     person: Person,
+    modifier: Modifier = Modifier,
     summary: PersonCategorySummary? = null,
     isNameMaskingEnabled: Boolean = true,
     onClick: () -> Unit,
     onQuickMenuClick: () -> Unit,
     onEmergencyContactManageClick: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
+    onDeleteClick: () -> Unit
 ) {
     // 誕生日の通知判定（本日または近日）
     val isBirthdayToday = remember(person.birthday) {
@@ -239,10 +238,11 @@ fun UserListItem(
 fun CategorySelectionSheet(
     personName: String,
     onCategorySelect: (Category) -> Unit,
-    onBatchInputSelect: () -> Unit
+    onBatchInputSelect: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
             .testTag("CategorySelectionSheet"),

@@ -92,12 +92,13 @@ import kotlinx.collections.immutable.ImmutableMap
 fun CalendarGrid(
     yearMonth: YearMonth,
     recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
+    modifier: Modifier = Modifier,
     onDayClick: (LocalDate) -> Unit
 ) {
     // 表示用の日付リスト（月初の空白を含む）を取得
     val calendarDays = remember(yearMonth) { MedicationLogic.getCalendarDays(yearMonth) }
 
-    Column {
+    Column(modifier = modifier) {
         // 曜日ヘッダー（日・月・火...）
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
@@ -185,13 +186,14 @@ fun CalendarGrid(
 private fun DayCell(
     date: LocalDate,
     records: List<MedicationRecord>,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val isToday = date == LocalDate.now()
     val dayOfWeek = date.dayOfWeek
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .aspectRatio(0.8f)
             .padding(1.dp)
             .border(
@@ -242,7 +244,11 @@ private fun DayCell(
  * @param status 服薬状況（TAKEN, ASSIST, NONE または null）
  */
 @Composable
-private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationStatus?) {
+private fun MedicationStatusIcon(
+    slot: MedicationTimeSlot,
+    status: MedicationStatus?,
+    modifier: Modifier = Modifier
+) {
     // ステータスに応じた配色の決定
     val bgColor = MedicationDisplayMapper.getStatusColor(status)
     val contentColor = when (status) {
@@ -260,7 +266,7 @@ private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationSta
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(17.dp)
             .background(bgColor, CircleShape)
             .let { 
@@ -303,13 +309,14 @@ private fun MedicationStatusIcon(slot: MedicationTimeSlot, status: MedicationSta
 fun MedicationHistoryTable(
     yearMonth: YearMonth,
     recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
+    modifier: Modifier = Modifier,
     lazyListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
     val slotLabels = AppSpecifications.Medication.TimeSlot.LABELS
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
             .clip(MaterialTheme.shapes.medium)
@@ -432,6 +439,7 @@ fun MedicationInputDialog(
     date: LocalDate,
     personId: String,
     records: ImmutableList<MedicationRecord>,
+    modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onConfirm: (List<MedicationRecord?>) -> Unit
 ) {
@@ -478,6 +486,7 @@ fun MedicationInputDialog(
 
     AppDialog(
         onDismissRequest = onDismiss,
+        modifier = modifier,
         title = {
             Text(
                 text = stringResource(R.string.p_med_dialog_title, formatMedicationDialogTitle(date)),
@@ -572,10 +581,11 @@ private fun MedicationRow(
     label: String,
     currentRecord: MedicationRecord?,
     isSelectedForTime: Boolean,
+    modifier: Modifier = Modifier,
     onStatusToggle: (Int) -> Unit,
     onTimeClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -635,6 +645,7 @@ private fun StatusChip(
     text: String,
     isSelected: Boolean,
     color: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     // 選択時の背景色に合わせて最適な文字色（コントラスト）を選択
@@ -650,7 +661,7 @@ private fun StatusChip(
         shape = MaterialTheme.shapes.medium,
         color = if (isSelected) color else MaterialTheme.colorScheme.surfaceVariant,
         contentColor = if (isSelected) selectedContentColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
+        modifier = modifier
             .height(36.dp)
             .width(56.dp)
             .testTag("Medication_StatusChip_${text}")

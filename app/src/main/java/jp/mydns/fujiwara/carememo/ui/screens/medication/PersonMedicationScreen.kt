@@ -4,6 +4,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +32,7 @@ fun PersonMedicationScreen(
     medicationViewModel: PersonMedicationViewModel,
     navController: NavHostController,
     widthSizeClass: WindowWidthSizeClass,
+    modifier: Modifier = Modifier,
     onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> }
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
@@ -119,7 +121,8 @@ fun PersonMedicationScreen(
                 }
             },
             onDayClick = { date -> showDialog = date },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     } else {
         PersonMedicationScreenPhone(
@@ -145,7 +148,8 @@ fun PersonMedicationScreen(
                 }
             },
             onDayClick = { date -> showDialog = date },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     }
 

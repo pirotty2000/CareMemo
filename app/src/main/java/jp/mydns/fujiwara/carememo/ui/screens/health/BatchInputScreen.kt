@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun BatchInputScreen(
     viewModel: BatchInputViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
@@ -158,6 +159,7 @@ fun BatchInputScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { 

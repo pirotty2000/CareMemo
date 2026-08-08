@@ -29,7 +29,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 fun ConditionPhotoPreviewScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
@@ -61,6 +62,7 @@ fun ConditionPhotoPreviewScreen(
     BackHandler(onBack = handleBack)
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {

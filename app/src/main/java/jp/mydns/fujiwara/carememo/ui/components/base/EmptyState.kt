@@ -40,11 +40,12 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     description: String? = null
 ) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Box(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         // アイコン表示（控えめな配色）
         Icon(
             imageVector = icon,
@@ -70,4 +71,5 @@ fun EmptyState(
             )
         }
     }
+}
 }

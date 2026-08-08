@@ -63,12 +63,14 @@ fun OrphanedPhotoManagementContent(
 @Composable
 fun OrphanedPhotoItem(
     info: OrphanedPhotoInfo,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val thumbFile = info.thumbnailFileName?.let { ImageUtils.getPhotoFile(context, it) }
 
     Card(
+        modifier = modifier,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {

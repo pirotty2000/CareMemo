@@ -70,9 +70,11 @@ fun PersonMedicationScreenTablet(
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {

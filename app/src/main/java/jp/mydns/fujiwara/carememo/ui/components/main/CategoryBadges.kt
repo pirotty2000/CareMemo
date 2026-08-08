@@ -76,13 +76,19 @@ fun CategoryBadges(
  * @param contentDescription アクセシビリティ用の読み上げテキスト
  */
 @Composable
-fun BadgeChar(text: String, isActive: Boolean, color: Color, contentDescription: String? = null) {
+fun BadgeChar(
+    text: String,
+    isActive: Boolean,
+    color: Color,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
+) {
     Surface(
         shape = RoundedCornerShape(2.dp),
         // 非アクティブ時は背景・文字ともに透過・グレーアウトさせて「情報の欠落」を表現
         color = if (isActive) color else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         contentColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-        modifier = Modifier
+        modifier = modifier
             .size(18.dp)
             .then(
                 if (isActive && contentDescription != null) {

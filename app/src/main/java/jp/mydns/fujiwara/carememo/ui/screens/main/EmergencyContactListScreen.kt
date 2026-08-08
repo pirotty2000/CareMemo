@@ -38,7 +38,8 @@ import kotlinx.collections.immutable.persistentListOf
 @Composable
 fun EmergencyContactListScreen(
     viewModel: EmergencyContactEditViewModel,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -66,7 +67,8 @@ fun EmergencyContactListScreen(
         },
         onDeleteConfirm = { contact ->
             viewModel.deleteContact(contact)
-        }
+        },
+        modifier = modifier,
     )
 }
 
@@ -80,12 +82,14 @@ fun EmergencyContactListContent(
     onNavigateBack: () -> Unit,
     onAddClick: () -> Unit,
     onEditClick: (EmergencyContact) -> Unit,
-    onDeleteConfirm: (EmergencyContact) -> Unit
+    onDeleteConfirm: (EmergencyContact) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var contactToDelete by remember { mutableStateOf<EmergencyContact?>(null) }
     val lazyListState = rememberLazyListState()
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { 
@@ -152,11 +156,13 @@ fun EmergencyContactListContent(
 fun EmergencyContactItem(
     contact: EmergencyContact,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     ListItem(
+        modifier = modifier,
         headlineContent = { 
             Text(contact.facilityName, fontWeight = FontWeight.Bold) 
         },
