@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
  *
  * @param viewModel 操作と状態を管理する ViewModel
  * @param navController 画面遷移制御用の NavHostController
- * @param mode 初期表示モード（RESTORE:復帰 / DELETE:完全抹消）
+ * @param modifier 修飾子
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
