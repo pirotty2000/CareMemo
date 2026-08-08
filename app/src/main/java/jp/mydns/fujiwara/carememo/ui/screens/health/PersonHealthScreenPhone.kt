@@ -63,11 +63,9 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)

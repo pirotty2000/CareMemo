@@ -54,7 +54,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.MockData
 import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
 import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionPreviewParameterProvider
-import java.time.Instant
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
