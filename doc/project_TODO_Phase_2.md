@@ -18,7 +18,7 @@ CareMemo は「一貫性・責務分離・型安全性・保守性」を最優�
 | **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。ViewModel の初期化を自律化。    |
 | **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。UiState と関連コンポーネントを刷新。 |
 | **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   100%   | 全ての Components層および Screen層（Content等）で適用完了。 |
-| **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** |    0%    | プレビュー関数の書き換えが必要だが効果は絶大。   |
+| **5. PreviewParameterProvider**             | ★★★★☆ |  **高**   | **中** | **可** |   100%   | 完了。プレビュー環境の刷新と状態網羅の標準化。   |
 | **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。              |
 
 ---
@@ -167,4 +167,24 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 - [x] **その他**: `DeleteOrRestorePersonScreen`, `OrphanedPhotoManagementScreen` への適用。
 
 ---
-最終更新日: 2026/08/08
+
+## 🚀 実装ロードマップ：PreviewParameterProvider 導入 (Phase 5) [完了]
+
+プレビュー用のテストデータを一括管理し、UI コンポーネントの「正常・異常・空・ロード中」などの多様な状態を網羅的にプレビューできる環境を構築する。
+
+### ステップ 1：プレビュー基盤の構築
+- [x] **MockData の集約**: `ui/preview/MockData.kt` を作成し、共有のテストデータを定義。
+- [x] **PreviewState の導入**: 引数の多い Screen 層のために `PreviewStates.kt` を定義。
+
+### ステップ 2：共通コンポーネントのプロバイダー導入
+- [x] **HistoryPreviewParameterProvider**: `PersonHistoryList` への適用。
+
+### ステップ 3：主要画面のプロバイダー導入
+- [x] **健康記録 (Health)**: `PersonHealthPreviewParameterProvider` を作成し、Phone/Tablet/Content 各画面に適用。
+- [x] **所見メモ (Condition)**: `PersonConditionPreviewParameterProvider` を作成し、ScreenContent および Components に適用。
+
+### ステップ 4：開発ルールの整備
+- [x] **project_RULES.md への明記**: プレビュー作成時の `PreviewParameterProvider` および `MockData` 活用を義務化。
+
+---
+最終更新日: 2026/08/08 (Phase 5: PreviewParameterProvider 完了の反映)
