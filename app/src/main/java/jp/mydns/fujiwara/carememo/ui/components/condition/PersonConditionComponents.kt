@@ -63,7 +63,6 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
-import jp.mydns.fujiwara.carememo.ui.mapping.ConditionDisplayMapper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
