@@ -1,5 +1,9 @@
 # CareMemo ViewModel 構造改善計画 (project_TODO_ViewModel.md)
 
+> [!IMPORTANT]
+> 本ドキュメントの未完了タスク（異常系テスト、抽象化検討）は、**Phase 3 (project_TODO_Phase_3.md)** へ統合されました。
+> 以降の進捗管理は Phase 3 ドキュメントにて行います。
+
 このドキュメントは、現状の ViewModel における「責務の集中」「肥大化」「状態管理の複雑化」を解消し、長期的な保守性とテスト容易性を向上させるための具体的な改善案をまとめたものです。
 
 ---

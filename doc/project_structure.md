@@ -48,7 +48,7 @@ jp.mydns.fujiwara.carememo
 │   │   ├── health/     #  │   ├─ 【固有】(A)健康記録専用
 │   │   ├── condition/  #  │   ├─ 【固有】(B)所見メモ専用
 │   │   └── medication/ #  │   └─ 【固有】(C)服薬管理専用
-│   ├── mapping/        #  ├─ 表示用マッピング（監査ログ等の識別子を日本語に変換）
+│   ├── mapping/        #  ├─ 表示用マッピング（ドメインモデル/識別子を日本語リソースIDに変換）
 │   ├── preview/        #  ├─ プレビュー用基盤（MockData, PreviewStates）
 │   └── theme/          #  └─ アプリのテーマ設定（Color, Type, Shapeなど）
 ├── viewmodel/          # UI状態の管理と実行制御（safeLaunch / safeCollect による通知・ロード管理）
@@ -178,14 +178,15 @@ ViewModel (androidx.lifecycle.ViewModel)
 | 緊急連絡先管理  | `EmergencyContactListScreen`<br>`EmergencyContactEditScreen` | `EmergencyContactEditViewModel` **(B)**                                           | `EmergencyContactLogic`<br>`PhoneNumberVisualTransformation`  | `EmergencyContactRepository`<br>`PersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                   |
 | 健康一括入力   | `BatchInputScreen`                                           | `BatchInputViewModel` **(PB)**                                                    | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                |
 | 利用者管理    | `DeleteOrRestorePerson`                                      | `DeleteOrRestorePersonViewModel` **(B)**                                          | `DeleteOrRestorePersonLogic`                                  | `DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                    |
-| アプリ設定    | `SettingsScreen`                                             | `SettingsViewModel` **(B)**                                                       | `SettingsLogic`                                               | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                      |
+| アプリ設定    | `SettingsScreen`                                             | `SettingsViewModel` **(B)**                                                       | `SettingsLogic`                                               | `AppMaintenanceRepository` (C)<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                      |
 | 操作ログ     | `AuditLogScreen`                                             | `AuditLogViewModel` **(B)**                                                       | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                         |
 | 迷子写真確認   | `OrphanedPhotoManagementScreen`                              | `OrphanedPhotoViewModel` **(B)**                                                  | `ConditionMaintenanceLogic`                                   | `ConditionRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                |
 | 共通基盤     | (詳細画面全体)                                                     | `PersonDetailUiStateViewModel` **(PB)**                                           | -                                                             | `PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                      |
 
 <br>
 ※ **(B)**: `BaseUiStateViewModel` 継承（基本UI状態・イベント管理）<br>
-※ **(PB)**: `PersonBaseUiStateViewModel` 継承（利用者コンテキスト管理）
+※ **(PB)**: `PersonBaseUiStateViewModel` 継承（利用者コンテキスト管理）<br>
+※ **(C)**: リソース解決のため `Context` に依存。
 
 ---
 
@@ -220,16 +221,16 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `PersonEditLogic.kt`            | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。 |
 | `PersonDetailLogic.kt`          | 利用者詳細（A/B/C共通）のUI状態定義、カテゴリ管理、共通イベントの定義。                  |
 | `PersonHealthLogic.kt`          | 健康記録画面における新規・更新判定、および重複チェックロジック。                         |
-| `PersonConditionLogic.kt`       | 所見メモ画面における UI 状態定義、変更検知、バリデーション、Entity生成。                |
+| `PersonConditionLogic.kt`       | 所見メモ画面における UI 状態定義（不整合情報の descriptionResId 保持）、変更検知、 Entity生成。 |
 | `PersonMedicationLogic.kt`      | 服薬管理画面における履歴の日付別グルーピング、UiStateへの変換。                      |
 | `BatchInputLogic.kt`            | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                    |
 | `DeleteOrRestorePersonLogic.kt` | 利用者管理（復帰・抹消）画面の表示状態定義。                                   |
 | `SettingsLogic.kt`              | ZIP検証、バージョン互換性、空き容量チェック、開発者モード有効化判定。                     |
 | `AuditLogLogic.kt`              | 監査ログのフィルタリング、並び替え、選択肢の抽出。                                |
-| `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、迷子写真の分類。                                |
+| `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、迷子写真の分類（リソースIDによる理由保持）。             |
 
 ### **表示用マッピングロジック (ui/mapping)**
-- 判定結果（Enum）を日本語のラベルやテーマに合わせた色へ変換するロジックです。
+- ドメインモデルやシステム識別子（Enum/String）を、多言語対応可能な日本語ラベル（リソースID）やテーマカラーへ変換するレイヤーです。
 - **※ これらは Android リソース（R.string）や UI 資源（Color）に依存します。**
 
 | ファイル名                        | 役割・主な内容                                   |
@@ -239,9 +240,10 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `MedicationDisplayMapper.kt` | 服薬状況の Enum を記号（○/△/×）、時間枠ラベル、色へ変換。        |
 | `ConditionDisplayMapper.kt`  | 所見メモの写真枚数ラベルなどの表示文字列を生成。                  |
 | `EmergencyContactMapping.kt` | 緊急連絡先の種別（Enum）を日本語ラベルやアイコンへ変換。            |
-| `FeatureNameMapper.kt`       | 監査ログ用の機能識別子を日本語名称へ変換。                     |
-| `ActionTypeMapper.kt`        | 監査ログ用の操作種別（INSERT等）を日本語名称へ変換。             |
-| `ResultTypeMapper.kt`        | 監査ログ用の実行結果（SUCCESS等）を日本語名称へ変換。            |
+| `ThemeDisplayMapper.kt`      | テーマ設定の選択肢を日本語ラベルおよび説明文（リソースID）へ変換。      |
+| `FeatureNameMapper.kt`       | 監査ログ用の機能識別子を日本語名称（リソースID）へ変換。             |
+| `ActionTypeMapper.kt`        | 監査ログ用の操作種別（INSERT等）を日本語名称（リソースID）へ変換。     |
+| `ResultTypeMapper.kt`        | 監査ログ用の実行結果（SUCCESS等）を日本語名称（リソースID）へ変換。    |
 
 ---
 
@@ -357,4 +359,4 @@ ViewModel (androidx.lifecycle.ViewModel)
 
 ---
 
-最終更新日: 2026/08/08 (PreviewParameterProvider 導入の反映)
+最終更新日: 2026/08/09 (文言のリソース集約プロジェクト完了の反映)

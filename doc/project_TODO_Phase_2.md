@@ -1,5 +1,8 @@
 # CareMemo 次世代品質向上プロジェクト (project_TODO_Phase_2.md)
 
+> [!IMPORTANT]
+> 本フェーズのほとんどのタスクは完了しました。未完了の「KDoc 整備」は **Phase 3 (project_TODO_Phase_3.md)** へ統合されました。
+
 `project_structure.md` および `project_RULES.md` の整備完了を受け、Jetpack Compose / Material 3 の最新ベストプラクティスに基づき、アプリの堅牢性と保守性をさらに高めるためのロードマップです。
 
 ---
@@ -20,6 +23,7 @@ CareMemo は「一貫性・責務分離・型安全性・保守性」を最優�
 | **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   100%   | 全ての Components層および Screen層（Content等）で適用完了。 |
 | **5. PreviewParameterProvider**             | ★★★★☆ |  **高**   | **中** | **可** |   100%   | 完了。プレビュー環境の刷新と状態網羅の標準化。                    |
 | **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。                               |
+| **7. リソース ID への文言集約**                       | ★★★★☆ |  **中**   | **中** | **可** | **100%** | 全5フェーズにわたるハードコード文言の完全移行。                   |
 
 ---
 
@@ -57,7 +61,7 @@ Material 3 の特性を活かし、開発効率とユーザー体験を向上さ
 既存コードの改修にあわせて順次適用する項目です。
 
 - [x] **collectAsStateWithLifecycle への完全置換**: ライフサイクルに応じた安全な状態収集を徹底。
-- [ ] **リソース ID への文言集約**: ハードコードされた日本語を `strings.xml` へ順次移行。
+- [x] **リソース ID への文言集約**: ハードコードされた日本語を `strings.xml` へ移行完了（全5フェーズ）。
 - [ ] **KDoc の継続的な整備**: Logic, Repository, ViewModel 層のドキュメント化を完遂する。
 
 ---
@@ -187,4 +191,34 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 - [x] **project_RULES.md への明記**: プレビュー作成時の `PreviewParameterProvider` および `MockData` 活用を義務化。
 
 ---
-最終更新日: 2026/08/08 (Phase 5: PreviewParameterProvider 完了の反映)
+
+## 🚀 実装ロードマップ：リソース ID への文言集約 (Phase 6) [完了]
+
+ハードコードされた日本語文字列を `strings.xml` へ移行し、多言語対応の基盤構築と文言管理の一元化を実現する。
+
+### フェーズ 1：アプリ基盤・共通部
+- [x] **基盤 Screen**: `MainActivity` (ロック画面、バイオメトリクス認証)、`SplashActivity`。
+- [x] **共通コンポーネント**: `AppDialog`, `AppTextField` 等の汎用 UI 部品。
+- [x] **テーマ定義**: `ThemeSetting` 内の表示文言。
+
+### フェーズ 2：設定・管理系画面 (SCR-S-xxx)
+- [x] **Settings**: `SettingsScreen` (全設定項目、ダイアログメッセージ)。
+- [x] **AuditLog**: `AuditLogScreen` (タイトル、空状態、フィルタラベル)。
+- [x] **Maintenance**: `DeleteOrRestorePerson`, `OrphanedPhotoManagement` (警告文、案内メッセージ)。
+
+### フェーズ 3：主要3カテゴリ機能画面 (SCR-PH/PC/PM-xxx)
+- [x] **健康記録 (Health)**: `BatchInputScreen`, `GraphExpansionScreen`, `HealthGraphView` (タイトル、ツールチップ、エラー文)。
+- [x] **所見メモ (Condition)**: `PhotoPreview`, `PhotoFullScreen`, `PersonConditionComponents` (アクセシビリティ、案内文)。
+- [x] **服薬管理 (Medication)**: `PersonMedicationComponents` (カレンダー操作、日付フォーマット)。
+
+### フェーズ 4：利用者一覧・編集系画面 (SCR-M-xxx)
+- [x] **MainScreen**: `MainScreenContent` (バージョン情報ダイアログ、操作メニュー説明)。
+- [x] **PersonEdit / EmergencyContact**: バリデーションメッセージ、共通サフィックス（「さん」付け等）、カテゴリバッジ説明。
+
+### フェーズ 5：ロジック層・例外メッセージ・PDF
+- [x] **不整合レポート**: `DatabaseInconsistency` の理由説明、迷子写真の分類ラベル。
+- [x] **例外メッセージ**: `AppMaintenanceRepository` での I/O エラー、インポート/エクスポート例外。
+- [x] **PDF ユーティリティ**: `PdfExporter` 内の固定タイトル、表ヘッダー、グラフ見出し。
+
+---
+最終更新日: 2026/08/09 (Phase 6: リソース ID への文言集約 完了の反映)
