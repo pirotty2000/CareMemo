@@ -25,6 +25,9 @@
     <string name="common_year_suffix">年</string>
     <string name="common_month_suffix">月</string>
     <string name="common_day_suffix">日</string>
+    <string name="common_hour_suffix">時</string>
+    <string name="common_minute_suffix">分</string>
+    <string name="common_date_time_label">記録日時</string>
     <string name="common_age_suffix">%1$d 歳</string>
     <string name="common_birthday_format">%1$s生　%2$s</string>
 
@@ -38,6 +41,24 @@
     <!-- タブ名 -->
     <string name="common_tab_history">履歴</string>
     <string name="common_tab_graph">グラフ</string>
+
+    <!-- テーマ設定 -->
+    <string name="theme_system_label">システムの設定に従う</string>
+    <string name="theme_system_desc">端末の設定に合わせて自動で切り替わります。</string>
+    <string name="theme_light_label">ライトモード (標準)</string>
+    <string name="theme_light_desc">標準的な明るい配色です。</string>
+    <string name="theme_dark_label">ダークモード (夜間)</string>
+    <string name="theme_dark_desc">標準的な暗い配色です。</string>
+    <string name="theme_healing_green_label">ヒーリング・グリーン</string>
+    <string name="theme_healing_green_desc">目に優しく、安心感のある緑の配色です。</string>
+    <string name="theme_serene_blue_label">セレネ・ブルー</string>
+    <string name="theme_serene_blue_desc">清潔感があり、信頼感を与える青の配色です。</string>
+    <string name="theme_warm_apricot_label">ウォーム・アプリコット</string>
+    <string name="theme_warm_apricot_desc">温かみがあり、親しみやすいオレンジの配色です。</string>
+    <string name="theme_midnight_navy_label">ミッドナイト・ネイビー</string>
+    <string name="theme_midnight_navy_desc">夜勤中や暗い場所での利用に最適な深い紺色です。</string>
+    <string name="theme_classic_sand_label">クラシック・サンド</string>
+    <string name="theme_classic_sand_desc">紙のような質感で、目が疲れにくい茶系の配色です。</string>
 
     <!-- グラフ境界線ラベル -->
     <string name="health_graph_limit_upper">正常(上限)</string>
@@ -68,6 +89,10 @@
     <string name="main_search_hint">特定の症状や出来事を入力…</string>
     <string name="main_search_hint_short">検索…</string>
     <string name="main_btn_add_new">新規追加</string>
+
+    <!-- アプリロック -->
+    <string name="main_lock_title">アプリがロックされています</string>
+    <string name="main_lock_unlock_button">解除する</string>
 
     <string name="main_msg_user_added">%1$s さんを登録しました</string>
     <string name="main_msg_user_updated">利用者情報を更新しました</string>
@@ -280,6 +305,39 @@
     <string name="audit_log_clear_confirm_msg">記録されているすべての操作ログを消去します。よろしいですか？</string>
     <string name="settings_btn_view_audit_logs">操作ログを参照</string>
     <string name="settings_btn_rotate_logs">ログの手動ローテーション</string>
+
+    <!-- 監査ログ 識別子 -->
+    <string name="audit_feature_person_list">利用者：一覧</string>
+    <string name="audit_feature_person_edit">利用者：新規登録・編集</string>
+    <string name="audit_feature_person_archive">利用者：利用終了</string>
+    <string name="audit_feature_person_base">利用者：基底</string>
+    <string name="audit_feature_health">健康記録</string>
+    <string name="audit_feature_batch_input">一括入力</string>
+    <string name="audit_feature_detail_height_weight">詳細/身長体重</string>
+    <string name="audit_feature_detail_vital">詳細/バイタル</string>
+    <string name="audit_feature_detail_glucose">詳細/血糖値</string>
+    <string name="audit_feature_condition">所見メモ</string>
+    <string name="audit_feature_detail_condition">詳細/所見メモ</string>
+    <string name="audit_feature_medication">服薬管理</string>
+    <string name="audit_feature_detail_medication">詳細/服薬管理</string>
+    <string name="audit_feature_settings">設定・管理</string>
+    <string name="audit_feature_detail_base">詳細/基底</string>
+
+    <string name="audit_action_insert">追加 (INSERT)</string>
+    <string name="audit_action_update">更新 (UPDATE)</string>
+    <string name="audit_action_delete">削除 (DELETE)</string>
+    <string name="audit_action_logical_delete">利用終了</string>
+    <string name="audit_action_restore">利用復帰</string>
+    <string name="audit_action_permanent_delete">利用抹消</string>
+    <string name="audit_action_clear_all">一括抹消</string>
+
+    <string name="audit_result_success">成功</string>
+    <string name="audit_result_db_error">DBエラー</string>
+    <string name="audit_result_io_error">入出力エラー</string>
+    <string name="audit_result_format_error">形式エラー</string>
+    <string name="audit_result_validation_error">検証エラー</string>
+    <string name="audit_result_other_error">その他エラー</string>
+    <string name="audit_result_unknown">不明</string>
 
     <!-- 緊急連絡先 (MedicalContact) -->
     <string name="medical_contacts_title_format">%1$s さんの緊急連絡先</string>

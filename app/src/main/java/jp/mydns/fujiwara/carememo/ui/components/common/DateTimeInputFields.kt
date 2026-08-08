@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import java.time.Instant
@@ -166,7 +168,7 @@ fun DateTimeInputFields(
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = "記録日時",
+            text = stringResource(R.string.common_date_time_label),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary
         )
@@ -179,21 +181,21 @@ fun DateTimeInputFields(
                 value = year,
                 onValueChange = onYearChange,
                 maxLength = 4,
-                label = "年",
+                label = stringResource(R.string.common_year_suffix),
                 modifier = Modifier.weight(1.3f)
             )
             DateTimeUnitField(
                 value = month,
                 onValueChange = onMonthChange,
                 maxLength = 2,
-                label = "月",
+                label = stringResource(R.string.common_month_suffix),
                 modifier = Modifier.weight(1f)
             )
             DateTimeUnitField(
                 value = day,
                 onValueChange = onDayChange,
                 maxLength = 2,
-                label = "日",
+                label = stringResource(R.string.common_day_suffix),
                 modifier = Modifier.weight(1f),
                 // 日付までで入力を止める場合は Done、時まで続ける場合は Next を指定
                 imeAction = if (autoFocusHour) ImeAction.Next else ImeAction.Done
@@ -202,14 +204,14 @@ fun DateTimeInputFields(
                 value = hour,
                 onValueChange = onHourChange,
                 maxLength = 2,
-                label = "時",
+                label = stringResource(R.string.common_hour_suffix),
                 modifier = Modifier.weight(1f)
             )
             DateTimeUnitField(
                 value = minute,
                 onValueChange = onMinuteChange,
                 maxLength = 2,
-                label = "分",
+                label = stringResource(R.string.common_minute_suffix),
                 modifier = Modifier.weight(1f),
                 imeAction = ImeAction.Done
             )

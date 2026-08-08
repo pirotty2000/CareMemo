@@ -19,6 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -367,9 +369,9 @@ fun LockScreen(onUnlockRequest: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(imageVector = Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "アプリがロックされています", style = MaterialTheme.typography.titleLarge)
+            Text(text = stringResource(R.string.main_lock_title), style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = onUnlockRequest) { Text("解除する") }
+            Button(onClick = onUnlockRequest) { Text(stringResource(R.string.main_lock_unlock_button)) }
         }
     }
 }

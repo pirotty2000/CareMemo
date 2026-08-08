@@ -37,10 +37,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.ui.mapping.ThemeDisplayMapper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
@@ -375,14 +377,14 @@ fun SettingsScreen(
                         ) {
                             RadioButton(selected = uiState.themeSetting == selectionOption, onClick = null)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(selectionOption.label)
+                            Text(stringResource(ThemeDisplayMapper.getLabelRes(selectionOption)))
                         }
                     }
                 }
             },
             confirmButton = {
                 AppDialogDismissButton(
-                    text = "キャンセル",
+                    text = stringResource(R.string.common_cancel),
                     onClick = { showThemeDialog = false }
                 )
             }
@@ -983,7 +985,7 @@ private fun ThemeSection(
     SettingsSection(title = "テーマ", modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onThemeClick() }.testTag("Settings_ThemeRow")) {
             OutlinedTextField(
-                value = themeSetting.label,
+                value = stringResource(ThemeDisplayMapper.getLabelRes(themeSetting)),
                 onValueChange = {},
                 readOnly = true,
                 enabled = false,
@@ -998,7 +1000,7 @@ private fun ThemeSection(
                 )
             )
         }
-        Text(text = "※ ${themeSetting.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+        Text(text = "※ ${stringResource(ThemeDisplayMapper.getDescriptionRes(themeSetting))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
     }
 }
 
