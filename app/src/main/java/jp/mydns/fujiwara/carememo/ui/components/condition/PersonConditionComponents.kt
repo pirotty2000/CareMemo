@@ -170,14 +170,14 @@ private fun ConditionMemoContent(
             if (hasPhoto) {
                 Icon(
                     imageVector = Icons.Rounded.AddAPhoto,
-                    contentDescription = "写真あり",
+                    contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
             }
             Text(
-                text = "記録者: ${record.author}",
+                text = stringResource(R.string.common_author_format, record.author),
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.Gray
             )
@@ -310,8 +310,8 @@ fun ConditionDetailPane(
                     tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("左のリストから記録を選択してください", color = MaterialTheme.colorScheme.outline)
-                Text("右上の「＋」から新しい記録を追加できます", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.p_detail_empty_records), color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.p_detail_empty_records_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
         return
@@ -387,8 +387,8 @@ fun ConditionDetailPane(
                 photoToDelete?.let { onDeletePhoto(it) }
                 photoToDelete = null
             },
-            title = "写真の削除",
-            message = "この写真を削除してもよろしいですか？"
+            title = stringResource(R.string.condition_photo_delete_confirm_title),
+            message = stringResource(R.string.condition_photo_delete_confirm_msg)
         )
     }
 }
@@ -450,7 +450,7 @@ private fun ConditionRecordEditForm(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (IdLogic.isNew(conditionId)) "新規作成" else "記録の編集",
+                text = if (IdLogic.isNew(conditionId)) stringResource(R.string.common_create_new) else stringResource(R.string.common_edit_record),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -464,7 +464,7 @@ private fun ConditionRecordEditForm(
                         value = title,
                         onValueChange = onTitleChange,
                         type = AppTextFieldType.TEXT,
-                        label = { Text("タイトル (任意)") },
+                        label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -472,14 +472,14 @@ private fun ConditionRecordEditForm(
                         value = author,
                         onValueChange = onAuthorChange,
                         type = AppTextFieldType.TEXT,
-                        label = { Text("記録者") },
+                        label = { Text(stringResource(R.string.condition_label_author)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     AppTextField(
                         value = condition,
                         onValueChange = onConditionChange,
                         type = AppTextFieldType.TEXT,
-                        label = { Text("所見メモ") },
+                        label = { Text(stringResource(R.string.condition_label_memo)) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).testTag("Condition_MemoInput"),
                         singleLine = false,
                         trailingIcon = {
@@ -492,7 +492,7 @@ private fun ConditionRecordEditForm(
                                 onMicClick()
                                 speechLauncher.launch(intent)
                             }) {
-                                Icon(Icons.Rounded.Mic, contentDescription = "音声入力", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Rounded.Mic, contentDescription = stringResource(R.string.condition_btn_mic_desc), tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     )
@@ -516,7 +516,7 @@ private fun ConditionRecordEditForm(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size), style = MaterialTheme.typography.titleMedium)
+                Text(text = stringResource(R.string.common_photo_count_format, photos.size, AppSpecifications.Condition.Photo.MAX_COUNT), style = MaterialTheme.typography.titleMedium)
 
                 Row {
                     // 迷子写真の再登録ボタン (既存レコードかつ迷子がある場合のみ表示)
@@ -524,7 +524,7 @@ private fun ConditionRecordEditForm(
                         IconButton(onClick = onReattachClick, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.CloudDownload,
-                                contentDescription = "迷子写真を再登録",
+                                contentDescription = stringResource(R.string.common_orphaned_photo_reattach_title),
                                 tint = MaterialTheme.colorScheme.tertiary
                             )
                         }
@@ -534,7 +534,7 @@ private fun ConditionRecordEditForm(
                         IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.PhotoLibrary,
-                                contentDescription = "ギャラリーから追加",
+                                contentDescription = stringResource(R.string.condition_btn_gallery_desc),
                                 tint = MaterialTheme.colorScheme.secondary
                             )
                         }
@@ -542,7 +542,7 @@ private fun ConditionRecordEditForm(
                     // カメラで撮影
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                         IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
-                            Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
+                            Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = stringResource(R.string.condition_btn_camera_desc), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -559,7 +559,7 @@ private fun ConditionRecordEditForm(
 
             // 写真グリッド
             if (photos.isEmpty()) {
-                Text("写真がありません", color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.common_no_photos), color = MaterialTheme.colorScheme.outline)
             } else {
                 PhotoGrid(photos = photos, isEditable = true, onPhotoClick = {}, onDeletePhoto = onDeletePhoto)
             }
@@ -569,7 +569,7 @@ private fun ConditionRecordEditForm(
                 Button(onClick = onAddPhotoClick, enabled = !isProcessing, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("撮影")
+                    Text(stringResource(R.string.condition_btn_capture))
                 }
             }
             Spacer(modifier = Modifier.height(80.dp))
@@ -622,7 +622,7 @@ private fun PhotoGrid(
                                     modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
                                     colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f))
                                 ) {
-                                    Icon(Icons.Rounded.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.common_delete), tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -682,17 +682,17 @@ private fun ConditionRecordDisplayCard(
                         onClick = onCancel,
                         modifier = Modifier.offset(x = (-12).dp)
                     ) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                     Text(
-                        text = "記録の詳細",
+                        text = stringResource(R.string.common_record_detail_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.offset(x = (-8).dp)
                     )
                 }
                 IconButton(onClick = onEditClick) {
-                    Icon(Icons.Rounded.EditNote, contentDescription = "編集")
+                    Icon(Icons.Rounded.EditNote, contentDescription = stringResource(R.string.common_edit))
                 }
             }
 
@@ -716,7 +716,7 @@ private fun ConditionRecordDisplayCard(
                         Text(text = m.condition ?: "", style = MaterialTheme.typography.bodyLarge)
                         Spacer(modifier = Modifier.height(8.dp))
                         // 記録者名
-                        Text(text = "記録者: ${m.author}",
+                        Text(text = stringResource(R.string.common_author_format, m.author),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.align(Alignment.End),
                             color = MaterialTheme.colorScheme.secondary)
@@ -730,29 +730,29 @@ private fun ConditionRecordDisplayCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = ConditionDisplayMapper.getPhotoCountLabel(photos.size),
+                Text(text = stringResource(R.string.common_photo_count_format, photos.size, AppSpecifications.Condition.Photo.MAX_COUNT),
                     style = MaterialTheme.typography.titleMedium)
 
                 Row {
                     if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
                         IconButton(onClick = onReattachClick, enabled = !isProcessing) {
-                            Icon(imageVector = Icons.Rounded.CloudDownload, contentDescription = "迷子写真を再登録", tint = MaterialTheme.colorScheme.tertiary)
+                            Icon(imageVector = Icons.Rounded.CloudDownload, contentDescription = stringResource(R.string.common_orphaned_photo_reattach_title), tint = MaterialTheme.colorScheme.tertiary)
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
                         IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
-                            Icon(imageVector = Icons.Rounded.PhotoLibrary, contentDescription = "ギャラリーから追加", tint = MaterialTheme.colorScheme.secondary)
+                            Icon(imageVector = Icons.Rounded.PhotoLibrary, contentDescription = stringResource(R.string.condition_btn_gallery_desc), tint = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
                         IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
-                            Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = "写真を撮影", tint = MaterialTheme.colorScheme.primary)
+                            Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = stringResource(R.string.condition_btn_camera_desc), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
             }
             if (photos.isEmpty()) {
-                Text("写真がありません", color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.common_no_photos), color = MaterialTheme.colorScheme.outline)
             } else {
                 PhotoGrid(photos = photos, isEditable = false, onPhotoClick = onPhotoClick, onDeletePhoto = {})
             }
@@ -782,11 +782,11 @@ private fun OrphanedPhotoSelectionDialog(
     AppDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        title = { Text("迷子写真の再登録") },
+        title = { Text(stringResource(R.string.common_orphaned_photo_reattach_title)) },
         text = {
             AppDialogContent {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("紐付け先が不明な写真が見つかりました。この記録に登録する写真を選択してください。", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.common_orphaned_photo_reattach_msg), style = MaterialTheme.typography.bodySmall)
 
                     // 迷子写真を2列グリッドで提示
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -825,7 +825,7 @@ private fun OrphanedPhotoSelectionDialog(
         },
         confirmButton = {}, // 選択により即座に確定するため confirmButton は未使用
         dismissButton = {
-            AppDialogDismissButton(text = "キャンセル", onClick = onDismiss)
+            AppDialogDismissButton(text = stringResource(R.string.common_cancel), onClick = onDismiss)
         }
     )
 }

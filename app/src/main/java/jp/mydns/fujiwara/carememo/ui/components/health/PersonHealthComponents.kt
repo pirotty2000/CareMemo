@@ -518,7 +518,7 @@ private fun HealthRecordEditForm(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = if (IdLogic.isNew(recordId)) "新規作成" else "記録の編集",
+            text = if (IdLogic.isNew(recordId)) stringResource(R.string.common_create_new) else stringResource(R.string.common_edit_record),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -633,14 +633,14 @@ private fun HealthRecordDisplayCard(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
                     }
                     Text(
-                        text = "記録の詳細",
+                        text = stringResource(R.string.common_record_detail_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.offset(x = (-8).dp)
                     )
                 }
                 IconButton(onClick = onEditClick) {
-                    Icon(Icons.Rounded.EditNote, contentDescription = "編集")
+                    Icon(Icons.Rounded.EditNote, contentDescription = stringResource(R.string.common_edit))
                 }
             }
 
@@ -711,7 +711,7 @@ private fun HeightWeightDetailContent(
             val bmiLabel = status?.let { stringResource(HealthDisplayMapper.getBmiLabel(it)!!) } ?: "---"
             DetailRow(
                 label = stringResource(R.string.health_label_bmi),
-                value = "${HealthLogic.formatBmi(bmi)} ($bmiLabel)",
+                value = stringResource(R.string.health_item_bmi_format, HealthLogic.formatBmi(bmi), bmiLabel),
                 color = alertLevel.getDisplayColor(),
                 isBold = alertLevel != HealthAlertLevel.NORMAL
             )

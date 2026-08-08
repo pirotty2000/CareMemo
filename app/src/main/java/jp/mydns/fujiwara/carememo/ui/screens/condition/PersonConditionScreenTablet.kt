@@ -9,6 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -64,7 +68,7 @@ fun PersonConditionScreenTablet(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "所見記録",
+                            defaultTitle = stringResource(R.string.condition_title),
                             modifier = Modifier.testTag("PersonHeader_Title")
                         )
                     },
@@ -73,19 +77,19 @@ fun PersonConditionScreenTablet(
                             onClick = onBack,
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                         }
                     },
                     colors = appTopAppBarColors(),
                     actions = {
                         IconButton(onClick = { onSelectedIdChange(AppSpecifications.Id.NEW_RECORD_ID) }) {
-                            Icon(Icons.Rounded.Add, contentDescription = "新規追加")
+                            Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.common_create_new))
                         }
                         IconButton(
                             onClick = onShowPdfSettings,
                             modifier = Modifier.testTag("ConditionScreen_PdfButton")
                         ) {
-                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
+                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = stringResource(R.string.common_pdf_export))
                         }
                     }
                 )

@@ -39,6 +39,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
@@ -83,7 +85,7 @@ fun PersonMedicationScreenTablet(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "服薬管理",
+                            defaultTitle = stringResource(R.string.medication_title),
                             modifier = Modifier.testTag("PersonHeader")
                         )
                     },
@@ -92,7 +94,10 @@ fun PersonMedicationScreenTablet(
                             onClick = onBack,
                             modifier = Modifier.testTag("MedicationScreen_BackButton")
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.common_back)
+                            )
                         }
                     },
                     colors = appTopAppBarColors(),
@@ -101,7 +106,10 @@ fun PersonMedicationScreenTablet(
                             onClick = onShowPdfSettings,
                             modifier = Modifier.testTag("MedicationScreen_PdfButton")
                         ) {
-                            Icon(Icons.Rounded.PictureAsPdf, contentDescription = "PDF出力")
+                            Icon(
+                                Icons.Rounded.PictureAsPdf,
+                                contentDescription = stringResource(R.string.common_pdf_export)
+                            )
                         }
                     }
                 )

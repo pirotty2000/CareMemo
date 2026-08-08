@@ -107,7 +107,7 @@ fun GraphExpansionScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), modifier = Modifier.size(20.dp))
                     }
                     Text(
-                        text = "${detailState.person?.getMaskedName(isNameMaskingEnabled) ?: ""} 様 - ${stringResource(category.displayNameRes)}",
+                        text = "${detailState.person?.getMaskedName(isNameMaskingEnabled) ?: ""}${stringResource(R.string.common_honorific_suffix)}${stringResource(R.string.common_title_separator)}${stringResource(category.displayNameRes)}",
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
                         modifier = Modifier.testTag("GraphExpansion_HeaderTitle")

@@ -69,7 +69,7 @@ fun ConditionPhotoPreviewScreen(
                     PersonHeaderTitle(
                         person = person,
                         isNameMaskingEnabled = isNameMaskingEnabled,
-                        defaultTitle = "写真の確認"
+                        defaultTitle = stringResource(R.string.condition_photo_preview_title)
                     )
                 }
             )
@@ -97,7 +97,7 @@ fun ConditionPhotoPreviewScreen(
                     .memoryCachePolicy(CachePolicy.DISABLED)
                     .diskCachePolicy(CachePolicy.DISABLED)
                     .build(),
-                contentDescription = "プレビュー",
+                contentDescription = stringResource(R.string.common_preview),
                 modifier = Modifier.weight(1f).fillMaxWidth().testTag("PhotoPreview_Image"),
                 contentScale = ContentScale.Fit,
                 onError = {
@@ -108,7 +108,7 @@ fun ConditionPhotoPreviewScreen(
                 value = caption,
                 onValueChange = { caption = it },
                 type = AppTextFieldType.TEXT,
-                label = { Text("キャプション") },
+                label = { Text(stringResource(R.string.condition_photo_caption_label)) },
                 modifier = Modifier.fillMaxWidth().testTag("PhotoPreview_CaptionInput"),
                 singleLine = true,
                 enabled = !isProcessing
@@ -116,7 +116,7 @@ fun ConditionPhotoPreviewScreen(
 
             if (isProcessing) {
                 LoadingScreen(
-                    message = "画像を保存用に最適化しています...",
+                    message = stringResource(R.string.condition_msg_photo_optimizing),
                     modifier = Modifier.testTag("PhotoPreview_Loading")
                 )
             } else {
@@ -128,7 +128,7 @@ fun ConditionPhotoPreviewScreen(
                         onClick = { showDeleteConfirmDialog = true },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton")
                     ) {
-                        Text("削除")
+                        Text(stringResource(R.string.common_delete))
                     }
                     Button(
                         onClick = {
@@ -137,7 +137,7 @@ fun ConditionPhotoPreviewScreen(
                         },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
                     ) {
-                        Text("保存する")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
             }
@@ -152,7 +152,7 @@ fun ConditionPhotoPreviewScreen(
                 showDeleteConfirmDialog = false
                 navController.popBackStack()
             },
-            message = "写真を削除しますか？"
+            message = stringResource(R.string.condition_photo_delete_confirm_msg)
         )
     }
 

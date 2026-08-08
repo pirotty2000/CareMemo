@@ -166,7 +166,7 @@ fun BatchInputScreen(
                     PersonHeaderTitle(
                         person = uiState.person,
                         isNameMaskingEnabled = isNameMaskingEnabled,
-                        defaultTitle = stringResource(R.string.common_category_height_weight)
+                        defaultTitle = stringResource(R.string.health_batch_input_title)
                     )
                 },
                 navigationIcon = {

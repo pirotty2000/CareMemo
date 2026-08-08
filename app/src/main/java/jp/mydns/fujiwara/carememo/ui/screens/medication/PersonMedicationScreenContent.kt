@@ -104,7 +104,7 @@ fun PersonMedicationScreenContent(
                         onClick = onPreviousMonth,
                         modifier = Modifier.testTag("Medication_MonthPrev_Tablet")
                     ) {
-                        Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
+                        Icon(Icons.Rounded.ChevronLeft, contentDescription = stringResource(R.string.medication_btn_prev_month))
                     }
                     Text(
                         text = formatYearMonthHeader(selectedMonth),
@@ -116,7 +116,7 @@ fun PersonMedicationScreenContent(
                         onClick = onNextMonth,
                         modifier = Modifier.testTag("Medication_MonthNext_Tablet")
                     ) {
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.medication_btn_next_month))
                     }
                 }
 
@@ -154,7 +154,7 @@ fun PersonMedicationScreenContent(
                     onClick = onPreviousMonth,
                     modifier = Modifier.testTag("Medication_MonthPrev_Phone")
                 ) {
-                    Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
+                    Icon(Icons.Rounded.ChevronLeft, contentDescription = stringResource(R.string.medication_btn_prev_month))
                 }
                 Text(
                     text = formatYearMonthHeader(selectedMonth),
@@ -166,7 +166,7 @@ fun PersonMedicationScreenContent(
                     onClick = onNextMonth,
                     modifier = Modifier.testTag("Medication_MonthNext_Phone")
                 ) {
-                    Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.medication_btn_next_month))
                 }
             }
 

@@ -9,6 +9,7 @@
     <string name="common_delete">削除</string>
     <string name="common_add">追加</string>
     <string name="common_edit">編集</string>
+    <string name="common_preview">プレビュー</string>
     <string name="common_undo">元に戻す</string>
     <string name="common_pdf_export">PDF出力</string>
 
@@ -16,6 +17,46 @@
     <string name="common_confirm_discard_title">変更の破棄</string>
     <string name="common_confirm_discard_message">入力途中の内容がありますが、破棄して戻りますか？</string>
     <string name="common_discard">破棄して戻る</string>
+
+    <!-- 共通タイトル・アクション -->
+    <string name="common_record_detail_title">記録の詳細</string>
+    <string name="common_no_record">記録なし</string>
+    <string name="common_create_new">新規作成</string>
+    <string name="common_edit_record">記録の編集</string>
+    <string name="common_author_format">記録者: %1$s</string>
+    <string name="common_no_photos">写真がありません</string>
+    <string name="common_photo_count_format">写真 (%1$d/%2$d)</string>
+    <string name="common_orphaned_photo_reattach_title">迷子写真の再登録</string>
+    <string name="common_orphaned_photo_reattach_msg">紐付け先が不明な写真が見つかりました。この記録に登録する写真を選択してください。</string>
+
+    <!-- 健康記録用 -->
+    <string name="health_title">健康記録</string>
+    <string name="health_batch_input_title">健康一括入力</string>
+    <string name="health_graph_help_desc">目安の表示</string>
+    <string name="health_graph_expand_desc">拡大表示</string>
+    <string name="health_item_bmi_format">%1$s (%2$s)</string>
+
+    <!-- 所見メモ用 -->
+    <string name="condition_title">所見記録</string>
+    <string name="condition_label_title_optional">タイトル (任意)</string>
+    <string name="condition_label_author">記録者</string>
+    <string name="condition_label_memo">所見メモ</string>
+    <string name="condition_btn_mic_desc">音声入力</string>
+    <string name="condition_btn_gallery_desc">ギャラリーから追加</string>
+    <string name="condition_btn_camera_desc">写真を撮影</string>
+    <string name="condition_btn_capture">撮影</string>
+    <string name="condition_photo_preview_title">写真の確認</string>
+    <string name="condition_photo_caption_label">キャプション</string>
+    <string name="condition_msg_photo_optimizing">画像を保存用に最適化しています&#8230;</string>
+    <string name="condition_msg_no_photos_to_show">表示できる写真がありません</string>
+    <string name="condition_photo_delete_confirm_title">写真の削除</string>
+    <string name="condition_photo_delete_confirm_msg">この写真を削除してもよろしいですか？</string>
+
+    <!-- 服薬管理用 -->
+    <string name="medication_title">服薬管理</string>
+    <string name="medication_btn_prev_month">前月</string>
+    <string name="medication_btn_next_month">次月</string>
+    <string name="medication_history_day_format">%1$d(%2$s)</string>
 
     <!-- 日付・単位関連 -->
     <string name="common_era_ad">西暦</string>
@@ -30,6 +71,8 @@
     <string name="common_date_time_label">記録日時</string>
     <string name="common_age_suffix">%1$d 歳</string>
     <string name="common_birthday_format">%1$s生　%2$s</string>
+    <string name="common_honorific_suffix">様</string>
+    <string name="common_title_separator"> - </string>
 
     <!-- カテゴリ名 -->
     <string name="common_category_height_weight">身長・体重</string>
@@ -222,6 +265,10 @@
     <string name="common_error_delete">データの削除に失敗しました: %1$s</string>
     <string name="common_error_unknown">予期せぬエラーが発生しました: %1$s</string>
     <string name="common_error_no_space">空き容量が不足しています (%1$s)</string>
+    <string name="common_error_invalid_input">入力値が正しくありません</string>
+    <string name="common_error_out_of_range_height_weight">身長・体重が範囲外です</string>
+    <string name="common_error_out_of_range_vital">バイタルが範囲外です</string>
+    <string name="common_error_out_of_range_glucose">血糖値が範囲外です</string>
 
     <!-- PersonConditionScreen -->
     <string name="p_cond_msg_save_success">記録を保存しました</string>
@@ -231,6 +278,7 @@
     <string name="p_cond_msg_photo_delete_success">写真を削除しました</string>
     <string name="p_cond_err_title_photo">写真の取得に失敗</string>
     <string name="p_cond_err_photo_capture_failed">写真の取得または読み込みに失敗しました。</string>
+    <string name="p_cond_err_camera_launch_failed">カメラの起動準備に失敗しました。</string>
     <string name="p_cond_err_photo_process_failure">画像の処理に失敗しました。空き容量を確認してください。</string>
     <string name="p_cond_err_title_too_long">タイトルは50文字以内で入力してください</string>
     <string name="p_cond_err_empty_condition">内容を入力してください</string>

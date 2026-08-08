@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
@@ -72,7 +74,10 @@ fun PersonConditionScreenPhone(
                             onClick = { if (selectedId != null) onSelectedIdChange(null) else onBack() },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.common_back)
+                            )
                         }
                     },
                     actions = {
@@ -81,7 +86,7 @@ fun PersonConditionScreenPhone(
                                 onClick = onShowPdfSettings,
                                 modifier = Modifier.testTag("ConditionScreen_PdfButton")
                             ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF出力")
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = stringResource(R.string.common_pdf_export))
                             }
                         }
                     },
@@ -101,7 +106,7 @@ fun PersonConditionScreenPhone(
                     onClick = { onSelectedIdChange(AppSpecifications.Id.NEW_RECORD_ID) },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "新規追加")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.common_create_new))
                 }
             }
         },

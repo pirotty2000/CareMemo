@@ -139,7 +139,7 @@ fun PersonConditionScreen(
             conditionViewModel.onPhotoCaptured(tempPhotoUri!!, conditionState.selectedConditionId ?: "")
         } else {
             if (!success && tempPhotoUri != null) {
-                conditionViewModel.notifyPhotoError("写真の取得に失敗しました。")
+                conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_photo_capture_failed))
             }
         }
     }
@@ -181,7 +181,7 @@ fun PersonConditionScreen(
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
                 } catch (_: Exception) {
-                    conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
+                    conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_camera_launch_failed))
                 }
             },
             onPickPhotoClick = {
@@ -239,7 +239,7 @@ fun PersonConditionScreen(
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
                 } catch (_: Exception) {
-                    conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
+                    conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_camera_launch_failed))
                 }
             },
             // ギャラリー

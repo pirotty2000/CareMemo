@@ -26,10 +26,12 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
@@ -52,10 +54,10 @@ fun ConditionPhotoFullScreen(
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.testTag("PhotoFullScreen_Spinner"))
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("表示できる写真がありません", color = Color.White)
+                    Text(stringResource(R.string.condition_msg_no_photos_to_show), color = Color.White)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = { navController.popBackStack() }) {
-                        Text("戻る")
+                        Text(stringResource(R.string.common_back))
                     }
                 }
             }
@@ -105,7 +107,7 @@ fun ConditionPhotoFullScreen(
                 contentColor = Color.White
             )
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
 
         val currentPhoto = photos.getOrNull(pagerState.currentPage)

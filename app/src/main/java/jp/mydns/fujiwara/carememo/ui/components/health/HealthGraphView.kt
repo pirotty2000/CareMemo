@@ -169,7 +169,7 @@ private fun GraphTitleWithHelp(
             IconButton(onClick = { onShowHelp(helpContent) }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
-                    contentDescription = "目安の表示",
+                    contentDescription = stringResource(R.string.health_graph_help_desc),
                     modifier = Modifier.size(18.dp),
                     tint = Color.Gray
                 )
@@ -181,7 +181,7 @@ private fun GraphTitleWithHelp(
             IconButton(onClick = onExpand, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Rounded.ZoomOutMap,
-                    contentDescription = "拡大表示",
+                    contentDescription = stringResource(R.string.health_graph_expand_desc),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )

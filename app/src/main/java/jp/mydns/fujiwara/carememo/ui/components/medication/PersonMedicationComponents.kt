@@ -384,7 +384,7 @@ fun MedicationHistoryTable(
                 ) {
                     // 日付列 (例：2(木))
                     Text(
-                        text = "${day}($dayOfWeekText)",
+                        text = stringResource(R.string.medication_history_day_format, day, dayOfWeekText),
                         modifier = Modifier
                             .weight(1.0f)
                             .padding(end = 8.dp),

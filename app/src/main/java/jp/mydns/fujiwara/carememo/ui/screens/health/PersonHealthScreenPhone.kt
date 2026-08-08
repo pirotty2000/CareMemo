@@ -102,7 +102,7 @@ fun PersonHealthScreenPhone(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "健康記録"
+                            defaultTitle = stringResource(R.string.health_title)
                         )
                     },
                     // 戻る（←）アイコン

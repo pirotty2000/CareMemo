@@ -251,11 +251,11 @@ class BatchInputViewModel(
         val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
             val details = mutableListOf<String>()
             // どの項目のバリデーションが失敗したかを特定し、メッセージを構築する
-            if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("身長・体重が範囲外です")
-            if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("バイタルが範囲外です")
-            if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("血糖値が範囲外です")
+            if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_height_weight}")
+            if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_vital}")
+            if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_glucose}")
             
-            if (details.isEmpty()) listOf("入力値が正しくありません") else listOf(details.joinToString("\n"))
+            if (details.isEmpty()) listOf("__RES__${R.string.common_error_invalid_input}") else listOf(details.joinToString("、"))
         } else {
             emptyList()
         }
