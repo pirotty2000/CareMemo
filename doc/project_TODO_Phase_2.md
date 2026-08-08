@@ -56,7 +56,7 @@ Material 3 の特性を活かし、開発効率とユーザー体験を向上さ
 ## 🛠 継続的改善タスク（低重要度）
 既存コードの改修にあわせて順次適用する項目です。
 
-- [ ] **collectAsStateWithLifecycle への完全置換**: ライフサイクルに応じた安全な状態収集を徹底。
+- [x] **collectAsStateWithLifecycle への完全置換**: ライフサイクルに応じた安全な状態収集を徹底。
 - [ ] **リソース ID への文言集約**: ハードコードされた日本語を `strings.xml` へ順次移行。
 - [ ] **KDoc の継続的な整備**: Logic, Repository, ViewModel 層のドキュメント化を完遂する。
 

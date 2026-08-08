@@ -11,12 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
 import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewEvent
@@ -33,7 +33,7 @@ fun OrphanedPhotoManagementScreen(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var photoToDelete by remember { mutableStateOf<OrphanedPhotoInfo?>(null) }
 
     // ViewModel からの画面遷移イベントを監視

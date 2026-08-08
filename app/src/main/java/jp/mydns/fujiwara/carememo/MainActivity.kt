@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -69,13 +70,13 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val themeSetting by userSettingsRepository.themeSetting.collectAsState(initial = ThemeSetting.SYSTEM)
+            val themeSetting by userSettingsRepository.themeSetting.collectAsStateWithLifecycle(initialValue = ThemeSetting.SYSTEM)
             CareMemoTheme(themeSetting = themeSetting) {
                 val navController = rememberNavController()
                 val widthSizeClass = calculateWindowSizeClass(this).widthSizeClass
                 var isAppLocked by rememberSaveable { mutableStateOf(false) }
-                val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = false)
-                val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 5)
+                val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsStateWithLifecycle(initialValue = false)
+                val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsStateWithLifecycle(initialValue = 5)
                 var lastPausedTime by rememberSaveable { mutableLongStateOf(0L) }
 
                 val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
