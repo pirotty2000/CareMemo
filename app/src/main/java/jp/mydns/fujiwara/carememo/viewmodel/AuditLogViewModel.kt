@@ -8,6 +8,7 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogLogic
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -65,9 +66,9 @@ class AuditLogViewModel(
         ) { (filtered, features, results) ->
             updateUiState { current ->
                 current.copy(
-                    filteredLogs = filtered,
-                    availableFeatures = features,
-                    availableResults = results
+                    filteredLogs = filtered.toImmutableList(),
+                    availableFeatures = features.toImmutableList(),
+                    availableResults = results.toImmutableList()
                 )
             }
         }

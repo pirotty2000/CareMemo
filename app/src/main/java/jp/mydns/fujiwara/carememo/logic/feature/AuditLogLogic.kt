@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 /**
  * 監査ログ画面全体の表示状態を管理するデータクラス。
@@ -69,7 +68,7 @@ object AuditLogLogic {
         feature: String?,
         result: String?,
         ascending: Boolean
-    ): ImmutableList<AuditLog> {
+    ): List<AuditLog> {
         var filtered = logs
 
         // 1. 機能で絞り込み
@@ -83,11 +82,11 @@ object AuditLogLogic {
         }
 
         // 3. 日時でソート
-        return (if (ascending) {
+        return if (ascending) {
             filtered.sortedBy { it.timestamp }
         } else {
             filtered.sortedByDescending { it.timestamp }
-        }).toImmutableList()
+        }
     }
 
     /**
@@ -97,8 +96,8 @@ object AuditLogLogic {
      * @param logs 全ログリスト
      * @return アルファベット/五十音順にソートされたユニークな機能名リスト
      */
-    fun extractAvailableFeatures(logs: List<AuditLog>): ImmutableList<String> {
-        return logs.map { it.featureName }.distinct().sorted().toImmutableList()
+    fun extractAvailableFeatures(logs: List<AuditLog>): List<String> {
+        return logs.map { it.featureName }.distinct().sorted()
     }
 
     /**
@@ -108,7 +107,7 @@ object AuditLogLogic {
      * @param logs 全ログリスト
      * @return アルファベット順にソートされたユニークな結果タイプリスト
      */
-    fun extractAvailableResults(logs: List<AuditLog>): ImmutableList<String> {
-        return logs.map { it.resultType }.distinct().sorted().toImmutableList()
+    fun extractAvailableResults(logs: List<AuditLog>): List<String> {
+        return logs.map { it.resultType }.distinct().sorted()
     }
 }

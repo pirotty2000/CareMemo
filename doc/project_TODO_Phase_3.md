@@ -29,7 +29,7 @@
     - **理由**: 保存ボタンの活性制御は UI 演出ではなく業務判断であるため。
 
 ### 1.2. 所見メモ (Condition) 関連
-- [ ] **変更検知 (`isChanged`) の ViewModel 移行**:
+- [x] **変更検知 (`isChanged`) の ViewModel 移行**:
     - `PersonConditionComponents.kt` 内の `isChanged` 計算を ViewModel へ移動。
     - 健康記録と同様に、`UiState` での状態管理に切り替える。
 
@@ -93,4 +93,4 @@ ViewModel へのロジック集約に伴い、その振る舞いをより堅牢�
 - [x] `SettingsScreen.kt` 等: `ActivityResult API` によるファイル・カメラ連携。
 
 ---
-最終更新日: 2026/08/09
+最終更新日: 2026/08/10
