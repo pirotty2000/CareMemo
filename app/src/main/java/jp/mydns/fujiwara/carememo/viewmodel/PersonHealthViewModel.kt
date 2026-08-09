@@ -18,7 +18,9 @@ import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
@@ -128,7 +130,149 @@ class PersonHealthViewModel(
     }
 
     fun setSelectedRecordId(id: String?) {
-        updateUiState { it.copy(selectedRecordId = id) }
+        updateUiState {
+            val next = it.copy(selectedRecordId = id)
+            if (id == null) {
+                next.copy(
+                    isEditing = false,
+                    editInput = HealthEditInput(),
+                    initialSnapshot = null,
+                    isChanged = false,
+                    isSaveEnabled = false
+                )
+            } else if (IdLogic.isNew(id)) {
+                // 新規作成時は即座に編集セッションを開始
+                val latestHeight = if (it.currentCategory == Category.HEIGHT_AND_WEIGHT) {
+                    it.records.filterIsInstance<HeightAndWeight>()
+                        .filter { it.height != null }
+                        .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
+                } else ""
+
+                val initialInput = HealthEditInput(
+                    heightText = latestHeight,
+                    recordTime = Instant.now()
+                )
+                next.copy(
+                    isEditing = true,
+                    editInput = initialInput,
+                    initialSnapshot = initialInput,
+                    isChanged = false,
+                    isSaveEnabled = false
+                )
+            } else {
+                // 既存レコード選択時は閲覧モードから開始
+                next.copy(isEditing = false)
+            }
+        }
+    }
+
+    /**
+     * 現在選択されているレコードの編集セッションを開始します。
+     */
+    fun startEditSession() {
+        val recordId = currentState.selectedRecordId ?: return
+        val record = currentState.records.find { it.id == recordId } ?: return
+
+        val initialInput = HealthEditInput(
+            heightText = (record as? HeightAndWeight)?.height?.toString() ?: "",
+            weightText = (record as? HeightAndWeight)?.weight?.toString() ?: "",
+            bpSystolicText = (record as? BpAndPulse)?.bpSystolic?.toString() ?: "",
+            bpDiastolicText = (record as? BpAndPulse)?.bpDiastolic?.toString() ?: "",
+            satText = (record as? BpAndPulse)?.sat?.toString() ?: "",
+            pulseText = (record as? BpAndPulse)?.pulse?.toString() ?: "",
+            bodyTemperatureText = (record as? BpAndPulse)?.bodyTemperature?.toString() ?: "",
+            glucoseText = (record as? GlucoseAndHbA1c)?.glucose?.toString() ?: "",
+            hba1cText = (record as? GlucoseAndHbA1c)?.hba1c?.toString() ?: "",
+            recordTime = record.recordTime
+        )
+
+        updateUiState {
+            it.copy(
+                isEditing = true,
+                editInput = initialInput,
+                initialSnapshot = initialInput,
+                isChanged = false,
+                isSaveEnabled = false
+            )
+        }
+    }
+
+    /**
+     * 編集をキャンセルします。新規なら閉じ、既存なら閲覧モードに戻ります。
+     */
+    fun cancelEditSession() {
+        val recordId = currentState.selectedRecordId
+        if (recordId != null && IdLogic.isNew(recordId)) {
+            setSelectedRecordId(null)
+        } else {
+            updateUiState { it.copy(isEditing = false) }
+        }
+    }
+
+    /**
+     * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
+     */
+    fun updateEditInput(update: (HealthEditInput) -> HealthEditInput) {
+        updateUiState { state ->
+            val nextInput = update(state.editInput)
+            val isChanged = nextInput != state.initialSnapshot
+
+            // バリデーション
+            val validationResult = PersonHealthLogic.validateInputs(state.currentCategory, nextInput.toValidationMap())
+            val isDateTimeValid = nextInput.recordTime != null
+            val isSaveEnabled = (validationResult == HealthInputValidationResult.SUCCESS) && isDateTimeValid && isChanged
+
+            state.copy(
+                editInput = nextInput,
+                isChanged = isChanged,
+                isSaveEnabled = isSaveEnabled
+            )
+        }
+    }
+
+    /**
+     * 現在の入力内容で保存を実行します。
+     */
+    fun saveCurrentEdit() {
+        val input = currentState.editInput
+        val category = currentState.currentCategory
+        val recordId = currentState.selectedRecordId ?: ""
+        val recordTime = input.recordTime ?: return
+
+        val values = when (category) {
+            Category.HEIGHT_AND_WEIGHT -> mapOf(
+                "height" to input.heightText.toDoubleOrNull(),
+                "weight" to input.weightText.toDoubleOrNull()
+            )
+            Category.BP_AND_PULSE -> mapOf(
+                "bpSystolic" to input.bpSystolicText.toIntOrNull(),
+                "bpDiastolic" to input.bpDiastolicText.toIntOrNull(),
+                "sat" to input.satText.toIntOrNull(),
+                "pulse" to input.pulseText.toIntOrNull(),
+                "bodyTemperature" to input.bodyTemperatureText.toDoubleOrNull()
+            )
+            Category.GLUCOSE_AND_HBA1C -> mapOf(
+                "glucose" to input.glucoseText.toIntOrNull(),
+                "hba1c" to input.hba1cText.toDoubleOrNull()
+            )
+            else -> emptyMap()
+        }
+
+        saveRecord(category, recordId, recordTime, values)
+    }
+
+    private fun HealthEditInput.toValidationMap(): Map<String, String> {
+        return mapOf(
+            "height" to heightText,
+            "weight" to weightText,
+            "bpSystolic" to bpSystolicText,
+            "bpDiastolic" to bpDiastolicText,
+            "sat" to satText,
+            "pulse" to pulseText,
+            "bodyTemperature" to bodyTemperatureText,
+            "glucose" to glucoseText,
+            "hba1c" to hba1cText
+        )
     }
 
     private fun refreshRecords(personId: String?, category: Category) {

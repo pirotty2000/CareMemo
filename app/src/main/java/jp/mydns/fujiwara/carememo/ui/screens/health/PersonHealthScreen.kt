@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
@@ -106,13 +107,10 @@ fun PersonHealthScreen(
     if (isExpanded) {
         // Tablet
         PersonHealthScreenTablet(
-            currentCategory = detailState.currentCategory,
-            records = healthState.records,
-            isLoading = healthState.isLoading,
+            uiState = healthState,
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            selectedRecordId = healthState.selectedRecordId,
             onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
             onBack = { detailViewModel.navigateBackToMain() },
             onExpandGraph = { index ->
@@ -123,24 +121,21 @@ fun PersonHealthScreen(
             onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { cat, recordId, time, values -> 
-                healthViewModel.saveRecord(cat, recordId, time, values) 
-            },
+            onEditClick = { healthViewModel.startEditSession() },
+            onEditInputUpdate = { healthViewModel.updateEditInput(it) },
+            onSaveClick = { healthViewModel.saveCurrentEdit() },
+            onCancelEdit = { healthViewModel.cancelEditSession() },
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
     } else {
         // Phone
         PersonHealthScreenPhone(
-            currentCategory = detailState.currentCategory,
-            records = healthState.records,
-            isLoading = healthState.isLoading,
+            uiState = healthState,
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            preferredShowHistory = healthState.preferredShowHistory,
             onPreferredShowHistoryChange = { healthViewModel.updatePreferredShowHistory(it) },
-            selectedRecordId = healthState.selectedRecordId,
             onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
             onBack = { detailViewModel.navigateBackToMain() },
             onExpandGraph = { index ->
@@ -151,9 +146,10 @@ fun PersonHealthScreen(
             onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { cat, recordId, time, values -> 
-                healthViewModel.saveRecord(cat, recordId, time, values) 
-            },
+            onEditClick = { healthViewModel.startEditSession() },
+            onEditInputUpdate = { healthViewModel.updateEditInput(it) },
+            onSaveClick = { healthViewModel.saveCurrentEdit() },
+            onCancelEdit = { healthViewModel.cancelEditSession() },
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )

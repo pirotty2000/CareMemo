@@ -41,6 +41,8 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
@@ -52,26 +54,25 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import kotlinx.collections.immutable.ImmutableList
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenTablet(
-    currentCategory: Category,
-    records: ImmutableList<HistoryRecord>,
-    isLoading: Boolean,
+    uiState: PersonHealthUiState,
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    selectedRecordId: String?,
     onSelectedRecordIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onExpandGraph: (Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
+    onSaveClick: () -> Unit,
+    onCancelEdit: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
@@ -116,7 +117,7 @@ fun PersonHealthScreenTablet(
                     }
                 )
                 CategorySelectorBar(
-                    currentCategory = currentCategory,
+                    currentCategory = uiState.currentCategory,
                     personCategorySummary = personCategorySummary,
                     onCategoryClick = onNavigateToCategory,
                     modifier = Modifier.testTag("CategorySelectorBar")
@@ -130,7 +131,7 @@ fun PersonHealthScreenTablet(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {
-                        if (selectedRecordId == it.id) onSelectedRecordIdChange(null)
+                        if (uiState.selectedRecordId == it.id) onSelectedRecordIdChange(null)
                         onDeleteRecord(it)
                     }
                 }
@@ -143,7 +144,7 @@ fun PersonHealthScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId == null && !isLoading) {
+            if ((uiState.records.isEmpty() && uiState.selectedRecordId == null && !uiState.isLoading)) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
@@ -154,17 +155,16 @@ fun PersonHealthScreenTablet(
             } else {
                 PersonHealthScreenContent(
                     isExpanded = true,
-                    records = records,
-                    isLoading = isLoading,
-                    currentCategory = currentCategory,
-                    preferredShowHistory = true,
+                    uiState = uiState,
                     onPreferredShowHistoryChange = {},
-                    selectedRecordId = selectedRecordId,
                     onSelectedRecordIdChange = onSelectedRecordIdChange,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = { record -> recordToDelete = record },
                     onExpandGraph = onExpandGraph,
-                    onSaveRecord = onSaveRecord,
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit,
                     isAnyDialogOpen = recordToDelete != null
                 )
             }
@@ -179,20 +179,25 @@ fun PersonHealthScreenTabletPreview(
 ) {
     CareMemoTheme {
         PersonHealthScreenTablet(
-            currentCategory = state.category,
-            records = state.records,
-            isLoading = state.isLoading,
+            uiState = PersonHealthUiState(
+                currentCategory = state.category,
+                records = state.records,
+                isLoading = state.isLoading,
+                selectedRecordId = state.selectedRecordId
+            ),
             currentPerson = state.person,
             personCategorySummary = state.summary,
             isNameMaskingEnabled = false,
-            selectedRecordId = state.selectedRecordId,
             onSelectedRecordIdChange = {},
             onBack = {},
             onExpandGraph = {},
             onNavigateToCategory = {},
             onShowPdfSettings = {},
             onDeleteRecord = {},
-            onSaveRecord = { _, _, _, _ -> },
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

@@ -23,6 +23,10 @@ import java.util.UUID
  * @param preferredShowHistory グラフよりも履歴リストを優先して表示するかどうかの設定
  * @param selectedRecordId 現在詳細表示または編集対象として選択されているレコードのID
  * @param isLoading データの読み込み中フラグ
+ * @param editInput 現在の入力値
+ * @param initialSnapshot 編集開始時のスナップショット（変更検知用）
+ * @param isChanged 初期状態から変更があるかどうか
+ * @param isSaveEnabled 保存ボタンを活性化できる状態（バリデーション成功かつ変更あり）かどうか
  */
 @Immutable
 data class PersonHealthUiState(
@@ -31,8 +35,30 @@ data class PersonHealthUiState(
     val records: ImmutableList<HistoryRecord> = persistentListOf(),
     val preferredShowHistory: Boolean = true,
     val selectedRecordId: String? = null,
-    override val isLoading: Boolean = false
+    override val isLoading: Boolean = false,
+    val isEditing: Boolean = false,
+    val editInput: HealthEditInput = HealthEditInput(),
+    val initialSnapshot: HealthEditInput? = null,
+    val isChanged: Boolean = false,
+    val isSaveEnabled: Boolean = false
 ) : PersonAwareState
+
+/**
+ * 健康記録の入力フォーム状態。
+ */
+@Immutable
+data class HealthEditInput(
+    val heightText: String = "",
+    val weightText: String = "",
+    val bpSystolicText: String = "",
+    val bpDiastolicText: String = "",
+    val satText: String = "",
+    val pulseText: String = "",
+    val bodyTemperatureText: String = "",
+    val glucoseText: String = "",
+    val hba1cText: String = "",
+    val recordTime: Instant? = null
+)
 
 /**
  * View Event：PersonHealthViewEvent

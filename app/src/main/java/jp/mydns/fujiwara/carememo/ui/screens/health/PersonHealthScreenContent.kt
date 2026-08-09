@@ -53,6 +53,8 @@ import java.time.Instant
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
@@ -88,26 +90,22 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 @Composable
 fun PersonHealthScreenContent(
     isExpanded: Boolean,
-    records: ImmutableList<HistoryRecord>,
-    isLoading: Boolean,
-    currentCategory: Category,
-    preferredShowHistory: Boolean,
+    uiState: PersonHealthUiState,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
-    selectedRecordId: String?,
     onSelectedRecordIdChange: (String?) -> Unit,
     onItemClick: (HistoryRecord) -> Unit,
     onDeleteSwipe: (HistoryRecord) -> Unit,
     onExpandGraph: (Int) -> Unit,
-    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
+    onSaveClick: () -> Unit,
+    onCancelEdit: () -> Unit,
     isAnyDialogOpen: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val historyListState = rememberLazyListState()
 
-    // HistoryRecord のリストを安定化
-    val historyRecords = records
-
-    if (isLoading) {
+    if (uiState.isLoading) {
         LoadingScreen(modifier = modifier)
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
@@ -115,27 +113,27 @@ fun PersonHealthScreenContent(
             // 左側: 履歴リスト (比率 1)
             Box(modifier = Modifier.weight(1f).testTag("HealthScreen_HistoryList")) {
                 PersonHistoryList(
-                    records = historyRecords,
-                    selectedRecordId = selectedRecordId,
+                    records = uiState.records,
+                    selectedRecordId = uiState.selectedRecordId,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = onDeleteSwipe,
                     isAnyDialogOpen = isAnyDialogOpen,
                     lazyListState = historyListState
                 ) { record ->
-                    HealthHistoryItemBody(category = currentCategory, record = record)
+                    HealthHistoryItemBody(category = uiState.currentCategory, record = record)
                 }
                 VerticalScrollIndicator(lazyListState = historyListState)
             }
             // 右側: グラフ または 詳細入力 (比率 1.5)
             Box(modifier = Modifier.weight(1.5f)) {
-                if (selectedRecordId != null) {
+                if (uiState.selectedRecordId != null) {
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
-                            category = currentCategory,
-                            recordId = selectedRecordId,
-                            records = historyRecords,
-                            onCancel = { onSelectedRecordIdChange(null) },
-                            onSaveRecord = onSaveRecord
+                            uiState = uiState,
+                            onCancel = onCancelEdit,
+                            onEditClick = onEditClick,
+                            onEditInputUpdate = onEditInputUpdate,
+                            onSaveClick = onSaveClick
                         )
                     }
                 } else {
@@ -143,13 +141,13 @@ fun PersonHealthScreenContent(
                     Box(modifier = Modifier.fillMaxSize().testTag("HealthScreen_GraphArea")) {
                         Column(
                             modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(scrollState)
-                                    .padding(end = 12.dp)
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                                .padding(end = 12.dp)
                         ) {
                             HealthGraphView(
-                                records = records,
-                                categoryType = currentCategory,
+                                records = uiState.records,
+                                categoryType = uiState.currentCategory,
                                 onExpandGraph = onExpandGraph
                             )
                         }
@@ -162,15 +160,15 @@ fun PersonHealthScreenContent(
         }
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
-        if (selectedRecordId != null) {
+        if (uiState.selectedRecordId != null) {
             Box(modifier = modifier.testTag("HealthScreen_InputForm")) {
-            HealthRecordDetailPane(
-                category = currentCategory,
-                recordId = selectedRecordId,
-                records = historyRecords,
-                onCancel = { onSelectedRecordIdChange(null) },
-                onSaveRecord = onSaveRecord
-            )
+                HealthRecordDetailPane(
+                    uiState = uiState,
+                    onCancel = onCancelEdit,
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick
+                )
             }
         } else {
             Column(
@@ -182,7 +180,7 @@ fun PersonHealthScreenContent(
                     modifier = Modifier.fillMaxWidth().testTag("HealthScreen_HistoryGraphSwitch")
                 ) {
                     SegmentedButton(
-                        selected = preferredShowHistory,
+                        selected = uiState.preferredShowHistory,
                         onClick = { onPreferredShowHistoryChange(true) },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                         icon = { Icon(Icons.Rounded.History, contentDescription = null) },
@@ -193,7 +191,7 @@ fun PersonHealthScreenContent(
                         modifier = Modifier.testTag("HealthScreen_Tab_History")
                     ) { Text(stringResource(R.string.common_tab_history)) }
                     SegmentedButton(
-                        selected = !preferredShowHistory,
+                        selected = !uiState.preferredShowHistory,
                         onClick = { onPreferredShowHistoryChange(false) },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                         icon = { Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null) },
@@ -208,17 +206,17 @@ fun PersonHealthScreenContent(
                 // コンテンツ表示
                 Box(modifier = Modifier.weight(1f)) {
 
-                    if (preferredShowHistory) {
+                    if (uiState.preferredShowHistory) {
                         // 履歴表示
                         Box(modifier = Modifier.testTag("HealthScreen_HistoryList")) {
                             PersonHistoryList(
-                                records = historyRecords,
+                                records = uiState.records,
                                 onItemClick = onItemClick,
                                 onDeleteSwipe = onDeleteSwipe,
                                 isAnyDialogOpen = isAnyDialogOpen,
                                 lazyListState = historyListState
                             ) { record ->
-                                HealthHistoryItemBody(category = currentCategory, record = record)
+                                HealthHistoryItemBody(category = uiState.currentCategory, record = record)
                             }
                         }
                         VerticalScrollIndicator(lazyListState = historyListState)
@@ -228,13 +226,13 @@ fun PersonHealthScreenContent(
                         Box(modifier = Modifier.fillMaxSize().testTag("HealthScreen_GraphArea")) {
                             Column(
                                 modifier = Modifier
-                                        .fillMaxSize()
-                                        .verticalScroll(scrollState)
-                                        .padding(end = 16.dp)
+                                    .fillMaxSize()
+                                    .verticalScroll(scrollState)
+                                    .padding(end = 16.dp)
                             ) {
                                 HealthGraphView(
-                                    records = records,
-                                    categoryType = currentCategory,
+                                    records = uiState.records,
+                                    categoryType = uiState.currentCategory,
                                     onExpandGraph = onExpandGraph
                                 )
                                 Spacer(modifier = Modifier.height(80.dp))
@@ -262,17 +260,22 @@ private fun PreviewPersonHealthScreenContent(
     CareMemoTheme {
         PersonHealthScreenContent(
             isExpanded = false,
-            records = state.records,
-            isLoading = state.isLoading,
-            currentCategory = state.category,
-            preferredShowHistory = state.preferredShowHistory,
+            uiState = PersonHealthUiState(
+                records = state.records,
+                isLoading = state.isLoading,
+                currentCategory = state.category,
+                preferredShowHistory = state.preferredShowHistory,
+                selectedRecordId = state.selectedRecordId
+            ),
             onPreferredShowHistoryChange = {},
-            selectedRecordId = state.selectedRecordId,
             onSelectedRecordIdChange = {},
             onItemClick = {},
             onDeleteSwipe = {},
             onExpandGraph = {},
-            onSaveRecord = { _, _, _, _ -> },
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
             isAnyDialogOpen = false
         )
     }

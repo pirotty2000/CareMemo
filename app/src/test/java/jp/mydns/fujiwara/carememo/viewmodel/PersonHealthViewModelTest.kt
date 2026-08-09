@@ -147,4 +147,50 @@ class PersonHealthViewModelTest {
         
         verify { healthRepository.getGlucoseAndHbA1cByPersonId("1") is kotlinx.coroutines.flow.Flow<*> }
     }
+
+    @Test
+    fun LG_05_edit_session_isChanged_tracking() = runTest {
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 1. 新規レコードセッション開始
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        
+        viewModel.uiState.test {
+            val initialState = awaitItem()
+            assertEquals(true, initialState.isEditing)
+            assertEquals(false, initialState.isChanged)
+            assertEquals(false, initialState.isSaveEnabled)
+
+            // 2. 値を変更
+            viewModel.updateEditInput { it.copy(heightText = "170.5") }
+            val changedState = awaitItem()
+            assertEquals(true, changedState.isChanged)
+            assertEquals(true, changedState.isSaveEnabled) // バリデーション成功かつ変更あり
+
+            // 3. 値を元に戻す
+            viewModel.updateEditInput { it.copy(heightText = "") }
+            val revertedState = awaitItem()
+            assertEquals(false, revertedState.isChanged)
+            assertEquals(false, revertedState.isSaveEnabled)
+            
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun LG_06_edit_session_latest_height_inheritance() = runTest {
+        // 前回の記録がある状態を作る
+        val lastRecord = HeightAndWeight(id = "prev", personId = "1", height = 165.0, weight = 60.0, recordTime = Instant.now().minusSeconds(3600))
+        every { healthRepository.getHeightAndWeightByPersonId("1") } returns flowOf(listOf(lastRecord))
+
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 新規作成開始
+        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+
+        assertEquals("165.0", viewModel.uiState.value.editInput.heightText)
+    }
 }
