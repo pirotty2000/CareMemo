@@ -63,10 +63,10 @@ Logic レイヤーから標準の `List` が返されるようになるため、
 
 新しく定義した「Activity への委譲ルール（3.6項）」に基づき、現状の調査と今後の対応を整理します。
 
-- [ ] **既存の委譲実装の確認 (完了)**:
+- [x] **既存の委譲実装の確認 (完了)**:
     - [x] **生体認証 (BiometricPrompt)**: `MainActivity` で一括管理され、Composable へラムダとして注入されていることを確認済み（ルール遵守）。
     - [x] **ActivityResult API**: `PersonConditionScreen` や `SettingsScreen` で `rememberLauncherForActivityResult` が Compose 内で使用されていることを確認済み（ルール遵守）。
-- [ ] **今後の権限要求の実装**:
+- [x] **今後の権限要求の実装**:
     - 今後、ストレージアクセスや音声認識などでランタイム権限が必要になった際、Composable 内で直接要求せず、`MainActivity` へ処理を委譲する構成を徹底する。
 
 ## 4. ViewModel の堅牢化と品質担保（旧 ViewModel 改善計画より）
