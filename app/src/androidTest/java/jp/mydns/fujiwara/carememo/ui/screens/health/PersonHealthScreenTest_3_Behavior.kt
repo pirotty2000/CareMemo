@@ -14,6 +14,8 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -51,7 +53,7 @@ class PersonHealthScreenTest_3_Behavior {
     ))
     private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(
         personId = "1",
-        records = emptyList()
+        records = persistentListOf()
     ))
 
     @Before
@@ -115,7 +117,7 @@ class PersonHealthScreenTest_3_Behavior {
 
     @Test
     fun bh02_graph_expansion_navigation() {
-        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
+        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords.toImmutableList())
         setContent()
         
         // グラフタブに切り替え
@@ -142,7 +144,7 @@ class PersonHealthScreenTest_3_Behavior {
 
     @Test
     fun bh04_pdf_output_action() {
-        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
+        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords.toImmutableList())
         setContent()
         
         // PDFボタンタップ（タグで指定）
@@ -154,7 +156,7 @@ class PersonHealthScreenTest_3_Behavior {
 
     @Test
     fun bh05_return_from_expansion_maintains_state() {
-        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
+        healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords.toImmutableList())
         setContent()
         
         // グラフタブに切り替え

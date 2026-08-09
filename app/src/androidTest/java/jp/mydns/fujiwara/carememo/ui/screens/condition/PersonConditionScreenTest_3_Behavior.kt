@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -86,7 +87,7 @@ class PersonConditionScreenTest_3_Behavior {
         // 一覧画面が表示されるように、selectedConditionId を明示的に null にする
         conditionUiStateFlow.value = conditionUiStateFlow.value.copy(
             selectedConditionId = null,
-            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now()))
+            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now())).toImmutableList()
         )
         setContent()
 
