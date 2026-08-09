@@ -30,7 +30,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
-import java.time.Instant
 
 /**
  * 利用者所見記録画面
@@ -48,7 +47,6 @@ fun PersonConditionScreen(
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
-    val defaultRecorderName by conditionViewModel.defaultRecorderName.collectAsStateWithLifecycle()
 
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
@@ -158,19 +156,13 @@ fun PersonConditionScreen(
     if (isExpanded) {
         // Tablet
         PersonConditionScreenTablet(
+            uiState = conditionState,
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
-            records = conditionState.filteredRecords,
-            isLoading = conditionState.isLoading,
-            searchQuery = conditionState.searchQuery,
-            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
-            conditionPhotoMap = conditionState.conditionPhotoMap,
-            photos = conditionState.currentConditionPhotos,
-            isProcessing = conditionState.isProcessing,
             isAnyDialogOpen = isAnyDialogOpen,
-            defaultRecorderName = defaultRecorderName,
-            selectedId = conditionState.selectedConditionId,
+            modifier = modifier,
+            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
             onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
             onBack = { detailViewModel.navigateBackToMain() },
             onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
@@ -199,35 +191,28 @@ fun PersonConditionScreen(
                 }
             },
             onDeleteRecord = { recordToDelete = it },
-            onSaveRecord = { cId, s, onSuccess -> 
-                conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
-            },
+            onEditClick = { conditionViewModel.startEditSession() },
+            onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
+            onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
+            onCancelEdit = { conditionViewModel.cancelEditSession() },
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
                 conditionViewModel.reattachOrphanedPhoto(cid, info)
             },
-            orphanedPhotos = conditionState.availableOrphanedPhotos,
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
-            snackbarHostState = snackbarHostState,
-            modifier = modifier
+            snackbarHostState = snackbarHostState
         )
     } else {
         // Phone
         PersonConditionScreenPhone(
+            uiState = conditionState,
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
-            records = conditionState.filteredRecords,
-            isLoading = conditionState.isLoading,
-            searchQuery = conditionState.searchQuery,
-            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
-            conditionPhotoMap = conditionState.conditionPhotoMap,
-            photos = conditionState.currentConditionPhotos,
-            isProcessing = conditionState.isProcessing,
             isAnyDialogOpen = isAnyDialogOpen,
-            defaultRecorderName = defaultRecorderName,
-            selectedId = conditionState.selectedConditionId,
+            modifier = modifier,
+            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
             onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
             onBack = { detailViewModel.navigateBackToMain() },
             onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
@@ -261,10 +246,10 @@ fun PersonConditionScreen(
             },
             // 削除
             onDeleteRecord = { recordToDelete = it },
-            // 保存
-            onSaveRecord = { cId, s, onSuccess ->
-                conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess) 
-            },
+            onEditClick = { conditionViewModel.startEditSession() },
+            onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
+            onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
+            onCancelEdit = { conditionViewModel.cancelEditSession() },
             // サムネイルのごみ箱アイコン
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             // 迷子写真の再アタッチ処理
@@ -272,12 +257,9 @@ fun PersonConditionScreen(
                 val cid = conditionState.selectedConditionId ?: ""
                 conditionViewModel.reattachOrphanedPhoto(cid, info)
             },
-            // 迷子写真のコレクション
-            orphanedPhotos = conditionState.availableOrphanedPhotos,
             // マイク
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
-            snackbarHostState = snackbarHostState,
-            modifier = modifier
+            snackbarHostState = snackbarHostState
         )
     }
 
@@ -361,17 +343,14 @@ fun PersonConditionScreen(
                 color = MaterialTheme.colorScheme.surface
             ) {
                 jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane(
-                    conditionId = conditionState.selectedConditionId!!,
-                    records = conditionState.records,
-                    photos = conditionState.currentConditionPhotos,
-                    isProcessing = conditionState.isProcessing,
-                    defaultRecorderName = defaultRecorderName,
-                    onSaveRecord = { cId: String, s, onSuccess ->
-                        conditionViewModel.saveRecord(cId, s.title, s.condition, s.author, s.recordTime ?: Instant.now(), onSuccess)
-                    },
+                    uiState = conditionState,
                     onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
                     onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
                     onCancel = { conditionViewModel.setSelectedConditionId(null) },
+                    onEditClick = { conditionViewModel.startEditSession() },
+                    onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
+                    onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
+                    onCancelEdit = { conditionViewModel.cancelEditSession() },
                     onAddPhotoClick = {
                         try {
                             val uri = ImageUtils.getTempPhotoUri(context)
@@ -390,7 +369,6 @@ fun PersonConditionScreen(
                         val cid = conditionState.selectedConditionId ?: ""
                         conditionViewModel.reattachOrphanedPhoto(cid, info)
                     },
-                    orphanedPhotos = conditionState.availableOrphanedPhotos,
                     onNavigateToFullScreen = { photoId, condId ->
                         conditionViewModel.navigateToPhotoFullScreen(photoId, condId)
                     },

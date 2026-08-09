@@ -49,6 +49,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
@@ -88,34 +89,26 @@ import kotlinx.collections.immutable.persistentListOf
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
-    records: ImmutableList<ConditionAtVisit>,
-    isLoading: Boolean,
-    searchQuery: String,
+    uiState: PersonConditionUiState,
     onSearchQueryChange: (String) -> Unit,
-    selectedId: String?,
     onSelectedIdChange: (String?) -> Unit,
-    conditionPhotoMap: Map<String, Boolean>,
-    photos: ImmutableList<ConditionPhoto>,
-    isProcessing: Boolean,
-    isAnyDialogOpen: Boolean,
-    defaultRecorderName: String,
-    modifier: Modifier = Modifier,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
+    onSaveClick: ((String) -> Unit) -> Unit,
+    onCancelEdit: () -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
-    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
+    isAnyDialogOpen: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val lazyListState = rememberLazyListState()
 
-    // ConditionAtVisit のリスト
-    val conditionRecords = records
-
-    if (isLoading) {
+    if (uiState.isLoading) {
         LoadingScreen(modifier = modifier)
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
@@ -133,13 +126,13 @@ fun PersonConditionScreenContent(
             ) {
                 // 検索ボックス
                 SearchBox(
-                    query = searchQuery,
+                    query = uiState.searchQuery,
                     onQueryChange = onSearchQueryChange,
                     placeholder = stringResource(R.string.main_search_hint_short)
                 )
                 // 所見メモ・履歴一覧
                 Box(modifier = Modifier.weight(1f)) {
-                    if (conditionRecords.isEmpty()) {
+                    if (uiState.filteredRecords.isEmpty()) {
                         EmptyState(
                             message = stringResource(R.string.p_detail_empty_records),
                             description = stringResource(R.string.p_detail_empty_records_desc),
@@ -147,9 +140,9 @@ fun PersonConditionScreenContent(
                         )
                     } else {
                         ConditionList(
-                            records = conditionRecords,
-                            selectedId = selectedId,
-                            conditionPhotoMap = conditionPhotoMap,
+                            records = uiState.filteredRecords,
+                            selectedId = uiState.selectedConditionId,
+                            conditionPhotoMap = uiState.conditionPhotoMap,
                             isAnyDialogOpen = isAnyDialogOpen,
                             onSelect = { onSelectedIdChange(it) },
                             onDelete = onDeleteRecord,
@@ -167,19 +160,17 @@ fun PersonConditionScreenContent(
                     .testTag("Condition_DetailPane")
             ) {
                 ConditionDetailPane(
-                    conditionId = selectedId ?: "",
-                    records = conditionRecords,
-                    photos = photos,
-                    isProcessing = isProcessing,
-                    defaultRecorderName = defaultRecorderName,
-                    onSaveRecord = onSaveRecord,
+                    uiState = uiState,
                     onDeletePhoto = onDeletePhoto,
-                    onSelectedIdChange = { onSelectedIdChange(it) },
+                    onSelectedIdChange = onSelectedIdChange,
                     onCancel = { onSelectedIdChange(null) },
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit,
                     onAddPhotoClick = onAddPhotoClick,
                     onPickPhotoClick = onPickPhotoClick,
                     onReattachPhoto = onReattachPhoto,
-                    orphanedPhotos = orphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = onMicClick
                 )
@@ -195,13 +186,13 @@ fun PersonConditionScreenContent(
         ) {
             // 検索ボックス
             SearchBox(
-                query = searchQuery,
+                query = uiState.searchQuery,
                 onQueryChange = onSearchQueryChange,
                 modifier = Modifier.testTag("ConditionScreen_SearchBox")
             )
             // 所見メモ・履歴一覧
             Box(modifier = Modifier.weight(1f)) {
-                if (conditionRecords.isEmpty()) {
+                if (uiState.filteredRecords.isEmpty()) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
                         description = stringResource(R.string.p_detail_empty_records_desc),
@@ -209,9 +200,9 @@ fun PersonConditionScreenContent(
                     )
                 } else {
                     ConditionList(
-                        records = conditionRecords,
-                        selectedId = selectedId,
-                        conditionPhotoMap = conditionPhotoMap,
+                        records = uiState.filteredRecords,
+                        selectedId = uiState.selectedConditionId,
+                        conditionPhotoMap = uiState.conditionPhotoMap,
                         isAnyDialogOpen = isAnyDialogOpen,
                         onSelect = { onSelectedIdChange(it) },
                         onDelete = onDeleteRecord,
@@ -236,25 +227,24 @@ private fun PreviewPersonConditionScreenContent(
     CareMemoTheme {
         PersonConditionScreenContent(
             isExpanded = state.isExpanded,
-            records = state.records,
-            isLoading = state.isLoading,
-            searchQuery = "",
+            uiState = PersonConditionUiState(
+                records = state.records,
+                isLoading = state.isLoading,
+                selectedConditionId = state.selectedRecordId
+            ),
             onSearchQueryChange = {},
-            selectedId = state.selectedRecordId,
             onSelectedIdChange = {},
-            conditionPhotoMap = emptyMap(),
-            photos = persistentListOf<ConditionPhoto>(),
-            isProcessing = state.isLoading,
-            isAnyDialogOpen = false,
-            defaultRecorderName = "記録 太郎",
             onDeleteRecord = {},
-            onSaveRecord = { _, _, _ -> },
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
             onDeletePhoto = {},
             onAddPhotoClick = {},
             onReattachPhoto = {},
-            orphanedPhotos = persistentListOf<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>(),
             onNavigateToFullScreen = { _, _ -> },
-            onMicClick = {}
+            onMicClick = {},
+            isAnyDialogOpen = false
         )
     }
 }

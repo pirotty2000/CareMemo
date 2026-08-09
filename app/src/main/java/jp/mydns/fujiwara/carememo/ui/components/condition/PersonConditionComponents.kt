@@ -61,7 +61,7 @@ import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
@@ -74,6 +74,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import java.time.Instant
 
 /**
  * コンポーネント構造ツリー：
@@ -190,84 +191,53 @@ private fun ConditionMemoContent(
  * [2] ConditionDetailPane
  * 所見メモの詳細・編集ペイン。
  *
- * @param conditionId 対象のレコードID（空文字なら未選択状態、新規IDなら作成モード）
- * @param records レコードリスト
- * @param photos 対象レコードに紐付く写真リスト
- * @param isProcessing 保存中や削除中などの処理中フラグ
- * @param defaultRecorderName デフォルトの記録者名
- * @param onSaveRecord 保存処理のコールバック
+ * @param uiState UI 状態
  * @param onDeletePhoto 写真削除処理のコールバック
  * @param onSelectedIdChange 選択ID変更（新規作成中止時など）のコールバック
  * @param onCancel 閲覧モードの終了コールバック
+ * @param onEditClick 編集モードへの移行コールバック
+ * @param onEditInputUpdate 入力値の更新コールバック
+ * @param onSaveClick 保存実行のコールバック
+ * @param onCancelEdit 編集キャンセルのコールバック
  * @param onAddPhotoClick カメラ起動のコールバック
  * @param onPickPhotoClick ギャラリー起動のコールバック
  * @param onReattachPhoto 迷子写真の再紐付けコールバック
- * @param orphanedPhotos 再紐付け可能な迷子写真のリスト
  * @param onNavigateToFullScreen 写真フルスクリーン表示への遷移コールバック
  * @param onMicClick 音声入力開始時のコールバック（効果音再生等に使用）
  */
 @Composable
 fun ConditionDetailPane(
-    conditionId: String?,
-    records: ImmutableList<ConditionAtVisit>,
-    photos: ImmutableList<ConditionPhoto>,
-    isProcessing: Boolean,
-    defaultRecorderName: String,
+    uiState: PersonConditionUiState,
     modifier: Modifier = Modifier,
-    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onSelectedIdChange: (String?) -> Unit,
     onCancel: () -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
+    onSaveClick: ((String) -> Unit) -> Unit,
+    onCancelEdit: () -> Unit,
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit = {},
-    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
-    val memo = remember(records, conditionId) {
-        if (conditionId == null || IdLogic.isNew(conditionId)) null
-        else records.find { it.id == conditionId }
+    val memo = remember(uiState.records, uiState.selectedConditionId) {
+        if ((uiState.selectedConditionId == null || IdLogic.isNew(uiState.selectedConditionId))) null
+        else uiState.records.find { it.id == uiState.selectedConditionId }
     }
 
     // データロード待ち
-    if (memo == null && conditionId != null && !IdLogic.isNew(conditionId)) {
+    if (memo == null && uiState.selectedConditionId != null && !IdLogic.isNew(uiState.selectedConditionId)) {
         LoadingScreen(modifier = modifier)
         return
-    }
-
-    // 新規作成時のみ編集モードから開始。既存データは閲覧から開始。
-    var isEditing by remember(conditionId) { mutableStateOf(IdLogic.isNew(conditionId)) }
-    val dateTimeState = rememberDateTimeInputState(initialInstant = memo?.recordTime)
-
-    // 入力項目の状態保持
-    var title by remember(conditionId) { mutableStateOf(memo?.title ?: "") }
-    var condition by remember(conditionId) { mutableStateOf(memo?.condition ?: "") }
-    var author by remember(conditionId, defaultRecorderName) {
-        mutableStateOf(memo?.author ?: defaultRecorderName)
-    }
-
-    // 【重要】変更検知用の初期スナップショット
-    // 入力を途中で破棄しようとした際の警告ダイアログ判定に使用
-    val initialTitleSnapshot = remember(conditionId) { title }
-    val initialConditionSnapshot = remember(conditionId) { condition }
-    val initialAuthorSnapshot = remember(conditionId) { author }
-    val initialDateTimeSnapshot = remember(conditionId) { dateTimeState.toInstant() }
-
-    val isChanged by remember(title, condition, author, dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
-        derivedStateOf {
-            title != initialTitleSnapshot ||
-                    condition != initialConditionSnapshot ||
-                    author != initialAuthorSnapshot ||
-                    dateTimeState.toInstant() != initialDateTimeSnapshot
-        }
     }
 
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showOrphanedSelectDialog by remember { mutableStateOf(false) }
 
     // システム戻るボタンによる破棄保護
-    androidx.activity.compose.BackHandler(enabled = isEditing && isChanged) {
+    androidx.activity.compose.BackHandler(enabled = uiState.isEditing && uiState.isChanged) {
         showDiscardDialog = true
     }
 
@@ -283,7 +253,7 @@ fun ConditionDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        if (IdLogic.isNew(conditionId)) onSelectedIdChange(null) else isEditing = false
+                        onCancelEdit()
                     }
                 )
             },
@@ -299,7 +269,7 @@ fun ConditionDetailPane(
     var photoToDelete by remember { mutableStateOf<ConditionPhoto?>(null) }
 
     // 未選択状態の表示
-    if (conditionId == null) {
+    if (uiState.selectedConditionId == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
@@ -316,60 +286,53 @@ fun ConditionDetailPane(
         return
     }
 
-    if (isEditing) {
+    if (uiState.isEditing) {
         // [2-1] ConditionRecordEditForm (記録の編集)
         ConditionRecordEditForm(
-            conditionId = conditionId,
-            dateTimeState = dateTimeState,
-            title = title,
-            onTitleChange = { title = it },
-            author = author,
-            onAuthorChange = { author = it },
-            condition = condition,
-            onConditionChange = { condition = it },
-            photos = photos,
-            isProcessing = isProcessing,
+            conditionId = uiState.selectedConditionId,
+            editInput = uiState.editInput,
+            photos = uiState.currentConditionPhotos,
+            isProcessing = uiState.isProcessing,
+            isSaveEnabled = uiState.isSaveEnabled,
             modifier = modifier,
+            onEditInputUpdate = onEditInputUpdate,
             onSave = {
-                val currentState = PersonConditionUiState(title, condition, author, dateTimeState.toInstant())
-                onSaveRecord(conditionId, currentState) { newId ->
+                onSaveClick { newId ->
                     onSelectedIdChange(newId)
-                    isEditing = false
                 }
             },
             onCancel = {
-                if (isChanged) showDiscardDialog = true
-                else if (!IdLogic.isNew(conditionId)) isEditing = false else onSelectedIdChange(null)
+                if (uiState.isChanged) showDiscardDialog = true
+                else onCancelEdit()
             },
             onAddPhotoClick = onAddPhotoClick,
             onPickPhotoClick = onPickPhotoClick,
             onReattachClick = { showOrphanedSelectDialog = true },
-            orphanedPhotoCount = orphanedPhotos.size,
+            orphanedPhotoCount = uiState.availableOrphanedPhotos.size,
             onDeletePhoto = { photoToDelete = it },
-            onMicClick = onMicClick,
-            isChanged = isChanged
+            onMicClick = onMicClick
         )
     } else {
         // [2-2] ConditionRecordDisplayCard (記録の閲覧)
         ConditionRecordDisplayCard(
             memo = memo,
-            photos = photos,
-            isProcessing = isProcessing,
+            photos = uiState.currentConditionPhotos,
+            isProcessing = uiState.isProcessing,
             modifier = modifier,
             onCancel = onCancel,
-            onEditClick = { isEditing = true },
+            onEditClick = onEditClick,
             onPhotoClick = { onNavigateToFullScreen(it.id, it.conditionId) },
             onAddPhotoClick = onAddPhotoClick,
             onPickPhotoClick = onPickPhotoClick,
             onReattachClick = { showOrphanedSelectDialog = true },
-            orphanedPhotoCount = orphanedPhotos.size
+            orphanedPhotoCount = uiState.availableOrphanedPhotos.size
         )
     }
 
     // 迷子写真の再登録用ダイアログ
     if (showOrphanedSelectDialog) {
         OrphanedPhotoSelectionDialog(
-            orphanedPhotos = orphanedPhotos,
+            orphanedPhotos = uiState.availableOrphanedPhotos,
             onDismiss = { showOrphanedSelectDialog = false },
             onSelect = { info ->
                 onReattachPhoto(info)
@@ -399,16 +362,12 @@ fun ConditionDetailPane(
 @Composable
 private fun ConditionRecordEditForm(
     conditionId: String,
-    dateTimeState: DateTimeInputState,
-    title: String,
-    onTitleChange: (String) -> Unit,
-    author: String,
-    onAuthorChange: (String) -> Unit,
-    condition: String,
-    onConditionChange: (String) -> Unit,
+    editInput: ConditionEditInput,
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
+    isSaveEnabled: Boolean,
     modifier: Modifier = Modifier,
+    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onAddPhotoClick: () -> Unit,
@@ -417,7 +376,6 @@ private fun ConditionRecordEditForm(
     orphanedPhotoCount: Int = 0,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
-    isChanged: Boolean
 ) {
     // 音声認識ランチャーの設定
     val speechLauncher = rememberLauncherForActivityResult(
@@ -427,9 +385,24 @@ private fun ConditionRecordEditForm(
             val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
             if (spokenText != null) {
                 // 音声入力の結果を既存のテキストに追記
-                val newCondition = "$condition$spokenText。\n"
-                onConditionChange(newCondition)
+                onEditInputUpdate { it.copy(condition = "${it.condition}$spokenText。\n") }
             }
+        }
+    }
+
+    val dateTimeState = rememberDateTimeInputState(initialInstant = editInput.recordTime)
+
+    // 日時状態を ViewModel へ同期
+    LaunchedEffect(
+        dateTimeState.year.value,
+        dateTimeState.month.value,
+        dateTimeState.day.value,
+        dateTimeState.hour.value,
+        dateTimeState.minute.value
+    ) {
+        val nextTime = dateTimeState.toInstant()
+        if (nextTime != editInput.recordTime) {
+            onEditInputUpdate { it.copy(recordTime = nextTime) }
         }
     }
 
@@ -460,23 +433,23 @@ private fun ConditionRecordEditForm(
                     DateTimeInputFields(state = dateTimeState)
                     HorizontalDivider(thickness = 0.5.dp)
                     AppTextField(
-                        value = title,
-                        onValueChange = onTitleChange,
+                        value = editInput.title,
+                        onValueChange = { v -> onEditInputUpdate { it.copy(title = v) } },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
                         modifier = Modifier.fillMaxWidth()
                     )
                     AppTextField(
-                        value = author,
-                        onValueChange = onAuthorChange,
+                        value = editInput.author,
+                        onValueChange = { v -> onEditInputUpdate { it.copy(author = v) } },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_author)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     AppTextField(
-                        value = condition,
-                        onValueChange = onConditionChange,
+                        value = editInput.condition,
+                        onValueChange = { v -> onEditInputUpdate { it.copy(condition = v) } },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_memo)) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).testTag("Condition_MemoInput"),
@@ -503,7 +476,7 @@ private fun ConditionRecordEditForm(
                         Button(
                             onClick = onSave,
                             modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
-                            enabled = PersonConditionLogic.isValid(PersonConditionUiState(title, condition, author, dateTimeState.toInstant())) && isChanged
+                            enabled = isSaveEnabled
                         ) { Text(stringResource(R.string.common_save)) }
                     }
                 }
@@ -840,19 +813,21 @@ private fun PreviewConditionDetailPane(
 ) {
     MaterialTheme {
         ConditionDetailPane(
-            conditionId = state.selectedRecordId,
-            records = state.records,
-            photos = persistentListOf(),
-            isProcessing = state.isLoading,
-            defaultRecorderName = "A",
-            onSaveRecord = { _, _, _ -> },
+            uiState = PersonConditionUiState(
+                selectedConditionId = state.selectedRecordId,
+                records = state.records,
+                isLoading = state.isLoading
+            ),
             onDeletePhoto = {},
             onSelectedIdChange = {},
             onCancel = {},
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
             onAddPhotoClick = {},
             onPickPhotoClick = {},
             onReattachPhoto = {},
-            orphanedPhotos = persistentListOf(),
             onNavigateToFullScreen = { _, _ -> },
             onMicClick = {}
         )
@@ -865,24 +840,23 @@ private fun PreviewConditionRecordEditFormDirect() {
     MaterialTheme {
         ConditionRecordEditForm(
             conditionId = "new",
-            dateTimeState = rememberDateTimeInputState(),
-            title = MockData.condition.title ?: "",
-            onTitleChange = {},
-            author = MockData.condition.author,
-            onAuthorChange = {},
-            condition = MockData.condition.condition ?: "",
-            onConditionChange = {},
+            editInput = ConditionEditInput(
+                title = MockData.condition.title ?: "",
+                author = MockData.condition.author,
+                condition = MockData.condition.condition ?: "",
+                recordTime = Instant.now()
+            ),
             photos = persistentListOf(),
             isProcessing = false,
-            orphanedPhotoCount = 2,
+            isSaveEnabled = true,
+            onEditInputUpdate = {},
             onSave = {},
             onCancel = {},
             onAddPhotoClick = {},
             onPickPhotoClick = {},
             onReattachClick = {},
             onDeletePhoto = {},
-            onMicClick = {},
-            isChanged = true
+            onMicClick = {}
         )
     }
 }

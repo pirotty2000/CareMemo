@@ -11,13 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.AppSpecifications
-import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
-import jp.mydns.fujiwara.carememo.data.ConditionPhoto
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
@@ -27,20 +22,13 @@ import kotlinx.collections.immutable.ImmutableList
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenPhone(
+    uiState: PersonConditionUiState,
     currentPerson: Person?,
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
-    records: ImmutableList<ConditionAtVisit>,
-    isLoading: Boolean,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    conditionPhotoMap: Map<String, Boolean>,
-    photos: ImmutableList<ConditionPhoto>,
-    isProcessing: Boolean,
     isAnyDialogOpen: Boolean,
-    defaultRecorderName: String,
     modifier: Modifier = Modifier,
-    selectedId: String?,
+    onSearchQueryChange: (String) -> Unit,
     onSelectedIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onNavigateToCategory: (Category) -> Unit,
@@ -49,10 +37,12 @@ fun PersonConditionScreenPhone(
     onNavigateToFullScreen: (String, String) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
+    onSaveClick: ((String) -> Unit) -> Unit,
+    onCancelEdit: () -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
-    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
@@ -71,7 +61,7 @@ fun PersonConditionScreenPhone(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (selectedId != null) onSelectedIdChange(null) else onBack() },
+                            onClick = { if (uiState.selectedConditionId != null) onCancelEdit() else onBack() },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
                             Icon(
@@ -81,7 +71,7 @@ fun PersonConditionScreenPhone(
                         }
                     },
                     actions = {
-                        if (selectedId == null) {
+                        if (uiState.selectedConditionId == null) {
                             IconButton(
                                 onClick = onShowPdfSettings,
                                 modifier = Modifier.testTag("ConditionScreen_PdfButton")
@@ -101,7 +91,7 @@ fun PersonConditionScreenPhone(
             }
         },
         floatingActionButton = {
-            if (selectedId == null) {
+            if (uiState.selectedConditionId == null) {
                 FloatingActionButton(
                     onClick = { onSelectedIdChange(AppSpecifications.Id.NEW_RECORD_ID) },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
@@ -112,32 +102,27 @@ fun PersonConditionScreenPhone(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        if (isLoading && records.isEmpty()) {
+        if (uiState.isLoading && uiState.records.isEmpty()) {
             LoadingScreen(modifier = Modifier.padding(padding))
         } else {
             Box(modifier = Modifier.padding(padding)) {
                 PersonConditionScreenContent(
                     isExpanded = false,
-                    records = records,
-                    isLoading = isLoading,
-                    searchQuery = searchQuery,
+                    uiState = uiState,
                     onSearchQueryChange = onSearchQueryChange,
-                    selectedId = selectedId,
                     onSelectedIdChange = onSelectedIdChange,
-                    conditionPhotoMap = conditionPhotoMap,
-                    photos = photos,
-                    isProcessing = isProcessing,
-                    isAnyDialogOpen = isAnyDialogOpen,
-                    defaultRecorderName = defaultRecorderName,
                     onDeleteRecord = onDeleteRecord,
-                    onSaveRecord = onSaveRecord,
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit,
                     onDeletePhoto = onDeletePhoto,
                     onAddPhotoClick = onAddPhotoClick,
                     onPickPhotoClick = onPickPhotoClick,
                     onReattachPhoto = onReattachPhoto,
-                    orphanedPhotos = orphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,
-                    onMicClick = onMicClick
+                    onMicClick = onMicClick,
+                    isAnyDialogOpen = isAnyDialogOpen
                 )
             }
         }

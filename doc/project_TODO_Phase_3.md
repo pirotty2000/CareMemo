@@ -20,11 +20,11 @@
 `derivedStateOf` を Composable 内で使用している箇所のうち、ビジネスロジック（保存可否、変更検知等）に関わるものを ViewModel / UiState へ移動します。
 
 ### 1.1. 健康記録 (Health) 関連
-- [ ] **変更検知 (`isChanged`) の ViewModel 移行**:
+- [x] **変更検知 (`isChanged`) の ViewModel 移行**:
     - `PersonHealthComponents.kt` 内の `isChanged` 計算を ViewModel へ移動。
     - `UiState` に `isChanged: Boolean` を追加し、入力値の変更を ViewModel 側で判定する。
     - **理由**: 変更破棄ダイアログの表示判定は重要な業務ロジックであり、Unit Test で検証可能にすべきであるため。
-- [ ] **バリデーション (`isDateTimeValid`, `validationResult`) の ViewModel 移行**:
+- [x] **バリデーション (`isDateTimeValid`, `validationResult`) の ViewModel 移行**:
     - `HealthRecordInputPanel` 内で行っている日時の妥当性チェックと、`PersonHealthLogic.validateInputs` による判定を ViewModel へ移動。
     - **理由**: 保存ボタンの活性制御は UI 演出ではなく業務判断であるため。
 

@@ -22,6 +22,7 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
 import jp.mydns.fujiwara.carememo.logic.common.ConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
@@ -180,8 +181,35 @@ class PersonConditionViewModel(
     }
 
     fun setSelectedConditionId(id: String?) {
-        updateUiState { it.copy(selectedConditionId = id) }
-        
+        updateUiState {
+            val next = it.copy(selectedConditionId = id)
+            if (id == null) {
+                next.copy(
+                    isEditing = false,
+                    editInput = ConditionEditInput(),
+                    initialSnapshot = null,
+                    isChanged = false,
+                    isSaveEnabled = false
+                )
+            } else if (IdLogic.isNew(id)) {
+                // 新規作成時は即座に編集セッションを開始
+                val initialInput = ConditionEditInput(
+                    author = defaultRecorderName.value,
+                    recordTime = Instant.now()
+                )
+                next.copy(
+                    isEditing = true,
+                    editInput = initialInput,
+                    initialSnapshot = initialInput,
+                    isChanged = false,
+                    isSaveEnabled = false
+                )
+            } else {
+                // 既存レコード選択時は閲覧モードから開始
+                next.copy(isEditing = false)
+            }
+        }
+
         photoJob?.cancel()
         if (id != null) {
             photoJob = safeCollect(
@@ -207,15 +235,66 @@ class PersonConditionViewModel(
         }
     }
 
-    fun saveRecord(
-        conditionId: String,
-        title: String,
-        condition: String,
-        author: String,
-        recordTime: Instant,
-        onSuccess: (String) -> Unit = {}
-    ) {
-        val inputState = PersonConditionUiState(title, condition, author, recordTime)
+    /**
+     * 現在選択されているレコードの編集セッションを開始します。
+     */
+    fun startEditSession() {
+        val recordId = currentState.selectedConditionId ?: return
+        val record = currentState.records.find { it.id == recordId } ?: return
+
+        val initialInput = ConditionEditInput(
+            title = record.title ?: "",
+            condition = record.condition ?: "",
+            author = record.author,
+            recordTime = record.recordTime
+        )
+
+        updateUiState {
+            it.copy(
+                isEditing = true,
+                editInput = initialInput,
+                initialSnapshot = initialInput,
+                isChanged = false,
+                isSaveEnabled = false
+            )
+        }
+    }
+
+    /**
+     * 編集をキャンセルします。新規なら閉じ、既存なら閲覧モードに戻ります。
+     */
+    fun cancelEditSession() {
+        val recordId = currentState.selectedConditionId
+        if ((recordId != null && IdLogic.isNew(recordId))) {
+            setSelectedConditionId(null)
+        } else {
+            updateUiState { it.copy(isEditing = false) }
+        }
+    }
+
+    /**
+     * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
+     */
+    fun updateEditInput(update: (ConditionEditInput) -> ConditionEditInput) {
+        updateUiState { state ->
+            val nextInput = update(state.editInput)
+            val isChanged = PersonConditionLogic.isChanged(nextInput, state.initialSnapshot)
+            val isSaveEnabled = PersonConditionLogic.isValid(nextInput) && isChanged
+
+            state.copy(
+                editInput = nextInput,
+                isChanged = isChanged,
+                isSaveEnabled = isSaveEnabled
+            )
+        }
+    }
+
+    /**
+     * 現在の入力内容で保存を実行します。
+     */
+    fun saveCurrentEdit(onSuccess: (String) -> Unit = {}) {
+        val input = currentState.editInput
+        val conditionId = currentState.selectedConditionId ?: ""
         
         safeLaunch(
             operation = OP_SAVE,
@@ -225,10 +304,10 @@ class PersonConditionViewModel(
                 affectedId = conditionId
             }
         ) {
-            val validationResult = PersonConditionLogic.validate(inputState)
+            val validationResult = PersonConditionLogic.validate(input)
             translateValidationResult(validationResult)
 
-            val record = PersonConditionLogic.createRecord(requiredPersonId, conditionId, inputState)
+            val record = PersonConditionLogic.createRecord(requiredPersonId, conditionId, input)
             val isUpdate = !IdLogic.isNew(conditionId)
 
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)

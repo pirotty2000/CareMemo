@@ -8,6 +8,11 @@ import androidx.lifecycle.SavedStateHandle
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -156,5 +161,43 @@ class PersonConditionViewModelTest {
 
         // 写真リストが購読・更新されていること
         assertEquals(mockPhotos, viewModel.uiState.value.currentConditionPhotos)
+    }
+
+    @Test
+    fun lg_05_編集セッションの変更検知() = runTest {
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 1. 新規レコードセッション開始
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        advanceUntilIdle()
+
+        val initialState = viewModel.uiState.value
+        assertEquals(true, initialState.isEditing)
+        assertEquals(false, initialState.isChanged)
+        assertEquals(false, initialState.isSaveEnabled) // 本文が空
+
+        // 2. 本文を入力
+        viewModel.updateEditInput { it.copy(condition = "テスト内容") }
+        
+        val changedState = viewModel.uiState.value
+        assertEquals(true, changedState.isChanged)
+        assertEquals(true, changedState.isSaveEnabled)
+
+        // 3. 元に戻す
+        viewModel.updateEditInput { it.copy(condition = "") }
+        assertEquals(false, viewModel.uiState.value.isChanged)
+    }
+
+    @Test
+    fun lg_06_新規作成時のデフォルト記録者継承() = runTest {
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 新規作成開始
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        advanceUntilIdle()
+
+        assertEquals("テスト記録者", viewModel.uiState.value.editInput.author)
     }
 }
