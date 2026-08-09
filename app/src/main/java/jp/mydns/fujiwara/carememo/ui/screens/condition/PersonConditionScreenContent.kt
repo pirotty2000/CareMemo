@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
@@ -57,12 +56,10 @@ import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
-import kotlinx.collections.immutable.ImmutableList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import kotlinx.collections.immutable.persistentListOf
 
 /**
  * 全体像：利用者所見記録（Condition）

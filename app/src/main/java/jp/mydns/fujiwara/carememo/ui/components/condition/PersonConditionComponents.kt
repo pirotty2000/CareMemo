@@ -69,7 +69,6 @@ import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextField
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
-import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 import kotlinx.collections.immutable.ImmutableList

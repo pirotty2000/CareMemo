@@ -8,11 +8,6 @@ import androidx.lifecycle.SavedStateHandle
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
-import jp.mydns.fujiwara.carememo.logic.common.IdLogic
-import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
