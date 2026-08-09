@@ -67,7 +67,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

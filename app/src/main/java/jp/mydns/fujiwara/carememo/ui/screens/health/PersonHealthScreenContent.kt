@@ -49,9 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import java.time.Instant
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
@@ -61,7 +59,6 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHistoryList
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthGraphView
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthHistoryItemBody
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthRecordDetailPane
-import kotlinx.collections.immutable.ImmutableList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
