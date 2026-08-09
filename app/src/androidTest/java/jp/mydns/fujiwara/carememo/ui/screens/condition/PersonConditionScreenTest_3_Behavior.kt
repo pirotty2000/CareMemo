@@ -73,11 +73,8 @@ class PersonConditionScreenTest_3_Behavior {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    widthSizeClass = WindowWidthSizeClass.Compact,
-                    onBack = {},
-                    onNavigateToCategory = {},
-                    onNavigateToPhotoPreview = { _, _, _ -> },
-                    onNavigateToFullScreen = { _, _ -> }
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact
                 )
             }
         }
@@ -105,7 +102,7 @@ class PersonConditionScreenTest_3_Behavior {
             .performTextInput("内容")
         composeTestRule.onNodeWithTag("Condition_SaveButton").performClick()
         
-        verify { conditionViewModel.saveRecord(any(), any(), any(), any(), any(), any()) }
+        verify { conditionViewModel.saveCurrentEdit(any()) }
     }
 
     @Test

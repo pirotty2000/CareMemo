@@ -78,18 +78,14 @@ class PersonHealthScreenTest_3_Behavior {
         }
     }
 
-    private fun setContent(
-        onNavigateToGraphExpansion: (String, Category, Int) -> Unit = { _, _, _ -> }
-    ) {
+    private fun setContent() {
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreen(
                     detailViewModel = detailViewModel,
                     healthViewModel = healthViewModel,
-                    widthSizeClass = WindowWidthSizeClass.Compact,
-                    onBack = {},
-                    onNavigateToCategory = {},
-                    onNavigateToGraphExpansion = onNavigateToGraphExpansion
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact
                 )
             }
         }
@@ -114,26 +110,20 @@ class PersonHealthScreenTest_3_Behavior {
         composeTestRule.onNodeWithTag("HealthField_SaveButton").assertIsEnabled().performClick()
         
         // 4. ViewModel の保存処理が呼ばれたことを検証
-        verify { healthViewModel.saveRecord(any(), any(), any(), any()) }
+        verify { healthViewModel.saveCurrentEdit() }
     }
 
     @Test
     fun bh02_graph_expansion_navigation() {
-        var expandedPersonId = ""
-        var expandedCategory: Category? = null
         healthUiStateFlow.value = healthUiStateFlow.value.copy(records = testRecords)
-        setContent(onNavigateToGraphExpansion = { pid, cat, _ ->
-            expandedPersonId = pid
-            expandedCategory = cat
-        })
+        setContent()
         
         // グラフタブに切り替え
         composeTestRule.onNodeWithTag("HealthScreen_Tab_Graph").performClick()
         // 拡大表示アイコンをタップ
         composeTestRule.onAllNodesWithContentDescription("拡大表示").onFirst().performClick()
         
-        assert(expandedPersonId == "1")
-        assert(expandedCategory == Category.BP_AND_PULSE)
+        verify { healthViewModel.navigateToGraphExpansion("1", Category.BP_AND_PULSE, any()) }
     }
 
     @Test

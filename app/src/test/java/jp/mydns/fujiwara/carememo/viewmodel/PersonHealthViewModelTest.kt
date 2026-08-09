@@ -111,13 +111,15 @@ class PersonHealthViewModelTest {
     @Test
     fun LG_02_save_failure_safety() = runTest {
         viewModel.loadPerson("1")
-        // 新規レコード (id="")
-        val time = Instant.now()
-        val values = mapOf("bpSystolic" to 120, "bpDiastolic" to 80, "pulse" to 70)
-        coEvery { healthRepository.insertBpAndPulse(any(), any(), any(), any()) } throws RuntimeException("Save Failure")
+        advanceUntilIdle()
 
-        viewModel.saveRecord(Category.BP_AND_PULSE, "", time, values)
-        
+        // 編集セッションを開始して値をセット
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        viewModel.updateEditInput { 
+            it.copy(bpSystolicText = "120", bpDiastolicText = "80", pulseText = "70")
+        }
+
+        viewModel.saveCurrentEdit()
         advanceUntilIdle()
 
         // isLoading が false に戻ること

@@ -108,7 +108,13 @@ class PersonConditionViewModelTest {
         viewModel.loadPerson("1")
         advanceUntilIdle()
 
-        viewModel.saveRecord(AppSpecifications.Id.NEW_RECORD_ID, "タイトル", "内容", "著者", Instant.now())
+        // 編集セッションを開始して値をセット
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        viewModel.updateEditInput { 
+            it.copy(title = "タイトル", condition = "内容", author = "著者", recordTime = Instant.now())
+        }
+
+        viewModel.saveCurrentEdit()
         advanceUntilIdle()
 
         // isLoading (loadingStateProxy経由) が false に戻ること

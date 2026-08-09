@@ -87,6 +87,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
     uiState: PersonConditionUiState,
+    modifier: Modifier = Modifier,
     onSearchQueryChange: (String) -> Unit,
     onSelectedIdChange: (String?) -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
@@ -96,12 +97,11 @@ fun PersonConditionScreenContent(
     onCancelEdit: () -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
     isAnyDialogOpen: Boolean,
-    modifier: Modifier = Modifier,
+    onPickPhotoClick: () -> Unit = {},
 ) {
     val lazyListState = rememberLazyListState()
 
