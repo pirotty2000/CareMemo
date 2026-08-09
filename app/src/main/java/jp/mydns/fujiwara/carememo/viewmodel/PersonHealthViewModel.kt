@@ -130,8 +130,8 @@ class PersonHealthViewModel(
     }
 
     fun setSelectedRecordId(id: String?) {
-        updateUiState {
-            val next = it.copy(selectedRecordId = id)
+        updateUiState { state ->
+            val next = state.copy(selectedRecordId = id)
             if (id == null) {
                 next.copy(
                     isEditing = false,
@@ -142,8 +142,8 @@ class PersonHealthViewModel(
                 )
             } else if (IdLogic.isNew(id)) {
                 // 新規作成時は即座に編集セッションを開始
-                val latestHeight = if (it.currentCategory == Category.HEIGHT_AND_WEIGHT) {
-                    it.records.filterIsInstance<HeightAndWeight>()
+                val latestHeight = if (state.currentCategory == Category.HEIGHT_AND_WEIGHT) {
+                    state.records.filterIsInstance<HeightAndWeight>()
                         .filter { it.height != null }
                         .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
                 } else ""

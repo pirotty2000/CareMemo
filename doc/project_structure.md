@@ -178,7 +178,7 @@ ViewModel (androidx.lifecycle.ViewModel)
 | 緊急連絡先管理  | `EmergencyContactListScreen`<br>`EmergencyContactEditScreen` | `EmergencyContactEditViewModel` **(B)**                                           | `EmergencyContactLogic`<br>`PhoneNumberVisualTransformation`  | `EmergencyContactRepository`<br>`PersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                   |
 | 健康一括入力   | `BatchInputScreen`                                           | `BatchInputViewModel` **(PB)**                                                    | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                |
 | 利用者管理    | `DeleteOrRestorePerson`                                      | `DeleteOrRestorePersonViewModel` **(B)**                                          | `DeleteOrRestorePersonLogic`                                  | `DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                    |
-| アプリ設定    | `SettingsScreen`                                             | `SettingsViewModel` **(B)**                                                       | `SettingsLogic`                                               | `AppMaintenanceRepository` (C)<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                      |
+| アプリ設定    | `SettingsScreen`                                             | `SettingsViewModel` **(B)**                                                       | `SettingsLogic`                                               | `AppMaintenanceRepository` (C)<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                  |
 | 操作ログ     | `AuditLogScreen`                                             | `AuditLogViewModel` **(B)**                                                       | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                         |
 | 迷子写真確認   | `OrphanedPhotoManagementScreen`                              | `OrphanedPhotoViewModel` **(B)**                                                  | `ConditionMaintenanceLogic`                                   | `ConditionRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                |
 | 共通基盤     | (詳細画面全体)                                                     | `PersonDetailUiStateViewModel` **(PB)**                                           | -                                                             | `PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                      |
@@ -215,19 +215,19 @@ ViewModel (androidx.lifecycle.ViewModel)
 - 特定の画面や ViewModel の状態管理（UiState）に密結合したロジックです。
 - **※ 各 Logic クラスのファイルには、その画面の `UiState` および `ViewEvent` の定義も集約されています。**
 
-| ファイル名                           | 役割・主な内容                                                  |
-|:--------------------------------|:---------------------------------------------------------|
-| `PersonListLogic.kt`            | 利用者一覧の五十音判定、フィルタリング、UI状態（伏せ字・年齢計算）への変換。                  |
-| `PersonEditLogic.kt`            | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。 |
-| `PersonDetailLogic.kt`          | 利用者詳細（A/B/C共通）のUI状態定義、カテゴリ管理、共通イベントの定義。                  |
-| `PersonHealthLogic.kt`          | 健康記録画面における新規・更新判定、および重複チェックロジック。                         |
+| ファイル名                           | 役割・主な内容                                                        |
+|:--------------------------------|:---------------------------------------------------------------|
+| `PersonListLogic.kt`            | 利用者一覧の五十音判定、フィルタリング、UI状態（伏せ字・年齢計算）への変換。                        |
+| `PersonEditLogic.kt`            | 利用者編集画面における変更検知（`isChanged`）、保存可否判定（`isValid`）、Entity生成。       |
+| `PersonDetailLogic.kt`          | 利用者詳細（A/B/C共通）のUI状態定義、カテゴリ管理、共通イベントの定義。                        |
+| `PersonHealthLogic.kt`          | 健康記録画面における新規・更新判定、および重複チェックロジック。                               |
 | `PersonConditionLogic.kt`       | 所見メモ画面における UI 状態定義（不整合情報の descriptionResId 保持）、変更検知、 Entity生成。 |
-| `PersonMedicationLogic.kt`      | 服薬管理画面における履歴の日付別グルーピング、UiStateへの変換。                      |
-| `BatchInputLogic.kt`            | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                    |
-| `DeleteOrRestorePersonLogic.kt` | 利用者管理（復帰・抹消）画面の表示状態定義。                                   |
-| `SettingsLogic.kt`              | ZIP検証、バージョン互換性、空き容量チェック、開発者モード有効化判定。                     |
-| `AuditLogLogic.kt`              | 監査ログのフィルタリング、並び替え、選択肢の抽出。                                |
-| `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、迷子写真の分類（リソースIDによる理由保持）。             |
+| `PersonMedicationLogic.kt`      | 服薬管理画面における履歴の日付別グルーピング、UiStateへの変換。                            |
+| `BatchInputLogic.kt`            | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                          |
+| `DeleteOrRestorePersonLogic.kt` | 利用者管理（復帰・抹消）画面の表示状態定義。                                         |
+| `SettingsLogic.kt`              | ZIP検証、バージョン互換性、空き容量チェック、開発者モード有効化判定。                           |
+| `AuditLogLogic.kt`              | 監査ログのフィルタリング、並び替え、選択肢の抽出。                                      |
+| `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、迷子写真の分類（リソースIDによる理由保持）。                       |
 
 ### **表示用マッピングロジック (ui/mapping)**
 - ドメインモデルやシステム識別子（Enum/String）を、多言語対応可能な日本語ラベル（リソースID）やテーマカラーへ変換するレイヤーです。
@@ -240,7 +240,7 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `MedicationDisplayMapper.kt` | 服薬状況の Enum を記号（○/△/×）、時間枠ラベル、色へ変換。        |
 | `ConditionDisplayMapper.kt`  | 所見メモの写真枚数ラベルなどの表示文字列を生成。                  |
 | `EmergencyContactMapping.kt` | 緊急連絡先の種別（Enum）を日本語ラベルやアイコンへ変換。            |
-| `ThemeDisplayMapper.kt`      | テーマ設定の選択肢を日本語ラベルおよび説明文（リソースID）へ変換。      |
+| `ThemeDisplayMapper.kt`      | テーマ設定の選択肢を日本語ラベルおよび説明文（リソースID）へ変換。        |
 | `FeatureNameMapper.kt`       | 監査ログ用の機能識別子を日本語名称（リソースID）へ変換。             |
 | `ActionTypeMapper.kt`        | 監査ログ用の操作種別（INSERT等）を日本語名称（リソースID）へ変換。     |
 | `ResultTypeMapper.kt`        | 監査ログ用の実行結果（SUCCESS等）を日本語名称（リソースID）へ変換。    |
