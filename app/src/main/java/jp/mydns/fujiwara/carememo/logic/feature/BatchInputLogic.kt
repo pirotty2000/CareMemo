@@ -10,8 +10,6 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import java.time.Instant
 
 /**
@@ -166,9 +164,9 @@ object BatchInputLogic {
      * @param state 現在のUI状態
      * @return [BatchInputCategory] のリスト
      */
-    fun getEffectiveCategories(state: BatchInputUiState): ImmutableList<BatchInputCategory> {
+    fun getEffectiveCategories(state: BatchInputUiState): List<BatchInputCategory> {
         val results = evaluateCategories("dummy", Instant.EPOCH, state)
-        return results.filter { it.value is CategoryResult.Valid }.keys.toList().toImmutableList()
+        return results.filter { it.value is CategoryResult.Valid }.keys.toList()
     }
 
     /**
@@ -194,7 +192,7 @@ object BatchInputLogic {
      * @return 生成された Entity オブジェクトのリスト
      * @throws IllegalArgumentException 不正な入力（Invalid）が一つでもある場合にスロー
      */
-    fun createEntities(personId: String, time: Instant, state: BatchInputUiState): ImmutableList<Any> {
+    fun createEntities(personId: String, time: Instant, state: BatchInputUiState): List<Any> {
         val results = evaluateCategories(personId, time, state).values
 
         // 不正な入力がある状態で呼び出された場合は異常系として扱う（呼び出し側でvalidate済みであることを期待）
@@ -202,7 +200,7 @@ object BatchInputLogic {
             throw IllegalArgumentException("Invalid input state")
         }
 
-        return results.filterIsInstance<CategoryResult.Valid>().map { it.entity }.toImmutableList()
+        return results.filterIsInstance<CategoryResult.Valid>().map { it.entity }
     }
 
     /**

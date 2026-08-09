@@ -22,6 +22,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationViewEvent
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -153,6 +154,8 @@ class PersonMedicationViewModel(
                     monthlyRecords = records.toImmutableList(),
                     // 日付ごとにグループ化したマップを作成し、カレンダー表示を効率化する
                     recordsByDate = PersonMedicationLogic.groupRecordsByDate(records)
+                        .mapValues { it.value.toImmutableList() }
+                        .toImmutableMap()
                 )
             }
         }

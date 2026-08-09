@@ -8,8 +8,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import java.time.YearMonth
 
 /**
@@ -73,9 +71,7 @@ object PersonMedicationLogic {
      * @param records 変換対象の履歴レコードリスト
      * @return 日付文字列をキー、その日のレコードリスト（最大4スロット分）を値とするマップ
      */
-    fun groupRecordsByDate(records: List<MedicationRecord>): ImmutableMap<String, ImmutableList<MedicationRecord>> {
+    fun groupRecordsByDate(records: List<MedicationRecord>): Map<String, List<MedicationRecord>> {
         return records.groupBy { it.dosageDate }
-            .mapValues { it.value.toImmutableList() }
-            .toImmutableMap()
     }
 }

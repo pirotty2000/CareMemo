@@ -41,22 +41,22 @@
 ### 2.1. Logic レイヤーからの ImmutableList 排除
 UI 境界の外側である Logic クラスのメソッド戻り値を、標準の `List` / `Map` へ戻します。
 
-- [ ] **AuditLogLogic.kt**:
+- [x] **AuditLogLogic.kt**:
     - `filterLogs`: `ImmutableList<AuditLog>` -> `List<AuditLog>`
     - `extractAvailableFeatures`: `ImmutableList<String>` -> `List<String>`
     - `extractAvailableResults`: `ImmutableList<String>` -> `List<String>`
-- [ ] **BatchInputLogic.kt**:
+- [x] **BatchInputLogic.kt**:
     - `getEffectiveCategories`: `ImmutableList<BatchInputCategory>` -> `List<BatchInputCategory>`
     - `createEntities`: `ImmutableList<Any>` -> `List<Any>`
-- [ ] **DeleteOrRestorePersonLogic.kt**:
+- [x] **DeleteOrRestorePersonLogic.kt**:
     - `filterTargets`: `ImmutableList<Person>` -> `List<Person>`
-- [ ] **PersonMedicationLogic.kt**:
+- [x] **PersonMedicationLogic.kt**:
     - `groupRecordsByDate`: `ImmutableMap<String, ImmutableList<MedicationRecord>>` -> `Map<String, List<MedicationRecord>>`
 
 ### 2.2. ViewModel での変換の徹底
 Logic レイヤーから標準の `List` が返されるようになるため、ViewModel で `UiState` に反映する際の変換を確実に行います。
 
-- [ ] **対象 ViewModel の確認と修正**:
+- [x] **対象 ViewModel の確認と修正**:
     - `AuditLogViewModel`, `BatchInputViewModel`, `DeleteOrRestorePersonViewModel`, `PersonMedicationViewModel` 等において、Logic の結果を `.toImmutableList()` しているか確認する。
 
 ## 3. Activity への委譲ルールの適用と確認

@@ -7,8 +7,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableSet
 
 /**
  * UI State：DeleteOrRestorePersonUiState
@@ -59,12 +57,12 @@ object DeleteOrRestorePersonLogic {
      * @param personId 切り替え対象の利用者 ID
      * @return 新しい選択 ID のセット
      */
-    fun toggleSelection(currentIds: Set<String>, personId: String): ImmutableSet<String> {
-        return (if (currentIds.contains(personId)) {
+    fun toggleSelection(currentIds: Set<String>, personId: String): Set<String> {
+        return if (currentIds.contains(personId)) {
             currentIds - personId
         } else {
             currentIds + personId
-        }).toImmutableSet()
+        }
     }
 
     /**
@@ -73,8 +71,8 @@ object DeleteOrRestorePersonLogic {
      * @param persons 利用者リスト
      * @return すべての ID を含むセット
      */
-    fun selectAll(persons: List<Person>): ImmutableSet<String> {
-        return persons.map { it.id }.toImmutableSet()
+    fun selectAll(persons: List<Person>): Set<String> {
+        return persons.map { it.id }.toSet()
     }
 
     /**
@@ -82,10 +80,10 @@ object DeleteOrRestorePersonLogic {
      *
      * @param persons 全利用者リスト
      * @param selectedIds 選択されている ID のセット
-     * @return 処理対象の利用者リスト
+     * @return 処理対象 Paige 利用者リスト
      */
-    fun filterTargets(persons: List<Person>, selectedIds: Set<String>): ImmutableList<Person> {
-        return persons.filter { selectedIds.contains(it.id) }.toImmutableList()
+    fun filterTargets(persons: List<Person>, selectedIds: Set<String>): List<Person> {
+        return persons.filter { selectedIds.contains(it.id) }
     }
 
     /**

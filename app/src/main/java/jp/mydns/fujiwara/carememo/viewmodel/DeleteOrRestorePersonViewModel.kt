@@ -15,6 +15,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.launch
 
 /**
@@ -92,14 +93,14 @@ class DeleteOrRestorePersonViewModel(
 
     fun toggleSelection(personId: String) {
         updateUiState { current ->
-            val nextIds = DeleteOrRestorePersonLogic.toggleSelection(current.selectedIds, personId)
+            val nextIds = DeleteOrRestorePersonLogic.toggleSelection(current.selectedIds, personId).toImmutableSet()
             current.copy(selectedIds = nextIds)
         }
     }
 
     fun selectAll(persons: List<Person>) {
         if (currentState.mode == OperationMode.DELETE) return
-        updateUiState { current -> current.copy(selectedIds = DeleteOrRestorePersonLogic.selectAll(persons)) }
+        updateUiState { current -> current.copy(selectedIds = DeleteOrRestorePersonLogic.selectAll(persons).toImmutableSet()) }
     }
 
     fun clearSelection() {
