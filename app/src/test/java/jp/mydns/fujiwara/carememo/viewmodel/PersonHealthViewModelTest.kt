@@ -124,7 +124,7 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
         
         assertEquals(Category.GLUCOSE_AND_HBA1C, viewModel.uiState.value.currentCategory)
-        coVerify { healthRepository.getGlucoseAndHbA1cByPersonId(personId) }
+        verify { healthRepository.getGlucoseAndHbA1cByPersonId(personId) }
     }
 
     @Test

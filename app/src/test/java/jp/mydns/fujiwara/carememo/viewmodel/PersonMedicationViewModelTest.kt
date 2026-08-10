@@ -102,7 +102,7 @@ class PersonMedicationViewModelTest {
         advanceUntilIdle()
 
         assertEquals(nextMonth, viewModel.uiState.value.selectedMonth)
-        coVerify { medicationRepository.getMedicationRecordsByMonth(personId, nextMonth.toString()) }
+        verify { medicationRepository.getMedicationRecordsByMonth(personId, nextMonth.toString()) }
     }
 
     // endregion

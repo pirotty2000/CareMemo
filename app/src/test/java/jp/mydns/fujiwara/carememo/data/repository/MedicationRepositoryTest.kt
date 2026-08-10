@@ -1,8 +1,6 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.MedicationRecordDao
 import kotlinx.coroutines.test.runTest
@@ -78,13 +76,13 @@ class MedicationRepositoryTest {
     @Test
     fun GET_01_getMedicationRecords() = runTest {
         repository.getMedicationRecords("u1")
-        coVerify { medicationRecordDao.getByPersonId("u1") }
+        verify { medicationRecordDao.getByPersonId("u1") }
     }
 
     @Test
     fun GET_02_getMedicationRecordsByMonth() = runTest {
         repository.getMedicationRecordsByMonth("u1", "2023-11")
-        coVerify { medicationRecordDao.getByMonth("u1", "2023-11") }
+        verify { medicationRecordDao.getByMonth("u1", "2023-11") }
     }
 
     // endregion

@@ -1,8 +1,6 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.EmergencyContactDao
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
@@ -90,7 +88,7 @@ class EmergencyContactRepositoryTest {
     @Test
     fun GET_01_getContactsByPersonId() = runTest {
         repository.getContactsByPersonId("u1")
-        coVerify { emergencyContactDao.getByPersonId("u1") }
+        verify { emergencyContactDao.getByPersonId("u1") }
     }
 
     @Test

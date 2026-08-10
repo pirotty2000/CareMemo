@@ -1,8 +1,6 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonDao
 import kotlinx.coroutines.test.runTest
@@ -104,13 +102,13 @@ class PersonRepositoryTest {
     @Test
     fun GET_01_getAllPersons() = runTest {
         repository.getAllPersons()
-        coVerify { personDao.getAllPersons() }
+        verify { personDao.getAllPersons() }
     }
 
     @Test
     fun GET_02_getPersonById() = runTest {
         repository.getPersonById("u1")
-        coVerify { personDao.getPersonById("u1") }
+        verify { personDao.getPersonById("u1") }
     }
 
     // endregion
