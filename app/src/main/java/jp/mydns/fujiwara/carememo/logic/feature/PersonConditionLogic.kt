@@ -88,7 +88,7 @@ sealed interface PersonConditionViewEvent {
     /** 写真タップ時の全画面表示遷移 */
     data class NavigateToPhotoFullScreen(val photoId: String, val conditionId: String) : PersonConditionViewEvent
     /** 一覧画面へ戻る */
-    object NavigateBackToMain : PersonConditionViewEvent
+    // object NavigateBackToMain : PersonConditionViewEvent
 }
 
 /**

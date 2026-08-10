@@ -45,7 +45,7 @@ data class PersonMedicationUiState(
  */
 sealed interface PersonMedicationViewEvent {
     /** 一覧画面へ戻る */
-    object NavigateBackToMain : PersonMedicationViewEvent
+    // object NavigateBackToMain : PersonMedicationViewEvent
 }
 
 /**

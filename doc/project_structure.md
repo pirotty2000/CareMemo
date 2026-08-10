@@ -238,7 +238,6 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `HealthDisplayMapper.kt`     | 健康状態の Enum（AlertLevel 等）を日本語ラベル、色、説明文へ変換。 |
 | `BirthEraDisplayMapper.kt`   | 元号（昭和・平成・令和・西暦）の Enum を日本語ラベルへ変換。         |
 | `MedicationDisplayMapper.kt` | 服薬状況の Enum を記号（○/△/×）、時間枠ラベル、色へ変換。        |
-| `ConditionDisplayMapper.kt`  | 所見メモの写真枚数ラベルなどの表示文字列を生成。                  |
 | `EmergencyContactMapping.kt` | 緊急連絡先の種別（Enum）を日本語ラベルやアイコンへ変換。            |
 | `ThemeDisplayMapper.kt`      | テーマ設定の選択肢を日本語ラベルおよび説明文（リソースID）へ変換。        |
 | `FeatureNameMapper.kt`       | 監査ログ用の機能識別子を日本語名称（リソースID）へ変換。             |

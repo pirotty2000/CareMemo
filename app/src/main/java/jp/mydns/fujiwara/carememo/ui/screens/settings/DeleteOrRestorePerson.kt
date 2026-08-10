@@ -58,9 +58,7 @@ fun DeleteOrRestorePersonScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val archivedPersons = uiState.archivedPersons
-    val selectedIds = uiState.selectedIds
-    val isNameMaskingEnabled = uiState.isNameMaskingEnabled
+    val (isLoading, mode, archivedPersons, selectedIds, isNameMaskingEnabled) = uiState
 
     val scope = rememberCoroutineScope()
     // 操作が行われた場合に、戻り先の画面にリスト更新を促すためのフラグ
@@ -134,7 +132,7 @@ fun DeleteOrRestorePersonScreen(
         }
     }
 
-    val isDeleteMode = uiState.mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
+    val isDeleteMode = mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
     
     // 背景色の決定 (DELETEモード時は、注意を促すために薄いエラー色を適用)
     val backgroundColor = if (isDeleteMode) {
@@ -238,11 +236,15 @@ fun DeleteOrRestorePersonScreen(
         ) {
             if (archivedPersons.isEmpty()) {
                 // アーカイブ対象がいない場合の表示
-                EmptyState(
-                    message = stringResource(R.string.archive_empty_msg),
-                    icon = Icons.Outlined.PersonOff,
-                    modifier = Modifier.testTag("DeleteOrRestore_EmptyState")
-                )
+                if (isLoading) {
+                    LoadingScreen(modifier = Modifier.testTag("DeleteOrRestore_Loading"))
+                } else {
+                    EmptyState(
+                        message = stringResource(R.string.archive_empty_msg),
+                        icon = Icons.Outlined.PersonOff,
+                        modifier = Modifier.testTag("DeleteOrRestore_EmptyState")
+                    )
+                }
             } else {
                 val listState = androidx.compose.foundation.lazy.rememberLazyListState()
                 Column {

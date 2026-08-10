@@ -3,7 +3,6 @@ package jp.mydns.fujiwara.carememo.data
 import androidx.room.TypeConverter
 import java.time.Instant
 
-@Suppress("unused")
 class Converters {
     @TypeConverter
     fun timestampToInstant(value: Long?): Instant? {

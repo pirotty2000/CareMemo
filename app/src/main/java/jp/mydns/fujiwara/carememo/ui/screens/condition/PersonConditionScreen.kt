@@ -122,9 +122,11 @@ fun PersonConditionScreen(
                         )
                     }
                 }
+                /*
                 is PersonConditionViewEvent.NavigateBackToMain -> {
                     detailViewModel.navigateBackToMain()
                 }
+                */
             }
         }
     }
