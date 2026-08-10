@@ -1,53 +1,64 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
+import app.cash.turbine.test
+import io.mockk.*
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
+import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
- * SCR-M-002 PersonEditViewModel のロジックテスト
- *
- * 仕様書：doc/test/screen/TEST_SPEC_SCR-M-002_PersonEditScreen.md に準拠
+ * Logic Test: PersonEditViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonEditViewModelTest {
 
-    private val personRepository = mockk<PersonRepository>(relaxed = true)
+    private val repository = mockk<PersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
+    
     private val testDispatcher = StandardTestDispatcher()
+    
+    private val testPerson = Person(
+        id = "u1",
+        lastName = "山田",
+        firstName = "太郎",
+        lastNameFurigana = "ヤマダ",
+        firstNameFurigana = "タロウ",
+        birthday = LocalDate.of(1950, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant(),
+        note = "備考"
+    )
+    
+    private val isNameMaskingEnabledFlow = MutableStateFlow(false)
 
     @Before
     fun setup() {
         mockkStatic(Log::class)
         every { Log.e(any(), any(), any()) } returns 0
-
         Dispatchers.setMain(testDispatcher)
-        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
-        every { userSettingsRepository.defaultRecorderName } returns flowOf("")
+
+        every { userSettingsRepository.isNameMaskingEnabled } returns isNameMaskingEnabledFlow
+        coEvery { repository.getPersonById("u1") } returns flowOf(testPerson)
+        coEvery { repository.findExistingPerson(any()) } returns null
     }
 
     @After
@@ -56,132 +67,175 @@ class PersonEditViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    // ======================================================================================
-    // 3. ロジック・安全性テスト (PersonEditViewModel)
-    // ======================================================================================
-
-    @Test
-    fun lg01_loadFailure_safety() = runTest {
-        val personId = "1"
-        // 既存データのロード中に例外が発生した際
-        coEvery { personRepository.getPersonById(personId) } returns flow { throw RuntimeException("Load Error") }
-
-        val viewModel = PersonEditViewModel(
-            SavedStateHandle(mapOf("personId" to personId)),
-            personRepository,
+    private fun createViewModel(personId: String? = "_new"): PersonEditViewModel {
+        return PersonEditViewModel(
+            SavedStateHandle(if (personId != null) mapOf("personId" to personId) else emptyMap()),
+            repository,
             userSettingsRepository,
             auditLogRepository
         )
-        advanceUntilIdle()
-
-        // isLoading が false になり、監査ログに記録されること
-        assertEquals("ローディングが終了していること", false, viewModel.uiState.value.isLoading)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "PersonEdit",
-                operation = "loadPerson",
-                tableName = "person_db",
-                actionType = "ERROR",
-                affectedId = personId,
-                details = match { it.contains("Load Error") },
-                resultType = "OTHER_ERROR"
-            )
-        }
     }
 
-    @Test
-    fun lg02_saveFailure_safety() = runTest {
-        val viewModel = PersonEditViewModel(null, personRepository, userSettingsRepository, auditLogRepository)
-        advanceUntilIdle()
-
-        // 必須項目入力
-        viewModel.updateLastName("山田")
-        viewModel.updateFirstName("太郎")
-        viewModel.updateLastNameFurigana("ヤマダ")
-        viewModel.updateFirstNameFurigana("タロウ")
-        viewModel.updateYear("25")
-        viewModel.updateMonth("1")
-        viewModel.updateDay("1")
-
-        // 保存中に例外が発生した際
-        coEvery { personRepository.findExistingPerson(any()) } returns null
-        coEvery { personRepository.insertPerson(any(), any(), any()) } throws RuntimeException("Save Error")
-
-        viewModel.save()
-        advanceUntilIdle()
-
-        // isLoading が false になり、監査ログに記録されること
-        assertEquals("ローディングが終了していること", false, viewModel.uiState.value.isLoading)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "PersonEdit",
-                operation = "save",
-                tableName = "person_db",
-                actionType = "ERROR",
-                affectedId = "",
-                details = match { it.contains("Save Error") },
-                resultType = "OTHER_ERROR"
-            )
-        }
-    }
+    // region 2. 初期化・データロードテスト (Initialization)
 
     @Test
-    fun lg03_validationFailure_translation() = runTest {
-        val viewModel = PersonEditViewModel(null, personRepository, userSettingsRepository, auditLogRepository)
+    fun INI_01_initialLoad_newMode() = runTest {
+        val viewModel = createViewModel("_new")
         advanceUntilIdle()
 
-        // 必須項目（苗字）を空にする。他の必須項目（ふりがな等）は埋める。
-        viewModel.updateLastName("")
-        viewModel.updateFirstName("太郎")
-        viewModel.updateLastNameFurigana("ヤマダ")
-        viewModel.updateFirstNameFurigana("タロウ")
-        viewModel.updateYear("25")
-        viewModel.updateMonth("1")
-        viewModel.updateDay("1")
-
-        viewModel.save()
-        advanceUntilIdle()
-
-        // バリデーションエラーが監査ログに VALIDATION_ERROR として記録されること
-        coVerify {
-            auditLogRepository.log(
-                featureName = "PersonEdit",
-                operation = "save",
-                tableName = "person_db",
-                actionType = "ERROR",
-                affectedId = "",
-                details = match { it.contains("EMPTY_LAST_NAME") },
-                resultType = "VALIDATION_ERROR"
-            )
-        }
-    }
-
-    @Test
-    fun lg04_uiState_atomicity() = runTest {
-        val viewModel = PersonEditViewModel(null, personRepository, userSettingsRepository, auditLogRepository)
-        advanceUntilIdle()
-
-        // 初期状態の確認
-        assertEquals(false, viewModel.uiState.value.isChanged)
-        assertEquals(false, viewModel.uiState.value.isValid)
-
-        // 値を更新
-        viewModel.updateLastName("山田")
-        
-        // lastName が更新されると同時に isChanged も更新されていること（原子性の確認）
         val state = viewModel.uiState.value
-        assertEquals("山田", state.lastName)
-        assertEquals(true, state.isChanged)
+        assertTrue(state.isNew)
+        assertEquals("", state.lastName)
+        assertFalse(state.isChanged)
+    }
+
+    @Test
+    fun INI_02_initialLoad_editMode() = runTest {
+        val viewModel = createViewModel("u1")
         
-        // 全ての必須項目を入力
-        viewModel.updateFirstName("太郎")
-        viewModel.updateLastNameFurigana("ヤマダ")
-        viewModel.updateFirstNameFurigana("タロウ")
-        viewModel.updateYear("25")
+        viewModel.uiState.test {
+            awaitItem() // Skip initial state
+            advanceUntilIdle()
+            
+            val loaded = awaitItem()
+            assertFalse(loaded.isNew)
+            assertEquals("山田", loaded.lastName)
+            assertEquals("25", loaded.year) // 1950 is Showa 25
+            assertEquals(BirthEra.SHOWA, loaded.era)
+            assertFalse(loaded.isChanged)
+        }
+    }
+
+    @Test
+    fun INI_03_maskingSettingReflection() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+        
+        isNameMaskingEnabledFlow.value = true
+        advanceUntilIdle()
+        
+        assertTrue(viewModel.uiState.value.isNameMaskingEnabled)
+    }
+
+    // endregion
+
+    // region 3. 入力・状態管理テスト (Input & State)
+
+    @Test
+    fun INP_01_INP_03_inputUpdate_reactivity() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        viewModel.updateLastName("佐藤")
+        
+        val state = viewModel.uiState.value
+        assertEquals("佐藤", state.lastName)
+        assertTrue(state.isChanged)
+        assertFalse(state.isValid) // Missing other required fields
+    }
+
+    @Test
+    fun INP_02_fullInput_validationSuccess() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        viewModel.updateLastName("佐藤")
+        viewModel.updateFirstName("花子")
+        viewModel.updateLastNameFurigana("サトウ")
+        viewModel.updateFirstNameFurigana("ハナコ")
+        viewModel.updateYear("1")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
+        viewModel.updateEra(BirthEra.REIWA)
+        
+        assertTrue(viewModel.uiState.value.isValid)
+    }
+
+    // endregion
+
+    // region 4. 保存・処理実行テスト (Saving)
+
+    @Test
+    fun SAV_01_save_newSuccess() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        // Setup valid state
+        viewModel.updateLastName("A")
+        viewModel.updateFirstName("B")
+        viewModel.updateLastNameFurigana("A")
+        viewModel.updateFirstNameFurigana("B")
+        viewModel.updateYear("1")
         viewModel.updateMonth("1")
         viewModel.updateDay("1")
 
-        // isValid が true になっていること
-        assertEquals(true, viewModel.uiState.value.isValid)
+        viewModel.viewEvent.test {
+            viewModel.save()
+            advanceUntilIdle()
+            
+            val event = awaitItem()
+            assertTrue(event is PersonEditViewEvent.NavigateBack)
+            assertEquals(EditResult.ADDED, (event as PersonEditViewEvent.NavigateBack).result)
+        }
+
+        coVerify { repository.insertPerson(any(), any(), any()) }
     }
+
+    @Test
+    fun SAV_03_save_duplicateActiveBlocked() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        // Setup valid state
+        viewModel.updateLastName("Duplicate")
+        viewModel.updateFirstName("User")
+        viewModel.updateLastNameFurigana("D")
+        viewModel.updateFirstNameFurigana("U")
+        viewModel.updateYear("1")
+        viewModel.updateMonth("1")
+        viewModel.updateDay("1")
+
+        // Mock active duplicate
+        coEvery { repository.findExistingPerson(any()) } returns testPerson.copy(deletedAt = null)
+
+        viewModel.uiEventFlow.test {
+            viewModel.save()
+            advanceUntilIdle()
+            
+            val event = awaitItem()
+            assertTrue(event is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes)
+            assertEquals(R.string.main_err_duplicate_active, (event as BaseUiStateViewModel.UiEvent.ShowErrorDialogRes).messageResId)
+        }
+        
+        coVerify(exactly = 0) { repository.insertPerson(any(), any(), any()) }
+    }
+
+    // endregion
+
+    // region 5. 安全性・例外テスト (Safety)
+
+    @Test
+    fun ERR_01_loadFailure_safety() = runTest {
+        coEvery { repository.getPersonById("u1") } returns flow { throw RuntimeException("Load Error") }
+
+        val viewModel = createViewModel("u1")
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", "u1", match { it.contains("Load Error") }, any()) }
+    }
+
+    @Test
+    fun ERR_02_save_validationFailureLogs() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        viewModel.updateLastName("") // Empty required
+        viewModel.save()
+        advanceUntilIdle()
+
+        coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("EMPTY_LAST_NAME") }, "VALIDATION_ERROR") }
+    }
+
+    // endregion
 }

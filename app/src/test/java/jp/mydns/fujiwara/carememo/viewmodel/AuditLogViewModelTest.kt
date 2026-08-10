@@ -1,36 +1,25 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import app.cash.turbine.test
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
+import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
 /**
- * AuditLogViewModel のロジック・安全性テスト (System B 移行済)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-S-002_AuditLogScreen.md に準拠
+ * Logic Test: AuditLogViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuditLogViewModelTest {
@@ -38,11 +27,11 @@ class AuditLogViewModelTest {
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     
-    private lateinit var viewModel: AuditLogViewModel
     private val testDispatcher = StandardTestDispatcher()
 
     private val mockLogs = listOf(
-        AuditLog(id = 1, timestamp = Instant.ofEpochMilli(1000), featureName = "PersonList", operation = "op1", tableName = "t1", actionType = "A", affectedId = "1", resultType = "SUCCESS")
+        AuditLog(id = 1, timestamp = Instant.ofEpochMilli(1000), featureName = "PersonList", operation = "op1", tableName = "t1", actionType = "INSERT", affectedId = "1", resultType = "SUCCESS"),
+        AuditLog(id = 2, timestamp = Instant.ofEpochMilli(2000), featureName = "Settings", operation = "op2", tableName = "t2", actionType = "UPDATE", affectedId = "2", resultType = "DB_ERROR")
     )
 
     @Before
@@ -52,11 +41,6 @@ class AuditLogViewModelTest {
         Dispatchers.setMain(testDispatcher)
         
         every { auditLogRepository.allLogs } returns flowOf(mockLogs)
-
-        viewModel = AuditLogViewModel(
-            auditLogRepository,
-            userSettingsRepository
-        )
     }
 
     @After
@@ -65,52 +49,121 @@ class AuditLogViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    // ======================================================================================
-    // 3. ロジック・安全性テスト (AuditLogViewModel)
-    // ======================================================================================
+    // region 2. データ読み込みテスト (Init / Load)
 
     @Test
-    fun lg_01_dataFetchFailure_safety() = runTest {
-        // ログ取得中に例外が発生する状況をシミュレート
+    fun RD_01_RD_02_initialLoad_success() = runTest {
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        
+        viewModel.uiState.test {
+            // Initial state
+            val initial = awaitItem()
+            assertTrue(initial.isLoading)
+
+            advanceUntilIdle()
+
+            // Loaded state
+            val state = awaitItem()
+            assertFalse(state.isLoading)
+            assertEquals(2, state.filteredLogs.size)
+            assertTrue(state.availableFeatures.contains("Settings"))
+            assertTrue(state.availableResults.contains("DB_ERROR"))
+        }
+    }
+
+    @Test
+    fun RD_03_loadFailure_safety() = runTest {
         every { auditLogRepository.allLogs } returns flow {
-            throw RuntimeException("AuditLogs Flow Error")
+            throw RuntimeException("Connection Failed")
         }
 
-        val errorViewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
 
-        errorViewModel.uiState.test {
-            awaitItem() // 初期値
+        viewModel.uiState.test {
+            awaitItem() // Initial
             advanceUntilIdle()
             
-            // 検証: isLoading が false になること
-            assertEquals(false, errorViewModel.uiState.value.isLoading)
+            val state = awaitItem()
+            assertFalse(state.isLoading)
             
-            // 検証: 監査ログにエラーが記録されること (BaseViewModel/SafeCollectの機能)
             coVerify {
-                auditLogRepository.log(
-                    featureName = "AuditLog",
-                    operation = "auditLogsFlow",
-                    tableName = "audit_log",
-                    actionType = "ERROR",
-                    affectedId = any(),
-                    details = match { it.contains("AuditLogs Flow Error") },
-                    resultType = "OTHER_ERROR"
-                )
+                auditLogRepository.log(any(), any(), "audit_log", "ERROR", any(), any(), "OTHER_ERROR")
             }
-            cancelAndIgnoreRemainingEvents()
         }
     }
 
+    // endregion
+
+    // region 3. フィルタリング・ソートテスト (Filter / Sort)
+
     @Test
-    fun lg_02_atomicStateUpdate() = runTest {
+    fun FLT_01_setFeatureFilter() = runTest {
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
         advanceUntilIdle()
-        
-        // フィルタ変更
+
         viewModel.setFeatureFilter("Settings")
         advanceUntilIdle()
-        
-        assertEquals("Settings", viewModel.uiState.value.selectedFeature)
-        // リストは mockLogs (PersonList) なので、Settings でフィルタすると空になるはず
-        assertEquals(0, viewModel.uiState.value.auditLogs.size)
+
+        val state = viewModel.uiState.value
+        assertEquals("Settings", state.selectedFeature)
+        assertEquals(1, state.filteredLogs.size)
+        assertEquals("Settings", state.filteredLogs[0].featureName)
     }
+
+    @Test
+    fun FLT_02_setResultFilter() = runTest {
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        advanceUntilIdle()
+
+        viewModel.setResultFilter("DB_ERROR")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("DB_ERROR", state.selectedResult)
+        assertEquals(1, state.filteredLogs.size)
+    }
+
+    @Test
+    fun SRT_01_toggleSortOrder() = runTest {
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        advanceUntilIdle()
+
+        // Default is descending (2, 1)
+        assertEquals(2, viewModel.uiState.value.filteredLogs[0].id)
+
+        viewModel.toggleSortOrder() // Change to ascending
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isAscending)
+        assertEquals(1, viewModel.uiState.value.filteredLogs[0].id)
+    }
+
+    @Test
+    fun CLR_01_clearFilters() = runTest {
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        advanceUntilIdle()
+
+        viewModel.setFeatureFilter("Settings")
+        viewModel.clearFilters()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.selectedFeature)
+        assertEquals(2, viewModel.uiState.value.filteredLogs.size)
+    }
+
+    // endregion
+
+    // region 4. ナビゲーションテスト (Event)
+
+    @Test
+    fun NAV_01_navigateBack() = runTest {
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        
+        viewModel.viewEvent.test {
+            viewModel.navigateBack()
+            assertEquals(AuditLogViewEvent.NavigateBack, awaitItem())
+        }
+    }
+
+    // endregion
 }

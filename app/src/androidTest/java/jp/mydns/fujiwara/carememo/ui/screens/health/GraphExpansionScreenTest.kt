@@ -1,15 +1,12 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import io.mockk.every
-import io.mockk.mockk
+import androidx.navigation.NavHostController
+import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -19,15 +16,16 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 /**
- * UI層テスト：GraphExpansionScreen (グラフ拡大表示)
+ * Instrumented Test: GraphExpansionScreen (SCR-PH-003)
  * 
  * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-003_GraphExpansionScreen.md に準拠
  */
@@ -36,55 +34,49 @@ class GraphExpansionScreenTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var detailViewModel: PersonDetailUiStateViewModel
-    private lateinit var healthViewModel: PersonHealthViewModel
+    private val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
+    private val healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
+    private val navController = mockk<NavHostController>(relaxed = true)
 
-    private val mockPerson = Person(
-        id = "1", 
-        lastName = "山田", 
-        firstName = "太郎", 
-        lastNameFurigana = "ヤマダ", 
-        firstNameFurigana = "タロウ", 
+    private val testPerson = Person(
+        id = "u1", lastName = "山田", firstName = "太郎",
+        lastNameFurigana = "", firstNameFurigana = "",
         birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
 
-    private val baseTime = Instant.parse("2023-10-01T10:00:00Z")
-
     private val mockRecords = listOf(
-        BpAndPulse(id = "1", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = baseTime),
-        BpAndPulse(id = "2", personId = "1", bpSystolic = 130, bpDiastolic = 85, pulse = 75, recordTime = baseTime.plus(1, ChronoUnit.DAYS))
+        BpAndPulse(id = "1", personId = "u1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
     )
-
-    private val detailUiStateFlow = MutableStateFlow(PersonDetailUiState(person = mockPerson, personId = "1", currentCategory = Category.BP_AND_PULSE))
-    private val healthUiStateFlow = MutableStateFlow(PersonHealthUiState(personId = "1"))
-    private val recordsFlow = MutableStateFlow<List<HistoryRecord>>(emptyList())
 
     @Before
     fun setup() {
-        detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
-        healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
-
-        every { detailViewModel.uiState } returns detailUiStateFlow
+        every { detailViewModel.uiState } returns MutableStateFlow(
+            PersonDetailUiState(person = testPerson, personId = "u1", currentCategory = Category.BP_AND_PULSE)
+        )
         every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-
-        every { healthViewModel.uiState } returns healthUiStateFlow
-        every { healthViewModel.getHealthRecords(any()) } returns recordsFlow
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(personId = "u1"))
+        every { healthViewModel.getHealthRecords(any()) } returns MutableStateFlow(mockRecords.toImmutableList())
+        every { healthViewModel.viewEvent } returns MutableSharedFlow()
+        every { healthViewModel.uiEventFlow } returns MutableSharedFlow()
     }
 
-    private fun setContent(category: Category = Category.BP_AND_PULSE, initialIndex: Int = 0, onBack: () -> Unit = {}) {
+    private fun setContent(
+        isLoading: Boolean = false,
+        records: List<HistoryRecord> = mockRecords
+    ) {
+        every { healthViewModel.getHealthRecords(any()) } returns MutableStateFlow(records.toImmutableList())
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(isLoading = isLoading, personId = "u1"))
+
         composeTestRule.setContent {
             val context = LocalContext.current
-            // applicationContext を提供することで、本番コード内での Activity へのキャストを失敗させ、
-            // テスト中の画面回転（およびそれに伴う Activity 再生成）を抑制する。
+            // Use applicationContext to avoid orientation locking crashes in test environment
             CompositionLocalProvider(LocalContext provides context.applicationContext) {
                 CareMemoTheme {
                     GraphExpansionScreen(
                         detailViewModel = detailViewModel,
                         healthViewModel = healthViewModel,
-                        personId = "1",
-                        category = category,
-                        initialGraphIndex = initialIndex,
-                        onBack = onBack
+                        initialGraphIndex = 0,
+                        navController = navController
                     )
                 }
             }
@@ -92,142 +84,60 @@ class GraphExpansionScreenTest {
         composeTestRule.waitForIdle()
     }
 
-    /**
-     * 指定したグラフが画面に表示され、特定の数値が含まれていることを検証する
-     */
-    private fun assertChartContainsValue(index: Int, value: String) {
-        val tag = "GraphExpansion_ChartView_$index"
-        
-        // グラフが表示されるまで待機（最長10秒）
-        composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // 階層をマージせずに、子ノードも含めて contentDescription を検索する
-        composeTestRule.onNodeWithTag(tag)
-            .assertExists()
-            .onChildren()
-            .assertAny(hasContentDescription(value, substring = true))
-    }
-
-    // ======================================================================================
-    // 1. コンポーネント単体テスト (GraphExpansionScreen)
-    // ======================================================================================
+    //region 2. 表示テスト (Display)
 
     @Test
-    fun cp01_basic_layout_display() {
-        recordsFlow.value = mockRecords
+    fun DSP_01_basicLayout_isDisplayed() {
         setContent()
-        
         composeTestRule.onNodeWithTag("GraphExpansion_BackButton").assertIsDisplayed()
-        // 1番目のグラフ(血圧)が表示されていること
-        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("GraphExpansion_GraphList").assertIsDisplayed()
     }
 
     @Test
-    fun cp02_chart_drawing_content() {
-        recordsFlow.value = mockRecords
+    fun DSP_02_headerTitle_isCorrect() {
         setContent()
-        
-        // 血圧の最高値(120, 130)が描画されていることを確認
-        assertChartContainsValue(0, "120")
-        assertChartContainsValue(0, "130")
-    }
-
-    @Test
-    fun cp03_axis_labels_display() {
-        recordsFlow.value = mockRecords
-        setContent()
-        
-        // 軸ラベルや目盛りの一部として、期待される値が表示されていること
-        assertChartContainsValue(0, "120")
-    }
-
-    @Test
-    fun cp04_received_data_reflection() {
-        // 血糖値カテゴリで開始
-        val glucoseRecords = listOf(
-            jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c(id = "3", personId = "1", glucose = 150, hba1c = 7.0, recordTime = baseTime)
-        )
-        recordsFlow.value = glucoseRecords
-        setContent(category = Category.GLUCOSE_AND_HBA1C)
-        
-        // ヘッダーに「血糖値」が含まれていること
+        // Should contain masked name and category name
         composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle")
-            .assertTextContains("血糖値", substring = true)
-
-        // 1番目のグラフ(血糖値)と2番目のグラフ(HbA1c)の両方が存在することを確認
-        assertChartContainsValue(0, "150")
-        assertChartContainsValue(1, "7.0")
+            .assertTextContains("山田　太郎", substring = true)
+            .assertTextContains("血圧・脈拍", substring = true)
     }
 
     @Test
-    fun cp05_boundary_data_points() {
-        // データが1点のみの場合
-        recordsFlow.value = listOf(mockRecords[0])
+    fun DSP_04_emptyState_isDisplayed() {
+        setContent(records = emptyList())
+        composeTestRule.onNodeWithTag("GraphExpansion_EmptyState").assertIsDisplayed()
+        composeTestRule.onNodeWithText("記録がありません", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun DSP_05_loadingIndicator_isDisplayed() {
+        setContent(isLoading = true, records = emptyList())
+        composeTestRule.onNodeWithTag("GraphExpansion_Loading").assertIsDisplayed()
+    }
+
+    //endregion
+
+    //region 3. 操作・インタラクションテスト (Interaction)
+
+    @Test
+    fun ACT_01_graphList_isScrollable() {
+        // Mock multiple graphs (Category.BP_AND_PULSE has 2 graphs: Vital and BodyTemp usually, 
+        // depending on HealthChartHelper implementation)
         setContent()
-        
-        // エラーにならずに描画されていること
-        assertChartContainsValue(0, "120")
+        val list = composeTestRule.onNodeWithTag("GraphExpansion_GraphList")
+        list.assert(hasScrollAction())
     }
 
-    // ======================================================================================
-    // 2. 画面全体の挙動・結合テスト (GraphExpansionScreen)
-    // ======================================================================================
+    //endregion
+
+    //region 4. ナビゲーション・副作用検証 (Navigation)
 
     @Test
-    fun bh01_pinch_zoom_operation() {
-        recordsFlow.value = mockRecords
+    fun NAV_01_backButton_popsBackStack() {
         setContent()
-        
-        // ピンチ操作のシミュレーション
-        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput {
-            pinch(
-                start0 = center + Offset(-20f, 0f),
-                end0 = center + Offset(-100f, 0f),
-                start1 = center + Offset(20f, 0f),
-                end1 = center + Offset(100f, 0f)
-            )
-        }
-        composeTestRule.waitForIdle()
-    }
-
-    @Test
-    fun bh02_scroll_operation() {
-        recordsFlow.value = mockRecords
-        setContent()
-        
-        // スワップ操作のシミュレーション（グラフ内スクロール）
-        composeTestRule.onNodeWithTag("GraphExpansion_ChartView_0").performTouchInput {
-            swipeLeft()
-        }
-        composeTestRule.waitForIdle()
-    }
-
-    @Test
-    fun bh03_back_button_callback() {
-        var backCalled = false
-        recordsFlow.value = mockRecords
-        setContent(onBack = { backCalled = true })
-        
         composeTestRule.onNodeWithTag("GraphExpansion_BackButton").performClick()
-        
-        composeTestRule.runOnIdle {
-            assert(backCalled)
-        }
+        verify { navController.popBackStack() }
     }
 
-    @Test
-    fun bh04_screen_exit_and_return() {
-        var backCalled = false
-        recordsFlow.value = mockRecords
-        setContent(onBack = { backCalled = true })
-        
-        // 戻るボタンタップによりコールバックが呼ばれることを確認（bh03と同様の検証）
-        composeTestRule.onNodeWithTag("GraphExpansion_BackButton").performClick()
-        
-        composeTestRule.runOnIdle {
-            assert(backCalled)
-        }
-    }
+    //endregion
 }

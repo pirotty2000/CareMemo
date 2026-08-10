@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
@@ -63,7 +64,7 @@ fun OrphanedPhotoManagementScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.orphaned_photo_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateBack() }) {
+                    IconButton(onClick = { viewModel.navigateBack() }, modifier = Modifier.testTag("OrphanedPhoto_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }

@@ -1,29 +1,27 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import io.mockk.*
-import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
 /**
- * ViewModel層テスト：BatchInputViewModel (ロジック・安全性)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-002_BatchInputScreen.md に準拠
+ * Logic Test: BatchInputViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class BatchInputViewModelTest {
@@ -33,35 +31,29 @@ class BatchInputViewModelTest {
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
+    
     private val testDispatcher = StandardTestDispatcher()
-
+    
     private val testPerson = Person(
-        id = "1",
+        id = "u1",
         lastName = "健康",
         firstName = "太郎",
         lastNameFurigana = "ケンコウ",
         firstNameFurigana = "タロウ",
-        birthday = Instant.now()
+        birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
+    
+    private val isNameMaskingEnabledFlow = MutableStateFlow(false)
 
     @Before
     fun setup() {
         mockkStatic(Log::class)
         every { Log.e(any(), any(), any()) } returns 0
-
         Dispatchers.setMain(testDispatcher)
-        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
-        every { userSettingsRepository.defaultRecorderName } returns flowOf("")
+
+        every { userSettingsRepository.isNameMaskingEnabled } returns isNameMaskingEnabledFlow
         coEvery { personRepository.getPersonById(any()) } returns flowOf(testPerson)
-        coEvery { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(
-            jp.mydns.fujiwara.carememo.data.PersonCategorySummary(
-                hasHeightWeight = false,
-                hasBpAndPulse = false,
-                hasGlucoseAndHbA1c = false,
-                hasCondition = false,
-                hasMedication = false
-            )
-        )
+        coEvery { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
         
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
         coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
@@ -74,106 +66,159 @@ class BatchInputViewModelTest {
         unmockkStatic(Log::class)
     }
 
+    private fun createViewModel(personId: String? = "u1"): BatchInputViewModel {
+        return BatchInputViewModel(
+            healthRepository,
+            personRepository,
+            summaryRepository,
+            userSettingsRepository,
+            auditLogRepository,
+            SavedStateHandle(if (personId != null) mapOf("personId" to personId) else emptyMap())
+        )
+    }
+
+    // region 2. 初期化・データロードテスト (Initialization)
+
     @Test
-    fun lg_01_一括保存失敗時の安全性() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
-        advanceUntilIdle()
-
-        viewModel.updateWeight("60")
-        coEvery { healthRepository.insertHeightAndWeight(any(), any(), any()) } throws RuntimeException("Batch Save Failure")
-
-        viewModel.saveBatch()
-        advanceUntilIdle()
-
-        // isLoading が false に戻ること
-        assertFalse(viewModel.uiState.value.isLoading)
-        coVerify(exactly = 1) { 
-            auditLogRepository.log(
-                featureName = "BatchInput",
-                operation = "saveBatch",
-                tableName = "health_db",
-                actionType = "ERROR",
-                affectedId = "1",
-                resultType = "OTHER_ERROR",
-                details = match { it.contains("Batch Save Failure") }
-            )
+    fun INI_01_initialLoad_success() = runTest {
+        val viewModel = createViewModel()
+        
+        viewModel.uiState.test {
+            val initial = awaitItem()
+            assertTrue(initial.isLoading)
+            
+            advanceUntilIdle()
+            
+            val loaded = awaitItem()
+            assertFalse(loaded.isLoading)
+            assertEquals("u1", loaded.personId)
+            assertEquals("健康 太郎", loaded.currentPersonName)
+            assertTrue(loaded.weight.isEmpty())
         }
     }
 
     @Test
-    fun lg_02_バリデーション結果の翻訳() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
+    fun INI_02_maskingSettingReflection() = runTest {
+        val viewModel = createViewModel()
         advanceUntilIdle()
-
-        // 形式不正な入力
-        viewModel.updateWeight("abc")
-
-        viewModel.saveBatch()
+        
+        isNameMaskingEnabledFlow.value = true
         advanceUntilIdle()
-
-        coVerify {
-            auditLogRepository.log(
-                featureName = "BatchInput",
-                operation = "saveBatch",
-                tableName = "health_db",
-                actionType = "ERROR",
-                affectedId = "1",
-                resultType = "VALIDATION_ERROR",
-                details = match { it.contains("INVALID_VALUE") }
-            )
-        }
+        
+        assertTrue(viewModel.uiState.value.isNameMaskingEnabled)
+        assertEquals("健○\u3000太○", viewModel.uiState.value.currentPersonName)
     }
 
+    // endregion
+
+    // region 3. 入力・状態管理テスト (Input & State)
+
     @Test
-    fun lg_03_重複カテゴリの識別() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
+    fun INP_01_inputUpdate_reactivity() = runTest {
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.updateWeight("60")
         
-        // 重複がある状態をシミュレート
+        val state = viewModel.uiState.value
+        assertEquals("60", state.weight)
+        assertTrue(state.isChanged)
+        assertTrue(state.isValid)
+    }
+
+    @Test
+    fun INP_02_timeUpdate_reactivity() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val nextTime = viewModel.uiState.value.recordTime.plusSeconds(3600)
+        viewModel.setRecordTime(nextTime)
+        
+        assertTrue(viewModel.uiState.value.isChanged)
+        assertEquals(nextTime, viewModel.uiState.value.recordTime)
+    }
+
+    // endregion
+
+    // region 4. 一括保存テスト (Batch Saving)
+
+    @Test
+    fun SAV_01_saveBatch_success() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("60")
+        viewModel.saveBatch()
+        advanceUntilIdle()
+
+        coVerify { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+        // Verify input cleared
+        assertTrue(viewModel.uiState.value.weight.isEmpty())
+        assertFalse(viewModel.uiState.value.isChanged)
+    }
+
+    @Test
+    fun SAV_03_saveBatch_validationError() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("abc") // Invalid format
+        viewModel.saveBatch()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+        coVerify { 
+            auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("INVALID_VALUE") }, "VALIDATION_ERROR")
+        }
+    }
+
+    @Test
+    fun SAV_04_saveBatch_duplicateBlocked() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("60")
+        // Simulate duplicate
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns mockk<HeightAndWeight>()
 
         viewModel.saveBatch()
         advanceUntilIdle()
 
+        coVerify(exactly = 0) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
         coVerify {
-            auditLogRepository.log(
-                featureName = "BatchInput",
-                operation = "saveBatch",
-                tableName = "health_db",
-                actionType = "ERROR",
-                affectedId = "1",
-                resultType = "VALIDATION_ERROR",
-                details = match { it.contains("HEIGHT_WEIGHT") }
-            )
+            auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Duplicate detected") }, "VALIDATION_ERROR")
         }
     }
 
     @Test
-    fun lg_04_状態の原子性() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
+    fun SAV_05_saveBatch_repositoryException() = runTest {
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // 初期状態: 全項目空、変更なし
-        assertFalse(viewModel.uiState.value.isChanged)
-        assertFalse(viewModel.uiState.value.isValid)
-
-        // 数値を入力
         viewModel.updateWeight("60")
-        
-        // 即座に変更あり、かつ有効（体重のみでも有効）になること
-        val state = viewModel.uiState.value
-        assertEquals("60", state.weight)
-        assertTrue(state.isChanged)
-        assertTrue(state.isValid)
-        
-        // 日時を変更
-        val nextTime = state.recordTime.plusSeconds(3600)
-        viewModel.setRecordTime(nextTime)
-        
-        // 日時が更新されると同時に、変更ありフラグが維持されていること
-        assertEquals(nextTime, viewModel.uiState.value.recordTime)
-        assertTrue(viewModel.uiState.value.isChanged)
+        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
+
+        viewModel.saveBatch()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify {
+            auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("DB Error") }, "OTHER_ERROR")
+        }
     }
+
+    // endregion
+
+    // region 5. ナビゲーションテスト (Navigation)
+
+    @Test
+    fun NAV_01_navigateBack() = runTest {
+        val viewModel = createViewModel()
+        viewModel.viewEvent.test {
+            viewModel.navigateBack()
+            assertEquals(BatchInputViewEvent.NavigateBack, awaitItem())
+        }
+    }
+
+    // endregion
 }

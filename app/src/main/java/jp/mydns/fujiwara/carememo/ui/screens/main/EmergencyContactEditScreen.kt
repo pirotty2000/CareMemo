@@ -19,7 +19,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
-import jp.mydns.fujiwara.carememo.logic.common.PhoneNumberVisualTransformation
+import jp.mydns.fujiwara.carememo.logic.feature.PhoneNumberVisualTransformation
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme

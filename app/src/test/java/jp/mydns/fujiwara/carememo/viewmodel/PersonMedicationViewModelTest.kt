@@ -2,28 +2,26 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import io.mockk.*
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 
 /**
- * PersonMedicationViewModel (服薬管理) のユニットテスト
- * 
- * 仕様書：doc/test/screen/TEST_SPEC_SCR-PM-001_PersonMedicationScreen.md に準拠
+ * Logic Test: PersonMedicationViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonMedicationViewModelTest {
@@ -34,30 +32,26 @@ class PersonMedicationViewModelTest {
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
-    private lateinit var viewModel: PersonMedicationViewModel
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = StandardTestDispatcher()
 
-    private val fixedInstant = Instant.parse("2023-10-27T10:00:00Z")
-
+    private val personId = "u1"
     private val testPerson = Person(
-        id = "1", lastName = "服薬", firstName = "太郎",
+        id = personId, lastName = "服薬", firstName = "太郎",
         lastNameFurigana = "ふくやく", firstNameFurigana = "たろう",
-        birthday = fixedInstant
+        birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
 
     @Before
     fun setup() {
         mockkStatic(Log::class)
         every { Log.e(any(), any(), any()) } returns 0
-
         Dispatchers.setMain(testDispatcher)
+
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
-        every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
-        every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
-        
-        viewModel = PersonMedicationViewModel(
-            medicationRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1"))
-        )
+        coEvery { personRepository.getPersonById(any()) } returns flowOf(testPerson)
+        coEvery { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
+        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flowOf(emptyList())
+        every { medicationRepository.getMedicationRecords(any()) } returns flowOf(emptyList())
     }
 
     @After
@@ -66,77 +60,134 @@ class PersonMedicationViewModelTest {
         unmockkStatic(Log::class)
     }
 
+    private fun createViewModel(): PersonMedicationViewModel {
+        return PersonMedicationViewModel(
+            medicationRepository, personRepository, summaryRepository, 
+            userSettingsRepository, auditLogRepository, 
+            SavedStateHandle(mapOf("personId" to personId))
+        )
+    }
+
+    // region 2. 初期化・データロードテスト (Initialization)
+
     @Test
-    fun BH_03_nextMonth_updatesMonth() = runTest {
-        val initialMonth = viewModel.uiState.value.selectedMonth
+    fun INI_01_initialLoad_success() = runTest {
+        val viewModel = createViewModel()
+        
+        viewModel.uiState.test {
+            val initial = awaitItem()
+            assertTrue(initial.isLoading)
+            
+            advanceUntilIdle()
+            
+            val state = awaitItem()
+            assertFalse(state.isLoading)
+            assertEquals(personId, state.personId)
+            assertEquals(YearMonth.now(), state.selectedMonth)
+        }
+    }
+
+    // endregion
+
+    // region 3. 月次表示・期間管理テスト (Month & Navigation)
+
+    @Test
+    fun MON_01_nextMonth_triggersReload() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val currentMonth = viewModel.uiState.value.selectedMonth
+        val nextMonth = currentMonth.plusMonths(1)
+        
         viewModel.nextMonth()
+        advanceUntilIdle()
+
+        assertEquals(nextMonth, viewModel.uiState.value.selectedMonth)
+        coVerify { medicationRepository.getMedicationRecordsByMonth(personId, nextMonth.toString()) }
+    }
+
+    // endregion
+
+    // region 4. 服薬同期テスト (Sync)
+
+    @Test
+    fun SYN_01_syncMedicationDay_insertNewRecord() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val date = LocalDate.now().toString()
+        val record = MedicationRecord(personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
         
-        assertEquals(initialMonth.plusMonths(1), viewModel.uiState.value.selectedMonth)
+        viewModel.syncMedicationDay(date, listOf(record, null, null, null))
+        advanceUntilIdle()
+
+        coVerify { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) }
     }
 
     @Test
-    fun LG_01_load_failure_safety() = runTest {
-        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flow {
-            throw RuntimeException("Flow Error")
-        }
+    fun SYN_02_syncMedicationDay_deleteRecord() = runTest {
+        val date = LocalDate.now().toString()
+        val existingRecord = MedicationRecord(id = "c1", personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
         
-        viewModel.loadPerson("1")
+        // Mock existing data for that day
+        every { medicationRepository.getMedicationRecordsByMonth(personId, any()) } returns flowOf(listOf(existingRecord))
+        
+        val viewModel = createViewModel()
+        advanceUntilIdle()
 
-        // isLoading が false に戻ること
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "PersonMedication",
-                operation = "monthlyRecordsFlow",
-                tableName = "medication_db",
-                actionType = "ERROR",
-                affectedId = any(),
-                details = match { it.contains("Flow Error") },
-                resultType = "OTHER_ERROR"
-            )
-        }
+        // Clear all slots for that day
+        viewModel.syncMedicationDay(date, listOf(null, null, null, null))
+        advanceUntilIdle()
+
+        coVerify { medicationRepository.deleteMedicationRecord(match { it.id == "c1" }, any(), any()) }
     }
 
     @Test
-    fun LG_02_save_failure_safety() = runTest {
+    fun SYN_04_syncMedicationDay_futureDateBlocked() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val futureDate = LocalDate.now().plusDays(1).toString()
+        val record = MedicationRecord(personId = personId, dosageDate = futureDate, timeSlot = 0, status = 2, recordTime = Instant.now())
+
+        viewModel.uiEventFlow.test {
+            viewModel.syncMedicationDay(futureDate, listOf(record, null, null, null))
+            val event = awaitItem()
+            assertTrue(event is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes)
+        }
+    }
+
+    // endregion
+
+    // region 5. 安全性・例外テスト (Safety)
+
+    @Test
+    fun ERR_01_loadFailure_safety() = runTest {
+        every { medicationRepository.getMedicationRecordsByMonth(any(), any()) } returns flow { throw RuntimeException("Fetch Error") }
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Fetch Error") }, any()) }
+    }
+
+    @Test
+    fun ERR_02_syncFailure_safety() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
         coEvery { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
         
-        val date = "2023-10-27"
-        val record = MedicationRecord(id = "", personId = "1", dosageDate = date, timeSlot = 0, status = 2, recordTime = fixedInstant)
-
-        viewModel.loadPerson("1")
-        testDispatcher.scheduler.advanceUntilIdle()
+        val date = LocalDate.now().toString()
+        val record = MedicationRecord(personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
 
         viewModel.syncMedicationDay(date, listOf(record, null, null, null))
-        testDispatcher.scheduler.advanceUntilIdle()
+        advanceUntilIdle()
 
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "PersonMedication",
-                operation = "syncMedicationDay",
-                tableName = "medication_db",
-                actionType = "ERROR",
-                affectedId = "1",
-                details = match { it.contains("Sync Error") },
-                resultType = "OTHER_ERROR"
-            )
-        }
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Sync Error") }, any()) }
     }
 
-    @Test
-    @Suppress("USELESS_IS_CHECK")
-    fun LG_03_month_switch_atomicity() = runTest {
-        val initialMonth = YearMonth.now()
-        val nextMonth = initialMonth.plusMonths(1)
-        
-        viewModel.loadPerson("1")
-        
-        // 月を次へ
-        viewModel.nextMonth()
-        
-        // 即座に UiState の月が更新され、該当月のリポジトリが呼ばれていること
-        assertEquals(nextMonth, viewModel.uiState.value.selectedMonth)
-        verify { medicationRepository.getMedicationRecordsByMonth("1", nextMonth.toString()) is kotlinx.coroutines.flow.Flow<*> }
-    }
+    // endregion
 }

@@ -105,7 +105,7 @@ class MedicationLogicTest {
 
     // endregion
 
-    // region 3. 入力バリデーションテスト (validateMedicationInput)
+    // region 3. バリデーションテスト (validateMedication)
 
     @Test
     fun VAL_01_validateMedication_success() {
@@ -123,6 +123,31 @@ class MedicationLogicTest {
     fun VAL_03_validateMedication_invalidStatus() {
         val record = MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 0, status = 9, recordTime = now)
         assertEquals(MedicationValidationResult.INVALID_STATUS, MedicationLogic.validateMedication(record))
+    }
+
+    // endregion
+
+    // region 4. データクレンジングテスト (filterValidRecords)
+
+    @Test
+    fun CLN_01_filterValidRecords_allValid() {
+        val records = listOf(
+            MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 0, status = 1, recordTime = now),
+            MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 1, status = 2, recordTime = now)
+        )
+        val result = MedicationLogic.filterValidRecords(records)
+        assertEquals(2, result.size)
+    }
+
+    @Test
+    fun CLN_02_filterValidRecords_withInvalid() {
+        val records = listOf(
+            MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 0, status = 1, recordTime = now),
+            MedicationRecord(personId = "1", dosageDate = "2023-10-27", timeSlot = 1, status = 9, recordTime = now)
+        )
+        val result = MedicationLogic.filterValidRecords(records)
+        assertEquals(1, result.size)
+        assertEquals(1, result[0].status)
     }
 
     // endregion

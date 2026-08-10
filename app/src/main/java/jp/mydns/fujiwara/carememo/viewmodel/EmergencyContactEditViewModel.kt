@@ -11,7 +11,7 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.logic.common.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

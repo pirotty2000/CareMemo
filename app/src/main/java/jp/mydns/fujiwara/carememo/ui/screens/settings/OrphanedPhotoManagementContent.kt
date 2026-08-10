@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo
@@ -33,7 +34,7 @@ fun OrphanedPhotoManagementContent(
     modifier: Modifier = Modifier
 ) {
     if (uiState.isLoading && uiState.orphanedPhotos.isEmpty()) {
-        LoadingScreen(modifier = modifier)
+        LoadingScreen(modifier = modifier.testTag("OrphanedPhoto_Loading"))
         return
     }
 
@@ -41,7 +42,7 @@ fun OrphanedPhotoManagementContent(
         EmptyState(
             message = stringResource(R.string.orphaned_photo_empty_msg),
             icon = Icons.Default.Info,
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize().testTag("OrphanedPhoto_EmptyState")
         )
         return
     }
@@ -51,12 +52,13 @@ fun OrphanedPhotoManagementContent(
         contentPadding = PaddingValues(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize().testTag("OrphanedPhoto_Grid")
     ) {
         items(uiState.orphanedPhotos) { info ->
             OrphanedPhotoItem(
                 info = info,
-                onDelete = { onDelete(info) }
+                onDelete = { onDelete(info) },
+                modifier = Modifier.testTag("OrphanedPhoto_Item_${info.photoFileName}")
             )
         }
     }
@@ -90,6 +92,7 @@ fun OrphanedPhotoItem(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .background(Color.Black.copy(alpha = 0.5f))
+                        .testTag("OrphanedPhoto_DeleteButton")
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete), tint = Color.White)
                 }

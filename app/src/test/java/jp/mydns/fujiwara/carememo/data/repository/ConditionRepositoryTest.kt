@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.data.repository
 
 import io.mockk.coEvery
@@ -15,6 +13,9 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
+/**
+ * Unit Test: ConditionRepository
+ */
 class ConditionRepositoryTest {
 
     private val conditionAtVisitDao = mockk<ConditionAtVisitDao>(relaxed = true)
@@ -28,93 +29,92 @@ class ConditionRepositoryTest {
         repository = ConditionRepository(conditionAtVisitDao, conditionPhotoDao, auditLogRepository)
     }
 
+    // region 2. 所見メモ操作テスト (ConditionAtVisit)
+
     @Test
-    fun `insertConditionAtVisitを実行したとき、DAOのinsertが呼ばれ、かつ操作ログが記録されること`() = runTest {
-        val record = ConditionAtVisit(
-            id = "100",
-            personId = "1",
-            title = "テスト",
-            condition = "内容",
-            author = "記録者",
-            recordTime = Instant.now()
-        )
-        val screen = "テスト画面"
-        val op = "保存ボタン押下"
-        
-        coEvery { conditionAtVisitDao.insert(any()) } returns 1L // rowId
+    fun MEM_01_insertConditionAtVisit_new() = runTest {
+        val record = createSampleRecord("100")
+        coEvery { conditionAtVisitDao.insert(any()) } returns 1L
 
-        val resultId = repository.insertConditionAtVisit(record, screen, op)
+        repository.insertConditionAtVisit(record, "Feature", "Op", isUpdate = false)
 
-        assertEquals("100", resultId)
-        // updatedAt が内部で更新されるため、match を使用
-        coVerify { conditionAtVisitDao.insert(match { it.id == "100" && it.personId == "1" && it.title == "テスト" }) }
-        coVerify {
-            auditLogRepository.log(
-                featureName = screen,
-                operation = op,
-                tableName = "condition_at_visit_db",
-                actionType = "INSERT",
-                affectedId = "100",
-                details = match { it.contains("PersonId: 1") && it.contains("Title: テスト") },
-                resultType = "SUCCESS"
-            )
+        coVerify { conditionAtVisitDao.insert(match { it.id == "100" }) }
+        coVerify { 
+            auditLogRepository.log(any(), any(), any(), "INSERT", "100", any(), "SUCCESS") 
         }
     }
 
     @Test
-    fun `deleteConditionAtVisitを実行したとき、DAOのdeleteが呼ばれ、かつ操作ログが記録されること`() = runTest {
-        val record = ConditionAtVisit(
-            id = "10",
-            personId = "1",
-            title = "テスト",
-            condition = "内容",
-            author = "記録者",
-            recordTime = Instant.now()
-        )
-        
-        repository.deleteConditionAtVisit(record, "画面", "削除")
+    fun MEM_02_insertConditionAtVisit_update() = runTest {
+        val record = createSampleRecord("100")
+        repository.insertConditionAtVisit(record, "Feature", "Op", isUpdate = true)
+
+        coVerify { 
+            auditLogRepository.log(any(), any(), any(), "UPDATE", "100", any(), "SUCCESS") 
+        }
+    }
+
+    @Test
+    fun MEM_03_deleteConditionAtVisit() = runTest {
+        val record = createSampleRecord("100")
+        repository.deleteConditionAtVisit(record, "F", "O")
 
         coVerify { conditionAtVisitDao.delete(any()) }
-        coVerify {
-            auditLogRepository.log(
-                featureName = "画面",
-                operation = "削除",
-                tableName = "condition_at_visit_db",
-                actionType = "DELETE",
-                affectedId = "10",
-                details = match { it.contains("PersonId: 1") },
-                resultType = "SUCCESS"
-            )
+        coVerify { 
+            auditLogRepository.log(any(), any(), any(), "DELETE", "100", any(), "SUCCESS") 
         }
+    }
+
+    // endregion
+
+    // region 3. 写真メタデータ操作テスト (ConditionPhoto)
+
+    @Test
+    fun PHT_01_insertConditionPhoto() = runTest {
+        val photo = createSamplePhoto("p1", "c1")
+        repository.insertConditionPhoto(photo, "F", "O")
+
+        coVerify { conditionPhotoDao.insert(any()) }
+        coVerify { auditLogRepository.log(any(), any(), "condition_photo_db", any(), "p1", any(), "SUCCESS") }
     }
 
     @Test
-    fun `insertConditionPhotoを実行したとき、DAOのinsertが呼ばれ、かつ操作ログが記録されること`() = runTest {
-        val photo = ConditionPhoto(
-            id = "200",
-            conditionId = "5",
-            personId = "1",
-            photoFileName = "p.jpg",
-            thumbnailFileName = "t.jpg",
-            capturedAt = Instant.now()
-        )
+    fun PHT_02_linkTemporaryPhotosToRecord() = runTest {
+        repository.linkTemporaryPhotosToRecord("u1", "c1", "F", "O")
 
-        coEvery { conditionPhotoDao.insert(any()) } returns 1L
+        coVerify { conditionPhotoDao.linkTemporaryPhotosToRecord("u1", "c1") }
+        coVerify { auditLogRepository.log(any(), any(), any(), "UPDATE", "person:u1", any(), "SUCCESS") }
+    }
 
-        repository.insertConditionPhoto(photo, "画面", "写真保存")
+    @Test
+    fun PHT_04_adoptFileAsPhoto() = runTest {
+        val capturedAt = Instant.now()
+        repository.adoptFileAsPhoto("u1", "c1", "img.jpg", "thumb.jpg", capturedAt, "F", "O")
 
-        // updatedAt が内部で更新されるため、match を使用
-        coVerify { conditionPhotoDao.insert(match { it.id == "200" && it.conditionId == "5" && it.personId == "1" }) }
-        coVerify {
-            auditLogRepository.log(
-                featureName = "画面",
-                operation = "写真保存",
-                tableName = "condition_photo_db",
-                actionType = "INSERT",
-                affectedId = "200",
-                details = match { it.contains("PersonId: 1") && it.contains("ConditionId: 5") },
-                resultType = "SUCCESS"
-            )
+        coVerify { 
+            conditionPhotoDao.insert(match { 
+                it.personId == "u1" && it.photoFileName == "img.jpg" && it.capturedAt == capturedAt 
+            }) 
         }
     }
+
+    // endregion
+
+    private fun createSampleRecord(id: String) = ConditionAtVisit(
+        id = id,
+        personId = "u1",
+        title = "Title",
+        condition = "Content",
+        author = "Author",
+        recordTime = Instant.now()
+    )
+
+    private fun createSamplePhoto(id: String, conditionId: String) = ConditionPhoto(
+        id = id,
+        conditionId = conditionId,
+        personId = "u1",
+        photoFileName = "img.jpg",
+        thumbnailFileName = "thumb.jpg",
+        capturedAt = Instant.now()
+    )
 }

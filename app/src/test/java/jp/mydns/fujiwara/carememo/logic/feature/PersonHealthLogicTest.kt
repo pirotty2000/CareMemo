@@ -1,8 +1,7 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import org.junit.Assert.*
 import org.junit.Test
@@ -15,82 +14,125 @@ class PersonHealthLogicTest {
 
     private val now = Instant.now()
 
-    // region 1. 新規判定テスト (isNew)
+    // region 2. 数値妥当性テスト (validate)
 
     @Test
-    fun NEW_01_isNew_newRecord_returnsTrue() {
-        val record = HeightAndWeight(id = "", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
-        assertTrue(IdLogic.isNew(record.id))
-    }
-
-    @Test
-    fun NEW_02_isNew_existingRecord_returnsFalse() {
-        val record = HeightAndWeight(id = "100", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
-        assertFalse(IdLogic.isNew(record.id))
-    }
-
-    @Test
-    fun NEW_03_isNew_notHistoryRecord_returnsFalse() {
-        assertFalse(IdLogic.isNew("Not a record"))
-    }
-
-    // endregion
-
-    // region 2. 重複判定テスト (validateDuplicate)
-
-    @Test
-    fun DUP_01_validateDuplicate_noExisting_returnsSuccess() {
-        val current = HeightAndWeight(id = "", personId = "1", height = null, weight = null, recordTime = now)
-        assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, null))
-    }
-
-    @Test
-    fun DUP_02_validateDuplicate_newRecordCollision_returnsDuplicate() {
-        val current = HeightAndWeight(id = "", personId = "1", height = null, weight = null, recordTime = now)
-        val existing = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
-        assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
-    }
-
-    @Test
-    fun DUP_03_validateDuplicate_updateSameRecord_returnsSuccess() {
-        val current = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
-        val existing = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
-        assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, existing))
-    }
-
-    @Test
-    fun DUP_04_validateDuplicate_updateDifferentRecordCollision_returnsDuplicate() {
-        val current = HeightAndWeight(id = "1", personId = "1", height = null, weight = null, recordTime = now)
-        val existing = HeightAndWeight(id = "2", personId = "1", height = null, weight = null, recordTime = now)
-        assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
-    }
-
-    // endregion
-
-    // region 3. 数値妥当性テスト (validateValues)
-
-    @Test
-    fun VAL_01_validate_validHeightAndWeight_returnsSuccess() {
-        val record = HeightAndWeight(id = "", personId = "1", height = 170.0, weight = 60.0, recordTime = now)
+    fun VAL_01_validate_heightAndWeight_success() {
+        val record = HeightAndWeight(id = "1", personId = "u1", height = 170.0, weight = 60.0, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
     }
 
     @Test
-    fun VAL_02_validate_invalidHeight_returnsInvalidValue() {
-        val record = HeightAndWeight(id = "", personId = "1", height = 300.0, weight = 60.0, recordTime = now)
+    fun VAL_02_validate_height_invalid() {
+        val record = HeightAndWeight(id = "1", personId = "u1", height = 300.0, weight = 60.0, recordTime = now)
         assertEquals(HealthValidationResult.INVALID_VALUE, PersonHealthLogic.validate(record))
     }
 
     @Test
-    fun VAL_03_validate_validBpAndPulse_returnsSuccess() {
-        val record = BpAndPulse(id = "", personId = "1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = now)
+    fun VAL_03_validate_bpAndPulse_success() {
+        val record = BpAndPulse(id = "1", personId = "u1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
     }
 
     @Test
-    fun VAL_04_validate_validGlucoseAndHbA1c_returnsSuccess() {
-        val record = GlucoseAndHbA1c(id = "", personId = "1", glucose = 100, hba1c = 5.5, recordTime = now)
+    fun VAL_04_validate_glucoseAndHbA1c_success() {
+        val record = GlucoseAndHbA1c(id = "1", personId = "u1", glucose = 100, hba1c = 5.5, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
+    }
+
+    @Test
+    fun VAL_05_validate_nullFields_success() {
+        val record = BpAndPulse(id = "1", personId = "u1", bpSystolic = null, bpDiastolic = null, pulse = null, recordTime = now)
+        assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validate(record))
+    }
+
+    // endregion
+
+    // region 3. 重複判定テスト (validateDuplicate)
+
+    @Test
+    fun DUP_01_validateDuplicate_noExisting() {
+        val current = HeightAndWeight(id = "NEW", personId = "u1", height = null, weight = null, recordTime = now)
+        assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, null))
+    }
+
+    @Test
+    fun DUP_02_validateDuplicate_collisionNew() {
+        val current = HeightAndWeight(id = "NEW", personId = "u1", height = null, weight = null, recordTime = now)
+        val existing = HeightAndWeight(id = "persisted-1", personId = "u1", height = null, weight = null, recordTime = now)
+        assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
+    }
+
+    @Test
+    fun DUP_03_validateDuplicate_sameRecordUpdate() {
+        val current = HeightAndWeight(id = "p1", personId = "u1", height = null, weight = null, recordTime = now)
+        val existing = HeightAndWeight(id = "p1", personId = "u1", height = null, weight = null, recordTime = now)
+        assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, existing))
+    }
+
+    @Test
+    fun DUP_04_validateDuplicate_differentRecordUpdate() {
+        val current = HeightAndWeight(id = "p1", personId = "u1", height = null, weight = null, recordTime = now)
+        val existing = HeightAndWeight(id = "p2", personId = "u1", height = null, weight = null, recordTime = now)
+        assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
+    }
+
+    // endregion
+
+    // region 4. UI入力一括評価テスト (validateInputs)
+
+    @Test
+    fun UI_01_validateInputs_heightAndWeight() {
+        val values = mapOf("height" to "170", "weight" to "60")
+        assertEquals(HealthInputValidationResult.SUCCESS, PersonHealthLogic.validateInputs(Category.HEIGHT_AND_WEIGHT, values))
+    }
+
+    @Test
+    fun UI_02_validateInputs_vitalPartial() {
+        val values = mapOf("bpSystolic" to "120", "pulse" to "70")
+        assertEquals(HealthInputValidationResult.SUCCESS, PersonHealthLogic.validateInputs(Category.BP_AND_PULSE, values))
+    }
+
+    @Test
+    fun UI_03_validateInputs_invalidFormat() {
+        val values = mapOf("height" to "abc")
+        assertEquals(HealthInputValidationResult.INVALID_FORMAT, PersonHealthLogic.validateInputs(Category.HEIGHT_AND_WEIGHT, values))
+    }
+
+    // endregion
+
+    // region 5. Entity 生成テスト (createEntity)
+
+    @Test
+    fun CRT_01_createEntity_mapping() {
+        val values = mapOf("height" to 170.0, "weight" to 60.0)
+        val result = PersonHealthLogic.createEntity(Category.HEIGHT_AND_WEIGHT, "u1", "p1", now, values) as HeightAndWeight
+        
+        assertEquals("p1", result.id)
+        assertEquals("u1", result.personId)
+        assertEquals(170.0, result.height!!, 0.0)
+        assertEquals(60.0, result.weight!!, 0.0)
+        assertEquals(now, result.recordTime)
+    }
+
+    @Test
+    fun CRT_02_createEntity_newId() {
+        val values = emptyMap<String, Any?>()
+        val result = PersonHealthLogic.createEntity(Category.HEIGHT_AND_WEIGHT, "u1", "NEW", now, values) as HeightAndWeight
+        
+        assertNotEquals("NEW", result.id)
+        assertFalse(IdLogic.isNew(result.id))
+    }
+
+    @Test
+    fun CRT_03_createEntity_maintainId() {
+        val result = PersonHealthLogic.createEntity(Category.HEIGHT_AND_WEIGHT, "u1", "existing-id", now, emptyMap()) as HeightAndWeight
+        assertEquals("existing-id", result.id)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun CRT_04_createEntity_unsupported() {
+        PersonHealthLogic.createEntity(Category.CONDITION_AT_VISIT, "u1", "p1", now, emptyMap())
     }
 
     // endregion

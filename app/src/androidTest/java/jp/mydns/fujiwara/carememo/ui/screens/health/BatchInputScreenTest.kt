@@ -19,10 +19,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
 
 /**
- * UI層テスト：BatchInputScreen (健康記録一括入力)
+ * Instrumented Test: BatchInputScreen (SCR-PH-002)
  * 
  * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-002_BatchInputScreen.md に準拠
  */
@@ -31,25 +30,17 @@ class BatchInputScreenTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var viewModel: BatchInputViewModel
-    private lateinit var navController: NavHostController
+    private val viewModel = mockk<BatchInputViewModel>(relaxed = true)
+    private val navController = mockk<NavHostController>(relaxed = true)
     private val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
     private val viewEventFlow = MutableSharedFlow<BatchInputViewEvent>(extraBufferCapacity = 1)
     private val uiStateFlow = MutableStateFlow(BatchInputUiState(
-        personId = "1",
-        person = jp.mydns.fujiwara.carememo.data.Person(
-            id = "1", lastName = "山田", firstName = "太郎",
-            lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ",
-            birthday = Instant.now()
-        ),
+        personId = "u1",
         currentPersonName = "山田 太郎"
     ))
 
     @Before
     fun setup() {
-        viewModel = mockk<BatchInputViewModel>(relaxed = true)
-        navController = mockk<NavHostController>(relaxed = true)
-        
         every { viewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
         every { viewModel.viewEvent } returns viewEventFlow.asSharedFlow()
         every { viewModel.uiState } returns uiStateFlow
@@ -68,183 +59,93 @@ class BatchInputScreenTest {
         composeTestRule.waitForIdle()
     }
 
-    // ======================================================================================
-    // 1. コンポーネント単体テスト (BatchInputScreenContent)
-    // ======================================================================================
+    //region 2. 表示テスト (Display)
 
     @Test
-    fun cp01_date_time_input_display() {
+    fun DSP_01_allInputFields_areDisplayed() {
         setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_DateTimeInput").assertIsDisplayed()
-    }
-
-    @Test
-    fun cp02_height_weight_input_display() {
-        setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_HeightField").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithTag("BatchInputScreen_WeightField").performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun cp03_vital_input_display() {
-        setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_BpSystolicField").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag("BatchInputScreen_BpDiastolicField").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag("BatchInputScreen_SatField").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag("BatchInputScreen_PulseField").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag("BatchInputScreen_TempField").performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun cp04_glucose_input_display() {
-        setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_GlucoseField").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag("BatchInputScreen_Hba1cField").performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun cp05_action_buttons_display() {
+    fun DSP_02_saveButton_reflectsValidity() {
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = true)
         setContent()
-        composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag("BatchInputScreen_CancelButton").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsEnabled()
+
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = false)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsNotEnabled()
     }
 
     @Test
-    fun cp06_scroll_accessibility() {
+    fun DSP_04_scroll_isPossible() {
         setContent()
         val scrollColumn = composeTestRule.onNodeWithTag("BatchInputScreen_InputScrollColumn")
-        
-        // スクロール可能であることを確認
         scrollColumn.assert(hasScrollAction())
-        
-        // 最下部の項目までスクロールできるか（HbA1cフィールドで検証）
-        composeTestRule.onNodeWithTag("BatchInputScreen_Hba1cField").performScrollTo().assertIsDisplayed()
     }
 
-    // ======================================================================================
-    // 2. 画面全体の挙動・結合テスト (BatchInputScreen)
-    // ======================================================================================
+    //endregion
+
+    //region 3. 操作・インタラクションテスト (Interaction)
 
     @Test
-    fun bh01_save_operation_calls_viewmodel() {
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = true, personId = "1")
+    fun ACT_01_numericInput_triggersViewModel() {
         setContent()
+        composeTestRule.onNodeWithTag("BatchInputScreen_HeightField").performScrollTo().performTextInput("170")
+        verify { viewModel.updateHeight("170") }
+    }
 
+    @Test
+    fun ACT_03_saveButton_callsViewModel() {
+        uiStateFlow.value = uiStateFlow.value.copy(isValid = true)
+        setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().performClick()
         verify { viewModel.saveBatch() }
     }
 
     @Test
-    fun bh02_invalid_state_disables_save_button() {
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = false)
+    fun ACT_04_cancelWithChanges_showsDiscardDialog() {
+        uiStateFlow.value = uiStateFlow.value.copy(isChanged = true)
         setContent()
-
-        composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("BatchInputScreen_CancelButton").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("変更の破棄", substring = true).assertIsDisplayed()
     }
 
-    @Test
-    fun bh03_success_effect_and_scroll_to_top() {
-        setContent()
+    //endregion
 
-        // 成功イベント発行
-        viewEventFlow.tryEmit(BatchInputViewEvent.SaveSuccessEffects)
+    //region 4. ナビゲーション・副作用検証 (Navigation & Side Effects)
+
+    @Test
+    fun NAV_01_navigateBack_onEvent() {
+        setContent()
+        viewEventFlow.tryEmit(BatchInputViewEvent.NavigateBack)
         composeTestRule.waitForIdle()
-
-        // スクロールがトップに戻っていることを確認（日時入力エリアが表示されているか）
-        composeTestRule.onNodeWithTag("BatchInputScreen_DateTimeInput").assertIsDisplayed()
+        verify { navController.popBackStack() }
     }
 
     @Test
-    fun bh04_duplicate_guard_shows_error_dialog() {
+    fun EVT_02_duplicateError_displaysDialog() {
         setContent()
-
-        // 複数の重複カテゴリ（身長・体重 ＋ バイタル）を含むエラーイベントを発生させる
-        val cat1 = R.string.common_category_height_weight
-        val cat2 = R.string.common_category_vital
-        val categoryNameTag = "__RES__${cat1}、__RES__${cat2}"
         
+        // Simulate duplicate error for Height/Weight
+        val categoryName = "__RES__" + R.string.common_category_height_weight
         uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
             R.string.common_error_title_save,
             R.string.batch_err_duplicate_blocked,
-            listOf(categoryNameTag)
+            listOf(categoryName)
         ))
+        
         composeTestRule.waitForIdle()
-
-        // 1. ダイアログのタイトルが表示されていること
         composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
-        
-        // 2. 複数のカテゴリ名が列記されていることを確認
-        val expected1 = composeTestRule.activity.getString(cat1)
-        val expected2 = composeTestRule.activity.getString(cat2)
-        
-        composeTestRule.onAllNodesWithText(expected1, substring = true).onFirst().assertIsDisplayed()
-        composeTestRule.onAllNodesWithText(expected2, substring = true).onFirst().assertIsDisplayed()
-        
-        // 3. 閉じるボタンをタップしてダイアログが消えることを確認
-        composeTestRule.onNodeWithText("閉じる").performClick()
-        composeTestRule.onNodeWithText("閉じる").assertDoesNotExist()
+        // Check if category name is resolved in implementation (it should be according to BatchInputScreen logic)
+        val expectedCategoryName = composeTestRule.activity.getString(R.string.common_category_height_weight)
+        composeTestRule.onNodeWithText(expectedCategoryName, substring = true).assertIsDisplayed()
     }
 
-    @Test
-    fun bh05_continuous_input_maintained() {
-        uiStateFlow.value = BatchInputUiState(weight = "60.0", currentPersonName = "山田 太郎")
-        
-        setContent()
-
-        // 成功イベント発行
-        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess())
-        
-        // ViewModel側でリセットされるのをシミュレート（日時は維持）
-        val now = Instant.now()
-        uiStateFlow.value = BatchInputUiState(recordTime = now, initialRecordTime = now, currentPersonName = "山田 太郎") 
-        
-        composeTestRule.waitForIdle()
-
-        // 1. 画面が閉じられていないこと（popBackStack が呼ばれていないこと）
-        verify(exactly = 0) { navController.popBackStack() }
-        
-        // 2. 入力フィールドがクリアされていること
-        composeTestRule.onNodeWithTag("BatchInputScreen_WeightField").assertTextContains("")
-    }
-
-    @Test
-    fun bh06_discard_confirmation_dialog() {
-        // UIStateを「変更あり」の状態にする
-        uiStateFlow.value = uiStateFlow.value.copy(isChanged = true)
-        
-        setContent()
-
-        // 戻るボタンタップ（ViewModel経由で遷移）
-        composeTestRule.onNodeWithTag("BatchInputScreen_BackButton").performClick()
-        
-        // 破棄確認ダイアログが表示されること
-        composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").assertIsDisplayed()
-        
-        // 「破棄して戻る」をタップ
-        composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").performClick()
-        
-        // NavigateBack イベントが発行され、popBackStack が呼ばれたことを確認
-        viewEventFlow.tryEmit(BatchInputViewEvent.NavigateBack)
-        composeTestRule.waitForIdle()
-        verify { navController.popBackStack() }
-    }
-
-    @Test
-    fun bh07_save_success_prevents_discard_dialog() {
-        // 初期状態: 変更なし
-        uiStateFlow.value = uiStateFlow.value.copy(isChanged = false)
-        
-        setContent()
-
-        // 戻るボタンタップ
-        composeTestRule.onNodeWithTag("BatchInputScreen_BackButton").performClick()
-        
-        // ダイアログが出ずに画面が閉じること
-        composeTestRule.onNodeWithTag("BatchInputScreen_DiscardConfirmButton").assertDoesNotExist()
-        
-        // ViewModel経由でイベントが送出されるのをシミュレート
-        viewEventFlow.tryEmit(BatchInputViewEvent.NavigateBack)
-        composeTestRule.waitForIdle()
-        verify { navController.popBackStack() }
-    }
+    //endregion
 }

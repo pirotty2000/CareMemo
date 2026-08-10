@@ -90,7 +90,7 @@ fun PersonHealthScreenPhone(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag("HealthScreen_PhoneContent"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         // 画面最上部のバー
         topBar = {
