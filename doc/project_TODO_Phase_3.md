@@ -87,7 +87,15 @@ ViewModel へのロジック集約に伴い、その振る舞いをより堅牢�
 - [ ] **Logic, Repository, ViewModel 層의 KDoc 整備**:
     - 特に Phase 3 で責務を整理したメソッド（`isChanged` の判定理由、標準 `List` を返す意図など）について、後続の開発者が迷わないよう KDoc を記述する。
 
-## 6. 確認済（修正不要）の項目
+## 6. 確認済（修正不要）およびクリーンアップ対応
+- [x] **静的解析（インスペクション）指摘の解消**:
+    - `PersonHealthViewModel.kt`: ラムダ内での `it` のシャドーイング警告を、明示的なパラメーター名（`state`）への変更により解消。
+    - `Converters.kt`: 冗長な `@Suppress("unused")` を削除。
+    - `DeleteOrRestorePerson.kt`: 冗長なイニシャライザー警告を、分割代入の採用により解消。
+    - `build.gradle.kts`: `sub-projects` -> `subprojects` への修正（文法警告）。
+- [x] **不要なコード・ファイルの整理**:
+    - `ConditionDisplayMapper.kt`: 未使用かつルール違反（文字列ハードコード）のため削除。
+    - `NavigateBackToMain` 関連: 未使用の ViewEvent およびハンドラを、将来の拡張用としてコメントアウト。
 - [x] `VerticalScrollIndicator.kt`: スクロール位置に応じた表示制御（演出用）としての `derivedStateOf` 利用は、新ルールに合致しているため維持。
 - [x] `MainActivity.kt`: `BiometricPrompt` の管理と注入フロー。
 - [x] `SettingsScreen.kt` 等: `ActivityResult API` によるファイル・カメラ連携。
