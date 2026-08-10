@@ -119,7 +119,8 @@ class CareMemoDatabaseTest {
 
         val repo = DeleteOrRestorePersonRepository(
             db, personDao, hwDao, db.bpAndPulseDao(), db.glucoseAndHbA1cDao(),
-            db.conditionAtVisitDao(), db.conditionPhotoDao(), medicationDao
+            db.conditionAtVisitDao(), db.conditionPhotoDao(), medicationDao,
+            db.emergencyContactDao()
         )
 
         repo.logicalDeletePerson(personId, "Test", "Delete")

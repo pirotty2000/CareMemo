@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -66,7 +67,7 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_01_loadPerson_clearsStateImmediately() = runTest {
-        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
         val person1 = Person(id = "1", lastName = "First", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         every { personRepository.getPersonById("1") } returns flowOf(person1)
@@ -91,7 +92,7 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_02_rapidSwitch_cancelsPreviousLoad() = runTest {
-        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
 
         every { personRepository.getPersonById("1") } returns flow {
             delay(2000.milliseconds)
@@ -144,7 +145,7 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_03_sameId_avoidsReload() = runTest {
-        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
         val person1 = Person(id = "1", lastName = "P1", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         every { personRepository.getPersonById("1") } returns flowOf(person1)
