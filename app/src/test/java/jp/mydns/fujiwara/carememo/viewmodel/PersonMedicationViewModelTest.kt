@@ -91,6 +91,7 @@ class PersonMedicationViewModelTest {
     // region 3. 月次表示・期間管理テスト (Month & Navigation)
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun MON_01_nextMonth_triggersReload() = runTest {
         val viewModel = createViewModel()
         advanceUntilIdle()

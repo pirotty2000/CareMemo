@@ -74,12 +74,14 @@ class MedicationRepositoryTest {
     // region 3. データ取得テスト (Query)
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun GET_01_getMedicationRecords() = runTest {
         repository.getMedicationRecords("u1")
         verify { medicationRecordDao.getByPersonId("u1") }
     }
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun GET_02_getMedicationRecordsByMonth() = runTest {
         repository.getMedicationRecordsByMonth("u1", "2023-11")
         verify { medicationRecordDao.getByMonth("u1", "2023-11") }

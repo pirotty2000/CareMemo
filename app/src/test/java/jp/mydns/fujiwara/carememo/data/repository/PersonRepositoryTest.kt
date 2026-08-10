@@ -100,12 +100,14 @@ class PersonRepositoryTest {
     // region 4. データ取得テスト (Query)
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun GET_01_getAllPersons() = runTest {
         repository.getAllPersons()
         verify { personDao.getAllPersons() }
     }
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun GET_02_getPersonById() = runTest {
         repository.getPersonById("u1")
         verify { personDao.getPersonById("u1") }

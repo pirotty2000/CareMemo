@@ -86,6 +86,7 @@ class EmergencyContactRepositoryTest {
     // region 3. データ取得テスト (Query)
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun GET_01_getContactsByPersonId() = runTest {
         repository.getContactsByPersonId("u1")
         verify { emergencyContactDao.getByPersonId("u1") }

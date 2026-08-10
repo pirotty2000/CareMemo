@@ -116,6 +116,7 @@ class PersonHealthViewModelTest {
     // region 3. カテゴリ・状態管理テスト (Category & State)
 
     @Test
+    @Suppress("UNUSED_EXPRESSION")
     fun CAT_01_setCategory_triggersFlowSubscription() = runTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
