@@ -41,15 +41,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
@@ -57,6 +56,10 @@ import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
 /**
  * 全体像：利用者所見記録（Condition）
@@ -83,40 +86,31 @@ import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
-    records: List<Any>,
-    isLoading: Boolean,
-    searchQuery: String,
+    uiState: PersonConditionUiState,
+    modifier: Modifier = Modifier,
     onSearchQueryChange: (String) -> Unit,
-    selectedId: String,
-    onSelectedIdChange: (String) -> Unit,
-    conditionPhotoMap: Map<String, Boolean>,
-    photos: List<ConditionPhoto>,
-    isProcessing: Boolean,
-    isAnyDialogOpen: Boolean,
-    defaultRecorderName: String,
+    onSelectedIdChange: (String?) -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (String, PersonConditionUiState, (String) -> Unit) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
+    onSaveClick: ((String) -> Unit) -> Unit,
+    onCancelEdit: () -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
     onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
-    orphanedPhotos: List<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
+    isAnyDialogOpen: Boolean,
+    onPickPhotoClick: () -> Unit = {},
 ) {
     val lazyListState = rememberLazyListState()
 
-    // ConditionAtVisit のリストをフィルタリング
-    val conditionRecords = remember(records) {
-        records.filterIsInstance<ConditionAtVisit>()
-    }
-
-    if (isLoading) {
-        LoadingScreen()
+    if (uiState.isLoading) {
+        LoadingScreen(modifier = modifier)
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(16.dp)
                 .testTag("Condition_TabletLayout"),
@@ -129,13 +123,13 @@ fun PersonConditionScreenContent(
             ) {
                 // 検索ボックス
                 SearchBox(
-                    query = searchQuery,
+                    query = uiState.searchQuery,
                     onQueryChange = onSearchQueryChange,
                     placeholder = stringResource(R.string.main_search_hint_short)
                 )
                 // 所見メモ・履歴一覧
                 Box(modifier = Modifier.weight(1f)) {
-                    if (conditionRecords.isEmpty()) {
+                    if (uiState.filteredRecords.isEmpty()) {
                         EmptyState(
                             message = stringResource(R.string.p_detail_empty_records),
                             description = stringResource(R.string.p_detail_empty_records_desc),
@@ -143,9 +137,9 @@ fun PersonConditionScreenContent(
                         )
                     } else {
                         ConditionList(
-                            records = conditionRecords,
-                            selectedId = selectedId,
-                            conditionPhotoMap = conditionPhotoMap,
+                            records = uiState.filteredRecords,
+                            selectedId = uiState.selectedConditionId,
+                            conditionPhotoMap = uiState.conditionPhotoMap,
                             isAnyDialogOpen = isAnyDialogOpen,
                             onSelect = { onSelectedIdChange(it) },
                             onDelete = onDeleteRecord,
@@ -163,19 +157,17 @@ fun PersonConditionScreenContent(
                     .testTag("Condition_DetailPane")
             ) {
                 ConditionDetailPane(
-                    conditionId = selectedId,
-                    records = conditionRecords,
-                    photos = photos,
-                    isProcessing = isProcessing,
-                    defaultRecorderName = defaultRecorderName,
-                    onSaveRecord = onSaveRecord,
+                    uiState = uiState,
                     onDeletePhoto = onDeletePhoto,
-                    onSelectedIdChange = { onSelectedIdChange(it) },
-                    onCancel = { onSelectedIdChange("") },
+                    onSelectedIdChange = onSelectedIdChange,
+                    onCancel = { onSelectedIdChange(null) },
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit,
                     onAddPhotoClick = onAddPhotoClick,
                     onPickPhotoClick = onPickPhotoClick,
                     onReattachPhoto = onReattachPhoto,
-                    orphanedPhotos = orphanedPhotos,
                     onNavigateToFullScreen = onNavigateToFullScreen,
                     onMicClick = onMicClick
                 )
@@ -184,20 +176,20 @@ fun PersonConditionScreenContent(
     } else {
         // スマホ用レイアウト
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 検索ボックス
             SearchBox(
-                query = searchQuery,
+                query = uiState.searchQuery,
                 onQueryChange = onSearchQueryChange,
                 modifier = Modifier.testTag("ConditionScreen_SearchBox")
             )
             // 所見メモ・履歴一覧
             Box(modifier = Modifier.weight(1f)) {
-                if (conditionRecords.isEmpty()) {
+                if (uiState.filteredRecords.isEmpty()) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
                         description = stringResource(R.string.p_detail_empty_records_desc),
@@ -205,9 +197,9 @@ fun PersonConditionScreenContent(
                     )
                 } else {
                     ConditionList(
-                        records = conditionRecords,
-                        selectedId = selectedId,
-                        conditionPhotoMap = conditionPhotoMap,
+                        records = uiState.filteredRecords,
+                        selectedId = uiState.selectedConditionId,
+                        conditionPhotoMap = uiState.conditionPhotoMap,
                         isAnyDialogOpen = isAnyDialogOpen,
                         onSelect = { onSelectedIdChange(it) },
                         onDelete = onDeleteRecord,
@@ -217,5 +209,39 @@ fun PersonConditionScreenContent(
                 }
             }
         }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Previews
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 800)
+@Composable
+private fun PreviewPersonConditionScreenContent(
+    @PreviewParameter(PersonConditionPreviewParameterProvider::class) state: PersonConditionPreviewState
+) {
+    CareMemoTheme {
+        PersonConditionScreenContent(
+            isExpanded = state.isExpanded,
+            uiState = PersonConditionUiState(
+                records = state.records,
+                isLoading = state.isLoading,
+                selectedConditionId = state.selectedRecordId
+            ),
+            onSearchQueryChange = {},
+            onSelectedIdChange = {},
+            onDeleteRecord = {},
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
+            onDeletePhoto = {},
+            onAddPhotoClick = {},
+            onReattachPhoto = {},
+            onNavigateToFullScreen = { _, _ -> },
+            onMicClick = {},
+            isAnyDialogOpen = false
+        )
     }
 }

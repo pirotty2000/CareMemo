@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
@@ -55,7 +56,7 @@ class PersonMedicationViewModelTest {
         every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
         
         viewModel = PersonMedicationViewModel(
-            medicationRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository
+            medicationRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1"))
         )
     }
 

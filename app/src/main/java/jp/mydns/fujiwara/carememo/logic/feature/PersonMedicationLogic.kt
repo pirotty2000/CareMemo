@@ -1,8 +1,13 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import java.time.YearMonth
 
 /**
@@ -19,14 +24,15 @@ import java.time.YearMonth
  * @param allRecords 全期間の服薬記録リスト（統計や将来的な拡張用）
  * @param isLoading データの読み込み中フラグ
  */
+@Immutable
 data class PersonMedicationUiState(
     override val personId: String? = null,
     override val currentCategory: Category = Category.MEDICATION,
 
     val selectedMonth: YearMonth = YearMonth.now(),
-    val monthlyRecords: List<MedicationRecord> = emptyList(),
-    val recordsByDate: Map<String, List<MedicationRecord>> = emptyMap(),
-    val allRecords: List<MedicationRecord> = emptyList(),
+    val monthlyRecords: ImmutableList<MedicationRecord> = persistentListOf(),
+    val recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>> = persistentMapOf(),
+    val allRecords: ImmutableList<MedicationRecord> = persistentListOf(),
 
     override val isLoading: Boolean = false
 ) : PersonAwareState
@@ -38,7 +44,8 @@ data class PersonMedicationUiState(
  * 服薬管理画面固有の、一過性のアクションや通知（特定の日付へのスクロール要求等）を定義します。
  */
 sealed interface PersonMedicationViewEvent {
-    // 必要に応じてアクションを定義
+    /** 一覧画面へ戻る */
+    // object NavigateBackToMain : PersonMedicationViewEvent
 }
 
 /**

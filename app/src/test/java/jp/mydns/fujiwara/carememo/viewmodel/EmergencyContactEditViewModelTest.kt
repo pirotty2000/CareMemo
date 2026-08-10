@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
@@ -53,12 +54,13 @@ class EmergencyContactEditViewModelTest {
         every { emergencyContactRepository.getContactsByPersonId(personId) } returns flowOf(listOf(testContact))
 
         viewModel = EmergencyContactEditViewModel(
-            personId,
+            SavedStateHandle(mapOf("personId" to personId)),
             emergencyContactRepository,
             personRepository,
             userSettingsRepository,
             auditLogRepository
         )
+
         // 初期化時の Flow 購読を完了させる
         testDispatcher.scheduler.runCurrent()
     }

@@ -1,7 +1,7 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.core.net.toUri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +16,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
@@ -28,10 +29,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 fun ConditionPhotoPreviewScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     conditionViewModel: PersonConditionViewModel,
-    uri: Uri,
-    conditionId: String,
-    onBack: () -> Unit,
-    onSaved: () -> Unit,
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
@@ -41,6 +40,9 @@ fun ConditionPhotoPreviewScreen(
     val isProcessing = conditionState.isProcessing
     val errorMessage = conditionState.errorMessage
     val person = detailState.person
+    val uriString = conditionState.previewUri ?: return
+    val uri = uriString.toUri()
+    val conditionId = conditionState.selectedConditionId ?: ""
 
     val initialCaption = remember(uri) { DateTimeUtils.getPhotoCaption(context, uri) }
     var caption by remember { mutableStateOf(initialCaption) }
@@ -49,24 +51,25 @@ fun ConditionPhotoPreviewScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDiscardConfirmDialog by remember { mutableStateOf(false) }
 
-    val handleBack = {
+    val handleBack: () -> Unit = {
         if (isModified) {
             showDiscardConfirmDialog = true
         } else {
-            onBack()
+            navController.popBackStack()
         }
     }
 
     BackHandler(onBack = handleBack)
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
                     PersonHeaderTitle(
                         person = person,
                         isNameMaskingEnabled = isNameMaskingEnabled,
-                        defaultTitle = "写真の確認"
+                        defaultTitle = stringResource(R.string.condition_photo_preview_title)
                     )
                 }
             )
@@ -94,7 +97,7 @@ fun ConditionPhotoPreviewScreen(
                     .memoryCachePolicy(CachePolicy.DISABLED)
                     .diskCachePolicy(CachePolicy.DISABLED)
                     .build(),
-                contentDescription = "プレビュー",
+                contentDescription = stringResource(R.string.common_preview),
                 modifier = Modifier.weight(1f).fillMaxWidth().testTag("PhotoPreview_Image"),
                 contentScale = ContentScale.Fit,
                 onError = {
@@ -105,7 +108,7 @@ fun ConditionPhotoPreviewScreen(
                 value = caption,
                 onValueChange = { caption = it },
                 type = AppTextFieldType.TEXT,
-                label = { Text("キャプション") },
+                label = { Text(stringResource(R.string.condition_photo_caption_label)) },
                 modifier = Modifier.fillMaxWidth().testTag("PhotoPreview_CaptionInput"),
                 singleLine = true,
                 enabled = !isProcessing
@@ -113,7 +116,7 @@ fun ConditionPhotoPreviewScreen(
 
             if (isProcessing) {
                 LoadingScreen(
-                    message = "画像を保存用に最適化しています...",
+                    message = stringResource(R.string.condition_msg_photo_optimizing),
                     modifier = Modifier.testTag("PhotoPreview_Loading")
                 )
             } else {
@@ -125,16 +128,16 @@ fun ConditionPhotoPreviewScreen(
                         onClick = { showDeleteConfirmDialog = true },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_DeleteButton")
                     ) {
-                        Text("削除")
+                        Text(stringResource(R.string.common_delete))
                     }
                     Button(
                         onClick = {
                             conditionViewModel.processAndSavePhoto(context, uri, conditionId, caption)
-                            onSaved()
+                            navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
                     ) {
-                        Text("保存する")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
             }
@@ -147,9 +150,9 @@ fun ConditionPhotoPreviewScreen(
             onDismiss = { showDeleteConfirmDialog = false },
             onDelete = {
                 showDeleteConfirmDialog = false
-                onBack()
+                navController.popBackStack()
             },
-            message = "写真を削除しますか？"
+            message = stringResource(R.string.condition_photo_delete_confirm_msg)
         )
     }
 
@@ -164,7 +167,7 @@ fun ConditionPhotoPreviewScreen(
                     text = stringResource(R.string.common_discard),
                     onClick = {
                         showDiscardConfirmDialog = false
-                        onBack()
+                        navController.popBackStack()
                     },
                     type = AppDialogActionType.DELETE
                 )

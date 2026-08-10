@@ -5,10 +5,6 @@ package jp.mydns.fujiwara.carememo.ui.screens.condition
  *
  * 【画面名】
  * 写真フル画面表示画面
- *
- * 【役割】
- * 所見メモに関連付けられた写真を画面全体に表示し、拡大・縮小（ピンチズーム）等の操作で詳細を確認するための画面。
- * スワイプによる写真の切り替えに対応している。
  */
 
 import androidx.compose.foundation.background
@@ -30,9 +26,12 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
@@ -40,21 +39,28 @@ import kotlin.math.abs
 
 @Composable
 fun ConditionPhotoFullScreen(
-    conditionId: String,
-    initialPhotoId: String,
     viewModel: PersonConditionViewModel,
-    onBack: () -> Unit,
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(conditionId) {
-        viewModel.setSelectedConditionId(conditionId)
-    }
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val photos = uiState.currentConditionPhotos
+    val initialPhotoId = uiState.initialPhotoId
+    val isLoading = uiState.isLoading
 
     if (photos.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Loading"), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color.White)
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Container"), contentAlignment = Alignment.Center) {
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.testTag("PhotoFullScreen_Spinner"))
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.condition_msg_no_photos_to_show), color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { navController.popBackStack() }) {
+                        Text(stringResource(R.string.common_back))
+                    }
+                }
+            }
         }
         return
     }
@@ -68,7 +74,7 @@ fun ConditionPhotoFullScreen(
     var isAnyImageZoomed by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
@@ -91,7 +97,7 @@ fun ConditionPhotoFullScreen(
         }
         
         IconButton(
-            onClick = onBack,
+            onClick = { navController.popBackStack() },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 32.dp, start = 16.dp)
@@ -101,7 +107,7 @@ fun ConditionPhotoFullScreen(
                 contentColor = Color.White
             )
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
 
         val currentPhoto = photos.getOrNull(pagerState.currentPage)
@@ -129,7 +135,8 @@ fun ConditionPhotoFullScreen(
 fun ZoomableImage(
     photo: ConditionPhoto,
     isCurrentPage: Boolean,
-    onZoomStateChanged: (Boolean) -> Unit
+    onZoomStateChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val photoFile = remember(photo.photoFileName) {
@@ -148,7 +155,7 @@ fun ZoomableImage(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .testTag("PhotoFullScreen_Image_${photo.id}")
             .pointerInput(Unit) {

@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
@@ -66,7 +67,8 @@ class PersonHealthViewModelTest {
             personRepository,
             summaryRepository,
             userSettingsRepository,
-            auditLogRepository
+            auditLogRepository,
+            SavedStateHandle(mapOf("personId" to "1", "categoryName" to Category.HEIGHT_AND_WEIGHT.name))
         )
     }
 
@@ -109,13 +111,15 @@ class PersonHealthViewModelTest {
     @Test
     fun LG_02_save_failure_safety() = runTest {
         viewModel.loadPerson("1")
-        // 新規レコード (id="")
-        val time = Instant.now()
-        val values = mapOf("bpSystolic" to 120, "bpDiastolic" to 80, "pulse" to 70)
-        coEvery { healthRepository.insertBpAndPulse(any(), any(), any(), any()) } throws RuntimeException("Save Failure")
+        advanceUntilIdle()
 
-        viewModel.saveRecord(Category.BP_AND_PULSE, "", time, values)
-        
+        // 編集セッションを開始して値をセット
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        viewModel.updateEditInput { 
+            it.copy(bpSystolicText = "120", bpDiastolicText = "80", pulseText = "70")
+        }
+
+        viewModel.saveCurrentEdit()
         advanceUntilIdle()
 
         // isLoading が false に戻ること
@@ -144,5 +148,51 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
         
         verify { healthRepository.getGlucoseAndHbA1cByPersonId("1") is kotlinx.coroutines.flow.Flow<*> }
+    }
+
+    @Test
+    fun LG_05_edit_session_isChanged_tracking() = runTest {
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 1. 新規レコードセッション開始
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        
+        viewModel.uiState.test {
+            val initialState = awaitItem()
+            assertEquals(true, initialState.isEditing)
+            assertEquals(false, initialState.isChanged)
+            assertEquals(false, initialState.isSaveEnabled)
+
+            // 2. 値を変更
+            viewModel.updateEditInput { it.copy(heightText = "170.5") }
+            val changedState = awaitItem()
+            assertEquals(true, changedState.isChanged)
+            assertEquals(true, changedState.isSaveEnabled) // バリデーション成功かつ変更あり
+
+            // 3. 値を元に戻す
+            viewModel.updateEditInput { it.copy(heightText = "") }
+            val revertedState = awaitItem()
+            assertEquals(false, revertedState.isChanged)
+            assertEquals(false, revertedState.isSaveEnabled)
+            
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun LG_06_edit_session_latest_height_inheritance() = runTest {
+        // 前回の記録がある状態を作る
+        val lastRecord = HeightAndWeight(id = "prev", personId = "1", height = 165.0, weight = 60.0, recordTime = Instant.now().minusSeconds(3600))
+        every { healthRepository.getHeightAndWeightByPersonId("1") } returns flowOf(listOf(lastRecord))
+
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 新規作成開始
+        viewModel.setCategory(Category.HEIGHT_AND_WEIGHT)
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+
+        assertEquals("165.0", viewModel.uiState.value.editInput.heightText)
     }
 }

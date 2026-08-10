@@ -19,7 +19,6 @@ package jp.mydns.fujiwara.carememo.ui.components.main
  * ・利用者情報自体の保存・削除処理（ViewModel 経由でラムダとして操作を受け取る）。
  */
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -84,14 +83,14 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 @Composable
 fun UserListItem(
     person: Person,
+    modifier: Modifier = Modifier,
     summary: PersonCategorySummary? = null,
     isNameMaskingEnabled: Boolean = true,
     onClick: () -> Unit,
     onQuickMenuClick: () -> Unit,
     onEmergencyContactManageClick: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
+    onDeleteClick: () -> Unit
 ) {
     // 誕生日の通知判定（本日または近日）
     val isBirthdayToday = remember(person.birthday) {
@@ -129,7 +128,7 @@ fun UserListItem(
                     if (isBirthdaySoon || isBirthdayToday) {
                         Icon(
                             imageVector = Icons.Rounded.Cake,
-                            contentDescription = "誕生日通知",
+                            contentDescription = stringResource(R.string.main_desc_birthday_alert),
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.tertiary
                         )
@@ -156,7 +155,9 @@ fun UserListItem(
                 Text(
                     text = buildString { 
                         append(person.getMaskedName(isNameMaskingEnabled))
-                        if (person.note.isNotBlank()) append(" (${person.note})") 
+                        if (person.note.isNotBlank()) {
+                            append(stringResource(R.string.common_note_bracket_format, person.note))
+                        }
                     }, 
                     style = MaterialTheme.typography.titleMedium, 
                     fontWeight = FontWeight.Bold, 
@@ -185,7 +186,10 @@ fun UserListItem(
                     onClick = { showItemMenu = true },
                     modifier = Modifier.testTag("UserListItem_MenuButton")
                 ) { 
-                    Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー") 
+                    Icon(
+                        imageVector = Icons.Rounded.ModeEdit,
+                        contentDescription = stringResource(R.string.main_desc_op_menu)
+                    ) 
                 }
                 DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
                     // 利用者情報を編集
@@ -239,10 +243,11 @@ fun UserListItem(
 fun CategorySelectionSheet(
     personName: String,
     onCategorySelect: (Category) -> Unit,
-    onBatchInputSelect: () -> Unit
+    onBatchInputSelect: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
             .testTag("CategorySelectionSheet"),
@@ -270,7 +275,7 @@ fun CategorySelectionSheet(
         ) {
             Icon(Icons.Rounded.EditNote, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("健康記録の一括入力", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.main_category_selection_batch_input), style = MaterialTheme.typography.titleMedium)
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

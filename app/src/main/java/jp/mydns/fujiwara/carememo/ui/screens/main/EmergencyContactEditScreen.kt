@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
@@ -24,6 +25,7 @@ import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
+import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 
 /**
  * 緊急連絡先の登録・編集画面 (SCR-M-003 内のサブ機能)
@@ -32,18 +34,32 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 @Composable
 fun EmergencyContactEditScreen(
     viewModel: EmergencyContactEditViewModel,
-    onNavigateBack: () -> Unit
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // ViewModel からの画面遷移イベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is EmergencyContactViewEvent.NavigateBack,
+                is EmergencyContactViewEvent.SaveSuccess,
+                is EmergencyContactViewEvent.DeleteSuccess -> {
+                    navController.popBackStack()
+                }
+            }
+        }
+    }
+
     EmergencyContactEditContent(
         uiState = uiState,
-        onNavigateBack = onNavigateBack,
+        onNavigateBack = { navController.popBackStack() },
         onUpdateContact = { reducer -> viewModel.updateEditingContact(reducer) },
         onSaveClick = {
             viewModel.saveContact()
-            onNavigateBack()
-        }
+        },
+        modifier = modifier,
     )
 }
 
@@ -56,7 +72,8 @@ fun EmergencyContactEditContent(
     uiState: EmergencyContactUiState,
     onNavigateBack: () -> Unit,
     onUpdateContact: ((EmergencyContact) -> EmergencyContact) -> Unit,
-    onSaveClick: () -> Unit
+    onSaveClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val contact = uiState.editingContact ?: return
     var showDiscardDialog by remember { mutableStateOf(false) }
@@ -73,6 +90,7 @@ fun EmergencyContactEditContent(
     BackHandler(onBack = handleBack)
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { 

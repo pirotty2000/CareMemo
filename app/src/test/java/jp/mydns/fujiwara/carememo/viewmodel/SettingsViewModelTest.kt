@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -74,7 +75,8 @@ class SettingsViewModelTest {
             maintenanceRepository,
             archivedPersonRepository,
             auditLogRepository,
-            userSettingsRepository
+            userSettingsRepository,
+            SavedStateHandle()
         )
     }
 

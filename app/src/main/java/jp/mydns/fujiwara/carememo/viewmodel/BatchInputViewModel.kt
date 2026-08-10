@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
@@ -50,13 +53,15 @@ class BatchInputViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
-    auditLogRepository: AuditLogRepository
+    auditLogRepository: AuditLogRepository,
+    savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<BatchInputUiState, BatchInputViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
     auditLogRepository,
-    BatchInputUiState()
+    BatchInputUiState(),
+    savedStateHandle
 ) {
 
     companion object {
@@ -77,6 +82,9 @@ class BatchInputViewModel(
                 updateUiState { it.copy(isNameMaskingEnabled = enabled) }
             }
         }
+
+        // 最後に監視を開始 (featureName が初期化された後)
+        startObservePersonId()
     }
 
     // --- 基底クラスの抽象メソッド実装 ---
@@ -215,7 +223,7 @@ class BatchInputViewModel(
 
             // 全保存成功時のイベント通知
             sendViewEvent(BatchInputViewEvent.SaveSuccessEffects)
-            sendUiEvent(UiEvent.SaveSuccess)
+            sendUiEvent(UiEvent.SaveSuccess())
             showSnackbar(R.string.batch_msg_save_success)
             
             // 入力値をクリアし、変更基準点を現在の時刻に更新して次の入力に備える
@@ -243,11 +251,11 @@ class BatchInputViewModel(
         val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
             val details = mutableListOf<String>()
             // どの項目のバリデーションが失敗したかを特定し、メッセージを構築する
-            if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("身長・体重が範囲外です")
-            if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("バイタルが範囲外です")
-            if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("血糖値が範囲外です")
+            if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_height_weight}")
+            if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_vital}")
+            if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_glucose}")
             
-            if (details.isEmpty()) listOf("入力値が正しくありません") else listOf(details.joinToString("\n"))
+            if (details.isEmpty()) listOf("__RES__${R.string.common_error_invalid_input}") else listOf(details.joinToString("、"))
         } else {
             emptyList()
         }
@@ -261,6 +269,13 @@ class BatchInputViewModel(
     }
 
     /**
+     * 前の画面に戻ります。
+     */
+    fun navigateBack() {
+        sendViewEvent(BatchInputViewEvent.NavigateBack)
+    }
+
+    /**
      * BatchInputViewModel を生成するための Factory クラス。
      */
     class Factory(
@@ -271,13 +286,15 @@ class BatchInputViewModel(
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            val savedStateHandle = extras.createSavedStateHandle()
             return BatchInputViewModel(
                 healthRepository,
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
-                auditLogRepository
+                auditLogRepository,
+                savedStateHandle
             ) as T
         }
     }

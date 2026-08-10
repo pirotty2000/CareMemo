@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.ui.components.base.*
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * 健康記録グラフ表示コンポーネント
@@ -47,8 +48,9 @@ import jp.mydns.fujiwara.carememo.ui.components.base.*
  */
 @Composable
 fun HealthGraphView(
-    records: List<Any>,
+    records: ImmutableList<Any>,
     categoryType: Category,
+    modifier: Modifier = Modifier,
     onExpandGraph: ((Int) -> Unit)? = null
 ) {
     var showHelpDialog by remember { mutableStateOf<String?>(null) }
@@ -86,7 +88,7 @@ fun HealthGraphView(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -145,6 +147,7 @@ fun HealthGraphView(
  * @param title グラフのタイトル
  * @param helpContent ヘルプダイアログに表示する内容。空文字の場合はヘルプアイコンを表示しません。
  * @param onShowHelp ヘルプアイコンが押された際のコールバック。
+ * @param modifier 修飾子
  * @param onExpand 拡大アイコンが押された際のコールバック。null の場合は拡大アイコンを表示しません。
  */
 @Composable
@@ -152,9 +155,13 @@ private fun GraphTitleWithHelp(
     title: String,
     helpContent: String,
     onShowHelp: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onExpand: (() -> Unit)? = null
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         
         // ヘルプボタン（目安の表示）
@@ -162,7 +169,7 @@ private fun GraphTitleWithHelp(
             IconButton(onClick = { onShowHelp(helpContent) }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
-                    contentDescription = "目安の表示",
+                    contentDescription = stringResource(R.string.health_graph_help_desc),
                     modifier = Modifier.size(18.dp),
                     tint = Color.Gray
                 )
@@ -174,7 +181,7 @@ private fun GraphTitleWithHelp(
             IconButton(onClick = onExpand, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Rounded.ZoomOutMap,
-                    contentDescription = "拡大表示",
+                    contentDescription = stringResource(R.string.health_graph_expand_desc),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )

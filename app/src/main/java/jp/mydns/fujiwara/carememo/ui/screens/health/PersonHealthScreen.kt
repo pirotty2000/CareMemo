@@ -3,10 +3,14 @@ package jp.mydns.fujiwara.carememo.ui.screens.health
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import jp.mydns.fujiwara.carememo.data.Category
+import androidx.navigation.NavHostController
+import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
@@ -20,20 +24,14 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 fun PersonHealthScreen(
     detailViewModel: PersonDetailUiStateViewModel,
     healthViewModel: PersonHealthViewModel,
+    navController: NavHostController,
     widthSizeClass: WindowWidthSizeClass,
-    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> },
-    onBack: () -> Unit,
-    onNavigateToCategory: (Category) -> Unit,
-    onNavigateToGraphExpansion: (String, Category, Int) -> Unit
+    modifier: Modifier = Modifier,
+    onRequireAuthentication: (Int?, Int?, () -> Unit) -> Unit = { _, _, _ -> }
 ) {
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val healthState by healthViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
-
-    // PersonID変更時のみロードをトリガー
-    LaunchedEffect(detailState.personId) {
-        detailState.personId?.let { healthViewModel.loadPerson(it) }
-    }
 
     // カテゴリ変更の同期
     LaunchedEffect(detailState.currentCategory) {
@@ -50,7 +48,7 @@ fun PersonHealthScreen(
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
-    // イベント監視
+    // 通知イベント監視
     LaunchedEffect(Unit) {
         healthViewModel.uiEventFlow.collect { event ->
             when (event) {
@@ -73,57 +71,86 @@ fun PersonHealthScreen(
         }
     }
 
+    // 共通的な画面遷移イベントを監視 (Type-safe)
+    LaunchedEffect(Unit) {
+        detailViewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonDetailViewEvent.NavigateToCategory -> {
+                    detailState.personId?.let { personId ->
+                        navController.navigate(event.category.toDestination(personId)) {
+                            popUpTo<Destination.Main>()
+                            launchSingleTop = true
+                        }
+                    }
+                }
+                is PersonDetailViewEvent.NavigateBackToMain -> {
+                    navController.popBackStack(Destination.Main, inclusive = false)
+                }
+            }
+        }
+    }
+
+    // 健康記録固有の画面遷移イベントを監視 (Type-safe)
+    LaunchedEffect(Unit) {
+        healthViewModel.viewEvent.collect { event ->
+            when (event) {
+                is PersonHealthViewEvent.NavigateToGraphExpansion -> {
+                    navController.navigate(
+                        Destination.GraphExpansion(event.personId, event.category.name, event.initialIndex)
+                    )
+                }
+            }
+        }
+    }
+
     if (isExpanded) {
         // Tablet
         PersonHealthScreenTablet(
-            currentCategory = detailState.currentCategory,
-            records = healthState.records,
-            isLoading = healthState.isLoading,
+            uiState = healthState,
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            selectedRecordId = healthState.selectedRecordId ?: "",
-            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
-            onBack = onBack,
+            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
+            onBack = { detailViewModel.navigateBackToMain() },
             onExpandGraph = { index ->
                 detailState.personId?.let { pid ->
-                    onNavigateToGraphExpansion(pid, detailState.currentCategory, index)
+                    healthViewModel.navigateToGraphExpansion(pid, detailState.currentCategory, index)
                 }
             },
-            onNavigateToCategory = onNavigateToCategory,
+            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { cat, recordId, time, values -> 
-                healthViewModel.saveRecord(cat, recordId, time, values) 
-            },
-            snackbarHostState = snackbarHostState
+            onEditClick = { healthViewModel.startEditSession() },
+            onEditInputUpdate = { healthViewModel.updateEditInput(it) },
+            onSaveClick = { healthViewModel.saveCurrentEdit() },
+            onCancelEdit = { healthViewModel.cancelEditSession() },
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     } else {
         // Phone
         PersonHealthScreenPhone(
-            currentCategory = detailState.currentCategory,
-            records = healthState.records,
-            isLoading = healthState.isLoading,
+            uiState = healthState,
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            preferredShowHistory = healthState.preferredShowHistory,
             onPreferredShowHistoryChange = { healthViewModel.updatePreferredShowHistory(it) },
-            selectedRecordId = healthState.selectedRecordId ?: "",
-            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it.ifEmpty { null }) },
-            onBack = onBack,
+            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
+            onBack = { detailViewModel.navigateBackToMain() },
             onExpandGraph = { index ->
                 detailState.personId?.let { pid ->
-                    onNavigateToGraphExpansion(pid, detailState.currentCategory, index)
+                    healthViewModel.navigateToGraphExpansion(pid, detailState.currentCategory, index)
                 }
             },
-            onNavigateToCategory = onNavigateToCategory,
+            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onShowPdfSettings = { showPdfSettingsDialog = true },
             onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onSaveRecord = { cat, recordId, time, values -> 
-                healthViewModel.saveRecord(cat, recordId, time, values) 
-            },
-            snackbarHostState = snackbarHostState
+            onEditClick = { healthViewModel.startEditSession() },
+            onEditInputUpdate = { healthViewModel.updateEditInput(it) },
+            onSaveClick = { healthViewModel.saveCurrentEdit() },
+            onCancelEdit = { healthViewModel.cancelEditSession() },
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     }
 

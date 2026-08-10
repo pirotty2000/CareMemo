@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.ui.components.base
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 
@@ -30,6 +31,7 @@ import jp.mydns.fujiwara.carememo.R
 fun AppDeleteConfirmDialog(
     onDismiss: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
     title: String = stringResource(R.string.p_detail_dialog_title_delete),
     message: String = stringResource(R.string.p_detail_dialog_msg_delete_confirm),
     confirmButtonText: String = stringResource(R.string.common_delete),
@@ -37,6 +39,7 @@ fun AppDeleteConfirmDialog(
 ) {
     AppDialog(
         onDismissRequest = onDismiss,
+        modifier = modifier,
         title = { Text(title) },
         text = {
             // 本文メッセージの表示

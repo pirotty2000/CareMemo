@@ -1,5 +1,8 @@
 # CareMemo 次世代品質向上プロジェクト (project_TODO_Phase_2.md)
 
+> [!IMPORTANT]
+> 本フェーズのほとんどのタスクは完了しました。未完了の「KDoc 整備」は **Phase 3 (project_TODO_Phase_3.md)** へ統合されました。
+
 `project_structure.md` および `project_RULES.md` の整備完了を受け、Jetpack Compose / Material 3 の最新ベストプラクティスに基づき、アプリの堅牢性と保守性をさらに高めるためのロードマップです。
 
 ---
@@ -12,28 +15,29 @@ CareMemo は「一貫性・責務分離・型安全性・保守性」を最優�
 
 プロジェクトの安定性と開発効率のバランスを考慮した優先順位です。
 
-| 項目                                          |  評価   |   優先度    |  コスト  | 段階的移行 | 取り組み方針                       |
-|:--------------------------------------------|:-----:|:--------:|:-----:|:-----:|:-----------------------------|
-| **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | 2 とセットで導入。全画面の遷移定義を刷新。       |
-| **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | 1 とセットで導入。ViewModel の初期化を変更。 |
-| **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** | UiState と関連コンポーネントを順次変更。     |
-| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** | 新規作成・改修時に都度適用。影響範囲は局所的。      |
-| **5. PreviewParameterProvider**             | ★★★★☆ |  **中**   | **中** | **可** | プレビュー関数の書き換えが必要だが効果は絶大。      |
-| **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** | 現状維持（コストゼロ）。                 |
+| 項目                                          |  評価   |   優先度    |  コスト  | 段階的移行 |    進捗    | 取り組み方針                                     |
+|:--------------------------------------------|:-----:|:--------:|:-----:|:-----:|:--------:|:-------------------------------------------|
+| **1. Type-safe Navigation & ViewEvent 一元化** | ★★★★★ |  **高**   | **大** | **中** | **100%** | 完了。全画面の遷移定義を刷新。                            |
+| **2. SavedStateHandle**                     | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。ViewModel の初期化を自律化。                     |
+| **3. 不変コレクション (ImmutableList)**             | ★★★★★ |  **高**   | **中** | **可** | **100%** | 完了。UiState と関連コンポーネントを刷新。                  |
+| **4. Modifier ルールの厳格化**                     | ★★★★★ |  **継続**  | **小** | **可** |   100%   | 全ての Components層および Screen層（Content等）で適用完了。 |
+| **5. PreviewParameterProvider**             | ★★★★☆ |  **高**   | **中** | **可** |   100%   | 完了。プレビュー環境の刷新と状態網羅の標準化。                    |
+| **6. Dynamic Color**                        | ★★★★★ | **設計判断** | **-** | **-** |    -     | 現状維持（コストゼロ）。                               |
+| **7. リソース ID への文言集約**                       | ★★★★☆ |  **中**   | **中** | **可** | **100%** | 全5フェーズにわたるハードコード文言の完全移行。                   |
 
 ---
 
 ## 🏗 アーキテクチャの現代化
 Android Jetpack の最新ライブラリを活用し、実行時の安定性と型安全性を強化します。
 
-### 戦略的セット：Type-safe Navigation × SavedStateHandle
+### 戦略的セット：Type-safe Navigation × SavedStateHandle [完了]
 これら2つは「画面間データ受け渡し」の入り口と出口の関係にあるため、セットでの移行を推奨します。
 
-- **Type-Safe Navigation & ViewEvent 一元化**:
+- **Type-Safe Navigation & ViewEvent 一元化 [完了]**:
     - 文字列ベースのルート定義を廃止し、Navigation 2.8.0+ の型安全な遷移に移行する。
     - 画面遷移を ViewModel から発行される `ViewEvent`（sealed interface）として一元管理し、UI側（Composable）の `LaunchedEffect` で `navController` を操作する形式に統一する。これにより、遷移ロジックのテスタビリティと一貫性を向上させる。
     - `BaseUiStateViewModel.UiEvent.SaveSuccess` などの通知イベントを `data class` 化し、保存されたデータの ID 等を UI 側に伝播可能にすることで、遷移ロジックとの親和性を高める。
-- **SavedStateHandle**: ViewModel で引数を直接取得し、プロセス死からの復帰耐性を高める。LaunchedEffect での `loadPerson` 呼び出しを削減し、ViewModel を自己完結させる。
+- **SavedStateHandle [完了]**: ViewModel で引数を直接取得し、プロセス死からの復帰耐性を高める。LaunchedEffect での `loadPerson` 呼び出しを削減し、ViewModel を自己完結させる。
 
 ### パフォーマンス最適化
 - **不変コレクション (ImmutableList) の導入**: `kotlinx.collections.immutable` を採用し、`UiState` 内のリストをすべて `ImmutableList` に置き換える。これにより、Compose コンパイラがリストを「安定（Stable）」と判定できるようになり、Compose Compiler が安定性を正しく判定できるようになり、不要な再コンポーズを抑制できる。
@@ -56,9 +60,165 @@ Material 3 の特性を活かし、開発効率とユーザー体験を向上さ
 ## 🛠 継続的改善タスク（低重要度）
 既存コードの改修にあわせて順次適用する項目です。
 
-- [ ] **collectAsStateWithLifecycle への完全置換**: ライフサイクルに応じた安全な状態収集を徹底。
-- [ ] **リソース ID への文言集約**: ハードコードされた日本語を `strings.xml` へ順次移行。
+- [x] **collectAsStateWithLifecycle への完全置換**: ライフサイクルに応じた安全な状態収集を徹底。
+- [x] **リソース ID への文言集約**: ハードコードされた日本語を `strings.xml` へ移行完了（全5フェーズ）。
 - [ ] **KDoc の継続的な整備**: Logic, Repository, ViewModel 層のドキュメント化を完遂する。
 
 ---
-最終更新日: 2026/08/02
+
+## 🚀 実装ロードマップ：Type-safe Navigation & SavedStateHandle 移行 (Phase 2-1)
+
+この移行は「定義」→「ロジック(ViewModel)」「表示(UI)」「結合」の順に、段階的に実施する。各ステップの完了により、いつでも作業を中断・再開可能とする。
+
+### ステップ 1：共通基盤とナビゲーション定義の作成
+- [x] **ナビゲーション目的地の定義**: `ui.navigation.Destinations.kt` を作成し、全ルートを `@Serializable` な object/class として定義する。
+- [x] **基底クラスの拡張**: `BaseUiStateViewModel` において、`UiEvent.SaveSuccess` を `data class` に変更し、保存後に遷移が必要な ID 等を保持可能にする。
+
+### ステップ 2：ViewModel 層の近代化（SavedStateHandle 導入と ViewEvent 定義）
+各 ViewModel で `SavedStateHandle` から引数を取得し、遷移を `ViewEvent` で判断するように変更する。
+- [x] `PersonListViewModel` (SCR-M-001)
+- [x] `PersonEditViewModel` (SCR-M-002)
+- [x] `EmergencyContactEditViewModel` (SCR-M-003, 004)
+- [x] `PersonDetailUiStateViewModel` / `PersonHealthViewModel` (SCR-PH-001, 003)
+- [x] `BatchInputViewModel` (SCR-PH-002)
+- [x] `PersonConditionViewModel` (SCR-PM-001, 002, 003)
+- [x] `PersonMedicationViewModel` (SCR-PM-001)
+- [x] `SettingsViewModel` (SCR-S-001)
+- [x] `AuditLogViewModel` (SCR-S-002)
+- [x] `DeleteOrRestorePersonViewModel` (SCR-S-003)
+- [x] `OrphanedPhotoViewModel` (SCR-S-004)
+
+### ステップ 3：UI (Screen) 層の遷移ロジック一元化
+Composable の `LaunchedEffect` で ViewModel の `ViewEvent` を購読し、`navController.navigate()` を実行するように変更する。
+- [x] `MainScreen`
+- [x] `PersonEditScreen`
+- [x] `EmergencyContactListScreen` / `EmergencyContactEditScreen`
+- [x] `PersonHealthScreen` / `GraphExpansionScreen`
+- [x] `BatchInputScreen`
+- [x] `PersonConditionScreen` / `ConditionPhotoPreviewScreen` / `ConditionPhotoFullScreen`
+- [x] `PersonMedicationScreen`
+- [x] `SettingsScreen` / `AuditLogScreen` / `DeleteOrRestorePersonScreen` / `OrphanedPhotoManagementScreen`
+
+### ステップ 4：MainActivity での最終結合（システム切り替え）
+- [x] **NavHost 刷新**: `composable<T>` 形式に全面移行し、文字列ベースの定義を廃止する。
+- [x] **ViewModelFactory 整理**: 各 Factory 内での ID 抽出ロジックを削除し、コンストラクタ注入を簡素化する。
+- [x] **レガシーコードの削除**: 各 `Category` Enum 等に残る文字列ルート生成ロジック (`getRoute` 等) を完全に整理する。
+
+### ステップ 5：型安全ナビゲーションの純粋化と完全移行の仕上げ [完了]
+これまでの移行で構築した土台を活かし、不自然に残っている「接着コード」を排除して、真の型安全な構造を完成させる。
+- [x] **MainActivity の冗長な詰め替えを削除**: `backStackEntry.savedStateHandle["personId"] = args.personId` などの手動代入を廃止し、Navigation コンポーネントによる `SavedStateHandle` への自動連携に一本化する。
+- [x] **初期化ロジックの ViewModel への完全移管**: `MedicalContactEdit` 等の初期化（`startEdit` 呼び出し等）を `MainActivity` の `LaunchedEffect` から ViewModel 内の `SavedStateHandle` 監視（`startObservePersonId` 等のパターン）に移行し、ViewModel の自己完結性を高める。
+- [x] **Screen 引数の最適化と Source of Truth の一元化**: Composable 関数の引数から、ViewModel が `SavedStateHandle` 経由で既に保持している重複パラメータ（`personId`, `category`等）を整理し、ViewModel の状態を参照する形に統一する。
+- [x] **非推奨コード（Deprecated）の物理削除**: `Category.getRoute` などの旧ナビゲーション関連コードを完全に削除し、コードベースを最新の設計にクリーンアップする。
+- [x] **コードインスペクションによる最終クリーンアップ**:
+    - 未使用の `savedStateHandle` パラメータ、冗長な型修飾子、未使用のシンボルの整理（コメントアウトまたは削除）を行い、型安全ナビゲーション移行に伴う残置コードを一掃。
+    - **[Phase 3 対応]** `minSdkVersion` (31) に対して不要となっていた `mipmap-anydpi-v26` リソースフォルダを `mipmap-anydpi` へ統合・整理。
+
+---
+
+## 🚀 実装ロードマップ：不変コレクション (ImmutableList) 導入 (Phase 3)
+
+UI 状態 (UiState) におけるリストの不変性を保証し、Compose コンパイラによる最適化（不要な再コンポーズの抑制）を促進する。
+
+### ステップ 1：準備と基盤整備
+- [x] **ライブラリ導入**: `kotlinx-collections-immutable` をプロジェクトに追加。
+- [x] **モデルの安定化判定 (@Immutable / @Stable)**: 
+    - 状態が変化しないことが保証されているドメインモデルおよび UI 専用モデル（`Person`, `PersonUiState` 等）へのアノテーション付与。
+    - Compose Runtime への依存を許容（Entity層）することを決定し、適用。
+
+### ステップ 2：各機能の UiState 移行
+各画面の `UiState` に含まれる `List` を `ImmutableList` に順次置き換える。
+- [x] `PersonList` (SCR-M-001)
+- [x] `PersonEdit` / `PersonDetail` (SCR-M-002, SCR-PH-001)
+- [x] `EmergencyContact` (SCR-M-003, 004)
+- [x] `PersonHealth` / `BatchInput` (SCR-PH-001, 002, 003)
+- [x] `PersonCondition` (SCR-PM-001, 002, 003)
+- [x] `PersonMedication` (SCR-PM-001)
+- [x] `Settings` / `AuditLog` / `DeleteOrRestorePerson` / `OrphanedPhoto` (SCR-S-001〜004)
+
+### ステップ 3：Logic 層・ViewModel 層の整合
+- [x] **Logic 戻り値の型変更**: リストを生成・返却する Logic メソッドの戻り値を `ImmutableList` に変更。
+- [x] **ViewModel の更新ロジック修正**: `it.copy(list = newList.toImmutableList())` 形式への統一、または `PersistentList` 操作への移行。
+
+### ステップ 4：UI コンポーネントの最適化
+- [x] **共通部品の引数型変更**: `AppLazyColumn` 等、リストを引数に取る主要な共通コンポーネントの引数型を `ImmutableList` に変更し、安定性を向上させる。
+
+---
+
+## 🚀 実装ロードマップ：Modifier ルールの厳格化 (Phase 4)
+
+コンポーネントの再利用性と予測可能性を高めるため、すべての Composable 関数における `modifier` の扱いを統一する。
+
+### ステップ 1：UI Components の残り (基盤・共通部品の完遂) [完了]
+- [x] **ダイアログ系の対応**: `AppDeleteConfirmDialog`, `PdfSettingsDialog` 等に `modifier` 引数を追加。
+- [x] **小型部品・内部部品の対応**: `BadgeChar`, `QuickActionMenu`, `HealthGraphView` 等への適用。
+- [x] **論理部品の検討**: `PdfExportActionHandler` 等、UIを持たないが `modifier` 伝播が関与しうる箇所の整理。
+- [x] **主要共通部品の完了**: `HistoryComponents`, `CategorySelectorBar`, `UserListItem` 等は対応済。
+
+### ステップ 2：利用者一覧・編集系 Screen (SCR-M-xxx) [完了]
+- [x] **MainScreen**: `MainScreenContent`, `EmergencyContactSelectionSheet` への `modifier` 導入とルート Box 適用。
+- [x] **PersonEdit**: `PersonEditScreenContent`, `BirthdayInputSection` への適用。
+- [x] **EmergencyContact**: `EmergencyContactListContent`, `EmergencyContactItem`, `EmergencyContactEditContent` への適用。
+
+### ステップ 3：詳細3カテゴリ Screen (SCR-PH/PC/PM-xxx) [完了]
+- [x] **健康記録 (Health)**: `Phone`, `Tablet`, `Content` の各レイアウトへの適用。`BatchInputScreen`, `GraphExpansionScreen` を含む。
+- [x] **所見メモ (Condition)**: `Phone`, `Tablet`, `Content` および `PhotoPreview`, `PhotoFullScreen` への適用。
+- [x] **服薬管理 (Medication)**: `Phone`, `Tablet`, `Content` への適用。
+
+### ステップ 4：設定・管理系 Screen (SCR-S-xxx) [完了]
+- [x] **Settings**: `SettingsScreenContent` および内部セクションへの適用。
+- [x] **AuditLog**: `AuditLogScreenContent` への適用。
+- [x] **その他**: `DeleteOrRestorePersonScreen`, `OrphanedPhotoManagementScreen` への適用。
+
+---
+
+## 🚀 実装ロードマップ：PreviewParameterProvider 導入 (Phase 5) [完了]
+
+プレビュー用のテストデータを一括管理し、UI コンポーネントの「正常・異常・空・ロード中」などの多様な状態を網羅的にプレビューできる環境を構築する。
+
+### ステップ 1：プレビュー基盤の構築
+- [x] **MockData の集約**: `ui/preview/MockData.kt` を作成し、共有のテストデータを定義。
+- [x] **PreviewState の導入**: 引数の多い Screen 層のために `PreviewStates.kt` を定義。
+
+### ステップ 2：共通コンポーネントのプロバイダー導入
+- [x] **HistoryPreviewParameterProvider**: `PersonHistoryList` への適用。
+
+### ステップ 3：主要画面のプロバイダー導入
+- [x] **健康記録 (Health)**: `PersonHealthPreviewParameterProvider` を作成し、Phone/Tablet/Content 各画面に適用。
+- [x] **所見メモ (Condition)**: `PersonConditionPreviewParameterProvider` を作成し、ScreenContent および Components に適用。
+
+### ステップ 4：開発ルールの整備
+- [x] **project_RULES.md への明記**: プレビュー作成時の `PreviewParameterProvider` および `MockData` 活用を義務化。
+
+---
+
+## 🚀 実装ロードマップ：リソース ID への文言集約 (Phase 6) [完了]
+
+ハードコードされた日本語文字列を `strings.xml` へ移行し、多言語対応の基盤構築と文言管理の一元化を実現する。
+
+### フェーズ 1：アプリ基盤・共通部
+- [x] **基盤 Screen**: `MainActivity` (ロック画面、バイオメトリクス認証)、`SplashActivity`。
+- [x] **共通コンポーネント**: `AppDialog`, `AppTextField` 等の汎用 UI 部品。
+- [x] **テーマ定義**: `ThemeSetting` 内の表示文言。
+
+### フェーズ 2：設定・管理系画面 (SCR-S-xxx)
+- [x] **Settings**: `SettingsScreen` (全設定項目、ダイアログメッセージ)。
+- [x] **AuditLog**: `AuditLogScreen` (タイトル、空状態、フィルタラベル)。
+- [x] **Maintenance**: `DeleteOrRestorePerson`, `OrphanedPhotoManagement` (警告文、案内メッセージ)。
+
+### フェーズ 3：主要3カテゴリ機能画面 (SCR-PH/PC/PM-xxx)
+- [x] **健康記録 (Health)**: `BatchInputScreen`, `GraphExpansionScreen`, `HealthGraphView` (タイトル、ツールチップ、エラー文)。
+- [x] **所見メモ (Condition)**: `PhotoPreview`, `PhotoFullScreen`, `PersonConditionComponents` (アクセシビリティ、案内文)。
+- [x] **服薬管理 (Medication)**: `PersonMedicationComponents` (カレンダー操作、日付フォーマット)。
+
+### フェーズ 4：利用者一覧・編集系画面 (SCR-M-xxx)
+- [x] **MainScreen**: `MainScreenContent` (バージョン情報ダイアログ、操作メニュー説明)。
+- [x] **PersonEdit / EmergencyContact**: バリデーションメッセージ、共通サフィックス（「さん」付け等）、カテゴリバッジ説明。
+
+### フェーズ 5：ロジック層・例外メッセージ・PDF
+- [x] **不整合レポート**: `DatabaseInconsistency` の理由説明、迷子写真の分類ラベル。
+- [x] **例外メッセージ**: `AppMaintenanceRepository` での I/O エラー、インポート/エクスポート例外。
+- [x] **PDF ユーティリティ**: `PdfExporter` 内の固定タイトル、表ヘッダー、グラフ見出し。
+
+---
+最終更新日: 2026/08/09 (Phase 6: リソース ID への文言集約 完了の反映)

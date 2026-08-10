@@ -1,10 +1,13 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * UI State：PersonListUiState
@@ -26,12 +29,12 @@ data class PersonListUiState(
     val isLoading: Boolean = true,
     val selectedSection: String = AppSpecifications.Search.SECTION_ALL,
     val searchQuery: String = "",
-    val userList: List<PersonUiState> = emptyList(),
+    val userList: ImmutableList<PersonUiState> = persistentListOf(),
     val isNameMaskingEnabled: Boolean = true,
     // --- 緊急連絡先機能の実装に伴う追加フィールド ---
     val selectedPersonForQuickMenu: Person? = null,
     val isQuickActionMenuExpanded: Boolean = false,
-    val emergencyContactsForSheet: List<EmergencyContact>? = null,
+    val emergencyContactsForSheet: ImmutableList<EmergencyContact>? = null,
     val isEmergencyContactLoading: Boolean = false
 )
 
@@ -39,7 +42,22 @@ data class PersonListUiState(
  * View Event：PersonListViewEvent
  */
 sealed interface PersonListViewEvent {
-    // 将来的な拡張用
+    /** 詳細画面（各カテゴリ）へ遷移 */
+    data class NavigateToDetail(
+        val personId: String,
+        val category: jp.mydns.fujiwara.carememo.data.Category,
+        val query: String? = null
+    ) : PersonListViewEvent
+    /** 一括入力画面へ遷移 */
+    data class NavigateToBatchInput(val personId: String) : PersonListViewEvent
+    /** 利用者追加画面へ遷移 */
+    object NavigateToAddPerson : PersonListViewEvent
+    /** 利用者編集画面へ遷移 */
+    data class NavigateToEditPerson(val personId: String) : PersonListViewEvent
+    /** 設定画面へ遷移 */
+    object NavigateToSettings : PersonListViewEvent
+    /** 緊急連絡先画面へ遷移 */
+    data class NavigateToMedicalContacts(val personId: String) : PersonListViewEvent
 }
 
 /**
@@ -48,6 +66,7 @@ sealed interface PersonListViewEvent {
  * 【役割】
  * 利用者一覧の各行（1名分）の表示状態を保持する UI 専用モデルです。
  */
+@Immutable
 data class PersonUiState(
     val person: Person,
     val maskedName: String,

@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BoxScope.VerticalScrollIndicator(
     scrollState: ScrollState,
+    modifier: Modifier = Modifier,
     isCompact: Boolean = false
 ) {
     val barHeight = if (isCompact) 32.dp else 60.dp
@@ -77,7 +78,8 @@ fun BoxScope.VerticalScrollIndicator(
         isBottomSelected = isBottomSelected,
         maxOffset = maxOffset,
         barHeight = barHeight,
-        isCompact = isCompact
+        isCompact = isCompact,
+        modifier = modifier
     )
 }
 
@@ -90,6 +92,7 @@ fun BoxScope.VerticalScrollIndicator(
 @Composable
 fun BoxScope.VerticalScrollIndicator(
     lazyListState: LazyListState,
+    modifier: Modifier = Modifier,
     isCompact: Boolean = false
 ) {
     // スクロール可能かどうかを判定
@@ -132,7 +135,8 @@ fun BoxScope.VerticalScrollIndicator(
         isBottomSelected = isBottomSelected,
         maxOffset = maxOffset,
         barHeight = barHeight,
-        isCompact = isCompact
+        isCompact = isCompact,
+        modifier = modifier
     )
 }
 
@@ -145,7 +149,8 @@ private fun BoxScope.IndicatorContent(
     isBottomSelected: Boolean,
     maxOffset: Dp,
     barHeight: Dp,
-    isCompact: Boolean
+    isCompact: Boolean,
+    modifier: Modifier = Modifier
 ) {
     // 表示サイズの設定
     val dotSize = if (isCompact) 4.dp else 6.dp
@@ -155,7 +160,7 @@ private fun BoxScope.IndicatorContent(
 
     // 上部/下部ドット表示
     Column(
-        modifier = Modifier
+        modifier = modifier
             .align(Alignment.CenterEnd)
             .padding(end = paddingEnd),
         verticalArrangement = Arrangement.spacedBy(dotSpacing),

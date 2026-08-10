@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
+import kotlinx.collections.immutable.toImmutableSet
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -28,11 +29,11 @@ class DeleteOrRestorePersonLogicTest {
         var state = DeleteOrRestorePersonUiState()
         
         // 追加
-        state = state.copy(selectedIds = DeleteOrRestorePersonLogic.toggleSelection(state.selectedIds, "1"))
+        state = state.copy(selectedIds = DeleteOrRestorePersonLogic.toggleSelection(state.selectedIds, "1").toImmutableSet())
         assertEquals(setOf("1"), state.selectedIds)
         
         // 削除
-        state = state.copy(selectedIds = DeleteOrRestorePersonLogic.toggleSelection(state.selectedIds, "1"))
+        state = state.copy(selectedIds = DeleteOrRestorePersonLogic.toggleSelection(state.selectedIds, "1").toImmutableSet())
         assertTrue(state.selectedIds.isEmpty())
     }
 

@@ -39,8 +39,10 @@ class UserSettingsRepository(private val context: Context) {
         private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
         /** 自動ロックまでの分（0は即時） */
         private val LOCK_TIMEOUT_MINUTES = intPreferencesKey("lock_timeout_minutes")
+        /*
         /** 最後にアプリを操作した時刻（ミリ秒） */
         private val LAST_ACTIVE_TIME = longPreferencesKey("last_active_time")
+        */
         /** バックアップ生成時のパスワード保護を有効にするか */
         private val IS_BACKUP_PASSWORD_ENABLED = booleanPreferencesKey("is_backup_password_enabled")
         /** バックアップ用パスワード（平文/暫定） */
@@ -70,14 +72,14 @@ class UserSettingsRepository(private val context: Context) {
             preferences[IS_BIOMETRIC_ENABLED] ?: false
         }
 
-    /**
-     * 生体認証設定が既にユーザーまたはシステムによって初期化済みかどうかを判定するための Flow。
-     * まだ一度も設定が行われていない（キーが存在しない）場合は false を返します。
-     */
+    /*
+     * 初回起動時の生体認証案内ダイアログの表示制御など、
+     * 「未設定状態」を明示的に判定する必要がある機能を追加する際に使用するため保持。
     val isBiometricSettingInitialized: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences.contains(IS_BIOMETRIC_ENABLED)
         }
+    */
 
     /** ロックタイムアウト（分）を取得する Flow */
     val lockTimeoutMinutes: Flow<Int> = context.dataStore.data
@@ -86,11 +88,13 @@ class UserSettingsRepository(private val context: Context) {
             preferences[LOCK_TIMEOUT_MINUTES] ?: 0
         }
 
+    /*
     /** 最終アクティブ時刻を取得する Flow */
     val lastActiveTime: Flow<Long> = context.dataStore.data
         .map { preferences ->
             preferences[LAST_ACTIVE_TIME] ?: 0L
         }
+    */
 
     /** デフォルトの記録者名を取得する Flow */
     val defaultRecorderName: Flow<String> = context.dataStore.data
@@ -167,11 +171,17 @@ class UserSettingsRepository(private val context: Context) {
         }
     }
 
+    /*
+    /**
+     * アプリがバックグラウンドに回った際や、ユーザー操作があった際に時刻を更新し、
+     * 自動ロックの判定基準とするために使用。将来的なセキュリティ強化のために保持。
+     */
     suspend fun setLastActiveTime(timeMillis: Long) {
         context.dataStore.edit { preferences ->
             preferences[LAST_ACTIVE_TIME] = timeMillis
         }
     }
+    */
 
     suspend fun setDefaultRecorderName(name: String) {
         context.dataStore.edit { preferences ->
@@ -202,7 +212,6 @@ class UserSettingsRepository(private val context: Context) {
             preferences[AUDIT_LOG_RETENTION_DAYS] = days
         }
     }
-
     suspend fun setLastAuditLogRotationDate(date: String) {
         context.dataStore.edit { preferences ->
             preferences[LAST_AUDIT_LOG_ROTATION_DATE] = date

@@ -1,6 +1,9 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AuditLog
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * 監査ログ画面全体の表示状態を管理するデータクラス。
@@ -14,22 +17,24 @@ import jp.mydns.fujiwara.carememo.data.AuditLog
  * @param availableFeatures ログ内に存在する、フィルタ選択可能な機能名のリスト
  * @param availableResults ログ内に存在する、フィルタ選択可能な結果タイプのリスト
  */
+@Immutable
 data class AuditLogUiState(
-    val auditLogs: List<AuditLog> = emptyList(),
-    val filteredLogs: List<AuditLog> = emptyList(),
+    val auditLogs: ImmutableList<AuditLog> = persistentListOf(),
+    val filteredLogs: ImmutableList<AuditLog> = persistentListOf(),
     val isLoading: Boolean = true,
     val selectedFeature: String? = null,
     val selectedResult: String? = null,
     val isAscending: Boolean = false,
-    val availableFeatures: List<String> = emptyList(),
-    val availableResults: List<String> = emptyList()
+    val availableFeatures: ImmutableList<String> = persistentListOf(),
+    val availableResults: ImmutableList<String> = persistentListOf()
 )
 
 /**
  * 監査ログ画面固有のイベント定義。
  */
 sealed interface AuditLogViewEvent {
-    // 将来的なアクション（CSVエクスポート等）の拡張用
+    /** 前の画面に戻る */
+    data object NavigateBack : AuditLogViewEvent
 }
 
 /**

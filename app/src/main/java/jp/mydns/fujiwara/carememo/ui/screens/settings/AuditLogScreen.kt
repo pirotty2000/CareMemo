@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,31 +23,49 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AuditLog
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
-import jp.mydns.fujiwara.carememo.ui.mapping.toActionLabel
-import jp.mydns.fujiwara.carememo.ui.mapping.toFeatureLabel
-import jp.mydns.fujiwara.carememo.ui.mapping.toResultLabel
+import jp.mydns.fujiwara.carememo.ui.mapping.toActionLabelRes
+import jp.mydns.fujiwara.carememo.ui.mapping.toFeatureLabelRes
+import jp.mydns.fujiwara.carememo.ui.mapping.toResultLabelRes
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.ui.theme.getAuditActionColor
 import jp.mydns.fujiwara.carememo.ui.theme.getAuditResultMainColor
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun AuditLogScreen(
     viewModel: AuditLogViewModel,
-    onBack: () -> Unit,
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // ViewModel からの画面遷移イベントを監視
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is AuditLogViewEvent.NavigateBack -> {
+                    navController.popBackStack()
+                }
+            }
+        }
+    }
+
     AuditLogScreenContent(
-        auditLogs = uiState.auditLogs,
+        auditLogs = uiState.filteredLogs, // filteredLogs を使用するように変更
         isLoading = uiState.isLoading,
         selectedFeature = uiState.selectedFeature,
         selectedResult = uiState.selectedResult,
@@ -57,36 +76,39 @@ fun AuditLogScreen(
         onResultSelect = { viewModel.setResultFilter(it) },
         onToggleSort = { viewModel.toggleSortOrder() },
         onClearFilters = { viewModel.clearFilters() },
-        onBack = onBack
+        onBack = { viewModel.navigateBack() },
+        modifier = modifier
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditLogScreenContent(
-    auditLogs: List<AuditLog>,
+    auditLogs: ImmutableList<AuditLog>,
     isLoading: Boolean,
     selectedFeature: String?,
     selectedResult: String?,
     isAscending: Boolean,
-    availableFeatures: List<String>,
-    availableResults: List<String>,
+    availableFeatures: ImmutableList<String>,
+    availableResults: ImmutableList<String>,
     onFeatureSelect: (String?) -> Unit,
     onResultSelect: (String?) -> Unit,
     onToggleSort: () -> Unit,
     onClearFilters: () -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val lazyListState = rememberLazyListState()
     val isFiltered = (selectedFeature != null) || (selectedResult != null)
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("操作ログ", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.audit_log_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("AuditLogScreen_BackButton")) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 colors = appTopAppBarColors(),
@@ -116,9 +138,9 @@ fun AuditLogScreenContent(
                 }
             } else if (auditLogs.isEmpty()) {
                 EmptyState(
-                    message = if (isFiltered) "条件に合うログはありません" else "ログはありません",
+                    message = if (isFiltered) stringResource(R.string.audit_log_empty_filtered_msg) else stringResource(R.string.audit_log_empty),
                     icon = Icons.Rounded.History,
-                    description = if (isFiltered) "フィルター設定を変更してください" else "操作を行うとここに履歴が記録されます",
+                    description = if (isFiltered) stringResource(R.string.audit_log_empty_filtered_desc) else stringResource(R.string.audit_log_empty_desc),
                     modifier = Modifier.weight(1f).testTag("AuditLog_EmptyState"),
                 )
             } else {
@@ -147,8 +169,8 @@ private fun AuditLogFilterBar(
     selectedFeature: String?,
     selectedResult: String?,
     isAscending: Boolean,
-    availableFeatures: List<String>,
-    availableResults: List<String>,
+    availableFeatures: ImmutableList<String>,
+    availableResults: ImmutableList<String>,
     onFeatureSelect: (String?) -> Unit,
     onResultSelect: (String?) -> Unit,
     onToggleSort: () -> Unit,
@@ -170,7 +192,12 @@ private fun AuditLogFilterBar(
                 FilterChip(
                     selected = selectedResult != null,
                     onClick = { showResultMenu = true },
-                    label = { Text(selectedResult?.toResultLabel ?: "結果: 全て") },
+                    label = { 
+                        Text(
+                            selectedResult?.let { stringResource(it.toResultLabelRes) } 
+                                ?: stringResource(R.string.audit_log_filter_result_prefix, stringResource(R.string.audit_log_filter_all))
+                        ) 
+                    },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedResult != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
@@ -179,7 +206,7 @@ private fun AuditLogFilterBar(
                 )
                 DropdownMenu(expanded = showResultMenu, onDismissRequest = { showResultMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("全て") },
+                        text = { Text(stringResource(R.string.audit_log_filter_all)) },
                         onClick = {
                             onResultSelect(null)
                             showResultMenu = false
@@ -187,7 +214,7 @@ private fun AuditLogFilterBar(
                     )
                     availableResults.forEach { result ->
                         DropdownMenuItem(
-                            text = { Text(result.toResultLabel) },
+                            text = { Text(stringResource(result.toResultLabelRes)) },
                             onClick = {
                                 onResultSelect(result)
                                 showResultMenu = false
@@ -205,7 +232,12 @@ private fun AuditLogFilterBar(
                 FilterChip(
                     selected = selectedFeature != null,
                     onClick = { showFeatureMenu = true },
-                    label = { Text(selectedFeature?.toFeatureLabel ?: "機能: 全て") },
+                    label = { 
+                        Text(
+                            selectedFeature?.let { stringResource(it.toFeatureLabelRes) } 
+                                ?: stringResource(R.string.audit_log_filter_feature_prefix, stringResource(R.string.audit_log_filter_all))
+                        ) 
+                    },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedFeature != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
@@ -214,7 +246,7 @@ private fun AuditLogFilterBar(
                 )
                 DropdownMenu(expanded = showFeatureMenu, onDismissRequest = { showFeatureMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("全て") },
+                        text = { Text(stringResource(R.string.audit_log_filter_all)) },
                         onClick = {
                             onFeatureSelect(null)
                             showFeatureMenu = false
@@ -222,7 +254,7 @@ private fun AuditLogFilterBar(
                     )
                     availableFeatures.forEach { feature ->
                         DropdownMenuItem(
-                            text = { Text(feature.toFeatureLabel) },
+                            text = { Text(stringResource(feature.toFeatureLabelRes)) },
                             onClick = {
                                 onFeatureSelect(feature)
                                 showFeatureMenu = false
@@ -242,7 +274,7 @@ private fun AuditLogFilterBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.SwapVert,
-                    contentDescription = if (isAscending) "古い順" else "新しい順",
+                    contentDescription = if (isAscending) stringResource(R.string.audit_log_sort_asc) else stringResource(R.string.audit_log_sort_desc),
                     tint = if (isAscending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -254,7 +286,7 @@ private fun AuditLogFilterBar(
                 IconButton(onClick = onClear, modifier = Modifier.testTag("AuditLog_FilterClear")) {
                     Icon(
                         Icons.Rounded.ClearAll,
-                        contentDescription = "フィルター解除",
+                        contentDescription = stringResource(R.string.audit_log_filter_clear),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -268,7 +300,7 @@ private fun AuditLogFilterBar(
 fun AuditLogScreenPreview() {
     CareMemoTheme {
         AuditLogScreenContent(
-            auditLogs = listOf(
+            auditLogs = persistentListOf(
                 AuditLog(
                     id = 1,
                     timestamp = java.time.Instant.now(),
@@ -306,8 +338,8 @@ fun AuditLogScreenPreview() {
             selectedFeature = null,
             selectedResult = null,
             isAscending = false,
-            availableFeatures = listOf("PersonList", "PersonHealth", "Settings"),
-            availableResults = listOf("SUCCESS", "DB_ERROR", "OTHER_ERROR"),
+            availableFeatures = persistentListOf("PersonList", "PersonHealth", "Settings"),
+            availableResults = persistentListOf("SUCCESS", "DB_ERROR", "OTHER_ERROR"),
             onFeatureSelect = {},
             onResultSelect = {},
             onToggleSort = {},
@@ -318,7 +350,10 @@ fun AuditLogScreenPreview() {
 }
 
 @Composable
-fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
+fun AuditLogItem(
+    log: AuditLog,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -336,7 +371,7 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = log.actionType.toActionLabel,
+                    text = stringResource(log.actionType.toActionLabelRes),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = getAuditActionColor(log.actionType),
@@ -350,8 +385,10 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val featureLabelRes = log.featureName.toFeatureLabelRes
+                val featureText = if (featureLabelRes != 0) stringResource(featureLabelRes) else log.featureName
                 Text(
-                    text = "${log.featureName.toFeatureLabel} > ${log.operation}",
+                    text = "$featureText > ${log.operation}",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
@@ -364,7 +401,7 @@ fun AuditLogItem(log: AuditLog, modifier: Modifier = Modifier) {
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, resultColor)
                 ) {
                     Text(
-                        text = log.resultType.toResultLabel,
+                        text = stringResource(log.resultType.toResultLabelRes),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),

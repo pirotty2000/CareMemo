@@ -18,43 +18,57 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
+import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * 緊急連絡先一覧画面 (SCR-M-003)
- * ViewModel との接続を担当する Stateful な Composable。
  */
 @Composable
 fun EmergencyContactListScreen(
     viewModel: EmergencyContactEditViewModel,
-    onNavigateBack: () -> Unit,
-    onNavigateToAdd: () -> Unit,
-    onNavigateToEdit: (String) -> Unit
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) {
+        viewModel.viewEvent.collect { event ->
+            when (event) {
+                is EmergencyContactViewEvent.NavigateBack -> {
+                    navController.popBackStack()
+                }
+                else -> {}
+            }
+        }
+    }
+
     EmergencyContactListContent(
         uiState = uiState,
-        onNavigateBack = onNavigateBack,
+        onNavigateBack = { navController.popBackStack() },
         onAddClick = {
             viewModel.startAdd()
-            onNavigateToAdd()
+            navController.navigate(Destination.MedicalContactEdit(uiState.personId, null))
         },
         onEditClick = { contact ->
             viewModel.startEdit(contact)
-            onNavigateToEdit(contact.id)
+            navController.navigate(Destination.MedicalContactEdit(uiState.personId, contact.id))
         },
         onDeleteConfirm = { contact ->
             viewModel.deleteContact(contact)
-        }
+        },
+        modifier = modifier,
     )
 }
 
@@ -68,12 +82,14 @@ fun EmergencyContactListContent(
     onNavigateBack: () -> Unit,
     onAddClick: () -> Unit,
     onEditClick: (EmergencyContact) -> Unit,
-    onDeleteConfirm: (EmergencyContact) -> Unit
+    onDeleteConfirm: (EmergencyContact) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var contactToDelete by remember { mutableStateOf<EmergencyContact?>(null) }
     val lazyListState = rememberLazyListState()
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { 
@@ -97,7 +113,6 @@ fun EmergencyContactListContent(
         }
     ) { padding ->
         if (uiState.contacts.isEmpty()) {
-            // 空の状態
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.Center) {
                 Text(stringResource(R.string.medical_contacts_empty))
             }
@@ -119,14 +134,11 @@ fun EmergencyContactListContent(
                         HorizontalDivider()
                     }
                 }
-                
-                // 垂直スクロールインジケーター
                 VerticalScrollIndicator(lazyListState = lazyListState)
             }
         }
     }
 
-    // 削除確認ダイアログ
     if (contactToDelete != null) {
         AppDeleteConfirmDialog(
             title = stringResource(R.string.medical_contact_delete_confirm_title),
@@ -144,11 +156,13 @@ fun EmergencyContactListContent(
 fun EmergencyContactItem(
     contact: EmergencyContact,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     ListItem(
+        modifier = modifier,
         headlineContent = { 
             Text(contact.facilityName, fontWeight = FontWeight.Bold) 
         },
@@ -168,7 +182,10 @@ fun EmergencyContactItem(
         trailingContent = {
             Box {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Rounded.ModeEdit, contentDescription = "操作メニュー")
+                    Icon(
+                        imageVector = Icons.Rounded.ModeEdit,
+                        contentDescription = stringResource(R.string.main_desc_op_menu)
+                    )
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(
@@ -187,8 +204,6 @@ fun EmergencyContactItem(
     )
 }
 
-// --- Previews ---
-
 @Preview(showBackground = true)
 @Composable
 fun EmergencyContactListContentPreview_Normal() {
@@ -196,27 +211,10 @@ fun EmergencyContactListContentPreview_Normal() {
         EmergencyContactListContent(
             uiState = EmergencyContactUiState(
                 personName = "愛 植○",
-                contacts = listOf(
+                contacts = persistentListOf(
                     EmergencyContact(facilityName = "○○クリニック", personName = "○○先生", phoneNumber = "0311111111", contactType = "DOCTOR", personId = "1"),
                     EmergencyContact(facilityName = "長男の妻", personName = "○○さん", phoneNumber = "08011111111", contactType = "FAMILY", personId = "1", priority = 1)
                 )
-            ),
-            onNavigateBack = {},
-            onAddClick = {},
-            onEditClick = {},
-            onDeleteConfirm = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun EmergencyContactListContentPreview_Empty() {
-    CareMemoTheme {
-        EmergencyContactListContent(
-            uiState = EmergencyContactUiState(
-                personName = "愛 植○",
-                contacts = emptyList()
             ),
             onNavigateBack = {},
             onAddClick = {},

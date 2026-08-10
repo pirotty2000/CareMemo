@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Component：PdfExportActionHandler
@@ -15,6 +17,8 @@ import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
  * 【役割】
  * PDF出力（帳票生成）および共有アクションを共通で処理するハンドラーコンポーネントです。
  * UIを持たない論理的なコンポーネントですが、設定ダイアログの表示と実際の出力処理の橋渡しを行います。
+ * 
+ * ※ UIを持たないため、modifier 引数は持ちません。
  *
  * 【主な機能】
  * ・PDF出力設定ダイアログ（PdfSettingsDialog）の表示管理。
@@ -44,10 +48,10 @@ fun PdfExportActionHandler(
     onDismiss: () -> Unit,
     category: Category,
     person: Person?,
-    records: List<HistoryRecord>,
+    records: ImmutableList<HistoryRecord>,
     viewModel: BaseUiStateViewModel<*, *>,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, onSuccess -> onSuccess() },
-    photos: List<ConditionPhoto> = emptyList()
+    photos: ImmutableList<ConditionPhoto> = persistentListOf()
 ) {
     val context = LocalContext.current
 

@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -73,11 +74,8 @@ class PersonConditionScreenTest_3_Behavior {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
-                    widthSizeClass = WindowWidthSizeClass.Compact,
-                    onBack = {},
-                    onNavigateToCategory = {},
-                    onNavigateToPhotoPreview = { _, _, _ -> },
-                    onNavigateToFullScreen = { _, _ -> }
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact
                 )
             }
         }
@@ -86,10 +84,10 @@ class PersonConditionScreenTest_3_Behavior {
 
     @Test
     fun bh01_save_action_calls_viewmodel() {
-        // 一覧画面が表示されるように、selectedConditionId を明示的に "" にする
+        // 一覧画面が表示されるように、selectedConditionId を明示的に null にする
         conditionUiStateFlow.value = conditionUiStateFlow.value.copy(
-            selectedConditionId = "",
-            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now()))
+            selectedConditionId = null,
+            records = listOf(ConditionAtVisit(id = "1", personId = "1", title = "A", condition = "B", author = "C", recordTime = Instant.now())).toImmutableList()
         )
         setContent()
 
@@ -105,7 +103,7 @@ class PersonConditionScreenTest_3_Behavior {
             .performTextInput("内容")
         composeTestRule.onNodeWithTag("Condition_SaveButton").performClick()
         
-        verify { conditionViewModel.saveRecord(any(), any(), any(), any(), any(), any()) }
+        verify { conditionViewModel.saveCurrentEdit(any()) }
     }
 
     @Test

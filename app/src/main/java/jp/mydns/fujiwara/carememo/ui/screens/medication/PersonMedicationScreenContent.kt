@@ -25,6 +25,9 @@ import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationHistoryTabl
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -53,23 +56,24 @@ fun PersonMedicationScreenContent(
     isExpanded: Boolean,
     selectedMonth: YearMonth,
     isLoading: Boolean,
-    recordsByDate: Map<String, List<MedicationRecord>>,
+    recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
     isHistoryMode: Boolean,
     onHistoryModeChange: (Boolean) -> Unit,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onDayClick: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // 記録が1件でもあるか判定
     val hasAnyRecord = recordsByDate.values.any { it.isNotEmpty() }
 
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize().testTag("Medication_Loading")) {
+        Box(modifier = modifier.fillMaxSize().testTag("Medication_Loading")) {
             LoadingScreen()
         }
     } else if (isExpanded) {
         // --- タブレット・横向き: 2カラムレイアウト ---
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             // 左側: カレンダー
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val calendarScrollState = rememberScrollState()
@@ -100,7 +104,7 @@ fun PersonMedicationScreenContent(
                         onClick = onPreviousMonth,
                         modifier = Modifier.testTag("Medication_MonthPrev_Tablet")
                     ) {
-                        Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
+                        Icon(Icons.Rounded.ChevronLeft, contentDescription = stringResource(R.string.medication_btn_prev_month))
                     }
                     Text(
                         text = formatYearMonthHeader(selectedMonth),
@@ -112,7 +116,7 @@ fun PersonMedicationScreenContent(
                         onClick = onNextMonth,
                         modifier = Modifier.testTag("Medication_MonthNext_Tablet")
                     ) {
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.medication_btn_next_month))
                     }
                 }
 
@@ -137,7 +141,7 @@ fun PersonMedicationScreenContent(
     } else {
         // --- スマホ: 1カラム・切り替えレイアウト ---
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 月の選択
@@ -150,7 +154,7 @@ fun PersonMedicationScreenContent(
                     onClick = onPreviousMonth,
                     modifier = Modifier.testTag("Medication_MonthPrev_Phone")
                 ) {
-                    Icon(Icons.Rounded.ChevronLeft, contentDescription = "前月")
+                    Icon(Icons.Rounded.ChevronLeft, contentDescription = stringResource(R.string.medication_btn_prev_month))
                 }
                 Text(
                     text = formatYearMonthHeader(selectedMonth),
@@ -162,7 +166,7 @@ fun PersonMedicationScreenContent(
                     onClick = onNextMonth,
                     modifier = Modifier.testTag("Medication_MonthNext_Phone")
                 ) {
-                    Icon(Icons.Rounded.ChevronRight, contentDescription = "次月")
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.medication_btn_next_month))
                 }
             }
 
@@ -257,7 +261,7 @@ fun PersonMedicationScreenContentPhonePreview() {
             isExpanded = false,
             selectedMonth = YearMonth.now(),
             isLoading = false,
-            recordsByDate = emptyMap(),
+            recordsByDate = persistentMapOf(),
             isHistoryMode = false,
             onHistoryModeChange = {},
             onPreviousMonth = {},
@@ -275,7 +279,7 @@ fun PersonMedicationScreenContentTabletPreview() {
             isExpanded = true,
             selectedMonth = YearMonth.now(),
             isLoading = false,
-            recordsByDate = emptyMap(),
+            recordsByDate = persistentMapOf(),
             isHistoryMode = false,
             onHistoryModeChange = {},
             onPreviousMonth = {},

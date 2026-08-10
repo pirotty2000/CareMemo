@@ -3,6 +3,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
@@ -75,8 +76,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun lg_01_一括保存失敗時の安全性() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        viewModel.loadPerson("1")
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
         advanceUntilIdle()
 
         viewModel.updateWeight("60")
@@ -102,8 +102,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun lg_02_バリデーション結果の翻訳() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        viewModel.loadPerson("1")
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
         advanceUntilIdle()
 
         // 形式不正な入力
@@ -127,8 +126,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun lg_03_重複カテゴリの識別() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        viewModel.loadPerson("1")
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
         advanceUntilIdle()
 
         viewModel.updateWeight("60")
@@ -154,8 +152,7 @@ class BatchInputViewModelTest {
 
     @Test
     fun lg_04_状態の原子性() = runTest {
-        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository)
-        viewModel.loadPerson("1")
+        val viewModel = BatchInputViewModel(healthRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle(mapOf("personId" to "1")))
         advanceUntilIdle()
 
         // 初期状態: 全項目空、変更なし

@@ -54,6 +54,8 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
@@ -61,33 +63,34 @@ import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 
 import androidx.compose.ui.tooling.preview.Preview
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenPhone(
-    currentCategory: Category,
-    records: List<Any>,
-    isLoading: Boolean,
+    uiState: PersonHealthUiState,
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    preferredShowHistory: Boolean,
     onPreferredShowHistoryChange: (Boolean) -> Unit,
-    selectedRecordId: String,
-    onSelectedRecordIdChange: (String) -> Unit,
+    onSelectedRecordIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onExpandGraph: (Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
+    onSaveClick: () -> Unit,
+    onCancelEdit: () -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         // 画面最上部のバー
         topBar = {
@@ -98,13 +101,13 @@ fun PersonHealthScreenPhone(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = "健康記録"
+                            defaultTitle = stringResource(R.string.health_title)
                         )
                     },
                     // 戻る（←）アイコン
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (selectedRecordId.isNotEmpty()) onSelectedRecordIdChange("") else onBack() },
+                            onClick = { if (uiState.selectedRecordId != null) onCancelEdit() else onBack() },
                             modifier = Modifier.testTag("HealthScreen_BackButton")
                         ) {
                             Icon(
@@ -116,7 +119,7 @@ fun PersonHealthScreenPhone(
                     colors = appTopAppBarColors(),
                     // PDF出力
                     actions = {
-                        if (selectedRecordId.isEmpty()) {
+                        if (uiState.selectedRecordId == null) {
                             IconButton(
                                 onClick = onShowPdfSettings,
                                 modifier = Modifier.testTag("HealthScreen_PdfButton")
@@ -131,7 +134,7 @@ fun PersonHealthScreenPhone(
                 )
                 // カテゴリ選択バー
                 CategorySelectorBar(
-                    currentCategory = currentCategory,
+                    currentCategory = uiState.currentCategory,
                     personCategorySummary = personCategorySummary,
                     onCategoryClick = onNavigateToCategory,
                     modifier = Modifier.testTag("CategorySelectorBar")
@@ -140,7 +143,7 @@ fun PersonHealthScreenPhone(
         },
         // 右下のFAB
         floatingActionButton = {
-            if (selectedRecordId.isEmpty()) {
+            if (uiState.selectedRecordId == null) {
                 FloatingActionButton(
                     onClick = {
                         onSelectedRecordIdChange(AppSpecifications.Id.NEW_RECORD_ID)
@@ -165,9 +168,9 @@ fun PersonHealthScreenPhone(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = if (selectedRecordId.isEmpty()) 16.dp else 0.dp)
+                .padding(horizontal = if (uiState.selectedRecordId == null) 16.dp else 0.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId.isEmpty() && !isLoading) {
+            if ((uiState.records.isEmpty() && uiState.selectedRecordId == null && !uiState.isLoading)) {
                 EmptyState(
                     message = stringResource(R.string.p_detail_empty_records),
                     description = stringResource(R.string.p_detail_empty_records_desc),
@@ -177,17 +180,16 @@ fun PersonHealthScreenPhone(
                 //-- ui/screens/health/PersonHealtScreeenContent.kt
                 PersonHealthScreenContent(
                     isExpanded = false,
-                    records = records,
-                    isLoading = isLoading,
-                    currentCategory = currentCategory,
-                    preferredShowHistory = preferredShowHistory,
+                    uiState = uiState,
                     onPreferredShowHistoryChange = onPreferredShowHistoryChange,
-                    selectedRecordId = selectedRecordId,
                     onSelectedRecordIdChange = onSelectedRecordIdChange,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = { record -> recordToDelete = record },
                     onExpandGraph = onExpandGraph,
-                    onSaveRecord = onSaveRecord,
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit,
                     isAnyDialogOpen = recordToDelete != null
                 )
             }
@@ -197,33 +199,32 @@ fun PersonHealthScreenPhone(
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
-fun PersonHealthScreenPhonePreview() {
+fun PersonHealthScreenPhonePreview(
+    @PreviewParameter(PersonHealthPreviewParameterProvider::class) state: PersonHealthPreviewState
+) {
     CareMemoTheme {
         PersonHealthScreenPhone(
-            currentCategory = Category.BP_AND_PULSE,
-            records = listOf(
-                BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+            uiState = PersonHealthUiState(
+                currentCategory = state.category,
+                records = state.records,
+                isLoading = state.isLoading,
+                preferredShowHistory = state.preferredShowHistory,
+                selectedRecordId = state.selectedRecordId
             ),
-            isLoading = false,
-            currentPerson = Person(
-                lastName = "山田", 
-                firstName = "太郎",
-                lastNameFurigana = "ヤマダ",
-                firstNameFurigana = "タロウ",
-                birthday = Instant.now()
-            ),
-            personCategorySummary = null,
+            currentPerson = state.person,
+            personCategorySummary = state.summary,
             isNameMaskingEnabled = false,
-            preferredShowHistory = true,
             onPreferredShowHistoryChange = {},
-            selectedRecordId = "",
             onSelectedRecordIdChange = {},
             onBack = {},
             onExpandGraph = {},
             onNavigateToCategory = {},
             onShowPdfSettings = {},
             onDeleteRecord = {},
-            onSaveRecord = { _, _, _, _ -> },
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

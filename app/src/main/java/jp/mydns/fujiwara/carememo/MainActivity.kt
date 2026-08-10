@@ -9,661 +9,368 @@ import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricPrompt
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import android.net.Uri
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
-import jp.mydns.fujiwara.carememo.data.Category
+import androidx.navigation.toRoute
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
-import jp.mydns.fujiwara.carememo.ui.screens.main.MainScreen
-import jp.mydns.fujiwara.carememo.ui.screens.main.PersonEditScreen
-import jp.mydns.fujiwara.carememo.ui.screens.main.EmergencyContactEditScreen
-import jp.mydns.fujiwara.carememo.ui.screens.main.EmergencyContactListScreen
-import jp.mydns.fujiwara.carememo.ui.screens.health.BatchInputScreen
-import jp.mydns.fujiwara.carememo.ui.screens.health.GraphExpansionScreen
-import jp.mydns.fujiwara.carememo.ui.screens.health.PersonHealthScreen
-import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionScreen
-import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoFullScreen
-import jp.mydns.fujiwara.carememo.ui.screens.condition.ConditionPhotoPreviewScreen
-import jp.mydns.fujiwara.carememo.ui.screens.medication.PersonMedicationScreen
-import jp.mydns.fujiwara.carememo.ui.screens.settings.AuditLogScreen
-import jp.mydns.fujiwara.carememo.ui.screens.settings.DeleteOrRestorePersonScreen
-import jp.mydns.fujiwara.carememo.ui.screens.settings.OrphanedPhotoManagementScreen
-import jp.mydns.fujiwara.carememo.ui.screens.settings.SettingsScreen
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
+import jp.mydns.fujiwara.carememo.ui.screens.main.*
+import jp.mydns.fujiwara.carememo.ui.screens.health.*
+import jp.mydns.fujiwara.carememo.ui.screens.condition.*
+import jp.mydns.fujiwara.carememo.ui.screens.medication.*
+import jp.mydns.fujiwara.carememo.ui.screens.settings.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.utils.PdfExporter
-import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.OrphanedPhotoViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
-import java.net.URLEncoder
+import jp.mydns.fujiwara.carememo.viewmodel.*
 
-/**
- * Activity：MainActivity
- *
- * 【役割】
- * CareMemo アプリケーションのメインアクティビティであり、唯一のエントリーポイントです。
- * システムレベルのセキュリティ設定、アプリ全体のテーマ、および画面遷移（Navigation）の定義を担当します。
- * 生体認証フレームワークを利用するため、[FragmentActivity] を継承しています。
- */
 class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // セキュリティ保護：
-        // スクリーンショットの撮影や画面録画をシステムレベルで防止します。
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         
-        // タスク説明（履歴画面）のカスタマイズ
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val taskDescription = ActivityManager.TaskDescription.Builder()
-                .setLabel(getString(R.string.app_name))
-                .setIcon(R.mipmap.ic_launcher)
-                .setPrimaryColor(0xFF6650A4.toInt())
-                .build()
+                .setLabel(getString(R.string.app_name)).setIcon(R.mipmap.ic_launcher).setPrimaryColor(0xFF6650A4.toInt()).build()
             setTaskDescription(taskDescription)
         } else {
             @Suppress("DEPRECATION")
-            val taskDescription = ActivityManager.TaskDescription(
-                getString(R.string.app_name),
-                R.mipmap.ic_launcher,
-                0xFF6650A4.toInt(),
-            )
+            val taskDescription = ActivityManager.TaskDescription(getString(R.string.app_name), R.mipmap.ic_launcher, 0xFF6650A4.toInt())
             setTaskDescription(taskDescription)
         }
 
-        // PDF出力用一時ファイルのクリーンアップ
-        PdfExporter.clearOldExports(this)
+        val application = application as CareMemoApplication
+        val personRepository = application.personRepository
+        val deleteOrRestorePersonRepository = application.deleteOrRestorePersonRepository
+        val personSummaryRepository = application.personSummaryRepository
+        val healthRepository = application.healthRepository
+        val conditionRepository = application.conditionRepository
+        val medicationRepository = application.medicationRepository
+        val userSettingsRepository = application.userSettingsRepository
+        val auditLogRepository = application.auditLogRepository
+        val appMaintenanceRepository = application.appMaintenanceRepository
 
         enableEdgeToEdge()
+
         setContent {
-            val windowSize = calculateWindowSizeClass(this)
-            CareMemoApp(this, windowSize.widthSizeClass)
+            val themeSetting by userSettingsRepository.themeSetting.collectAsStateWithLifecycle(initialValue = ThemeSetting.SYSTEM)
+            CareMemoTheme(themeSetting = themeSetting) {
+                val navController = rememberNavController()
+                val widthSizeClass = calculateWindowSizeClass(this).widthSizeClass
+                var isAppLocked by rememberSaveable { mutableStateOf(false) }
+                val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsStateWithLifecycle(initialValue = false)
+                val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsStateWithLifecycle(initialValue = 5)
+                var lastPausedTime by rememberSaveable { mutableLongStateOf(0L) }
+
+                val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
+                    authenticate(titleResId, subtitleResId, onSuccess)
+                }
+
+                DisposableEffect(Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_RESUME) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_PAUSE) {
+                            lastPausedTime = System.currentTimeMillis()
+                        } else if (event == Lifecycle.Event.ON_RESUME) {
+                            if (isBiometricEnabled && !userSettingsRepository.isLockBypassed) {
+                                if (lockTimeoutMinutes == 0) isAppLocked = true
+                                else if (lockTimeoutMinutes > 0) {
+                                    val elapsedMillis = System.currentTimeMillis() - lastPausedTime
+                                    if (elapsedMillis > lockTimeoutMinutes * 60 * 1000) isAppLocked = true
+                                }
+                            }
+                            userSettingsRepository.isLockBypassed = false
+                        }
+                    }
+                    lifecycle.addObserver(observer)
+                    onDispose { lifecycle.removeObserver(observer) }
+                }
+
+                if (isAppLocked) {
+                    // ロック画面を表示
+                    LockScreen(onUnlockRequest = { authenticate(onSuccess = { isAppLocked = false }) })
+                } else {
+                    NavHost(navController = navController, startDestination = Destination.Main) {
+
+                        // SCR-M-001 利用者一覧画面
+                        composable<Destination.Main> {
+                            val listViewModel: PersonListViewModel =
+                                viewModel(factory = PersonListViewModel.Factory(
+                                    personRepository,
+                                    deleteOrRestorePersonRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    application.emergencyContactRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            MainScreen(viewModel = listViewModel, navController = navController)
+                        }
+
+                        // SCR-M-002 利用者登録・編集画面
+                        composable<Destination.PersonEdit> {
+                            val editViewModel: PersonEditViewModel =
+                                viewModel(factory = PersonEditViewModel.Factory(
+                                    personRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            PersonEditScreen(viewModel = editViewModel, navController = navController)
+                        }
+
+                        // SCR-M-003 緊急連絡先・管理画面
+                        composable<Destination.MedicalContacts> {
+                            val medicalViewModel: EmergencyContactEditViewModel =
+                                viewModel(factory = EmergencyContactEditViewModel.Factory(
+                                    application.emergencyContactRepository,
+                                    personRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            EmergencyContactListScreen(viewModel = medicalViewModel, navController = navController)
+                        }
+
+                        // SCR-M-004 緊急連絡先・登録編集画面
+                        composable<Destination.MedicalContactEdit> {
+                            val medicalViewModel: EmergencyContactEditViewModel =
+                                viewModel(factory = EmergencyContactEditViewModel.Factory(
+                                    application.emergencyContactRepository,
+                                    personRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            EmergencyContactEditScreen(viewModel = medicalViewModel, navController = navController)
+                        }
+
+                        // SCR-PH-001 健康管理(身長・体重、バイタル、血糖値・HbA1c)
+                        composable<Destination.HealthDetail> {
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val healthViewModel: PersonHealthViewModel =
+                                viewModel(factory = PersonHealthViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    healthRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            PersonHealthScreen(
+                                detailViewModel = detailViewModel,
+                                healthViewModel = healthViewModel,
+                                navController = navController,
+                                widthSizeClass = widthSizeClass,
+                                onRequireAuthentication = requestAuthentication)
+                        }
+
+                        // SCR-PH-002 一括入力
+                        composable<Destination.BatchInput> {
+                            val batchViewModel: BatchInputViewModel =
+                                viewModel(factory = BatchInputViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    healthRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            BatchInputScreen(viewModel = batchViewModel, navController = navController)
+                        }
+
+                        // SCR-PH-003 グラフ拡大表示
+                        composable<Destination.GraphExpansion> { backStackEntry ->
+                            val args = backStackEntry.toRoute<Destination.GraphExpansion>()
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val healthViewModel: PersonHealthViewModel =
+                                viewModel(factory = PersonHealthViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    healthRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            GraphExpansionScreen(
+                                detailViewModel = detailViewModel,
+                                healthViewModel = healthViewModel,
+                                initialGraphIndex = args.initialIndex,
+                                navController = navController)
+                        }
+
+                        // SCR-PC-001 所見メモ
+                        composable<Destination.ConditionDetail> {
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val conditionViewModel: PersonConditionViewModel =
+                                viewModel(factory = PersonConditionViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository,
+                                    applicationContext))
+                            PersonConditionScreen(
+                                detailViewModel = detailViewModel,
+                                conditionViewModel = conditionViewModel,
+                                navController = navController,
+                                widthSizeClass = widthSizeClass,
+                                onRequireAuthentication = requestAuthentication)
+                        }
+
+                        // SCR-PC-002 所見メモ・写真プレビュー画面
+                        composable<Destination.PhotoPreview> {
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val conditionViewModel: PersonConditionViewModel =
+                                viewModel(factory = PersonConditionViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository,
+                                    applicationContext))
+                            ConditionPhotoPreviewScreen(
+                                detailViewModel = detailViewModel,
+                                conditionViewModel = conditionViewModel,
+                                navController = navController)
+                        }
+
+                        // SCR-PC-003 所見メモ・写真全画面表示
+                        @Suppress("UNUSED_VARIABLE")
+                        composable<Destination.PhotoFull> {
+                            val conditionViewModel: PersonConditionViewModel =
+                                viewModel(factory = PersonConditionViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    conditionRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository,
+                                    applicationContext))
+                            ConditionPhotoFullScreen(viewModel = conditionViewModel, navController = navController)
+                        }
+
+                        // SCR-PM-001 服薬管理
+                        composable<Destination.MedicationDetail> {
+                            val detailViewModel: PersonDetailUiStateViewModel =
+                                viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            val medicationViewModel: PersonMedicationViewModel =
+                                viewModel(factory = PersonMedicationViewModel.Factory(
+                                    personRepository,
+                                    personSummaryRepository,
+                                    medicationRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            PersonMedicationScreen(
+                                detailViewModel = detailViewModel,
+                                medicationViewModel = medicationViewModel,
+                                navController = navController,
+                                widthSizeClass = widthSizeClass,
+                                onRequireAuthentication = requestAuthentication)
+                        }
+
+                        // SCR-S-001 設定
+                        composable<Destination.Settings> {
+                            val settingsViewModel: SettingsViewModel =
+                                viewModel(factory = SettingsViewModel.Factory(
+                                    appMaintenanceRepository,
+                                    deleteOrRestorePersonRepository,
+                                    auditLogRepository,
+                                    userSettingsRepository))
+                            SettingsScreen(
+                                viewModel = settingsViewModel,
+                                navController = navController,
+                                onRequireAuthentication = requestAuthentication)
+                        }
+
+                        // SCR-S-002 設定・監査ログ
+                        composable<Destination.AuditLog> {
+                            val auditLogViewModel: AuditLogViewModel =
+                                viewModel(factory = AuditLogViewModel.Factory(
+                                    auditLogRepository,
+                                    userSettingsRepository))
+                            AuditLogScreen(viewModel = auditLogViewModel, navController = navController)
+                        }
+
+                        // SCR-S-003 設定・終了利用者管理
+                        composable<Destination.ArchiveManagement> {
+                            val archiveViewModel: DeleteOrRestorePersonViewModel =
+                                viewModel(factory = DeleteOrRestorePersonViewModel.Factory(
+                                    deleteOrRestorePersonRepository,
+                                    userSettingsRepository,
+                                    auditLogRepository))
+                            DeleteOrRestorePersonScreen(viewModel = archiveViewModel, navController = navController)
+                        }
+
+                        // SCR-S-004 設定・迷子写真管理
+                        composable<Destination.OrphanedPhotos> {
+                            val orphanedViewModel: OrphanedPhotoViewModel =
+                                viewModel(factory = OrphanedPhotoViewModel.Factory(
+                                    userSettingsRepository,
+                                    conditionRepository,
+                                    applicationContext))
+                            OrphanedPhotoManagementScreen(viewModel = orphanedViewModel, navController = navController)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    /**
+     * セキュリティ保護の実行、認証方式の統合管理、コールバック制御
+     */
+    private fun authenticate(titleResId: Int? = null, subtitleResId: Int? = null, onSuccess: () -> Unit) {
+        val executor = ContextCompat.getMainExecutor(this)
+        val biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                onSuccess()
+            }
+        })
+        val title = titleResId?.let { getString(it) } ?: getString(R.string.security_auth_title)
+        val subtitle = subtitleResId?.let { getString(it) } ?: getString(R.string.security_auth_reason_change_settings)
+        val promptInfo = BiometricPrompt.PromptInfo.Builder().setTitle(title).setSubtitle(subtitle).setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL).build()
+        biometricPrompt.authenticate(promptInfo)
     }
 }
 
-/**
- * Composable：CareMemoApp
- *
- * 【役割】
- * アプリケーションの最上位コンポーザブルとして、リポジトリの注入、セキュリティ制御（アプリロック）、
- * および [NavHost] による画面遷移定義を集約します。
- */
 @Composable
-fun CareMemoApp(activity: FragmentActivity, widthSizeClass: WindowWidthSizeClass) {
-    val context = LocalContext.current
-    val application = context.applicationContext as CareMemoApplication
-    val personRepository = application.personRepository
-    val deleteOrRestorePersonRepository = application.deleteOrRestorePersonRepository
-    val personSummaryRepository = application.personSummaryRepository
-    val appMaintenanceRepository = application.appMaintenanceRepository
-    val healthRepository = application.healthRepository
-    val conditionRepository = application.conditionRepository
-    val medicationRepository = application.medicationRepository
-    val auditLogRepository = application.auditLogRepository
-    val userSettingsRepository = application.userSettingsRepository
-    val themeSetting by userSettingsRepository.themeSetting.collectAsState(initial = ThemeSetting.SYSTEM)
-
-    CareMemoTheme(themeSetting = themeSetting) {
-        val navController = rememberNavController()
-        val scope = rememberCoroutineScope()
-
-        val isBiometricEnabled by userSettingsRepository.isBiometricEnabled.collectAsState(initial = false)
-        val isBiometricSettingInitialized by userSettingsRepository.isBiometricSettingInitialized.collectAsState(initial = true)
-        val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsState(initial = 0)
-        val lastActiveTime by userSettingsRepository.lastActiveTime.collectAsState(initial = 0L)
-        
-        var isAuthenticated by rememberSaveable { mutableStateOf(value = false) }
-
-        // 初回起動時の生体認証自動設定 (Security by Default)
-        LaunchedEffect(isBiometricSettingInitialized) {
-            if (!isBiometricSettingInitialized) {
-                val biometricManager = androidx.biometric.BiometricManager.from(activity)
-                val status = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-                if (status == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                    userSettingsRepository.setBiometricEnabled(true)
-                } else {
-                    userSettingsRepository.setBiometricEnabled(false)
-                }
-            }
-        }
-
-        // アプリ・ロック：バックグラウンド待機時間に基づく再認証判定
-        DisposableEffect(activity) {
-            val observer = LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_STOP -> {
-                        scope.launch { userSettingsRepository.setLastActiveTime(System.currentTimeMillis()) }
-                    }
-                    Lifecycle.Event.ON_START -> {
-                        if (isBiometricEnabled && isAuthenticated) {
-                            if (userSettingsRepository.isLockBypassed) {
-                                userSettingsRepository.isLockBypassed = false
-                                return@LifecycleEventObserver
-                            }
-                            if (lockTimeoutMinutes != -1) {
-                                val elapsedMillis = System.currentTimeMillis() - lastActiveTime
-                                val timeoutMillis = lockTimeoutMinutes * 60 * 1000L
-                                if (elapsedMillis > timeoutMillis) isAuthenticated = false
-                            }
-                        }
-                    }
-                    else -> {}
-                }
-            }
-            activity.lifecycle.addObserver(observer)
-            onDispose { activity.lifecycle.removeObserver(observer) }
-        }
-
-        // アプリ・ロック画面の実行制御
-        LaunchedEffect(isBiometricEnabled, isAuthenticated) {
-            if (!(!isBiometricEnabled || isAuthenticated)) {
-                val biometricManager = androidx.biometric.BiometricManager.from(activity)
-                val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-                
-                // ロックアウト回避のためのフォールバック
-                if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                    if (
-                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE) ||
-                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE) ||
-                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) ||
-                        (canAuth == androidx.biometric.BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED)
-                    ) {
-                        isAuthenticated = true
-                        userSettingsRepository.setBiometricEnabled(false)
-                        return@LaunchedEffect
-                    }
-                }
-
-                val executor = ContextCompat.getMainExecutor(activity)
-                val biometricPrompt = BiometricPrompt(
-                    activity,
-                    executor,
-                    object : BiometricPrompt.AuthenticationCallback() {
-                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                            super.onAuthenticationSucceeded(result)
-                            isAuthenticated = true
-                        }
-
-                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                            super.onAuthenticationError(errorCode, errString)
-                        if (errorCode == BiometricPrompt.ERROR_USER_CANCELED || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON || errorCode == BiometricPrompt.ERROR_LOCKOUT || errorCode == BiometricPrompt.ERROR_LOCKOUT_PERMANENT || errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS || errorCode == BIOMETRIC_STRONG) {
-                            activity.finish()
-                        }
-                    }
-                })
-                val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                    .setTitle("アプリ・ロック").setSubtitle("認証情報を入力してください")
-                    .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL).build()
-                biometricPrompt.authenticate(promptInfo)
-            } else if (!isBiometricEnabled) {
-                isAuthenticated = true
-            }
-        }
-
-        // 認証ゲート
-        if (!(!isAuthenticated && isBiometricEnabled)) {
-            // 共通認証要求関数
-            val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
-                val biometricManager = androidx.biometric.BiometricManager.from(activity)
-                val canAuth = biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-
-                if (canAuth != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) {
-                    onSuccess()
-                } else {
-                    val executor = ContextCompat.getMainExecutor(activity)
-                    val biometricPrompt = BiometricPrompt(
-                        activity, executor, object : BiometricPrompt.AuthenticationCallback() {
-                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                            super.onAuthenticationSucceeded(result)
-                            onSuccess()
-                        }
-                    })
-                    val title = titleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_title)
-                    val subtitle = subtitleResId?.let { context.getString(it) } ?: context.getString(R.string.security_auth_reason_change_settings)
-                    
-                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                        .setTitle(title)
-                        .setSubtitle(subtitle)
-                        .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
-                        .build()
-                    biometricPrompt.authenticate(promptInfo)
-                }
-            }
-
-            /**
-             * NavHost：ナビゲーションルート定義
-             */
-            NavHost(navController = navController, startDestination = "main") {
-
-                // ---------------------------------------------
-                // ---------- 利用者一覧(SCR-M-001) -------------
-                // ---------------------------------------------
-                composable("main") {
-                    val listViewModel: PersonListViewModel = viewModel(
-                        factory = PersonListViewModel.Factory(
-                            personRepository,
-                            deleteOrRestorePersonRepository,
-                            personSummaryRepository,
-                            conditionRepository,
-                            application.emergencyContactRepository,
-                            userSettingsRepository,
-                            auditLogRepository))
-                    MainScreen(
-                        viewModel = listViewModel,
-                        onNavigateToDetail = { personId, category ->
-                            listViewModel.prepareDetailNavigation()
-                            val query = listViewModel.uiState.value.searchQuery
-                            val encodedQuery = if (query.isNotBlank()) URLEncoder.encode(query, StandardCharsets.UTF_8.toString()) else ""
-                            navController.navigate(category.getRoute(personId, encodedQuery))
-                        }, 
-                        onNavigateToBatchInput = { personId ->
-                            navController.navigate("batch_input/$personId")
-                        },
-                        onNavigateToAddPerson = {
-                            navController.navigate("person_edit/_new")
-                        },
-                        onNavigateToEditPerson = { personId ->
-                            navController.navigate("person_edit/$personId")
-                        },
-                        onNavigateToSettings = { navController.navigate("settings") },
-                        onNavigateToMedicalContacts = { personId ->
-                            navController.navigate("medical_contacts/$personId")
-                        }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 緊急連絡先管理(SCR-M-003) --------------------------
-                // --------------------------------------------------------
-                composable("medical_contacts/{personId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType }
-                )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val medicalViewModel: EmergencyContactEditViewModel = viewModel(
-                        factory = EmergencyContactEditViewModel.Factory(
-                            personId, application.emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
-
-                    EmergencyContactListScreen(
-                        viewModel = medicalViewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToAdd = { navController.navigate("medical_contact_edit/$personId/_new") },
-                        onNavigateToEdit = { contactId -> navController.navigate("medical_contact_edit/$personId/$contactId") }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 緊急連絡先編集(SCR-M-004) ---------------------------
-                // --------------------------------------------------------
-                composable("medical_contact_edit/{personId}/{contactId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType },
-                    navArgument("contactId") { type = NavType.StringType }
-                )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val contactIdRaw = backStackEntry.arguments?.getString("contactId") ?: "_new"
-                    val medicalViewModel: EmergencyContactEditViewModel = viewModel(
-                        factory = EmergencyContactEditViewModel.Factory(
-                            personId, application.emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository))
-
-                    LaunchedEffect(contactIdRaw) {
-                        if (contactIdRaw == "_new") {
-                            medicalViewModel.startAdd()
-                        } else {
-                            val contact = medicalViewModel.uiState.value.contacts.find { it.id == contactIdRaw }
-                            if (contact != null) {
-                                medicalViewModel.startEdit(contact)
-                            } else {
-                                application.emergencyContactRepository.getContactById(contactIdRaw)?.let {
-                                    medicalViewModel.startEdit(it)
-                                }
-                            }
-                        }
-                    }
-
-                    EmergencyContactEditScreen(
-                        viewModel = medicalViewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
-                }
-
-                // ---------------------------------------------
-                // ---------- 利用者編集(SCR-M-002) --------------
-                // ---------------------------------------------
-                composable("person_edit/{personId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType }
-                )) { backStackEntry ->
-                    val personIdRaw = backStackEntry.arguments?.getString("personId") ?: "_new"
-                    val personId = if (personIdRaw == "_new") null else personIdRaw
-                    val editViewModel: PersonEditViewModel = viewModel(
-                        factory = PersonEditViewModel.Factory(
-                            personId, personRepository, userSettingsRepository, auditLogRepository))
-                    PersonEditScreen(
-                        viewModel = editViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 健康記録 (SCR-PH-001) ------------------------------
-                // --------------------------------------------------------
-                composable("detail/{personId}/{categoryName}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType },
-                    navArgument("categoryName") { type = NavType.StringType }
-                )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?: Category.BP_AND_PULSE.name
-                    val category = Category.valueOf(categoryName)
-                    
-                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
-                        factory = PersonDetailUiStateViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    val healthViewModel: PersonHealthViewModel = viewModel(
-                        factory = PersonHealthViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-
-                    LaunchedEffect(personId, category) {
-                        detailViewModel.loadPerson(personId)
-                        detailViewModel.setCategory(category)
-                    }
-
-                    PersonHealthScreen(
-                        detailViewModel = detailViewModel,
-                        healthViewModel = healthViewModel,
-                        widthSizeClass = widthSizeClass,
-                        onRequireAuthentication = requestAuthentication,
-                        onBack = { navController.popBackStack("main", inclusive = false) },
-                        onNavigateToCategory = { cat ->
-                            navController.navigate(cat.getRoute(personId)) {
-                                popUpTo("main")
-                                launchSingleTop = true
-                            }
-                        },
-                        onNavigateToGraphExpansion = { pId, cat, index ->
-                            navController.navigate("graphExpansion/$pId/${cat.name}/$index")
-                        }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 一括入力(SCR-PH-002) ------------------------------
-                // --------------------------------------------------------
-                composable("batch_input/{personId}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val batchViewModel: BatchInputViewModel = viewModel(
-                        factory = BatchInputViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-
-                    LaunchedEffect(personId) {
-                        batchViewModel.loadPerson(personId)
-                    }
-
-                    BatchInputScreen(viewModel = batchViewModel, onBack = { navController.popBackStack() })
-                }
-
-                // --------------------------------------------------------
-                // ----- グラフ拡大表示(SCR-PH-003) -------------------------
-                // --------------------------------------------------------
-                composable("graphExpansion/{personId}/{categoryName}/{initialIndex}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType },
-                    navArgument("categoryName") { type = NavType.StringType },
-                    navArgument("initialIndex") { type = NavType.IntType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?: ""
-                    val category = Category.valueOf(categoryName)
-                    val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
-                    
-                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
-                        factory = PersonDetailUiStateViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    val healthViewModel: PersonHealthViewModel = viewModel(
-                        factory = PersonHealthViewModel.Factory(
-                            personRepository, personSummaryRepository, healthRepository, userSettingsRepository, auditLogRepository))
-                    
-                    GraphExpansionScreen(
-                        detailViewModel = detailViewModel,
-                        healthViewModel = healthViewModel,
-                        personId = personId,
-                        category = category,
-                        initialGraphIndex = initialIndex,
-                        onBack = { navController.popBackStack() })
-                }
-
-                // --------------------------------------------------------
-                // ----- 所見メモ(SCR-PM-001) ------------------------------
-                // --------------------------------------------------------
-                composable("condition/{personId}?query={query}", arguments = listOf(
-                    navArgument("personId") { type = NavType.StringType },
-                    navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = "" }
-                )) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val initialQuery = backStackEntry.arguments?.getString("query")?.let {
-                        if (it.isNotBlank()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else "" } ?: ""
-                    
-                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
-                        factory = PersonDetailUiStateViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    val conditionViewModel: PersonConditionViewModel = viewModel(
-                        factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
-
-                    LaunchedEffect(personId) {
-                        detailViewModel.loadPerson(personId)
-                        detailViewModel.setCategory(Category.CONDITION_AT_VISIT)
-                    }
-
-                    PersonConditionScreen(
-                        detailViewModel = detailViewModel,
-                        conditionViewModel = conditionViewModel,
-                        initialQuery = initialQuery,
-                        widthSizeClass = widthSizeClass,
-                        onRequireAuthentication = requestAuthentication,
-                        onBack = { navController.popBackStack("main", inclusive = false) },
-                        onNavigateToCategory = { category ->
-                            navController.navigate(category.getRoute(personId)) {
-                                popUpTo("main")
-                                launchSingleTop = true
-                            }
-                        },
-                        onNavigateToPhotoPreview = { uri, pId, cId ->
-                            val encodedUri = Uri.encode(uri.toString())
-                            navController.navigate("photoPreview/$encodedUri/$pId/$cId")
-                        },
-                        onNavigateToFullScreen = { conditionId, photoId ->
-                            navController.navigate("photoFull/$conditionId/$photoId")
-                        }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 写真プレビュー(SCR-PM-002) -------------------------
-                // --------------------------------------------------------
-                composable("photoPreview/{uri}/{personId}/{conditionId}", arguments = listOf(
-                    navArgument("uri") { type = NavType.StringType },
-                    navArgument("personId") { type = NavType.StringType },
-                    navArgument("conditionId") { type = NavType.StringType })) { backStackEntry ->
-                    val uri = Uri.parse(Uri.decode(backStackEntry.arguments?.getString("uri") ?: ""))
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    val conditionId = backStackEntry.arguments?.getString("conditionId") ?: ""
-                    
-                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
-                        factory = PersonDetailUiStateViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    val conditionViewModel: PersonConditionViewModel = viewModel(
-                        factory = PersonConditionViewModel.Factory(
-                            personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
-
-                    LaunchedEffect(personId) {
-                        detailViewModel.loadPerson(personId)
-                        conditionViewModel.loadPerson(personId)
-                    }
-
-                    ConditionPhotoPreviewScreen(
-                        detailViewModel = detailViewModel,
-                        conditionViewModel = conditionViewModel,
-                        uri = uri,
-                        conditionId = conditionId,
-                        onBack = { navController.popBackStack() },
-                        onSaved = { navController.popBackStack() }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 写真全画面表示(SCR-PC-003) -------------------------
-                // --------------------------------------------------------
-                composable(
-                    "photoFull/{conditionId}/{initialPhotoId}",
-                    arguments = listOf(
-                        navArgument("conditionId") { type = NavType.StringType },
-                        navArgument("initialPhotoId") { type = NavType.StringType }
-                    )
-                ) { backStackEntry ->
-                    val conditionId = backStackEntry.arguments?.getString("conditionId") ?: ""
-                    val initialPhotoId = backStackEntry.arguments?.getString("initialPhotoId") ?: ""
-                    val conditionViewModel: PersonConditionViewModel = viewModel(factory = PersonConditionViewModel.Factory(personRepository, personSummaryRepository, conditionRepository, userSettingsRepository, auditLogRepository, context.applicationContext))
-
-                    ConditionPhotoFullScreen(
-                        conditionId = conditionId,
-                        initialPhotoId = initialPhotoId,
-                        viewModel = conditionViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 服薬管理(SCR-PM-001) ------------------------------
-                // --------------------------------------------------------
-                composable("medication/{personId}", arguments = listOf(navArgument("personId") { type = NavType.StringType })) { backStackEntry ->
-                    val personId = backStackEntry.arguments?.getString("personId") ?: ""
-                    
-                    val detailViewModel: PersonDetailUiStateViewModel = viewModel(
-                        factory = PersonDetailUiStateViewModel.Factory(
-                            personRepository, personSummaryRepository, userSettingsRepository, auditLogRepository))
-                    val medicationViewModel: PersonMedicationViewModel = viewModel(factory = PersonMedicationViewModel.Factory(personRepository, personSummaryRepository, medicationRepository, userSettingsRepository, auditLogRepository))
-
-                    LaunchedEffect(personId) {
-                        detailViewModel.loadPerson(personId)
-                        detailViewModel.setCategory(Category.MEDICATION)
-                    }
-
-                    PersonMedicationScreen(
-                        detailViewModel = detailViewModel,
-                        medicationViewModel = medicationViewModel,
-                        widthSizeClass = widthSizeClass,
-                        onRequireAuthentication = requestAuthentication,
-                        onBack = { navController.popBackStack("main", inclusive = false) },
-                        onNavigateToCategory = { category ->
-                            navController.navigate(category.getRoute(personId)) {
-                                popUpTo("main")
-                                launchSingleTop = true
-                            }
-                        }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 設定(SCR-S-001) ----------------------------------
-                // --------------------------------------------------------
-                composable("settings") {
-                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory(appMaintenanceRepository, deleteOrRestorePersonRepository, auditLogRepository, userSettingsRepository))
-                    SettingsScreen(
-                        viewModel = settingsViewModel, 
-                        navController = navController,
-                        onNavigateToArchiveManagement = { mode ->
-                            navController.navigate("archive_management/${mode.name}")
-                        },
-                        onNavigateToAuditLog = {
-                            navController.navigate("audit_log")
-                        },
-                        onNavigateToOrphanedPhotos = {
-                            navController.navigate("orphaned_photos")
-                        },
-                        onRequireAuthentication = requestAuthentication,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 監査ログ(SCR-S-002) -------------------------------
-                // --------------------------------------------------------
-                composable("audit_log") {
-                    val auditLogViewModel: AuditLogViewModel = viewModel(
-                        factory = AuditLogViewModel.Factory(auditLogRepository, userSettingsRepository)
-                    )
-                    AuditLogScreen(
-                        viewModel = auditLogViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 利用者管理(SCR-S-003) ------------------------------
-                // --------------------------------------------------------
-                composable("archive_management/{mode}") { backStackEntry ->
-                    val modeName = backStackEntry.arguments?.getString("mode") ?: DeleteOrRestorePersonViewModel.OperationMode.RESTORE.name
-                    val mode = DeleteOrRestorePersonViewModel.OperationMode.valueOf(modeName)
-                    val archiveViewModel: DeleteOrRestorePersonViewModel = viewModel(
-                        factory = DeleteOrRestorePersonViewModel.Factory(
-                            deleteOrRestorePersonRepository, userSettingsRepository, auditLogRepository))
-                    DeleteOrRestorePersonScreen(
-                        viewModel = archiveViewModel,
-                        navController = navController,
-                        mode = mode,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                // --------------------------------------------------------
-                // ----- 迷子写真管理(SCR-S-004) ----------------------------
-                // --------------------------------------------------------
-                composable("orphaned_photos") {
-                    val orphanedViewModel: OrphanedPhotoViewModel = viewModel(
-                        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                            @Suppress("UNCHECKED_CAST")
-                            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                                return OrphanedPhotoViewModel(userSettingsRepository, conditionRepository, context.applicationContext) as T
-                            }
-                        }
-                    )
-                    OrphanedPhotoManagementScreen(
-                        viewModel = orphanedViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-            }
+fun LockScreen(onUnlockRequest: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(imageVector = Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(text = stringResource(R.string.main_lock_title), style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(onClick = onUnlockRequest) { Text(stringResource(R.string.main_lock_unlock_button)) }
         }
     }
 }

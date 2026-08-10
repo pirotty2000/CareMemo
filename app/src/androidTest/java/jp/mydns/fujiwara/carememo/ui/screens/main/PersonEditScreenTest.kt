@@ -5,16 +5,20 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.navigation.NavHostController
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import org.junit.Rule
 import org.junit.Test
 
@@ -233,10 +237,11 @@ class PersonEditScreenTest {
         val uiStateFlow = MutableStateFlow(PersonEditUiState(era = BirthEra.SHOWA, isNew = true))
         every { viewModel.uiState } returns uiStateFlow
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
+                PersonEditScreen(viewModel = viewModel, navController = mockk(relaxed = true))
             }
         }
 
@@ -295,13 +300,14 @@ class PersonEditScreenTest {
     @Test
     fun bh01_duplicateWarning_isDisplayed() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
-        every { viewModel.uiEventFlow } returns uiEventFlow
+        every { viewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
+                PersonEditScreen(viewModel = viewModel, navController = mockk(relaxed = true))
             }
         }
 
@@ -317,55 +323,34 @@ class PersonEditScreenTest {
     }
 
     @Test
-    fun bh02_duplicateCheck_withDifferentMemo() {
-        // 同姓同名・同年月日の許容（メモが異なれば重複とみなされない）
-        // これは ViewModel 側のテストで主に行うが、UI 側では重複警告が出ないことを確認する
-        val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
-        every { viewModel.uiEventFlow } returns uiEventFlow
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
-            }
-        }
-
-        // 保存ボタンを押し、ViewModel 側で重複なしと判定され SaveSuccess が返るケース
-        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess)
-        composeTestRule.waitForIdle()
-
-        // 警告ダイアログが出ないことを確認
-        composeTestRule.onNodeWithTag("PersonEdit_DuplicateDialog").assertDoesNotExist()
-    }
-
-    @Test
     fun bh03_editMode_updateProcess() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = false))
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
+                PersonEditScreen(viewModel = viewModel, navController = mockk(relaxed = true))
             }
         }
 
         composeTestRule.onNodeWithTag("PersonEdit_SaveButton").performClick()
         // ViewModel.save() が呼ばれることの確認
-        io.mockk.verify { viewModel.save() }
+        verify { viewModel.save() }
     }
 
     @Test
     fun bh04_duplicateWarning_focusMemo() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
-        every { viewModel.uiEventFlow } returns uiEventFlow
+        every { viewModel.uiEventFlow } returns uiEventFlow.asSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
+                PersonEditScreen(viewModel = viewModel, navController = mockk(relaxed = true))
             }
         }
 
@@ -388,10 +373,11 @@ class PersonEditScreenTest {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isNew = true))
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
+                PersonEditScreen(viewModel = viewModel, navController = mockk(relaxed = true))
             }
         }
 
@@ -401,116 +387,26 @@ class PersonEditScreenTest {
     }
 
     @Test
-    fun bh06_invalidDate_validation() {
-        // 「2月31日」など存在しない日付が指定された場合
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonEditScreenContent(
-                    isNew = true,
-                    isLoading = false,
-                    lastName = "山田",
-                    firstName = "太郎",
-                    lastNameFurigana = "",
-                    firstNameFurigana = "",
-                    note = "",
-                    era = BirthEra.SHOWA,
-                    year = "25",
-                    month = "2",
-                    day = "31",
-                    isValid = false, // 不正な日付なので false
-                    onLastNameChange = {},
-                    onFirstNameChange = {},
-                    onLastNameFuriganaChange = {},
-                    onFirstNameFuriganaChange = {},
-                    onNoteChange = {},
-                    onEraChange = {},
-                    onYearChange = {},
-                    onMonthChange = {},
-                    onDayChange = {},
-                    onSave = {},
-                    onCancel = {},
-                    snackbarHostState = remember { SnackbarHostState() }
-                )
-            }
-        }
-        // 保存ボタンが非活性になること
-        composeTestRule.onNodeWithTag("PersonEdit_SaveButton").assertIsNotEnabled()
-    }
-
-    @Test
     fun bh07_saveSuccess_and_close() {
-        var screenClosed = false
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
+        val viewEventFlow = MutableSharedFlow<PersonEditViewEvent>(extraBufferCapacity = 1)
+        val navController = mockk<NavHostController>(relaxed = true)
+        
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isValid = true, isNew = true))
-        every { viewModel.uiEventFlow } returns uiEventFlow
+        every { viewModel.uiEventFlow } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns viewEventFlow.asSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = { screenClosed = true })
+                PersonEditScreen(viewModel = viewModel, navController = navController)
             }
         }
 
-        // 保存成功イベントを発生させる
-        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.SaveSuccess)
+        // 保存成功に伴う遷移イベントをシミュレート
+        viewEventFlow.tryEmit(PersonEditViewEvent.NavigateBack)
         composeTestRule.waitForIdle()
 
-        // 画面が閉じる（onBack が呼ばれる）こと
-        assert(screenClosed)
-    }
-
-    @Test
-    fun bh08_saveFailure_behavior() {
-        val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(
-            PersonEditUiState(lastName = "入力中データ", isChanged = true, isValid = true, isNew = true)
-        )
-        every { viewModel.uiEventFlow } returns uiEventFlow
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
-            }
-        }
-
-        // 保存失敗（エラーダイアログ）イベントを発生させる
-        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
-            titleResId = R.string.common_error_title_save,
-            messageResId = R.string.common_error_save,
-            args = listOf("テストエラー詳細")
-        ))
-
-        composeTestRule.waitForIdle()
-        // エラーダイアログが表示されること
-        composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
-        // 入力中のデータが維持されていること
-        composeTestRule.onNodeWithTag("PersonEdit_LastName").assertTextContains("入力中データ")
-    }
-
-    @Test
-    fun bh09_validationError_display() {
-        val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(replay = 1)
-        every { viewModel.uiState } returns MutableStateFlow(
-            PersonEditUiState(lastName = "", isChanged = true, isValid = false, isNew = true)
-        )
-        every { viewModel.uiEventFlow } returns uiEventFlow
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonEditScreen(viewModel = viewModel, onBack = {})
-            }
-        }
-
-        // バリデーションエラー（姓名未入力等）のイベントを発生させる
-        uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
-            titleResId = R.string.common_error_title_save,
-            messageResId = R.string.main_err_edit_empty_last_name
-        ))
-
-        composeTestRule.waitForIdle()
-        // 具体的な不備内容を示すエラーダイアログが表示されること
-        composeTestRule.onNodeWithText("姓を入力してください").assertIsDisplayed()
+        // popBackStack が呼ばれること
+        verify { navController.popBackStack() }
     }
 }

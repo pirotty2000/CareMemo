@@ -1,10 +1,13 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 import java.util.UUID
 
@@ -20,15 +23,42 @@ import java.util.UUID
  * @param preferredShowHistory グラフよりも履歴リストを優先して表示するかどうかの設定
  * @param selectedRecordId 現在詳細表示または編集対象として選択されているレコードのID
  * @param isLoading データの読み込み中フラグ
+ * @param editInput 現在の入力値
+ * @param initialSnapshot 編集開始時のスナップショット（変更検知用）
+ * @param isChanged 初期状態から変更があるかどうか
+ * @param isSaveEnabled 保存ボタンを活性化できる状態（バリデーション成功かつ変更あり）かどうか
  */
+@Immutable
 data class PersonHealthUiState(
     override val personId: String? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
-    val records: List<HistoryRecord> = emptyList(),
+    val records: ImmutableList<HistoryRecord> = persistentListOf(),
     val preferredShowHistory: Boolean = true,
     val selectedRecordId: String? = null,
-    override val isLoading: Boolean = false
+    override val isLoading: Boolean = false,
+    val isEditing: Boolean = false,
+    val editInput: HealthEditInput = HealthEditInput(),
+    val initialSnapshot: HealthEditInput? = null,
+    val isChanged: Boolean = false,
+    val isSaveEnabled: Boolean = false
 ) : PersonAwareState
+
+/**
+ * 健康記録の入力フォーム状態。
+ */
+@Immutable
+data class HealthEditInput(
+    val heightText: String = "",
+    val weightText: String = "",
+    val bpSystolicText: String = "",
+    val bpDiastolicText: String = "",
+    val satText: String = "",
+    val pulseText: String = "",
+    val bodyTemperatureText: String = "",
+    val glucoseText: String = "",
+    val hba1cText: String = "",
+    val recordTime: Instant? = null
+)
 
 /**
  * View Event：PersonHealthViewEvent
@@ -37,7 +67,12 @@ data class PersonHealthUiState(
  * 健康記録画面固有の、一過性のアクション（複雑なアニメーションの開始や、特定の外部画面への遷移等）を定義します。
  */
 sealed interface PersonHealthViewEvent {
-    // 将来的に「特定の画面への遷移」や「複雑なアニメーションの開始」などのイベントが必要になる可能性があります。
+    /** グラフ拡大表示画面へ遷移 */
+    data class NavigateToGraphExpansion(
+        val personId: String,
+        val category: Category,
+        val initialIndex: Int
+    ) : PersonHealthViewEvent
 }
 
 /**
@@ -48,8 +83,10 @@ enum class HealthValidationResult {
     SUCCESS,
     /** 数値が形式不正、または規定範囲外 */
     INVALID_VALUE,
-    /** 記録日時が不正 */
+    /*
+     * 日時の妥当性チェック（未来日の禁止等）を厳格化する際に使用する可能性があるため保持。
     INVALID_TIME,
+    */
     /** 同一利用者の同一日時に既に別のレコードが存在する */
     DUPLICATE_TIME
 }

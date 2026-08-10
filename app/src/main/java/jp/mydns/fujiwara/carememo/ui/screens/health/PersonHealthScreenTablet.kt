@@ -41,6 +41,8 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
@@ -48,31 +50,33 @@ import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 
 import androidx.compose.ui.tooling.preview.Preview
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenTablet(
-    currentCategory: Category,
-    records: List<Any>,
-    isLoading: Boolean,
+    uiState: PersonHealthUiState,
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    selectedRecordId: String,
-    onSelectedRecordIdChange: (String) -> Unit,
+    onSelectedRecordIdChange: (String?) -> Unit,
     onBack: () -> Unit,
     onExpandGraph: (Int) -> Unit,
     onNavigateToCategory: (Category) -> Unit,
     onShowPdfSettings: () -> Unit,
     onDeleteRecord: (HistoryRecord) -> Unit,
-    onSaveRecord: (Category, String, Instant, Map<String, Any?>) -> Unit,
+    onEditClick: () -> Unit,
+    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
+    onSaveClick: () -> Unit,
+    onCancelEdit: () -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
@@ -81,7 +85,7 @@ fun PersonHealthScreenTablet(
                         PersonHeaderTitle(
                             person = currentPerson,
                             isNameMaskingEnabled = isNameMaskingEnabled,
-                            defaultTitle = stringResource(R.string.app_name)
+                            defaultTitle = stringResource(R.string.health_title)
                         )
                     },
                     navigationIcon = {
@@ -98,7 +102,7 @@ fun PersonHealthScreenTablet(
                     colors = appTopAppBarColors(),
                     actions = {
                         IconButton(onClick = { onSelectedRecordIdChange(AppSpecifications.Id.NEW_RECORD_ID) }) {
-                            Icon(Icons.Rounded.Add, contentDescription = "新規追加")
+                            Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.common_create_new))
                         }
                         IconButton(
                             onClick = onShowPdfSettings,
@@ -112,7 +116,7 @@ fun PersonHealthScreenTablet(
                     }
                 )
                 CategorySelectorBar(
-                    currentCategory = currentCategory,
+                    currentCategory = uiState.currentCategory,
                     personCategorySummary = personCategorySummary,
                     onCategoryClick = onNavigateToCategory,
                     modifier = Modifier.testTag("CategorySelectorBar")
@@ -126,7 +130,7 @@ fun PersonHealthScreenTablet(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {
-                        if (selectedRecordId == it.id) onSelectedRecordIdChange("")
+                        if (uiState.selectedRecordId == it.id) onSelectedRecordIdChange(null)
                         onDeleteRecord(it)
                     }
                 }
@@ -139,7 +143,7 @@ fun PersonHealthScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (records.isEmpty() && selectedRecordId.isEmpty() && !isLoading) {
+            if ((uiState.records.isEmpty() && uiState.selectedRecordId == null && !uiState.isLoading)) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
@@ -150,17 +154,16 @@ fun PersonHealthScreenTablet(
             } else {
                 PersonHealthScreenContent(
                     isExpanded = true,
-                    records = records,
-                    isLoading = isLoading,
-                    currentCategory = currentCategory,
-                    preferredShowHistory = true,
+                    uiState = uiState,
                     onPreferredShowHistoryChange = {},
-                    selectedRecordId = selectedRecordId,
                     onSelectedRecordIdChange = onSelectedRecordIdChange,
                     onItemClick = { record -> onSelectedRecordIdChange(record.id) },
                     onDeleteSwipe = { record -> recordToDelete = record },
                     onExpandGraph = onExpandGraph,
-                    onSaveRecord = onSaveRecord,
+                    onEditClick = onEditClick,
+                    onEditInputUpdate = onEditInputUpdate,
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit,
                     isAnyDialogOpen = recordToDelete != null
                 )
             }
@@ -170,31 +173,30 @@ fun PersonHealthScreenTablet(
 
 @Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,dpi=240")
 @Composable
-fun PersonHealthScreenTabletPreview() {
+fun PersonHealthScreenTabletPreview(
+    @PreviewParameter(PersonHealthPreviewParameterProvider::class) state: PersonHealthPreviewState
+) {
     CareMemoTheme {
         PersonHealthScreenTablet(
-            currentCategory = Category.BP_AND_PULSE,
-            records = listOf(
-                BpAndPulse(id = "1", personId = "person-1", bpSystolic = 120, bpDiastolic = 80, pulse = 70, recordTime = Instant.now())
+            uiState = PersonHealthUiState(
+                currentCategory = state.category,
+                records = state.records,
+                isLoading = state.isLoading,
+                selectedRecordId = state.selectedRecordId
             ),
-            isLoading = false,
-            currentPerson = Person(
-                lastName = "山田", 
-                firstName = "太郎",
-                lastNameFurigana = "ヤマダ",
-                firstNameFurigana = "タロウ",
-                birthday = Instant.now()
-            ),
-            personCategorySummary = null,
+            currentPerson = state.person,
+            personCategorySummary = state.summary,
             isNameMaskingEnabled = false,
-            selectedRecordId = "",
             onSelectedRecordIdChange = {},
             onBack = {},
             onExpandGraph = {},
             onNavigateToCategory = {},
             onShowPdfSettings = {},
             onDeleteRecord = {},
-            onSaveRecord = { _, _, _, _ -> },
+            onEditClick = {},
+            onEditInputUpdate = {},
+            onSaveClick = {},
+            onCancelEdit = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

@@ -1,5 +1,8 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+
 /**
  * 緊急連絡先 (EmergencyContact) に関する仕様定義。
  */
@@ -41,7 +44,7 @@ object EmergencyContactSpecifications {
         const val OTHER = "OTHER"
 
         /** 定義順のリスト (ソートの第一キーとして使用) */
-        val ORDERED_TYPES = listOf(
+        val ORDERED_TYPES: ImmutableList<String> = persistentListOf(
             DOCTOR,
             NURSING_STATION,
             SUPPORT_CENTER,

@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -57,17 +56,20 @@ fun CategorySelectorBar(
         }
     }
 
-    LazyRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(vertical = 8.dp)
-            .testTag("CategorySelectorBar"),
-        state = categoryListState,
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        itemsIndexed(Category.entries) { _, category ->
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .testTag("CategorySelectorBar"),
+            state = categoryListState,
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            itemsIndexed(Category.entries) { _, category ->
             // カテゴリごとのデータ存在確認
             val hasData = when (category) {
                 Category.HEIGHT_AND_WEIGHT -> personCategorySummary?.hasHeightWeight == true
@@ -107,4 +109,5 @@ fun CategorySelectorBar(
             )
         }
     }
+}
 }

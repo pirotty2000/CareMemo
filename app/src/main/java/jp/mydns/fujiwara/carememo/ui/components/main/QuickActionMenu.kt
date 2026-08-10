@@ -44,18 +44,19 @@ fun QuickActionMenu(
     person: Person,
     isNameMaskingEnabled: Boolean,
     onDismissRequest: () -> Unit,
-    onEmergencyContactClick: () -> Unit
+    onEmergencyContactClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = Modifier.testTag("QuickActionMenu_${person.id}")
+        modifier = modifier.testTag("QuickActionMenu_${person.id}")
     ) {
         // メニューヘッダー (名前表示用：クリック不可)
         DropdownMenuItem(
             text = {
                 Text(
-                    text = "${person.getMaskedName(isNameMaskingEnabled)} さん",
+                    text = stringResource(R.string.common_honorific_san_suffix, person.getMaskedName(isNameMaskingEnabled)),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary

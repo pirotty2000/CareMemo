@@ -4,6 +4,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
@@ -67,7 +68,7 @@ class PersonConditionViewModelTest {
         coEvery { conditionRepository.findConditionAtTime(any(), any()) } returns null
         
         viewModel = PersonConditionViewModel(
-            conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, mockk<Context>(relaxed = true)
+            conditionRepository, personRepository, summaryRepository, userSettingsRepository, auditLogRepository, mockk<Context>(relaxed = true), SavedStateHandle(mapOf("personId" to "1"))
         )
     }
 
@@ -107,7 +108,13 @@ class PersonConditionViewModelTest {
         viewModel.loadPerson("1")
         advanceUntilIdle()
 
-        viewModel.saveRecord(AppSpecifications.Id.NEW_RECORD_ID, "タイトル", "内容", "著者", Instant.now())
+        // 編集セッションを開始して値をセット
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        viewModel.updateEditInput { 
+            it.copy(title = "タイトル", condition = "内容", author = "著者", recordTime = Instant.now())
+        }
+
+        viewModel.saveCurrentEdit()
         advanceUntilIdle()
 
         // isLoading (loadingStateProxy経由) が false に戻ること
@@ -155,5 +162,43 @@ class PersonConditionViewModelTest {
 
         // 写真リストが購読・更新されていること
         assertEquals(mockPhotos, viewModel.uiState.value.currentConditionPhotos)
+    }
+
+    @Test
+    fun lg_05_編集セッションの変更検知() = runTest {
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 1. 新規レコードセッション開始
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        advanceUntilIdle()
+
+        val initialState = viewModel.uiState.value
+        assertEquals(true, initialState.isEditing)
+        assertEquals(false, initialState.isChanged)
+        assertEquals(false, initialState.isSaveEnabled) // 本文が空
+
+        // 2. 本文を入力
+        viewModel.updateEditInput { it.copy(condition = "テスト内容") }
+        
+        val changedState = viewModel.uiState.value
+        assertEquals(true, changedState.isChanged)
+        assertEquals(true, changedState.isSaveEnabled)
+
+        // 3. 元に戻す
+        viewModel.updateEditInput { it.copy(condition = "") }
+        assertEquals(false, viewModel.uiState.value.isChanged)
+    }
+
+    @Test
+    fun lg_06_新規作成時のデフォルト記録者継承() = runTest {
+        viewModel.loadPerson("1")
+        advanceUntilIdle()
+
+        // 新規作成開始
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        advanceUntilIdle()
+
+        assertEquals("テスト記録者", viewModel.uiState.value.editInput.author)
     }
 }

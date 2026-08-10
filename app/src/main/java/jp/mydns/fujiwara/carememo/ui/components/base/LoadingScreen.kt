@@ -38,22 +38,24 @@ fun LoadingScreen(
     modifier: Modifier = Modifier,
     message: String = stringResource(R.string.common_loading)
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag("AppLoadingIndicator"),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // プログレスインジケーターの表示
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
-            // 待機メッセージの表示
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("AppLoadingIndicator"),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // プログレスインジケーターの表示
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                // 待機メッセージの表示
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

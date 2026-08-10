@@ -96,7 +96,7 @@ class PersonConditionScreenTest_2_Component {
     @Test
     fun cp06_search_box_updates_viewmodel() {
         // 一覧画面が表示されるように、selectedConditionId を明示的に "" にする
-        conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = "")
+        conditionUiStateFlow.value = conditionUiStateFlow.value.copy(selectedConditionId = null)
         setContent()
         
         // 検索ボックスを特定して入力する

@@ -1,9 +1,11 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
+import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import java.time.ZoneOffset
 
 /**
@@ -27,6 +29,7 @@ import java.time.ZoneOffset
  * @param isNameMaskingEnabled 氏名のマスキング（伏せ字）が有効か
  * @param isNew 新規登録モードかどうか
  */
+@Immutable
 data class PersonEditUiState(
     val lastName: String = "",
     val firstName: String = "",
@@ -52,7 +55,8 @@ data class PersonEditUiState(
  * 利用者編集画面において、コルーチン等から一過性のアクションを通知するために使用します。
  */
 sealed interface PersonEditViewEvent {
-    // 現在は UiEvent.SaveSuccess を使用しているが、将来的な拡張のために定義
+    /** 前の画面に戻る */
+    data class NavigateBack(val result: EditResult? = null) : PersonEditViewEvent
 }
 
 /**

@@ -1,7 +1,12 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 
 /**
  * UI State：DeleteOrRestorePersonUiState
@@ -15,11 +20,12 @@ import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
  * @param selectedIds 現在チェックボックスで選択されている利用者のIDセット
  * @param isNameMaskingEnabled 氏名のマスキング（伏せ字）が有効か
  */
+@Immutable
 data class DeleteOrRestorePersonUiState(
     val isLoading: Boolean = false,
     val mode: DeleteOrRestorePersonViewModel.OperationMode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE,
-    val archivedPersons: List<Person> = emptyList(),
-    val selectedIds: Set<String> = emptySet(),
+    val archivedPersons: ImmutableList<Person> = persistentListOf(),
+    val selectedIds: ImmutableSet<String> = persistentSetOf(),
     val isNameMaskingEnabled: Boolean = true
 )
 
@@ -32,6 +38,8 @@ data class DeleteOrRestorePersonUiState(
 sealed interface DeleteOrRestorePersonViewEvent {
     /** 処理完了後の画面終了を要求 */
     data object Finish : DeleteOrRestorePersonViewEvent
+    /** 前の画面に戻る */
+    data object NavigateBack : DeleteOrRestorePersonViewEvent
 }
 
 /**
@@ -72,7 +80,7 @@ object DeleteOrRestorePersonLogic {
      *
      * @param persons 全利用者リスト
      * @param selectedIds 選択されている ID のセット
-     * @return 処理対象の利用者リスト
+     * @return 処理対象 Paige 利用者リスト
      */
     fun filterTargets(persons: List<Person>, selectedIds: Set<String>): List<Person> {
         return persons.filter { selectedIds.contains(it.id) }
