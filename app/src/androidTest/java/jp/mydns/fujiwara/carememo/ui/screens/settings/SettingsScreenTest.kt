@@ -9,7 +9,6 @@ import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

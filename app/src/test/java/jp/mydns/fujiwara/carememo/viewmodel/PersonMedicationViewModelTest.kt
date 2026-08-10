@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
-import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
 import kotlinx.coroutines.Dispatchers

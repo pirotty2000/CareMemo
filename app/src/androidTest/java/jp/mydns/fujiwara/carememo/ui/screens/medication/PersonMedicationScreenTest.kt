@@ -2,26 +2,19 @@ package jp.mydns.fujiwara.carememo.ui.screens.medication
 
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.runtime.remember
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.navigation.NavHostController
 import io.mockk.*
-import jp.mydns.fujiwara.carememo.data.MedicationRecord
-import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
 import java.time.YearMonth
 
 /**

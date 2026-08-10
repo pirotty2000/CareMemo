@@ -1,9 +1,9 @@
-# テスト仕様書 - LOG-PH-002 HealthLogic
+# テスト仕様書 - HealthLogic
 
 - **対象テストコード:**
     - `app/src/test/java/jp/mydns/fujiwara/carememo/logic/common/HealthLogicTest.kt`
 - **関連するロジック仕様書:**
-    - [LOG-PH-001 PersonHealthLogic (画面保存フロー)](TEST_SPEC_LOG-PH-001_PersonHealthLogic.md)
+    - [PersonHealthLogic (画面保存フロー)](../feature/TEST_SPEC_PersonHealthLogic.md)
 
 ## 1. BMI判定テスト (evaluateBMI)
 **目的:** BMI値に基づき、正しい肥満度区分とアラートレベルが判定されることを検証する。
@@ -12,7 +12,7 @@
 |:-------|:-------|:-------------|:--------------|:------------------|
 | BMI-01 | 低体重    | 18.4         | `UNDERWEIGHT` | `INFO`            |
 | BMI-02 | 普通体重   | 22.0         | `NORMAL`      | `NORMAL`          |
-| BMI-03 | 肥満(1度) | 25.0         | `OBESITY_1`   | `WARNING`         |
+| BMI-03 | 肥満(1度) | 25.0         | `OBESITY_1`   | `INFO`            |
 | BMI-04 | 肥満(4度) | 40.0         | `OBESITY_4`   | `ALERT`           |
 
 ## 2. バイタル判定テスト (evaluateVital)
@@ -32,8 +32,8 @@
 | ID     | テスト項目      | 条件 (入力) | 期待結果 (Status) | 期待結果 (AlertLevel) |
 |:-------|:-----------|:--------|:--------------|:------------------|
 | GLC-01 | 血糖値：正常     | 90      | `NORMAL`      | `NORMAL`          |
-| GLC-02 | 血糖値：注意     | 100     | `WARNING`     | `WARNING`         |
-| GLC-03 | 血糖値：高血糖    | 126     | `HIGH`        | `ALERT`           |
+| GLC-02 | 血糖値：注意     | 110     | `PREDIABETES` | `WARNING`         |
+| GLC-03 | 血糖値：高血糖    | 126     | `DIABETES`    | `ALERT`           |
 | GLC-04 | 血糖値：低血糖    | 69      | `LOW`         | `ALERT`           |
 | HBA-01 | HbA1c：正常   | 5.5     | `NORMAL`      | `NORMAL`          |
 | HBA-02 | HbA1c：注意   | 6.0     | `WARNING`     | `WARNING`         |
@@ -49,12 +49,22 @@
 | CAL-03 | 身長がnull | null, 60.0              |    0.0     |
 
 ## 5. 入力バリデーションテスト (validateInput)
-**目的:** UIからの文字列入力が、形式・範囲ともに正しいかを「事実」として判定できることを検証する。
+**目的:** UIからの文字列入力が、形式・範囲ともに正しいかを判定できることを検証する。
 
-| ID     | テスト項目   | 検証内容                          | 期待結果 (Enum)      |
-|:-------|:--------|:------------------------------|:-----------------|
-| VLD-01 | 正しい入力   | 範囲内の適切な数値入力                   | `SUCCESS`        |
-| VLD-02 | 未入力     | 空文字                           | `EMPTY`          |
-| VLD-03 | 形式不正    | 数値以外の文字、または小数点位置異常            | `INVALID_FORMAT` |
-| VLD-04 | 範囲外（過大） | `AppThresholds.MAX_...` を超える値 | `OUT_OF_RANGE`   |
-| VLD-05 | 範囲外（過小） | `AppThresholds.MIN_...` を下回る値 | `OUT_OF_RANGE`   |
+| ID     | テスト項目   | 検証内容                             | 期待結果 (Enum)      |
+|:-------|:--------|:---------------------------------|:-----------------|
+| VLD-01 | 正しい入力   | 範囲内の適切な数値入力                      | `SUCCESS`        |
+| VLD-02 | 未入力     | 空文字                              | `EMPTY`          |
+| VLD-03 | 形式不正    | 数値以外の文字、または小数点位置異常               | `INVALID_FORMAT` |
+| VLD-04 | 範囲外（過大） | `AppSpecifications` の最大値を超える値 | `OUT_OF_RANGE`   |
+| VLD-05 | 範囲外（過小） | `AppSpecifications` の最小値を下回る値 | `OUT_OF_RANGE`   |
+
+## 6. 形式チェック・フォーマッタテスト
+**目的:** 表示用の数値整形および、入力制限（桁数）の判定が正しいことを検証する。
+
+| ID     | テスト項目       | 検証内容                          | 期待結果         |
+|:-------|:------------|:------------------------------|:-------------|
+| FMT-01 | 形式チェック(正)   | 許容された桁数内の入力                  | `true`       |
+| FMT-02 | 形式チェック(誤)   | 桁数オーバー、記号混入、負数               | `false`      |
+| FMT-03 | 身長フォーマット   | 小数点第1位での整形 (null時は ---)    | "170.0", "---" |
+| FMT-04 | BMIフォーマット | 小数点第1位での整形 (0以下、null時は ---) | "22.5", "---"  |
