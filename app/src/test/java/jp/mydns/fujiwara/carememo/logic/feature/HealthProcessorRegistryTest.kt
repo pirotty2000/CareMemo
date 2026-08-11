@@ -32,9 +32,14 @@ class HealthProcessorRegistryTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun REG_04_getByCategory_unsupported() {
-        // 現在は全ての Enum 値がサポートされている想定だが、将来の拡張に備えたテスト
-        // モック Enum などが使えないため、存在しない値を想定したロジック検証
-        HealthProcessorRegistry.getByCategory(null as @Suppress("UNCHECKED_CAST") BatchInputCategory)
+        // 非 null 型の Enum に対して強引に null を渡してセーフティネット（?: throw）を検証する。
+        // コンパイラの警告を避けるため、リフレクションを使用して呼び出す。
+        val method = HealthProcessorRegistry::class.java.getMethod("getByCategory", BatchInputCategory::class.java)
+        try {
+            method.invoke(HealthProcessorRegistry, null as BatchInputCategory?)
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            throw e.targetException
+        }
     }
 
     @Test
