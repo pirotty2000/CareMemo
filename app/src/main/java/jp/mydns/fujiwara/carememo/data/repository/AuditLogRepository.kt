@@ -33,7 +33,7 @@ class AuditLogRepository(
     /**
      * 保存されているすべてのログを、日時の降順（新しい順）で取得するための Flow です。
      */
-    val allLogs: Flow<List<AuditLog>> = auditLogDao.getAllLogs()
+    val allLogs: Flow<List<AuditLog>> get() = auditLogDao.getAllLogs()
 
     /**
      * ログの総件数を Flow で取得します。

@@ -112,7 +112,9 @@ class PersonHealthViewModel(
             personId = null,
             records = persistentListOf(),
             selectedRecordId = null,
-            preferredShowHistory = true
+            preferredShowHistory = true,
+            isEditing = false,
+            editInput = HealthEditInput()
         )
     }
 

@@ -15,8 +15,7 @@ import org.junit.runner.RunWith
 import java.time.Instant
 
 /**
- * バックアップ・リストア、およびデータの整合性スキャンのテスト。
- * データの「引っ越し」が安全に行われることを保証する。
+ * Instrumented Test: AppMaintenanceRepository
  */
 @RunWith(AndroidJUnit4::class)
 class AppMaintenanceRepositoryTest {
@@ -50,55 +49,84 @@ class AppMaintenanceRepositoryTest {
         db.close()
     }
 
+    // region 2. バックアップ・復元テスト (Backup & Restore)
+
     @Test
-    fun バックアップと復元_全てのデータとリレーションが完全に維持されること() = runBlocking {
-        // 1. テストデータの作成
-        val person = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
+    fun BKR_01_replaceAllData_maintainsClinicalRelations() = runBlocking {
+        // 1. Setup test data
+        val personId = "u1"
+        val person = Person(id = personId, lastName = "山田", firstName = "太郎", lastNameFurigana = "やまだ", firstNameFurigana = "たろう", birthday = Instant.now())
         personDao.insert(person)
         
-        val hw = HeightAndWeight(personId = "1", height = 170.0, recordTime = Instant.now())
+        val hw = HeightAndWeight(personId = personId, height = 170.0, recordTime = Instant.now())
         db.heightAndWeightDao().insert(hw)
 
-        // 2. バックアップ取得
+        // 2. Capture backup
         val backup = maintenanceRepository.getBackupData()
         assertEquals(1, backup.persons.size)
         assertEquals(1, backup.heightAndWeights.size)
 
-        // 3. データを全消去
+        // 3. Clear data
         maintenanceRepository.clearAllData()
-        assertTrue("全消去後はデータが空であること", personDao.getAllPersons().first().isEmpty())
+        assertTrue(personDao.getAllPersons().first().isEmpty())
 
-        // 4. リストア実行
+        // 4. Restore
         maintenanceRepository.replaceAllData(backup)
 
-        // 5. データが元通りであることを確認
+        // 5. Verify
         val restoredPersons = personDao.getAllPersons().first()
         assertEquals(1, restoredPersons.size)
         assertEquals("山田", restoredPersons[0].lastName)
         
-        // 注意: replaceAllData は内部で ID を振り直すため、ID "1" での取得はできない可能性がある。
-        // ここでは復元された利用者の新しい ID を取得して検索する。
+        // Relationship check (personId might be same in in-memory test, but we use the new ID anyway)
         val restoredPersonId = restoredPersons[0].id
         val restoredHw = db.heightAndWeightDao().getByPersonId(restoredPersonId).first()
         assertEquals(1, restoredHw.size)
         assertEquals(170.0, restoredHw[0].height!!, 0.0)
     }
 
+    // endregion
+
+    // region 3. データ消去テスト (Clear Data)
+
     @Test
-    fun 不整合スキャン_親のいないレコードを正しく検出して削除できること() = runBlocking {
-        // 1. あえて不整合レコードを挿入
+    fun CLR_02_clearAllData_emptiesAllTables() = runBlocking {
+        // 1. Setup data in multiple tables
+        val person = Person(id = "p1", lastName = "A", firstName = "B", lastNameFurigana = "A", firstNameFurigana = "B", birthday = Instant.now())
+        personDao.insert(person)
+        
+        val auditLog = AuditLog(timestamp = Instant.now(), featureName = "Test", operation = "op", tableName = "none", actionType = "INSERT", affectedId = "p1", resultType = "SUCCESS")
+        db.auditLogDao().insert(auditLog)
+
+        // 2. Clear all
+        maintenanceRepository.clearAllData()
+
+        // 3. Verify empty
+        assertTrue(personDao.getAllPersons().first().isEmpty())
+        assertTrue(db.auditLogDao().getAllLogs().first().isEmpty())
+    }
+
+    // endregion
+
+    // region 4. 整合性修復テスト (Inconsistency)
+
+    @Test
+    fun INC_01_02_scanAndCleanInconsistencies() = runBlocking {
+        // 1. Insert test inconsistency (orphaned record)
         maintenanceRepository.insertTestInconsistency()
         
-        // 2. スキャン実行
-        val inconsistencies = maintenanceRepository.scanInconsistencies()
-        assertEquals("不整合が1件検出されること", 1, inconsistencies.size)
+        // 2. Scan
+        var inconsistencies = maintenanceRepository.scanInconsistencies()
+        assertEquals(1, inconsistencies.size)
         assertEquals("bp_and_pulse_db", inconsistencies[0].tableName)
 
-        // 3. クリーンアップ実行
+        // 3. Clean
         maintenanceRepository.cleanInconsistencies(inconsistencies)
         
-        // 4. 再スキャンで0件になること
-        val resultsAfter = maintenanceRepository.scanInconsistencies()
-        assertTrue("クリーンアップ後は不整合が0件であること", resultsAfter.isEmpty())
+        // 4. Verify re-scan is empty
+        inconsistencies = maintenanceRepository.scanInconsistencies()
+        assertTrue(inconsistencies.isEmpty())
     }
+
+    // endregion
 }

@@ -46,7 +46,7 @@ fun PersonConditionScreenTablet(
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag("ConditionScreen_TabletContent"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {

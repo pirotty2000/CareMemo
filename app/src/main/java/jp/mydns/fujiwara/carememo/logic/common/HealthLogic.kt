@@ -193,7 +193,7 @@ object HealthLogic {
             g >= spec.THRESHOLD_PREDIABETES -> GlucoseStatus.PREDIABETES to HealthAlertLevel.WARNING
             g >= spec.THRESHOLD_NORMAL_UPPER -> GlucoseStatus.NORMAL_HIGH to HealthAlertLevel.INFO
             g >= spec.THRESHOLD_LOW -> GlucoseStatus.NORMAL to HealthAlertLevel.NORMAL
-            else -> GlucoseStatus.LOW to HealthAlertLevel.INFO
+            else -> GlucoseStatus.LOW to HealthAlertLevel.ALERT
         }
     }
 

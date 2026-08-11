@@ -14,6 +14,9 @@ import org.junit.runner.RunWith
 import java.io.IOException
 import java.time.Instant
 
+/**
+ * Instrumented Test: Basic DAO Operations (DT-01 Supplement)
+ */
 @RunWith(AndroidJUnit4::class)
 class CareMemoDaoTest {
     private lateinit var personDao: PersonDao
@@ -41,15 +44,14 @@ class CareMemoDaoTest {
     }
 
     @Test
-    @Throws(Exception::class)
-    fun insertAndGetPerson() = runBlocking {
+    fun DT_01_08_dao_insertAndGet() = runBlocking {
         personDao.insert(testPerson)
         val allPersons = personDao.getAllPersons().first()
         assertEquals(allPersons[0].lastName, testPerson.lastName)
     }
 
     @Test
-    fun logicalDeleteAndGet() = runBlocking {
+    fun DT_01_09_dao_logicalDelete() = runBlocking {
         personDao.insert(testPerson)
         val personsBefore = personDao.getAllPersons().first()
         val personId = personsBefore[0].id

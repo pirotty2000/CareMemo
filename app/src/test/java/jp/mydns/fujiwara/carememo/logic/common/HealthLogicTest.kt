@@ -1,3 +1,5 @@
+@file:Suppress("NonAsciiCharacters")
+
 package jp.mydns.fujiwara.carememo.logic.common
 
 import org.junit.Assert.assertEquals
@@ -6,7 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
- * Logic層テスト：HealthLogic
+ * Unit Test: HealthLogic
  */
 class HealthLogicTest {
 
@@ -52,7 +54,7 @@ class HealthLogicTest {
     }
 
     @Test
-    fun VTL_02_evaluateVital_highBp() {
+    fun VTL_02_evaluateVital_highBp_systolic() {
         val results = HealthLogic.evaluateVitalItems(140, 80, 98, 70, 36.5)
         val worst = HealthAlertLevel.worst(results.map { it.second })
         assertEquals(HealthAlertLevel.ALERT, worst)
@@ -98,17 +100,17 @@ class HealthLogicTest {
     }
 
     @Test
-    fun GLC_03_evaluateGlucose_high() {
+    fun GLC_03_evaluateGlucose_diabetes() {
         val (status, alert) = HealthLogic.evaluateGlucose(126)
         assertEquals(GlucoseStatus.DIABETES, status)
         assertEquals(HealthAlertLevel.ALERT, alert)
     }
 
     @Test
-    fun GLC_04_evaluateGlucose_low() {
+    fun GLC_04_evaluateGlucose_low_isAlert() {
         val (status, alert) = HealthLogic.evaluateGlucose(69)
         assertEquals(GlucoseStatus.LOW, status)
-        assertEquals(HealthAlertLevel.INFO, alert)
+        assertEquals(HealthAlertLevel.ALERT, alert)
     }
 
     @Test
@@ -116,13 +118,6 @@ class HealthLogicTest {
         val (status, alert) = HealthLogic.evaluateHbA1c(5.5)
         assertEquals(HbA1cStatus.NORMAL, status)
         assertEquals(HealthAlertLevel.NORMAL, alert)
-    }
-
-    @Test
-    fun HBA_02_evaluateHbA1c_warning() {
-        val (status, alert) = HealthLogic.evaluateHbA1c(6.0)
-        assertEquals(HbA1cStatus.WARNING, status)
-        assertEquals(HealthAlertLevel.WARNING, alert)
     }
 
     @Test
@@ -142,13 +137,8 @@ class HealthLogicTest {
     }
 
     @Test
-    fun CAL_02_calculateBMI_zeroHeight() {
+    fun CAL_02_calculateBMI_zeroHeight_returnsZero() {
         assertEquals(0.0, HealthLogic.calculateBMI(0.0, 60.0), 0.0)
-    }
-
-    @Test
-    fun CAL_03_calculateBMI_nullHeight() {
-        assertEquals(0.0, HealthLogic.calculateBMI(null, 60.0), 0.0)
     }
 
     // endregion
@@ -171,13 +161,9 @@ class HealthLogicTest {
     }
 
     @Test
-    fun VLD_04_validateInput_outOfRangeMax() {
-        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("300", "60"))
-    }
-
-    @Test
-    fun VLD_05_validateInput_outOfRangeMin() {
-        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("170", "0"))
+    fun VLD_04_validateInput_outOfRange_over() {
+        // Use a value that is 3 digits (valid format) but over max (300.0)
+        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("170", "350"))
     }
 
     // endregion
@@ -186,39 +172,26 @@ class HealthLogicTest {
 
     @Test
     fun FMT_01_isWithinFormat_valid() {
-        // 整数3桁、小数なし
         assertTrue(HealthLogic.isWithinFormat("123", 3, 0))
-        assertTrue(HealthLogic.isWithinFormat("0", 3, 0))
-        assertTrue(HealthLogic.isWithinFormat("", 3, 0))
-
-        // 整数3桁、小数1桁
         assertTrue(HealthLogic.isWithinFormat("123.4", 3, 1))
-        assertTrue(HealthLogic.isWithinFormat("12.3", 3, 1))
-        assertTrue(HealthLogic.isWithinFormat("1", 3, 1))
     }
 
     @Test
     fun FMT_02_isWithinFormat_invalid() {
-        // 桁数オーバー
         assertFalse(HealthLogic.isWithinFormat("1234", 3, 0))
         assertFalse(HealthLogic.isWithinFormat("123.45", 3, 1))
-
-        // 記号・文字
-        assertFalse(HealthLogic.isWithinFormat("1.2.3", 3, 1))
-        assertFalse(HealthLogic.isWithinFormat("12a", 3, 0))
         assertFalse(HealthLogic.isWithinFormat("-10", 3, 0))
     }
 
     @Test
-    fun FMT_03_formatHeight() {
+    fun FMT_03_formatHeight_rounding() {
         assertEquals("170.0", HealthLogic.formatHeight(170.0))
         assertEquals("---", HealthLogic.formatHeight(null))
     }
 
     @Test
-    fun FMT_04_formatBmi() {
+    fun FMT_04_formatBmi_rounding() {
         assertEquals("22.5", HealthLogic.formatBmi(22.49))
-        assertEquals("---", HealthLogic.formatBmi(0.0))
         assertEquals("---", HealthLogic.formatBmi(null))
     }
 

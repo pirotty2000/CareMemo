@@ -106,16 +106,16 @@ object PersonListLogic {
     fun getSection(furigana: String): String {
         val firstChar = furigana.firstOrNull() ?: return AppSpecifications.Search.SECTION_OTHER
         return when (firstChar) {
-            in 'あ'..'お' -> "あ"
-            in 'か'..'こ', in 'が'..'ご' -> "か"
-            in 'さ'..'そ', in 'ざ'..'ぞ' -> "さ"
-            in 'た'..'と', in 'だ'..'ど', in 'っ'..'っ' -> "た"
+            in 'ぁ'..'お' -> "あ"
+            in 'か'..'ご' -> "か"
+            in 'さ'..'ぞ' -> "さ"
+            in 'た'..'ど' -> "た"
             in 'な'..'の' -> "な"
-            in 'は'..'ほ', in 'ば'..'ぼ', in 'ぱ'..'ぽ' -> "は"
+            in 'は'..'ぽ' -> "は"
             in 'ま'..'も' -> "ま"
-            in 'や'..'よ' -> "や"
+            in 'ゃ'..'よ' -> "や"
             in 'ら'..'ろ' -> "ら"
-            in 'わ'..'ん' -> "わ"
+            in 'ゎ'..'ん' -> "わ"
             else -> AppSpecifications.Search.SECTION_OTHER
         }
     }

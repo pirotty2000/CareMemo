@@ -79,7 +79,7 @@ fun PersonMedicationScreenPhone(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag("MedicationScreen_PhoneContent"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {

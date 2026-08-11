@@ -45,6 +45,12 @@ class JapaneseDateLogicTest {
         assertEquals(LocalDate.of(1985, 1, 1), date)
     }
 
+    @Test
+    fun CNV_06_toLocalDate_failure() {
+        val date = JapaneseDateLogic.toLocalDate(BirthEra.REIWA, 1, 4, 30)
+        assertNull(date)
+    }
+
     // endregion
 
     // region 3. バリデーションテスト (validate)
@@ -89,6 +95,16 @@ class JapaneseDateLogicTest {
     @Test
     fun VAL_08_validate_notLeapYear_fail() {
         assertEquals(DateValidationResult.INVALID_DAY, JapaneseDateLogic.validate(BirthEra.REIWA, 5, 2, 29))
+    }
+
+    // endregion
+
+    // region 4. 簡易判定テスト (isValid)
+
+    @Test
+    fun VLD_01_isValid() {
+        assertTrue(JapaneseDateLogic.isValid(BirthEra.REIWA, 5, 10, 27))
+        assertFalse(JapaneseDateLogic.isValid(BirthEra.REIWA, 1, 4, 30))
     }
 
     // endregion

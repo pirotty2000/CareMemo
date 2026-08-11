@@ -1,22 +1,18 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.data.repository
 
 import app.cash.turbine.test
 import io.mockk.every
 import io.mockk.mockk
-import jp.mydns.fujiwara.carememo.data.BpAndPulseDao
-import jp.mydns.fujiwara.carememo.data.ConditionAtVisitDao
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1cDao
-import jp.mydns.fujiwara.carememo.data.HeightAndWeightDao
-import jp.mydns.fujiwara.carememo.data.MedicationRecordDao
-import jp.mydns.fujiwara.carememo.data.PersonDao
+import jp.mydns.fujiwara.carememo.data.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Unit Test: PersonSummaryRepository
+ */
 class PersonSummaryRepositoryTest {
 
     private val personDao = mockk<PersonDao>()
@@ -40,9 +36,11 @@ class PersonSummaryRepositoryTest {
         )
     }
 
+    // region 2. 個別サマリー取得テスト (getPersonCategorySummaryById)
+
     @Test
-    fun `getPersonCategorySummaryByIdを実行したとき、各DAOの記録有無が統合されること`() = runTest {
-        val personId = "1"
+    fun IND_01_getPersonCategorySummaryById_combinesFlows() = runTest {
+        val personId = "u1"
         every { heightAndWeightDao.hasDataForPerson(personId) } returns flowOf(true)
         every { bpAndPulseDao.hasDataForPerson(personId) } returns flowOf(false)
         every { glucoseAndHbA1cDao.hasDataForPerson(personId) } returns flowOf(true)
@@ -59,4 +57,36 @@ class PersonSummaryRepositoryTest {
             awaitComplete()
         }
     }
+
+    // endregion
+
+    // region 3. 全利用者サマリー取得テスト (getPersonCategorySummaries)
+
+    @Test
+    fun ALL_01_getPersonCategorySummaries_associatesById() = runTest {
+        val queryResults = listOf(
+            PersonSummaryQueryResult("u1", true, false, false, true, false),
+            PersonSummaryQueryResult("u2", false, true, true, false, true)
+        )
+        every { personDao.getPersonCategorySummaries() } returns flowOf(queryResults)
+
+        repository.getPersonCategorySummaries().test {
+            val map = awaitItem()
+            assertEquals(2, map.size)
+            
+            val s1 = map["u1"]!!
+            assertEquals(true, s1.hasHeightWeight)
+            assertEquals(true, s1.hasCondition)
+            assertEquals(false, s1.hasBpAndPulse)
+
+            val s2 = map["u2"]!!
+            assertEquals(true, s2.hasBpAndPulse)
+            assertEquals(true, s2.hasMedication)
+            assertEquals(false, s2.hasHeightWeight)
+            
+            awaitComplete()
+        }
+    }
+
+    // endregion
 }

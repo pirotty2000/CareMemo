@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.logic.common.EmergencyContactType
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactType
 
 /**
  * 緊急連絡先種別の表示用マッピング

@@ -11,12 +11,13 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
-import jp.mydns.fujiwara.carememo.logic.common.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 /**
@@ -121,8 +122,14 @@ class EmergencyContactEditViewModel(
             operation = "loadPersonInfo",
             contextBuilder = { tableName = "person_db"; affectedId = id }
         ) {
-            val person = personRepository.getPersonById(id).first()
-            updateUiState { it.copy(personName = person?.getMaskedName(it.isNameMaskingEnabled) ?: "") }
+            combine(
+                personRepository.getPersonById(id).filterNotNull(),
+                isNameMaskingEnabled
+            ) { person, masking ->
+                person.getMaskedName(masking)
+            }.collect { maskedName ->
+                updateUiState { it.copy(personName = maskedName) }
+            }
         }
     }
 

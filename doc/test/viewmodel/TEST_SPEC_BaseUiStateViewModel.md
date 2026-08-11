@@ -1,0 +1,23 @@
+# テスト仕様書 - BaseUiStateViewModel
+
+- **対象テストコード:**
+    - `app/src/test/java/jp/mydns/fujiwara/carememo/viewmodel/BaseUiStateViewModelTest.kt`
+
+## 1. 概要
+`BaseUiStateViewModel` が提供する、具体的な UI 通知ヘルパー機能や共通設定の同期ロジックを検証する。
+※アーキテクチャ上の根幹（原子性・エラー処理）については [ViewModel Foundation](./TEST_SPEC_ViewModelFoundation.md) を参照。
+
+## 2. イベント送出テスト (Events)
+**目的:** 画面共通の通知（UiEvent）および画面固有の遷移（ViewEvent）が、ViewModel 内部から正しく発行されることを検証する。
+
+| ID | テスト項目 | 操作 | 期待結果 |
+|:---|:---|:---|:---|
+| EVT-01 | 共通通知送出 | `showSnackbar` / `showError` を実行 | `uiEventFlow` から対応するリソース ID 等を含むイベントが発行されること |
+| EVT-02 | 画面固有イベント送出 | `sendViewEvent` を実行 | `viewEvent` から指定した型（generics）のイベントが発行されること |
+
+## 3. 共通設定同期テスト (Settings)
+**目的:** 基盤クラスが自動提供する共通設定（氏名伏せ字等）が、リポジトリの変更に即座に追従することを検証する。
+
+| ID | テスト項目 | 条件 | 期待結果 |
+|:---|:---|:---|:---|
+| SET-01 | 設定値のリアクティブ更新 | リポジトリの `isNameMaskingEnabled` を変更 | ViewModel が提供する同名の StateFlow が即座に更新されること |
