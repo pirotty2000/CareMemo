@@ -30,10 +30,11 @@ class HealthProcessorRegistryTest {
         assertEquals(VitalProcessor, processor)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = NullPointerException::class)
     fun REG_04_getByCategory_unsupported() {
-        // 非 null 型の Enum に対して強引に null を渡してセーフティネット（?: throw）を検証する。
-        // コンパイラの警告を避けるため、リフレクションを使用して呼び出す。
+        // 非 null 型の Enum に対して強引に null を渡して、Kotlin の実行時チェック（内部ガード）
+        // が正しく機能し、安全にクラッシュ（保護）されることを検証する。
+        // ※ 内部の ?: throw IllegalArgumentException に到達する前に Kotlin が NPE を投げる。
         val method = HealthProcessorRegistry::class.java.getMethod("getByCategory", BatchInputCategory::class.java)
         try {
             method.invoke(HealthProcessorRegistry, null as BatchInputCategory?)
