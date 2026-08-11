@@ -121,7 +121,14 @@ class PersonConditionViewModel(
     }
 
     override fun onPrepareLoadPerson(state: PersonConditionUiState): PersonConditionUiState {
-        return state
+        return state.copy(
+            personId = null,
+            searchQuery = "",
+            filteredRecords = persistentListOf(),
+            selectedConditionId = null,
+            isEditing = false,
+            editInput = ConditionEditInput()
+        )
     }
 
     private fun refreshRecords(state: PersonConditionUiState) {

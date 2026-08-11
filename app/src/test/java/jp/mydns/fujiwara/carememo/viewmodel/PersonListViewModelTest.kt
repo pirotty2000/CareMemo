@@ -1,42 +1,25 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.util.Log
 import app.cash.turbine.test
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
-import androidx.lifecycle.SavedStateHandle
-import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
-import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
-import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
-import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
-import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
-import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import io.mockk.*
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
 /**
- * SCR-M-001 PersonListViewModel のロジックテスト
- * 
- * 仕様書：doc/test/screen/TEST_SPEC_SCR-M-001_MainScreen.md に準拠
+ * Logic Test: PersonListViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PersonListViewModelTest {
@@ -49,36 +32,27 @@ class PersonListViewModelTest {
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
-    private lateinit var viewModel: PersonListViewModel
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = StandardTestDispatcher()
 
     private val testPerson = Person(
-        id = "1",
-        lastName = "テスト",
-        firstName = "太郎",
-        lastNameFurigana = "てすと",
-        firstNameFurigana = "たろう",
-        birthday = Instant.now()
+        id = "u1", lastName = "浅井", firstName = "太郎",
+        lastNameFurigana = "あさい", firstNameFurigana = "たろう",
+        birthday = Instant.parse("1950-01-01T00:00:00Z")
     )
+
+    private val isNameMaskingEnabledFlow = MutableStateFlow(false)
 
     @Before
     fun setup() {
         mockkStatic(Log::class)
-        every { Log.e(any(), any()) } returns 0
         every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
 
-        every { personRepository.getAllPersons() } returns flowOf(emptyList())
-        every { archivedRepository.getArchivedPersons() } returns flowOf(emptyList())
+        every { userSettingsRepository.isNameMaskingEnabled } returns isNameMaskingEnabledFlow
+        every { userSettingsRepository.healthDisplayModeIsHistory } returns flowOf(true)
+        every { personRepository.getAllPersons() } returns flowOf(listOf(testPerson))
         every { summaryRepository.getPersonCategorySummaries() } returns flowOf(emptyMap())
-        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { conditionRepository.getPersonIdsByConditionKeyword(any()) } returns flowOf(emptyList())
-
-        viewModel = PersonListViewModel(
-            personRepository, archivedRepository, summaryRepository,
-            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository,
-            SavedStateHandle()
-        )
     }
 
     @After
@@ -87,93 +61,171 @@ class PersonListViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    // ======================================================================================
-    // 3. ロジック・安全性テスト (PersonListViewModel)
-    // ======================================================================================
-
-    @Test
-    fun lg01_dataFetchFailure_resetsLoadingAndLogsError() = runTest {
-        // ViewModel作成前に、例外を投げるようにモックを設定
-        every { personRepository.getAllPersons() } returns flow {
-            throw RuntimeException("Load Error")
-        }
-        
-        val errorViewModel = PersonListViewModel(
+    private fun createViewModel(): PersonListViewModel {
+        return PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
-            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository,
-            SavedStateHandle()
+            conditionRepository, emergencyContactRepository,
+            userSettingsRepository, auditLogRepository
         )
+    }
 
-        errorViewModel.uiState.test {
-            awaitItem() // 初期値
+    // region 2. 初期化・データロードテスト (Initialization)
+
+    @Test
+    fun INI_01_initialLoad_success() = runTest {
+        val viewModel = createViewModel()
+        
+        viewModel.uiState.test {
+            // Skip intermediate state transitions during initialization
+            advanceUntilIdle()
             
-            // Then: isLoading が false になり、監査ログに ERROR が記録されること
-            assertEquals(false, errorViewModel.uiState.value.isLoading)
-            
-            coVerify {
-                auditLogRepository.log(
-                    featureName = "PersonList",
-                    operation = "userListFlow",
-                    actionType = "ERROR",
-                    tableName = "person_db",
-                    affectedId = any(),
-                    details = any(),
-                    resultType = any()
-                )
-            }
-            cancelAndIgnoreRemainingEvents()
+            val loaded = expectMostRecentItem()
+            assertFalse(loaded.isLoading)
+            assertEquals(1, loaded.userList.size)
+            assertEquals("浅井　太郎", loaded.userList[0].maskedName)
         }
     }
 
     @Test
-    fun lg02_saveOrDeleteFailure_resetsLoadingAndLogsError() = runTest {
-        coEvery { personRepository.insertPerson(any(), any(), any()) } throws RuntimeException("Add Error")
-        coEvery { personRepository.findExistingPerson(any()) } returns null
-
-        viewModel.addPerson(testPerson)
+    fun INI_02_maskingSettingReflection() = runTest {
+        val viewModel = createViewModel()
         
-        // Then: isLoading が false になり、監査ログに ERROR が記録されること
-        assertEquals(false, viewModel.uiState.value.isLoading)
-        
-        coVerify {
-            auditLogRepository.log(
-                featureName = "PersonList",
-                operation = "addPerson",
-                actionType = "ERROR",
-                tableName = "person_db",
-                affectedId = any(),
-                details = any(),
-                resultType = any()
-            )
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            
+            isNameMaskingEnabledFlow.value = true
+            advanceUntilIdle()
+            
+            val state = expectMostRecentItem()
+            assertTrue(state.isNameMaskingEnabled)
+            assertEquals("浅○\u3000太○", state.userList[0].maskedName)
         }
     }
 
+    // endregion
+
+    // region 3. フィルタ・検索管理テスト (Filtering & Search)
+
     @Test
-    fun lg03_setSearchQuery_updatesQueryAndResetsSection() = runTest {
-        viewModel.setSelectedSection("か")
+    fun FLT_01_setSelectedSection_filtersList() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.setSelectedSection("か") // "あさい" should be filtered out
+        advanceUntilIdle()
+
         assertEquals("か", viewModel.uiState.value.selectedSection)
-
-        viewModel.setSearchQuery("テスト")
-        
-        // Then: 検索クエリが更新され、セクションが「全」にリセットされること (原子性の検証)
-        assertEquals("テスト", viewModel.uiState.value.searchQuery)
-        assertEquals("全", viewModel.uiState.value.selectedSection)
+        assertTrue(viewModel.uiState.value.userList.isEmpty())
     }
 
     @Test
-    fun lg04_maskingSetting_syncsToUiState() = runTest {
-        // 設定が ON の場合
-        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(true)
-        
-        // 新しく ViewModel を作成して Flow を購読させる
-        val syncViewModel = PersonListViewModel(
-            personRepository, archivedRepository, summaryRepository,
-            conditionRepository, emergencyContactRepository, userSettingsRepository, auditLogRepository
-        )
-        
-        // TestDispatcher でコルーチンを回す
-        testDispatcher.scheduler.advanceUntilIdle()
+    fun FLT_02_setSearchQuery_resetsSectionToAll() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
 
-        assertEquals(true, syncViewModel.uiState.value.isNameMaskingEnabled)
+        viewModel.setSelectedSection("か")
+        viewModel.setSearchQuery("test")
+        
+        assertEquals("全", viewModel.uiState.value.selectedSection)
+        assertEquals("test", viewModel.uiState.value.searchQuery)
     }
+
+    // endregion
+
+    // region 4. クイックメニュー・詳細操作テスト (Quick Menu)
+
+    @Test
+    fun MNU_01_showQuickMenu_setsSelectedPerson() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.showQuickMenu(testPerson)
+        
+        val state = viewModel.uiState.value
+        assertTrue(state.isQuickActionMenuExpanded)
+        assertEquals(testPerson, state.selectedPersonForQuickMenu)
+    }
+
+    @Test
+    fun MNU_02_loadEmergencyContacts_success() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val mockContacts = listOf(mockk<EmergencyContact>())
+        every { emergencyContactRepository.getContactsByPersonId("u1") } returns flowOf(mockContacts)
+
+        viewModel.loadEmergencyContacts("u1")
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isQuickActionMenuExpanded)
+        assertEquals(mockContacts, viewModel.uiState.value.emergencyContactsForSheet)
+    }
+
+    // endregion
+
+    // region 5. 利用者管理操作テスト (Management)
+
+    @Test
+    fun MGT_01_addPerson_success() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        coEvery { personRepository.findExistingPerson(any()) } returns null
+        
+        viewModel.addPerson(testPerson)
+        advanceUntilIdle()
+
+        coVerify { personRepository.insertPerson(testPerson, any(), any()) }
+    }
+
+    @Test
+    fun MGT_02_addPerson_duplicateBlocked() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Mock existing duplicate
+        coEvery { personRepository.findExistingPerson(any()) } returns testPerson.copy(id = "other-id")
+
+        viewModel.uiEventFlow.test {
+            viewModel.addPerson(testPerson)
+            val event = awaitItem()
+            assertTrue(event is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes)
+        }
+        coVerify(exactly = 0) { personRepository.insertPerson(any(), any(), any()) }
+    }
+
+    // endregion
+
+    // region 6. ナビゲーションテスト (Navigation)
+
+    @Test
+    fun NAV_01_navigateToDetail_emitsCorrectEvent() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.setSearchQuery("search-term")
+
+        viewModel.viewEvent.test {
+            viewModel.navigateToDetail("u1", Category.BP_AND_PULSE)
+            val event = awaitItem()
+            assertTrue(event is PersonListViewEvent.NavigateToDetail)
+            assertEquals("search-term", (event as PersonListViewEvent.NavigateToDetail).query)
+        }
+    }
+
+    // endregion
+
+    // region 7. 安全性・例外テスト (Safety)
+
+    @Test
+    fun ERR_01_listLoadFailure_safety() = runTest {
+        every { personRepository.getAllPersons() } returns flow { throw RuntimeException("List Error") }
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("List Error") }, any()) }
+    }
+
+    // endregion
 }

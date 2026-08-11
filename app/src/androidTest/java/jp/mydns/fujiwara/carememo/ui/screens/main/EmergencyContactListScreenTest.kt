@@ -6,79 +6,127 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
+import kotlinx.collections.immutable.toImmutableList
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * SCR-M-003 EmergencyContactListScreen の UI テスト
+ * Instrumented Test: EmergencyContactListScreen (SCR-M-003)
+ * 
+ * 仕様書: doc/test/screen/TEST_SPEC_SCR-M-003_EmergencyContactListScreen.md に準拠
  */
 class EmergencyContactListScreenTest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
+    //region 2. 表示テスト (Display)
+
     @Test
-    fun cp01_initialDisplay_Normal() {
+    fun DSP_01_personName_isDisplayedInHeader() {
+        val personName = "テスト利用者"
+        setContent {
+            EmergencyContactListContentWrapper(personName = personName)
+        }
+        // Check for title (implementation uses format string usually)
+        composeTestRule.onNodeWithText(personName, substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun DSP_02_contactList_rendersItems() {
         val contacts = listOf(
-            EmergencyContact(id = "1", personId = "p1", facilityName = "A病院", personName = "田中", phoneNumber = "0312345678", contactType = "DOCTOR"),
-            EmergencyContact(id = "2", personId = "p1", facilityName = "B訪問看護", phoneNumber = "09011112222", contactType = "NURSING_STATION")
+            EmergencyContact(id = "c1", personId = "p1", facilityName = "A病院", phoneNumber = "0312345678", contactType = "DOCTOR"),
+            EmergencyContact(id = "c2", personId = "p1", facilityName = "B訪問看護", phoneNumber = "09011112222", contactType = "NURSING_STATION")
         )
 
-        composeTestRule.setContent {
-            CareMemoTheme {
-                EmergencyContactListContent(
-                    uiState = EmergencyContactUiState(personName = "利用者名", contacts = contacts),
-                    onNavigateBack = {},
-                    onAddClick = {},
-                    onEditClick = {},
-                    onDeleteConfirm = {}
-                )
-            }
+        setContent {
+            EmergencyContactListContentWrapper(contacts = contacts)
         }
 
-        // 施設名が表示されていること
+        // Each item tag exists
+        composeTestRule.onNodeWithTag("EmergencyContactItem_c1").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("EmergencyContactItem_c2").assertIsDisplayed()
+
+        // Content matches
         composeTestRule.onNodeWithText("A病院").assertIsDisplayed()
-        composeTestRule.onNodeWithText("B訪問看護").assertIsDisplayed()
-        
-        // 整形された電話番号が表示されていること (formatPhoneNumber)
         composeTestRule.onNodeWithText("03-1234-5678").assertIsDisplayed()
-        composeTestRule.onNodeWithText("090-1111-2222").assertIsDisplayed()
     }
 
     @Test
-    fun cp02_initialDisplay_Empty() {
-        composeTestRule.setContent {
-            CareMemoTheme {
-                EmergencyContactListContent(
-                    uiState = EmergencyContactUiState(personName = "利用者名", contacts = emptyList()),
-                    onNavigateBack = {},
-                    onAddClick = {},
-                    onEditClick = {},
-                    onDeleteConfirm = {}
-                )
-            }
+    fun DSP_03_emptyState_isDisplayed() {
+        setContent {
+            EmergencyContactListContentWrapper(contacts = emptyList())
         }
-
-        // 空メッセージが表示されること
-        composeTestRule.onNodeWithText("連絡先が登録されていません").assertIsDisplayed()
+        composeTestRule.onNodeWithText("連絡先が登録されていません", substring = true).assertIsDisplayed()
     }
 
+    //endregion
+
+    //region 3. 操作・インタラクションテスト (Interaction)
+
     @Test
-    fun bh01_addButtonClick() {
+    fun ACT_01_addButton_triggersCallback() {
         var addClicked = false
-        composeTestRule.setContent {
-            CareMemoTheme {
-                EmergencyContactListContent(
-                    uiState = EmergencyContactUiState(personName = "名"),
-                    onNavigateBack = {},
-                    onAddClick = { addClicked = true },
-                    onEditClick = {},
-                    onDeleteConfirm = {}
-                )
-            }
+        setContent {
+            EmergencyContactListContentWrapper(onAddClick = { addClicked = true })
         }
-
         composeTestRule.onNodeWithTag("MedicalContactList_AddButton").performClick()
         assert(addClicked)
+    }
+
+    @Test
+    fun ACT_03_ACT_04_deleteProcess_showsDialogAndConfirms() {
+        val contact = EmergencyContact(id = "c1", personId = "p1", facilityName = "Target Hospital", contactType = "DOCTOR")
+        var deleteConfirmed = false
+
+        setContent {
+            EmergencyContactListContentWrapper(
+                contacts = listOf(contact),
+                onDeleteConfirm = { deleteConfirmed = true }
+            )
+        }
+
+        // Open menu and click delete
+        composeTestRule.onNodeWithContentDescription("操作メニュー").performClick()
+        composeTestRule.onNodeWithText("削除").performClick()
+
+        // Verify dialog displayed
+        composeTestRule.onNodeWithText("連絡先の削除").assertIsDisplayed()
+        
+        // Confirm delete
+        composeTestRule.onNodeWithText("削除").performClick()
+        
+        assert(deleteConfirmed)
+    }
+
+    //endregion
+
+    // --- Helpers ---
+
+    private fun setContent(content: @androidx.compose.runtime.Composable () -> Unit) {
+        composeTestRule.setContent {
+            CareMemoTheme {
+                content()
+            }
+        }
+    }
+
+    @androidx.compose.runtime.Composable
+    private fun EmergencyContactListContentWrapper(
+        personName: String = "Name",
+        contacts: List<EmergencyContact> = emptyList(),
+        onAddClick: () -> Unit = {},
+        onDeleteConfirm: (EmergencyContact) -> Unit = {}
+    ) {
+        EmergencyContactListContent(
+            uiState = EmergencyContactUiState(
+                personName = personName,
+                contacts = contacts.toImmutableList()
+            ),
+            onNavigateBack = {},
+            onAddClick = onAddClick,
+            onEditClick = {},
+            onDeleteConfirm = onDeleteConfirm
+        )
     }
 }

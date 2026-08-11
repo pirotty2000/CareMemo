@@ -71,7 +71,7 @@ class ConditionLogicTest {
     @Test
     fun DUP_03_validateDuplicate_updateSame() {
         val current = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "", recordTime = now)
-        val existing = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "", recordTime = now)
+        val existing = ConditionAtVisit(id = "10", personId = "1", title = "", condition = "", author = "" , recordTime = now)
         assertEquals(ConditionValidationResult.SUCCESS, ConditionLogic.validateDuplicate(current, existing))
     }
 

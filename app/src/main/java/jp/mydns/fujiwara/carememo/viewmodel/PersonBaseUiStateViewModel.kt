@@ -58,6 +58,9 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     private var loadPersonJob: Job? = null
 
     open fun loadPerson(personId: String) {
+        // 同じIDが既にロード済み（またはロード中）であれば、何もしない（無駄なリロードを避ける）
+        if (currentState.personId == personId) return
+
         updateUiState { onPrepareLoadPerson(it) }
 
         loadPersonJob?.cancel()

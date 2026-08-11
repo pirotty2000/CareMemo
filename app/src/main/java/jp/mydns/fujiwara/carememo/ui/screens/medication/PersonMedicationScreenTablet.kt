@@ -76,7 +76,7 @@ fun PersonMedicationScreenTablet(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag("MedicationScreen_TabletContent"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {

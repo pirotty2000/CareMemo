@@ -129,7 +129,8 @@ fun EmergencyContactListContent(
                         EmergencyContactItem(
                             contact = contact,
                             onEditClick = { onEditClick(contact) },
-                            onDeleteClick = { contactToDelete = contact }
+                            onDeleteClick = { contactToDelete = contact },
+                            modifier = Modifier.testTag("EmergencyContactItem_${contact.id}")
                         )
                         HorizontalDivider()
                     }

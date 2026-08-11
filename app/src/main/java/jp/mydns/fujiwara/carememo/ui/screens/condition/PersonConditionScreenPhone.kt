@@ -46,7 +46,7 @@ fun PersonConditionScreenPhone(
     snackbarHostState: SnackbarHostState,
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag("ConditionScreen_PhoneContent"),
         topBar = {
             Column {
                 TopAppBar(

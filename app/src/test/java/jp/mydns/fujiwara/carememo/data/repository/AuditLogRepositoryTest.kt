@@ -1,15 +1,19 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.data.repository
 
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Unit Test: AuditLogRepository
+ */
 class AuditLogRepositoryTest {
 
     private val auditLogDao = mockk<AuditLogDao>(relaxed = true)
@@ -20,29 +24,69 @@ class AuditLogRepositoryTest {
         repository = AuditLogRepository(auditLogDao)
     }
 
-    @Test
-    fun `deleteOldLogsを実行したとき、指定日数以前のログ削除がDAOに依頼されること`() = runTest {
-        // 30日分保持の設定
-        repository.deleteOldLogs(30)
+    // region 2. ログ記録テスト (log)
 
-        // Instant.now() を内部で使っているので、おおよその時間で検証
+    @Test
+    fun LOG_01_log_delegatesToDao() = runTest {
+        repository.log("Feature", "Operation", "Table", "INSERT", "id-123", "details", "SUCCESS")
+        
+        coVerify { 
+            auditLogDao.insert(withArg {
+                assertEquals("Feature", it.featureName)
+                assertEquals("Operation", it.operation)
+                assertEquals("Table", it.tableName)
+                assertEquals("INSERT", it.actionType)
+                assertEquals("id-123", it.affectedId)
+                assertEquals("details", it.details)
+                assertEquals("SUCCESS", it.resultType)
+            })
+        }
+    }
+
+    @Test
+    fun LOG_02_log_suppressesExceptions() = runTest {
+        // Force DAO to throw
+        coEvery { auditLogDao.insert(any()) } throws RuntimeException("Database error")
+
+        // Should not throw exception
+        repository.log("F", "O", "T", "A", "ID")
+
+        coVerify { auditLogDao.insert(any()) }
+    }
+
+    // endregion
+
+    // region 3. ログ削除・ローテーションテスト (Delete)
+
+    @Test
+    fun DEL_01_deleteOldLogs_calculatesCorrectThreshold() = runTest {
+        repository.deleteOldLogs(30)
         coVerify { auditLogDao.deleteOldLogs(any()) }
     }
 
     @Test
-    fun `deleteAllLogsを実行したとき、DAOのdeleteAllが呼ばれること`() = runTest {
+    fun DEL_02_deleteOldLogs_ignoresNegativeDays() = runTest {
+        repository.deleteOldLogs(-1)
+        coVerify(exactly = 0) { auditLogDao.deleteOldLogs(any()) }
+    }
+
+    @Test
+    fun DEL_03_deleteAllLogs_delegatesToDao() = runTest {
         repository.deleteAllLogs()
         coVerify { auditLogDao.deleteAll() }
     }
 
+    // endregion
+
+    // region 4. データ取得テスト (Get)
+
     @Test
-    fun `log実行時に例外が発生しても、呼び出し元に例外が伝播しないこと`() = runTest {
-        // DAOが例外を投げるように設定
-        coEvery { auditLogDao.insert(any()) } throws RuntimeException("DB Error")
-
-        // 例外が発生しても、ここで例外がスローされないことを確認
-        repository.log("Screen", "Op", "Table", "Type", "1")
-
-        coVerify { auditLogDao.insert(any()) }
+    fun GET_01_getAuditLogCountFlow_returnsSize() = runTest {
+        coEvery { auditLogDao.getAllLogs() } returns flowOf(listOf(mockk(), mockk()))
+        
+        val count = repository.getAuditLogCountFlow().first()
+        assertEquals(2, count)
     }
+
+    // endregion
 }

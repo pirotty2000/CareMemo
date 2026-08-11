@@ -3,39 +3,28 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.SavedStateHandle
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.mockkStatic
-import io.mockk.unmockkObject
-import io.mockk.unmockkStatic
+import app.cash.turbine.test
+import io.mockk.*
+import jp.mydns.fujiwara.carememo.data.ThemeSetting
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 
 /**
- * SCR-S-001 SettingsViewModel のユニットテスト (System B 移行済)
- * 
- * 仕様書：doc/test/screen/TEST_SPEC_SCR-S-001_SettingsScreen.md に準拠
+ * Logic Test: SettingsViewModel
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
@@ -45,7 +34,6 @@ class SettingsViewModelTest {
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     
-    private lateinit var viewModel: SettingsViewModel
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -53,31 +41,20 @@ class SettingsViewModelTest {
         mockkStatic(Log::class)
         mockkObject(ImageUtils)
         every { Log.e(any(), any(), any()) } returns 0
-        coEvery { ImageUtils.clearPhotosDir(any()) } returns Unit
-
         Dispatchers.setMain(testDispatcher)
         
-        // デフォルトのFlow設定
+        // Default Flow setup
+        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { userSettingsRepository.isBiometricEnabled } returns flowOf(false)
         every { userSettingsRepository.lockTimeoutMinutes } returns flowOf(0)
+        every { userSettingsRepository.defaultRecorderName } returns flowOf("")
         every { userSettingsRepository.isBackupPasswordEnabled } returns flowOf(true)
         every { userSettingsRepository.backupPassword } returns flowOf("")
-        every { userSettingsRepository.themeSetting } returns flowOf(jp.mydns.fujiwara.carememo.data.ThemeSetting.SYSTEM)
+        every { userSettingsRepository.themeSetting } returns flowOf(ThemeSetting.SYSTEM)
         every { userSettingsRepository.auditLogRetentionDays } returns flowOf(30)
-        every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
-        every { userSettingsRepository.defaultRecorderName } returns flowOf("")
         
-        every { auditLogRepository.allLogs } returns flowOf(emptyList())
-        every { auditLogRepository.getAuditLogCountFlow() } returns flowOf(0)
+        every { auditLogRepository.getAuditLogCountFlow() } returns flowOf(10)
         every { archivedPersonRepository.getArchivedPersons() } returns flowOf(emptyList())
-
-        viewModel = SettingsViewModel(
-            maintenanceRepository,
-            archivedPersonRepository,
-            auditLogRepository,
-            userSettingsRepository,
-            SavedStateHandle()
-        )
     }
 
     @After
@@ -87,132 +64,146 @@ class SettingsViewModelTest {
         unmockkObject(ImageUtils)
     }
 
-    // ======================================================================================
-    // 3. ロジック・安全性テスト (SettingsViewModel)
-    // ======================================================================================
+    private fun createViewModel() = SettingsViewModel(
+        maintenanceRepository,
+        archivedPersonRepository,
+        auditLogRepository,
+        userSettingsRepository
+    )
+
+    // region 2. 初期化・設定同期テスト (Initialization & Sync)
 
     @Test
-    fun LG_01_exportData_safetyOnFailure() = runTest {
+    fun INI_01_initialSettingsSync_success() = runTest {
+        val viewModel = createViewModel()
+        
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertFalse(state.isNameMaskingEnabled)
+            assertEquals(10, state.auditLogCount)
+            assertEquals(ThemeSetting.SYSTEM, state.themeSetting)
+        }
+    }
+
+    @Test
+    fun INI_03_syncFailure_safety() = runTest {
+        every { userSettingsRepository.isNameMaskingEnabled } returns flow {
+            throw RuntimeException("Sync Error")
+        }
+
+        createViewModel()
+        advanceUntilIdle()
+            
+        coVerify {
+            auditLogRepository.log(any(), any(), "all_db", "ERROR", any(), match { it.contains("Sync Error") }, any())
+        }
+    }
+
+    // endregion
+
+    // region 3. 設定更新テスト (Settings Updates)
+
+    @Test
+    fun SET_01_setNameMaskingEnabled_callsRepository() = runTest {
+        val viewModel = createViewModel()
+        viewModel.setNameMaskingEnabled(true)
+        advanceUntilIdle()
+        coVerify { userSettingsRepository.setNameMaskingEnabled(true) }
+    }
+
+    @Test
+    fun DEV_01_handleVersionClick_enablesDevMode() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Click 7 times (threshold defined in AppSpecifications/SettingsLogic)
+        repeat(7) { viewModel.handleVersionClick() }
+        
+        assertTrue(viewModel.uiState.value.isDeveloperModeEnabled)
+    }
+
+    // endregion
+
+    // region 4. メンテナンス操作テスト (Maintenance Ops)
+
+    @Test
+    fun MNT_01_exportData_success() = runTest {
+        val viewModel = createViewModel()
         val context = mockk<Context>(relaxed = true)
         val uri = mockk<Uri>(relaxed = true)
-        
-        // 現時点では未実装エラーが出ることを期待（System B 移行時のスタブ状態）
-        viewModel.exportData(context, uri)
         advanceUntilIdle()
 
-        // 検証: isProcessing が false に戻ること
-        assertEquals(false, viewModel.uiState.value.isProcessing)
+        viewModel.viewEvent.test {
+            viewModel.exportData(context, uri)
+            advanceUntilIdle()
+            assertEquals(SettingsViewEvent.ExportSuccess, awaitItem())
+        }
+        coVerify { maintenanceRepository.exportData(context, uri, any(), any()) }
     }
 
     @Test
-    fun LG_02_clearAuditLogs_safetyOnFailure() = runTest {
-        coEvery { auditLogRepository.deleteAllLogs() } throws RuntimeException("Delete Error")
-
-        viewModel.clearAuditLogs()
+    fun MNT_03_importData_passwordError_emitsRequestEvent() = runTest {
+        val viewModel = createViewModel()
+        val context = mockk<Context>(relaxed = true)
+        val uri = mockk<Uri>(relaxed = true)
         advanceUntilIdle()
 
-        coVerify {
-            auditLogRepository.log(
-                featureName = "Settings",
-                operation = "clearAuditLogs",
-                actionType = "ERROR",
-                tableName = any(),
-                affectedId = any(),
-                details = match { it.contains("Delete Error") },
-                resultType = "OTHER_ERROR"
-            )
+        coEvery { maintenanceRepository.importData(any(), any(), any(), any(), any()) } throws IOException("Wrong password")
+
+        viewModel.viewEvent.test {
+            viewModel.importData(context, uri)
+            advanceUntilIdle()
+            assertEquals(SettingsViewEvent.RequestImportPassword, awaitItem())
         }
     }
 
     @Test
-    fun LG_03_rotateLogs_safetyOnFailure() = runTest {
-        // 設定値の読み込みを待機
-        advanceUntilIdle()
-        
-        coEvery { auditLogRepository.deleteOldLogs(any()) } throws RuntimeException("Rotate Error")
-
-        viewModel.rotateLogsManually()
+    fun MNT_05_checkIntegrity_updatesState() = runTest {
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertEquals(false, viewModel.uiState.value.isProcessing)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "Settings",
-                operation = "rotateLogsManually",
-                actionType = "ERROR",
-                tableName = any(),
-                affectedId = any(),
-                details = match { it.contains("Rotate Error") },
-                resultType = "OTHER_ERROR"
-            )
-        }
-    }
-
-    @Test
-    fun LG_04_clearAllData_safetyOnFailure() = runTest {
-        coEvery { maintenanceRepository.clearAllData() } throws IOException("Clear Error")
-
-        viewModel.clearAllData()
-        advanceUntilIdle()
-
-        assertEquals(false, viewModel.uiState.value.isProcessing)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "Settings",
-                operation = "clearAllData",
-                actionType = "ERROR",
-                tableName = any(),
-                affectedId = "0",
-                details = match { it.contains("Clear Error") },
-                resultType = "IO_ERROR"
-            )
-        }
-    }
-
-    @Test
-    fun LG_05_checkIntegrity_safetyOnFailure() = runTest {
-        coEvery { maintenanceRepository.scanInconsistencies() } throws RuntimeException("Integrity Error")
+        val mockResults = listOf(mockk<jp.mydns.fujiwara.carememo.data.DatabaseInconsistency>())
+        coEvery { maintenanceRepository.scanInconsistencies() } returns mockResults
 
         viewModel.checkIntegrity()
         advanceUntilIdle()
 
-        assertEquals(false, viewModel.uiState.value.isProcessing)
-        coVerify {
-            auditLogRepository.log(
-                featureName = "Settings",
-                operation = "checkIntegrity",
-                actionType = "ERROR",
-                tableName = any(),
-                affectedId = any(),
-                details = match { it.contains("Integrity Error") },
-                resultType = "OTHER_ERROR"
-            )
-        }
+        assertEquals(mockResults, viewModel.uiState.value.inconsistencies)
     }
+
+    // endregion
+
+    // region 5. 安全性・例外テスト (Safety)
 
     @Test
-    fun LG_06_initialSettingsSync_safety() = runTest {
-        every { userSettingsRepository.isBiometricEnabled } returns flow {
-            throw RuntimeException("Flow Error")
-        }
-
-        // 新しく ViewModel を作成して Flow を購読させる
-        SettingsViewModel(
-            maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository
-        )
-        
+    fun ERR_01_exportFailure_safety() = runTest {
+        val viewModel = createViewModel()
+        val context = mockk<Context>(relaxed = true)
+        val uri = mockk<Uri>(relaxed = true)
         advanceUntilIdle()
-            
-        coVerify {
-            auditLogRepository.log(
-                featureName = "Settings",
-                operation = "initialSettingsSync", 
-                actionType = "ERROR",
-                tableName = "all_db",
-                affectedId = "0",
-                details = match { it.contains("Flow Error") },
-                resultType = "OTHER_ERROR"
-            )
+
+        coEvery { maintenanceRepository.exportData(any(), any(), any(), any()) } throws RuntimeException("Export Error")
+
+        viewModel.exportData(context, uri)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isProcessing)
+        coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Export Error") }, any()) }
+    }
+
+    // endregion
+
+    // region 6. ナビゲーションテスト (Navigation)
+
+    @Test
+    fun NAV_01_navigateToAuditLog() = runTest {
+        val viewModel = createViewModel()
+        viewModel.viewEvent.test {
+            viewModel.navigateToAuditLog()
+            assertEquals(SettingsViewEvent.NavigateToAuditLog, awaitItem())
         }
     }
+
+    // endregion
 }

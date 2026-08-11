@@ -10,8 +10,10 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 /**
- * バックアップデータのJSONシリアライズ・デシリアライズを検証するテスト。
- * データの「命綱」が壊れていないことを保証する。
+ * Unit Test: Backup/Restore Integrity (UT-03)
+ * 
+ * Ensures that data serialization to JSON maintains perfect precision (down to the millisecond)
+ * and that complex data structures are restored exactly as they were.
  */
 class CareMemoBackupTest {
 
@@ -21,18 +23,18 @@ class CareMemoBackupTest {
     }
 
     @Test
-    fun InstantSerializer_日時の文字列化と復元が1ミリ秒の狂いもなく行われること() {
+    fun UT_03_01_instantSerializer_precision() {
         val original = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val serialized = json.encodeToString(InstantSerializer, original)
         val deserialized = json.decodeFromString(InstantSerializer, serialized)
         
-        assertEquals("シリアライズ前後で日時が一致すること", original, deserialized)
-        // JSON形式がISO-8601であることを確認
+        assertEquals("Date-time should match exactly before and after serialization", original, deserialized)
+        // Verify ISO-8601 format
         assertEquals("\"$original\"", serialized)
     }
 
     @Test
-    fun CareMemoBackup_複雑なデータ構造が完全に復元されること() {
+    fun UT_03_02_backupRestore_fullDataStructure() {
         val now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
         
         val backup = CareMemoBackup(
@@ -56,20 +58,13 @@ class CareMemoBackupTest {
             )
         )
 
-        // シリアライズ
+        // Serialize
         val jsonString = json.encodeToString(backup)
         
-        // デシリアライズ
+        // Deserialize
         val restored = json.decodeFromString<CareMemoBackup>(jsonString)
 
-        // 検証
-        assertEquals(backup.version, restored.version)
-        assertEquals(backup.persons[0].lastName, restored.persons[0].lastName)
-        assertEquals(backup.heightAndWeights[0].height, restored.heightAndWeights[0].height)
-        assertEquals(backup.conditionAtVisits[0].author, restored.conditionAtVisits[0].author)
-        assertEquals(backup.medicationRecords[0].dosageDate, restored.medicationRecords[0].dosageDate)
-        
-        // 全体一致の確認 (Data Class の equals)
+        // Verify full equality
         assertEquals(backup, restored)
     }
 }
