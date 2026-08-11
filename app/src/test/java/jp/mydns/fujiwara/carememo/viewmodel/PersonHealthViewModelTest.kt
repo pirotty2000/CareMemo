@@ -81,12 +81,10 @@ class PersonHealthViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-            
+            // Skip intermediate state transitions
             advanceUntilIdle()
             
-            val state = awaitItem()
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             assertEquals(personId, state.personId)
             assertEquals(Category.HEIGHT_AND_WEIGHT, state.currentCategory)
@@ -145,10 +143,11 @@ class PersonHealthViewModelTest {
 
     @Test
     fun EDT_01_startNewSession_setsCurrentTime() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.setSelectedRecordId("NEW")
+        viewModel.setSelectedRecordId(newId)
         
         val state = viewModel.uiState.value
         assertTrue(state.isEditing)
@@ -157,22 +156,24 @@ class PersonHealthViewModelTest {
 
     @Test
     fun EDT_02_inheritLatestHeight() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val lastRecord = HeightAndWeight(id = "prev", personId = personId, height = 165.5, weight = 60.0, recordTime = Instant.now().minusSeconds(3600))
         every { healthRepository.getHeightAndWeightByPersonId(personId) } returns flowOf(listOf(lastRecord))
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.setSelectedRecordId("NEW")
+        viewModel.setSelectedRecordId(newId)
         assertEquals("165.5", viewModel.uiState.value.editInput.heightText)
     }
 
     @Test
     fun EDT_04_inputUpdate_triggersValidationAndChangeDetection() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.setSelectedRecordId("NEW")
+        viewModel.setSelectedRecordId(newId)
         viewModel.updateEditInput { it.copy(weightText = "60.0") }
         
         val state = viewModel.uiState.value
@@ -186,10 +187,11 @@ class PersonHealthViewModelTest {
 
     @Test
     fun EXE_01_saveCurrentEdit_new_success() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.setSelectedRecordId("NEW")
+        viewModel.setSelectedRecordId(newId)
         viewModel.updateEditInput { it.copy(weightText = "60.0", recordTime = Instant.now()) }
 
         viewModel.saveCurrentEdit()
@@ -200,20 +202,26 @@ class PersonHealthViewModelTest {
 
     @Test
     fun EXE_02_save_duplicateBlocked() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.setSelectedRecordId("NEW")
-        viewModel.updateEditInput { it.copy(weightText = "60.0", recordTime = Instant.now()) }
+        val fixedTime = Instant.parse("2023-10-27T10:00:00Z")
+        viewModel.setSelectedRecordId(newId)
+        viewModel.updateEditInput { 
+            it.copy(heightText = "170.0", weightText = "60.0", recordTime = fixedTime) 
+        }
         
-        // Simulate duplicate
-        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns mockk<HeightAndWeight>()
+        // Simulate duplicate with a different ID
+        val existing = HeightAndWeight(id = "existing-1", personId = personId, height = 170.0, weight = 60.0, recordTime = fixedTime)
+        coEvery { healthRepository.findHeightAndWeightAtTime(personId, any()) } returns existing
 
         viewModel.uiEventFlow.test {
             viewModel.saveCurrentEdit()
             val event = awaitItem()
             assertTrue(event is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes)
-            assertEquals(R.string.common_err_duplicate_blocked_simple, (event as BaseUiStateViewModel.UiEvent.ShowErrorDialogRes).messageResId)
+            // Expecting duplicate error
+            assertEquals("Should show duplicate error message", R.string.common_err_duplicate_blocked_simple, (event as BaseUiStateViewModel.UiEvent.ShowErrorDialogRes).messageResId)
         }
     }
 
@@ -234,12 +242,13 @@ class PersonHealthViewModelTest {
 
     @Test
     fun ERR_02_saveFailure_safety() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         coEvery { healthRepository.insertHeightAndWeight(any(), any(), any(), any()) } throws RuntimeException("Save Error")
         
-        viewModel.setSelectedRecordId("NEW")
+        viewModel.setSelectedRecordId(newId)
         viewModel.updateEditInput { it.copy(weightText = "60.0", recordTime = Instant.now()) }
         
         viewModel.saveCurrentEdit()

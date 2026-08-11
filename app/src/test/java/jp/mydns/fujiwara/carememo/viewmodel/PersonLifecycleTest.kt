@@ -123,7 +123,7 @@ class PersonLifecycleTest {
             userSettingsRepository, 
             auditLogRepository,
             mockk<Context>(relaxed = true),
-            mockk(relaxed = true)
+            SavedStateHandle()
         )
         
         every { personRepository.getPersonById("1") } returns flowOf(Person(id = "1", lastName = "A", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now()))

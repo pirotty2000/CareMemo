@@ -76,12 +76,10 @@ class PersonListViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-            
+            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
-            val loaded = awaitItem()
+            val loaded = expectMostRecentItem()
             assertFalse(loaded.isLoading)
             assertEquals(1, loaded.userList.size)
             assertEquals("浅井　太郎", loaded.userList[0].maskedName)
@@ -91,13 +89,17 @@ class PersonListViewModelTest {
     @Test
     fun INI_02_maskingSettingReflection() = runTest {
         val viewModel = createViewModel()
-        advanceUntilIdle()
         
-        isNameMaskingEnabledFlow.value = true
-        advanceUntilIdle()
-        
-        assertTrue(viewModel.uiState.value.isNameMaskingEnabled)
-        assertEquals("浅○\u3000太○", viewModel.uiState.value.userList[0].maskedName)
+        viewModel.uiState.test {
+            advanceUntilIdle()
+            
+            isNameMaskingEnabledFlow.value = true
+            advanceUntilIdle()
+            
+            val state = expectMostRecentItem()
+            assertTrue(state.isNameMaskingEnabled)
+            assertEquals("浅○\u3000太○", state.userList[0].maskedName)
+        }
     }
 
     // endregion

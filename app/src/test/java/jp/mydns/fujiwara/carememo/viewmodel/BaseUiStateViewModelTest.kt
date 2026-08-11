@@ -79,12 +79,16 @@ class BaseUiStateViewModelTest {
     @Test
     fun SET_01_maskingSetting_isSynced() = runTest {
         val viewModel = createViewModel()
-        advanceUntilIdle()
-        assertTrue(viewModel.isNameMaskingEnabled.value)
-
-        isNameMaskingEnabledFlow.value = false
-        advanceUntilIdle()
-        assertFalse(viewModel.isNameMaskingEnabled.value)
+        
+        // Use turbine to subscribe to the Flow, keeping it active (triggering WhileSubscribed)
+        viewModel.isNameMaskingEnabled.test {
+            // Initial value
+            assertTrue(awaitItem())
+            
+            isNameMaskingEnabledFlow.value = false
+            // Should emit the new value
+            assertFalse(awaitItem())
+        }
     }
 
     // endregion

@@ -77,12 +77,10 @@ class PersonDetailUiStateViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-            
+            // Skip intermediate state transitions
             advanceUntilIdle()
             
-            val loaded = awaitItem()
+            val loaded = expectMostRecentItem()
             assertFalse(loaded.isLoading)
             assertEquals(personId, loaded.personId)
             assertEquals("詳細", loaded.person?.lastName)

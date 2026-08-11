@@ -127,8 +127,9 @@ class PersonConditionLogicTest {
 
     @Test
     fun CRT_03_createRecord_newId() {
-        val result = PersonConditionLogic.createRecord("p1", "NEW", sampleInput)
-        assertNotEquals("NEW", result.id)
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val result = PersonConditionLogic.createRecord("p1", newId, sampleInput)
+        assertNotEquals(newId, result.id)
         assertFalse(IdLogic.isNew(result.id))
     }
 

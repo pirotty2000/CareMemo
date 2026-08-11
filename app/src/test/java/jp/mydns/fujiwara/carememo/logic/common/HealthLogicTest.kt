@@ -162,7 +162,8 @@ class HealthLogicTest {
 
     @Test
     fun VLD_04_validateInput_outOfRange_over() {
-        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("170", "1000"))
+        // Use a value that is 3 digits (valid format) but over max (300.0)
+        assertEquals(HealthInputValidationResult.OUT_OF_RANGE, HealthLogic.validateHeightAndWeight("170", "350"))
     }
 
     // endregion

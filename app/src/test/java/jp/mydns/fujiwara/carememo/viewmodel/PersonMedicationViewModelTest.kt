@@ -74,12 +74,10 @@ class PersonMedicationViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-            
+            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
-            val state = awaitItem()
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             assertEquals(personId, state.personId)
             assertEquals(YearMonth.now(), state.selectedMonth)

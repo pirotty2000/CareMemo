@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
@@ -52,13 +53,15 @@ class PersonHealthLogicTest {
 
     @Test
     fun DUP_01_validateDuplicate_noExisting() {
-        val current = HeightAndWeight(id = "NEW", personId = "u1", height = null, weight = null, recordTime = now)
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val current = HeightAndWeight(id = newId, personId = "u1", height = null, weight = null, recordTime = now)
         assertEquals(HealthValidationResult.SUCCESS, PersonHealthLogic.validateDuplicate(current, null))
     }
 
     @Test
     fun DUP_02_validateDuplicate_collisionNew() {
-        val current = HeightAndWeight(id = "NEW", personId = "u1", height = null, weight = null, recordTime = now)
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val current = HeightAndWeight(id = newId, personId = "u1", height = null, weight = null, recordTime = now)
         val existing = HeightAndWeight(id = "persisted-1", personId = "u1", height = null, weight = null, recordTime = now)
         assertEquals(HealthValidationResult.DUPLICATE_TIME, PersonHealthLogic.validateDuplicate(current, existing))
     }
@@ -117,10 +120,11 @@ class PersonHealthLogicTest {
 
     @Test
     fun CRT_02_createEntity_newId() {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val values = emptyMap<String, Any?>()
-        val result = PersonHealthLogic.createEntity(Category.HEIGHT_AND_WEIGHT, "u1", "NEW", now, values) as HeightAndWeight
+        val result = PersonHealthLogic.createEntity(Category.HEIGHT_AND_WEIGHT, "u1", newId, now, values) as HeightAndWeight
         
-        assertNotEquals("NEW", result.id)
+        assertNotEquals(newId, result.id)
         assertFalse(IdLogic.isNew(result.id))
     }
 

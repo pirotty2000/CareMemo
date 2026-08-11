@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import org.junit.Assert.*
@@ -162,14 +163,16 @@ class PersonListLogicTest {
 
     @Test
     fun DUP_01_validateDuplicate_noDuplicate() {
-        val input = Person(id = "NEW", lastName = "新規", firstName = "太郎", lastNameFurigana = "しんき", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val input = Person(id = newId, lastName = "新規", firstName = "太郎", lastNameFurigana = "しんき", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val result = PersonListLogic.validateDuplicate(input, null)
         assertEquals(PersonDuplicateResult.SUCCESS, result)
     }
 
     @Test
     fun DUP_02_validateDuplicate_activeDuplicate() {
-        val input = Person(id = "NEW", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val input = Person(id = newId, lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val existing = Person(id = "persisted-1", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday, deletedAt = null)
         val result = PersonListLogic.validateDuplicate(input, existing)
         assertEquals(PersonDuplicateResult.DUPLICATE_ACTIVE, result)
@@ -177,7 +180,8 @@ class PersonListLogicTest {
 
     @Test
     fun DUP_03_validateDuplicate_archivedDuplicate() {
-        val input = Person(id = "NEW", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val input = Person(id = newId, lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday)
         val existing = Person(id = "persisted-1", lastName = "既存", firstName = "太郎", lastNameFurigana = "きぞん", firstNameFurigana = "たろう", birthday = defaultBirthday, deletedAt = 12345L)
         val result = PersonListLogic.validateDuplicate(input, existing)
         assertEquals(PersonDuplicateResult.DUPLICATE_ARCHIVED, result)

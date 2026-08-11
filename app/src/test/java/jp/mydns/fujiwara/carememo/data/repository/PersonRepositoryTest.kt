@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.data.repository
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonDao
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -74,8 +75,9 @@ class PersonRepositoryTest {
 
     @Test
     fun DUP_01_findExistingPerson_usesDateRange() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val birthday = Instant.parse("1950-01-01T12:00:00Z")
-        val person = createSamplePerson("NEW").copy(birthday = birthday)
+        val person = createSamplePerson(newId).copy(birthday = birthday)
         
         repository.findExistingPerson(person)
 

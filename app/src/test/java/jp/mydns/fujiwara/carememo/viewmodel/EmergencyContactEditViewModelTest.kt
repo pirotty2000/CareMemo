@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -81,11 +82,18 @@ class EmergencyContactEditViewModelTest {
     @Test
     fun INI_01_INI_02_loadPersonAndContacts() = runTest {
         val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        assertEquals("山田　太郎", viewModel.uiState.value.personName)
-        assertEquals(1, viewModel.uiState.value.contacts.size)
-        assertEquals("A病院", viewModel.uiState.value.contacts[0].facilityName)
+        
+        viewModel.uiState.test {
+            // Skip intermediate state transitions during initialization
+            advanceUntilIdle()
+            
+            val state = expectMostRecentItem()
+            assertFalse(state.isLoading)
+            // Expecting unmasked name as mock is set to false
+            assertEquals("山田　太郎", state.personName)
+            assertEquals(1, state.contacts.size)
+            assertEquals("A病院", state.contacts[0].facilityName)
+        }
     }
 
     @Test
@@ -99,14 +107,15 @@ class EmergencyContactEditViewModelTest {
 
     @Test
     fun INI_04_startAddAtLaunchWithNullContactId() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val handle = SavedStateHandle(mapOf("personId" to personId))
-        handle["contactId"] = null // Simulate optional param present but null
+        handle["contactId"] = null 
 
         val viewModel = EmergencyContactEditViewModel(handle, emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository)
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.isEditing)
-        assertEquals("NEW", viewModel.uiState.value.editingContact?.id)
+        assertEquals(newId, viewModel.uiState.value.editingContact?.id)
     }
 
     // endregion
@@ -115,12 +124,13 @@ class EmergencyContactEditViewModelTest {
 
     @Test
     fun EDT_01_startAdd() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.startAdd()
         val state = viewModel.uiState.value
-        assertEquals("NEW", state.editingContact?.id)
+        assertEquals(newId, state.editingContact?.id)
         assertTrue(state.isEditing)
     }
 
@@ -154,6 +164,7 @@ class EmergencyContactEditViewModelTest {
 
     @Test
     fun SAV_01_saveContact_new() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 

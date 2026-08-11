@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.data.repository
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.EmergencyContactDao
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -27,7 +28,8 @@ class EmergencyContactRepositoryTest {
 
     @Test
     fun CUR_01_insertContact_newRecord() = runTest {
-        val contact = createSampleContact("NEW")
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val contact = createSampleContact(newId)
         coEvery { emergencyContactDao.insert(any()) } returns 1L
 
         repository.insertContact(contact, "Feature", "Op")

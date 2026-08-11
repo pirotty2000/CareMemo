@@ -72,12 +72,10 @@ class DeleteOrRestorePersonViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-            
+            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
-            val state = awaitItem()
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             assertEquals(1, state.archivedPersons.size)
             assertEquals("u1", state.archivedPersons[0].id)

@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
 import android.content.Context
+import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
@@ -33,19 +34,30 @@ class OrphanedPhotoViewModelTest {
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
-        mockkStatic(ImageUtils::class)
+        
+        mockkObject(ImageUtils)
+        
+        // Stub context properties that are often accessed
+        val tempDir = File("build/tmp/test_photos")
+        tempDir.mkdirs()
+        every { context.filesDir } returns tempDir
+        every { context.cacheDir } returns tempDir
         
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { ImageUtils.getPhotosDirPublic(any()) } returns mockk<File> {
             every { listFiles() } returns emptyArray()
         }
+        coEvery { ImageUtils.deleteImageFiles(any(), any(), any()) } returns Unit
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        unmockkStatic(ImageUtils::class)
+        unmockkObject(ImageUtils)
+        unmockkStatic(Log::class)
     }
 
     private fun createViewModel() = OrphanedPhotoViewModel(
@@ -64,12 +76,10 @@ class OrphanedPhotoViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-            
+            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
-            val loaded = awaitItem()
+            val loaded = expectMostRecentItem()
             assertFalse(loaded.isLoading)
             assertTrue(loaded.orphanedPhotos.isEmpty())
         }

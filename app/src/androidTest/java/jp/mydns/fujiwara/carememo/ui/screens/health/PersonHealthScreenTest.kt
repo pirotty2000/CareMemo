@@ -4,9 +4,12 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -103,10 +106,11 @@ class PersonHealthScreenTest {
 
     @Test
     fun ACT_04_saveButton_triggersViewModel() {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
         // Set state to editing with valid input
         every { healthViewModel.uiState } returns MutableStateFlow(
-            PersonHealthUiState(selectedRecordId = "NEW", isEditing = true, isSaveEnabled = true)
+            PersonHealthUiState(selectedRecordId = newId, isEditing = true, isSaveEnabled = true)
         )
         every { healthViewModel.viewEvent } returns MutableSharedFlow()
         every { healthViewModel.uiEventFlow } returns MutableSharedFlow()

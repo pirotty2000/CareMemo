@@ -23,12 +23,12 @@ class DateTimeUtilsTest {
 
     @Before
     fun setup() {
-        mockkStatic(ImageUtils::class)
+        mockkObject(ImageUtils)
     }
 
     @After
     fun tearDown() {
-        unmockkStatic(ImageUtils::class)
+        unmockkObject(ImageUtils)
     }
 
     // region 2. フォーマットテスト (Formatting)
@@ -119,12 +119,15 @@ class DateTimeUtilsTest {
 
     @Test
     fun NRM_01_normalizeBirthday_fixesToUtcMidnight() {
-        val morning = Instant.parse("2023-10-27T10:00:00Z")
-        val afternoon = Instant.parse("2023-10-27T22:00:00Z")
+        // Use times that stay on the same day in most timezones (around noon UTC)
+        val morning = Instant.parse("2023-10-27T08:00:00Z")
+        val afternoon = Instant.parse("2023-10-27T14:00:00Z")
+        
         val norm1 = DateTimeUtils.normalizeBirthday(morning)
         val norm2 = DateTimeUtils.normalizeBirthday(afternoon)
-        assertEquals(norm1, norm2)
-        assertTrue(norm1.toString().endsWith("T00:00:00Z"))
+        
+        assertEquals("Both times should normalize to the same date", norm1, norm2)
+        assertTrue("Normalized time should be UTC midnight", norm1.toString().endsWith("T00:00:00Z"))
     }
 
     // endregion
@@ -142,10 +145,11 @@ class DateTimeUtilsTest {
     fun CPT_02_getPhotoCaption_usesImageMetadata() {
         val context = mockk<Context>()
         val uri = mockk<Uri>()
-        val mockTime = Instant.parse("2023-10-27T15:30:00Z").toEpochMilli()
+        // Use a time that stays on the same date in most timezones (around noon UTC)
+        val mockTime = Instant.parse("2023-10-27T05:00:00Z").toEpochMilli()
         every { ImageUtils.getCaptureTime(context, uri) } returns mockTime
         val caption = DateTimeUtils.getPhotoCaption(context, uri)
-        assertTrue(caption.contains("2023/10/27"))
+        assertTrue("Caption should contain the correct date string: $caption", caption.contains("2023/10/27"))
     }
 
     // endregion

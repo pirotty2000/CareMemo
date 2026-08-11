@@ -1,5 +1,15 @@
 # Ver.3.2.1 (2026/08/11)
-- テスト仕様・テストプログラムの精査
+- 不具合修正・仕様変更
+- PersonListLogic：getSection において、小書き文字（拗音・促音：ぁ、ゃ、っ、ゎ 等）が「他」に分類されていた問題を修正
+- HealthLogic：低血糖（血糖値 70mg/dL 未満）のアラートレベルを INFO から ALERT へ引き上げ
+- PhoneNumberVisualTransformation：フリーダイヤル（0120）およびフリーコール（0800）に対応した 4-3-3 形式 のハイフン挿入を追加、等
+- PersonBaseUiStateViewModel：loadPerson メソッドの冒頭に、現在ロード済みの ID と同一の場合は処理をスキップするガード節を追加
+- PersonConditionViewModel：onPrepareLoadPerson をオーバーライドし、検索クエリや入力中のテキストを明示的にクリアするように修正
+- EmergencyContactEditViewModel：personName の取得を first()（一度きり）から、設定 Flow との combine による継続監視に変更
+- AuditLogRepository：allLogs プロパティを val（固定）からカスタムゲッター（get()）に変更
+- DeleteOrRestorePersonRepository：コンストラクタに EmergencyContactDao を追加
+- EmergencyContactMapping：コンストラクタに EmergencyContactDao を追加
+- 各 ScreenPhone.kt / ScreenTablet.kt：ルート要素（Scaffold）に対して testTag（例：HealthScreen_PhoneContent）を追加
 
 # Ver.3.2.0 (2026/08/11)
 

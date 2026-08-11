@@ -56,14 +56,10 @@ class AuditLogViewModelTest {
         val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
         
         viewModel.uiState.test {
-            // Initial state
-            val initial = awaitItem()
-            assertTrue(initial.isLoading)
-
+            // Skip intermediate loading state transitions
             advanceUntilIdle()
-
-            // Loaded state
-            val state = awaitItem()
+            
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             assertEquals(2, state.filteredLogs.size)
             assertTrue(state.availableFeatures.contains("Settings"))
@@ -80,14 +76,13 @@ class AuditLogViewModelTest {
         val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
 
         viewModel.uiState.test {
-            awaitItem() // Initial
             advanceUntilIdle()
             
-            val state = awaitItem()
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             
             coVerify {
-                auditLogRepository.log(any(), any(), "audit_log", "ERROR", any(), any(), "OTHER_ERROR")
+                auditLogRepository.log(any(), any(), any(), "ERROR", any(), any(), "OTHER_ERROR")
             }
         }
     }

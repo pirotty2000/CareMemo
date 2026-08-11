@@ -93,10 +93,10 @@ class PersonEditViewModelTest {
         val viewModel = createViewModel("u1")
         
         viewModel.uiState.test {
-            awaitItem() // Skip initial state
+            // Skip intermediate state transitions during loading
             advanceUntilIdle()
             
-            val loaded = awaitItem()
+            val loaded = expectMostRecentItem()
             assertFalse(loaded.isNew)
             assertEquals("山田", loaded.lastName)
             assertEquals("25", loaded.year) // 1950 is Showa 25
@@ -140,14 +140,15 @@ class PersonEditViewModelTest {
 
         viewModel.updateLastName("佐藤")
         viewModel.updateFirstName("花子")
-        viewModel.updateLastNameFurigana("サトウ")
-        viewModel.updateFirstNameFurigana("ハナコ")
+        viewModel.updateLastNameFurigana("さとう")
+        viewModel.updateFirstNameFurigana("はなこ")
+        // Use a valid Reiwa date (Reiwa 1 starts from May 1st)
         viewModel.updateYear("1")
-        viewModel.updateMonth("1")
+        viewModel.updateMonth("5")
         viewModel.updateDay("1")
         viewModel.updateEra(BirthEra.REIWA)
         
-        assertTrue(viewModel.uiState.value.isValid)
+        assertTrue("Input should be valid with full correct data", viewModel.uiState.value.isValid)
     }
 
     // endregion
@@ -162,10 +163,11 @@ class PersonEditViewModelTest {
         // Setup valid state
         viewModel.updateLastName("A")
         viewModel.updateFirstName("B")
-        viewModel.updateLastNameFurigana("A")
-        viewModel.updateFirstNameFurigana("B")
+        viewModel.updateLastNameFurigana("あ")
+        viewModel.updateFirstNameFurigana("い")
+        viewModel.updateEra(BirthEra.REIWA)
         viewModel.updateYear("1")
-        viewModel.updateMonth("1")
+        viewModel.updateMonth("5")
         viewModel.updateDay("1")
 
         viewModel.viewEvent.test {
@@ -185,13 +187,14 @@ class PersonEditViewModelTest {
         val viewModel = createViewModel("_new")
         advanceUntilIdle()
 
-        // Setup valid state
+        // Setup valid state (Reiwa 1/5/1 is valid)
         viewModel.updateLastName("Duplicate")
         viewModel.updateFirstName("User")
-        viewModel.updateLastNameFurigana("D")
-        viewModel.updateFirstNameFurigana("U")
+        viewModel.updateLastNameFurigana("あ")
+        viewModel.updateFirstNameFurigana("い")
+        viewModel.updateEra(BirthEra.REIWA)
         viewModel.updateYear("1")
-        viewModel.updateMonth("1")
+        viewModel.updateMonth("5")
         viewModel.updateDay("1")
 
         // Mock active duplicate
