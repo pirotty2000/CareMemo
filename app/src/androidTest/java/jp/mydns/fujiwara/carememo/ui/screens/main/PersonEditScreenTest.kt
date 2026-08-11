@@ -114,7 +114,7 @@ class PersonEditScreenTest {
     fun NAV_01_navigateBack_onSuccessEvent() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
         val navController = mockk<NavHostController>(relaxed = true)
-        val viewEventFlow = MutableSharedFlow<PersonEditViewEvent>()
+        val viewEventFlow = MutableSharedFlow<PersonEditViewEvent>(extraBufferCapacity = 1)
         
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
         every { viewModel.viewEvent } returns viewEventFlow
@@ -130,13 +130,14 @@ class PersonEditScreenTest {
             viewEventFlow.tryEmit(PersonEditViewEvent.NavigateBack(jp.mydns.fujiwara.carememo.ui.navigation.EditResult.ADDED))
         }
         
+        composeTestRule.waitForIdle()
         verify { navController.popBackStack() }
     }
 
     @Test
     fun EVT_01_duplicateWarning_isDisplayed() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>()
+        val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
         
         every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
         every { viewModel.uiEventFlow } returns uiEventFlow
@@ -155,6 +156,7 @@ class PersonEditScreenTest {
             ))
         }
 
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("PersonEdit_DuplicateDialog").assertIsDisplayed()
     }
 

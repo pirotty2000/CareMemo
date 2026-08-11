@@ -14,6 +14,7 @@ import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
 import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,10 +77,15 @@ class PersonConditionScreenTest {
 
     @Test
     fun CPN_03_photoList_showsPlaceholder_whenEmpty() {
+        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "Morning", condition = "Good", author = "Staff A", recordTime = Instant.now())
         composeTestRule.setContent {
             CareMemoTheme {
                 ConditionDetailPane(
-                    uiState = PersonConditionUiState(selectedConditionId = "c1", isEditing = false),
+                    uiState = PersonConditionUiState(
+                        records = listOf(record).toImmutableList(),
+                        selectedConditionId = "c1", 
+                        isEditing = false
+                    ),
                     onDeletePhoto = {},
                     onSelectedIdChange = {},
                     onCancel = {},
@@ -102,17 +108,22 @@ class PersonConditionScreenTest {
 
     @Test
     fun ACT_01_memoInput_triggersViewModel() {
-        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(selectedConditionId = "c1", isEditing = true))
-        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
-        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
+        val detailViewModel = createMockDetailViewModel()
+        val conditionViewModel = createMockConditionViewModel()
+        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "", condition = "", author = "", recordTime = Instant.now())
+        
+        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
+        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
+            personId = "p1", 
+            records = persistentListOf(record),
+            selectedConditionId = "c1", 
+            isEditing = true
+        ))
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreen(
-                    detailViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonDetailUiState())
-                    },
+                    detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
@@ -126,17 +137,23 @@ class PersonConditionScreenTest {
 
     @Test
     fun ACT_03_saveButton_triggersViewModel() {
-        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(selectedConditionId = "c1", isEditing = true, isSaveEnabled = true))
-        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
-        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
+        val detailViewModel = createMockDetailViewModel()
+        val conditionViewModel = createMockConditionViewModel()
+        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "", condition = "", author = "", recordTime = Instant.now())
+        
+        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
+        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
+            personId = "p1", 
+            records = persistentListOf(record),
+            selectedConditionId = "c1", 
+            isEditing = true, 
+            isSaveEnabled = true
+        ))
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreen(
-                    detailViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonDetailUiState())
-                    },
+                    detailViewModel = detailViewModel,
                     conditionViewModel = conditionViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
@@ -154,20 +171,15 @@ class PersonConditionScreenTest {
 
     @Test
     fun NAV_03_backButton_navigatesBack() {
-        val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
+        val detailViewModel = createMockDetailViewModel()
+        val conditionViewModel = createMockConditionViewModel()
         val navController = mockk<NavHostController>(relaxed = true)
-        
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState())
         
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreen(
                     detailViewModel = detailViewModel,
-                    conditionViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonConditionUiState())
-                        every { viewEvent } returns MutableSharedFlow()
-                        every { uiEventFlow } returns MutableSharedFlow()
-                    },
+                    conditionViewModel = conditionViewModel,
                     navController = navController,
                     widthSizeClass = WindowWidthSizeClass.Compact
                 )
@@ -182,17 +194,32 @@ class PersonConditionScreenTest {
 
     // --- Helpers ---
 
+    private fun createMockDetailViewModel(): PersonDetailUiStateViewModel {
+        return mockk<PersonDetailUiStateViewModel>(relaxed = true).apply {
+            every { uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
+            every { defaultRecorderName } returns MutableStateFlow("")
+            every { viewEvent } returns MutableSharedFlow()
+            every { uiEventFlow } returns MutableSharedFlow()
+        }
+    }
+
+    private fun createMockConditionViewModel(): PersonConditionViewModel {
+        return mockk<PersonConditionViewModel>(relaxed = true).apply {
+            every { uiState } returns MutableStateFlow(PersonConditionUiState(personId = "p1"))
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
+            every { defaultRecorderName } returns MutableStateFlow("")
+            every { viewEvent } returns MutableSharedFlow()
+            every { uiEventFlow } returns MutableSharedFlow()
+        }
+    }
+
     private fun setContent(
         widthClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
         navController: NavHostController = mockk(relaxed = true)
     ) {
-        val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
-        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState())
-        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState())
-        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
-        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
+        val detailViewModel = createMockDetailViewModel()
+        val conditionViewModel = createMockConditionViewModel()
 
         composeTestRule.setContent {
             CareMemoTheme {

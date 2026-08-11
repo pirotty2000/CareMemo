@@ -4,12 +4,14 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
+import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,8 +67,9 @@ class PersonMedicationScreenTest {
                 )
             }
         }
-        // "2024年1月" should be visible in the header
-        composeTestRule.onNodeWithText("2024年1月", substring = true).assertIsDisplayed()
+        // Use the actual utility to get the expected header string (it includes the era)
+        val expectedHeader = DateTimeUtils.formatYearMonthHeader(month)
+        composeTestRule.onNodeWithText(expectedHeader, substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -96,17 +99,15 @@ class PersonMedicationScreenTest {
 
     @Test
     fun ACT_01_nextMonthButton_triggersViewModel() {
-        val medicationViewModel = mockk<PersonMedicationViewModel>(relaxed = true)
-        every { medicationViewModel.uiState } returns MutableStateFlow(PersonMedicationUiState())
-        every { medicationViewModel.viewEvent } returns MutableSharedFlow()
-        every { medicationViewModel.uiEventFlow } returns MutableSharedFlow()
+        val detailViewModel = createMockDetailViewModel()
+        val medicationViewModel = createMockMedicationViewModel()
+        
+        every { medicationViewModel.uiState } returns MutableStateFlow(PersonMedicationUiState(personId = "p1"))
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreen(
-                    detailViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonDetailUiState())
-                    },
+                    detailViewModel = detailViewModel,
                     medicationViewModel = medicationViewModel, 
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
@@ -125,18 +126,14 @@ class PersonMedicationScreenTest {
 
     @Test
     fun NAV_01_backButton_navigatesBack() {
-        val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState())
+        val detailViewModel = createMockDetailViewModel()
+        val medicationViewModel = createMockMedicationViewModel()
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonMedicationScreen(
                     detailViewModel = detailViewModel,
-                    medicationViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonMedicationUiState())
-                        every { viewEvent } returns MutableSharedFlow()
-                        every { uiEventFlow } returns MutableSharedFlow()
-                    },
+                    medicationViewModel = medicationViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
                 )
@@ -151,17 +148,34 @@ class PersonMedicationScreenTest {
 
     // --- Helpers ---
 
+    private fun createMockDetailViewModel(): PersonDetailUiStateViewModel {
+        return mockk<PersonDetailUiStateViewModel>(relaxed = true).apply {
+            every { uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
+            every { defaultRecorderName } returns MutableStateFlow("")
+            every { viewEvent } returns MutableSharedFlow()
+            every { uiEventFlow } returns MutableSharedFlow()
+        }
+    }
+
+    private fun createMockMedicationViewModel(): PersonMedicationViewModel {
+        return mockk<PersonMedicationViewModel>(relaxed = true).apply {
+            every { uiState } returns MutableStateFlow(PersonMedicationUiState(personId = "p1"))
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
+            every { defaultRecorderName } returns MutableStateFlow("")
+            every { viewEvent } returns MutableSharedFlow()
+            every { uiEventFlow } returns MutableSharedFlow()
+        }
+    }
+
     private fun setContent(
         widthClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
-        medicationState: PersonMedicationUiState = PersonMedicationUiState()
+        medicationState: PersonMedicationUiState = PersonMedicationUiState(personId = "p1")
     ) {
-        val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
-        val medicationViewModel = mockk<PersonMedicationViewModel>(relaxed = true)
+        val detailViewModel = createMockDetailViewModel()
+        val medicationViewModel = createMockMedicationViewModel()
 
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState())
         every { medicationViewModel.uiState } returns MutableStateFlow(medicationState)
-        every { medicationViewModel.viewEvent } returns MutableSharedFlow()
-        every { medicationViewModel.uiEventFlow } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {

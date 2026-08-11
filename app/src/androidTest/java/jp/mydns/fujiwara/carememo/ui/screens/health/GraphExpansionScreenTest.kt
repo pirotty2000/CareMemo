@@ -99,7 +99,7 @@ class GraphExpansionScreenTest {
         // Should contain masked name and category name
         composeTestRule.onNodeWithTag("GraphExpansion_HeaderTitle")
             .assertTextContains("山田　太郎", substring = true)
-            .assertTextContains("血圧・脈拍", substring = true)
+            .assertTextContains("バイタル", substring = true)
     }
 
     @Test

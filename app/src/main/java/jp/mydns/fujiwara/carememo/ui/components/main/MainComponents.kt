@@ -116,6 +116,7 @@ fun UserListItem(
                         .clip(MaterialTheme.shapes.small)
                         .clickable(onClick = onQuickMenuClick)
                         .padding(4.dp)
+                        .testTag("UserListItem_QuickMenuBox")
                 ) {
                     CategoryBadges(summary = summary ?: PersonCategorySummary())
                 }

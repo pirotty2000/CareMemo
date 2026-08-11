@@ -125,8 +125,8 @@ class MainScreenTest {
                 onQuickMenuClick = { menuOpened = true }
             )
         }
-        // Assuming there is a menu button on the list item
-        composeTestRule.onNodeWithTag("UserListItem_MenuButton").performClick()
+        // Clicking the badges area (UserListItem_QuickMenuBox) triggers the quick menu
+        composeTestRule.onNodeWithTag("UserListItem_QuickMenuBox").performClick()
         assert(menuOpened)
     }
 
@@ -138,7 +138,8 @@ class MainScreenTest {
     fun NAV_04_navigateToSettings_onEvent() {
         val viewModel = mockk<PersonListViewModel>(relaxed = true)
         val navController = mockk<NavHostController>(relaxed = true)
-        val viewEventFlow = MutableSharedFlow<PersonListViewEvent>()
+        // Use extraBufferCapacity to ensure tryEmit succeeds
+        val viewEventFlow = MutableSharedFlow<PersonListViewEvent>(extraBufferCapacity = 1)
         
         every { viewModel.uiState } returns MutableStateFlow(jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState(isLoading = false))
         every { viewModel.viewEvent } returns viewEventFlow
@@ -154,6 +155,7 @@ class MainScreenTest {
             viewEventFlow.tryEmit(PersonListViewEvent.NavigateToSettings)
         }
         
+        composeTestRule.waitForIdle()
         // Verify navigation controller was called
         verify { navController.navigate(jp.mydns.fujiwara.carememo.ui.navigation.Destination.Settings) }
     }

@@ -3,6 +3,8 @@ package jp.mydns.fujiwara.carememo.ui.screens.settings
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.lifecycle.SavedStateHandle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
@@ -29,12 +31,20 @@ class SettingsScreenTest {
     private val viewModel = mockk<SettingsViewModel>(relaxed = true)
     private val navController = mockk<NavHostController>(relaxed = true)
     private val uiStateFlow = MutableStateFlow(SettingsUiState())
+    private val viewEventFlow = MutableSharedFlow<SettingsViewEvent>(extraBufferCapacity = 1)
 
     @Before
     fun setup() {
+        // Stub NavController to avoid ClassCastException when collecting StateFlow from SavedStateHandle
+        val mockEntry = mockk<NavBackStackEntry>(relaxed = true)
+        val savedStateHandle = SavedStateHandle()
+        every { mockEntry.savedStateHandle } returns savedStateHandle
+        every { navController.currentBackStackEntry } returns mockEntry
+        every { navController.previousBackStackEntry } returns mockEntry
+
         every { viewModel.uiState } returns uiStateFlow
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
-        every { viewModel.viewEvent } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns viewEventFlow
         every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
         every { viewModel.defaultRecorderName } returns MutableStateFlow("")
         every { viewModel.canAuthenticate(any()) } returns true
@@ -110,15 +120,13 @@ class SettingsScreenTest {
 
     @Test
     fun NAV_01_navigateToAuditLog_onEvent() {
-        val viewEventFlow = MutableSharedFlow<SettingsViewEvent>()
-        every { viewModel.viewEvent } returns viewEventFlow
-        
         setContent()
 
         composeTestRule.runOnIdle {
             viewEventFlow.tryEmit(SettingsViewEvent.NavigateToAuditLog)
         }
         
+        composeTestRule.waitForIdle()
         verify { navController.navigate(jp.mydns.fujiwara.carememo.ui.navigation.Destination.AuditLog) }
     }
 
@@ -126,6 +134,13 @@ class SettingsScreenTest {
     fun NAV_03_backButton_popsBackStack() {
         setContent()
         composeTestRule.onNodeWithTag("SettingsScreen_BackButton").performClick()
+        
+        // SettingsScreen sends NavigateBack event on back button click
+        composeTestRule.runOnIdle {
+            viewEventFlow.tryEmit(SettingsViewEvent.NavigateBack)
+        }
+        
+        composeTestRule.waitForIdle()
         verify { navController.popBackStack() }
     }
 

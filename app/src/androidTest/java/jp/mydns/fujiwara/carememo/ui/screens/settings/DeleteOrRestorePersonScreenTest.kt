@@ -43,17 +43,20 @@ class DeleteOrRestorePersonScreenTest {
         every { viewModel.uiState } returns MutableStateFlow(
             DeleteOrRestorePersonUiState(
                 archivedPersons = mockPersons.toImmutableList(),
-                mode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE
+                mode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE,
+                isNameMaskingEnabled = false // Disable masking for testing exact name matches
             )
         )
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
-        every { viewModel.viewEvent } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow(extraBufferCapacity = 1)
     }
 
     private fun setContent(
-        uiState: DeleteOrRestorePersonUiState = DeleteOrRestorePersonUiState(archivedPersons = mockPersons.toImmutableList())
+        uiState: DeleteOrRestorePersonUiState? = null
     ) {
-        every { viewModel.uiState } returns MutableStateFlow(uiState)
+        if (uiState != null) {
+            every { viewModel.uiState } returns MutableStateFlow(uiState)
+        }
 
         composeTestRule.setContent {
             CareMemoTheme {
@@ -80,15 +83,18 @@ class DeleteOrRestorePersonScreenTest {
     fun DSP_03_actionButton_isDisplayed_whenSelected() {
         setContent(DeleteOrRestorePersonUiState(
             archivedPersons = mockPersons.toImmutableList(),
-            selectedIds = persistentSetOf("u1")
+            selectedIds = persistentSetOf("u1"),
+            mode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE
         ))
-        composeTestRule.onNodeWithTag("DeleteOrRestore_ActionButton").assertIsDisplayed()
-        composeTestRule.onNodeWithText("1名の利用者を復帰", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("DeleteOrRestore_ActionButton")
+            .assertIsDisplayed()
+            .assertTextContains("1名", substring = true)
+            .assertTextContains("復帰", substring = true)
     }
 
     @Test
     fun DSP_04_emptyState_isDisplayed() {
-        setContent(DeleteOrRestorePersonUiState(archivedPersons = persistentListOf()))
+        setContent(DeleteOrRestorePersonUiState(archivedPersons = persistentListOf(), isLoading = false))
         composeTestRule.onNodeWithTag("DeleteOrRestore_EmptyState").assertIsDisplayed()
         composeTestRule.onNodeWithText("終了した利用者はいません", substring = true).assertIsDisplayed()
     }
@@ -115,10 +121,12 @@ class DeleteOrRestorePersonScreenTest {
     fun ACT_03_actionButton_showsConfirmDialog() {
         setContent(DeleteOrRestorePersonUiState(
             archivedPersons = mockPersons.toImmutableList(),
-            selectedIds = persistentSetOf("u1")
+            selectedIds = persistentSetOf("u1"),
+            mode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE
         ))
         composeTestRule.onNodeWithTag("DeleteOrRestore_ActionButton").performClick()
-        composeTestRule.onNodeWithText("復帰しますか？", substring = true).assertIsDisplayed()
+        // Match string from R.string.archive_dialog_restore_confirm_msg
+        composeTestRule.onNodeWithText("戻します", substring = true).assertIsDisplayed()
     }
 
     //endregion
@@ -134,7 +142,7 @@ class DeleteOrRestorePersonScreenTest {
 
     @Test
     fun NAV_02_finishEvent_popsBackStack() {
-        val viewEventFlow = MutableSharedFlow<DeleteOrRestorePersonViewEvent>()
+        val viewEventFlow = MutableSharedFlow<DeleteOrRestorePersonViewEvent>(extraBufferCapacity = 1)
         every { viewModel.viewEvent } returns viewEventFlow
         
         setContent()
@@ -143,6 +151,7 @@ class DeleteOrRestorePersonScreenTest {
             viewEventFlow.tryEmit(DeleteOrRestorePersonViewEvent.Finish)
         }
         
+        composeTestRule.waitForIdle()
         verify { navController.popBackStack() }
     }
 

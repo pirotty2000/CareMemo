@@ -105,6 +105,7 @@ fun PersonEditScreen(
     if (showDiscardDialog) {
         AppDialog(
             onDismissRequest = { showDiscardDialog = false },
+            modifier = Modifier.testTag("PersonEdit_DiscardConfirmDialog"),
             title = { Text(stringResource(R.string.common_confirm_discard_title)) },
             text = {
                 AppDialogContent(text = stringResource(R.string.common_confirm_discard_message))
@@ -234,7 +235,7 @@ fun PersonEditScreenContent(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         if (isLoading) {
-            LoadingScreen()
+            LoadingScreen(modifier = Modifier.testTag("PersonEdit_Loading"))
         } else {
             val scrollState = rememberScrollState()
             Box(

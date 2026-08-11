@@ -13,6 +13,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,17 +80,21 @@ class PersonHealthScreenTest {
 
     @Test
     fun ACT_02_modeSwitch_triggersViewModel() {
-        val healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
-        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(preferredShowHistory = true))
-        every { healthViewModel.viewEvent } returns MutableSharedFlow()
-        every { healthViewModel.uiEventFlow } returns MutableSharedFlow()
+        val detailViewModel = createMockDetailViewModel()
+        val healthViewModel = createMockHealthViewModel()
+        
+        // Add a dummy record to avoid EmptyState, which hides the segmented buttons
+        val record = HeightAndWeight(id = "h1", personId = "p1", height = 170.0, weight = 60.0, recordTime = Instant.now())
+        
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(
+            preferredShowHistory = true,
+            records = persistentListOf(record)
+        ))
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreen(
-                    detailViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonDetailUiState())
-                    },
+                    detailViewModel = detailViewModel,
                     healthViewModel = healthViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
@@ -105,20 +110,18 @@ class PersonHealthScreenTest {
     @Test
     fun ACT_04_saveButton_triggersViewModel() {
         val newId = AppSpecifications.Id.NEW_RECORD_ID
-        val healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
+        val detailViewModel = createMockDetailViewModel()
+        val healthViewModel = createMockHealthViewModel()
+        
         // Set state to editing with valid input
         every { healthViewModel.uiState } returns MutableStateFlow(
             PersonHealthUiState(selectedRecordId = newId, isEditing = true, isSaveEnabled = true)
         )
-        every { healthViewModel.viewEvent } returns MutableSharedFlow()
-        every { healthViewModel.uiEventFlow } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreen(
-                    detailViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonDetailUiState())
-                    },
+                    detailViewModel = detailViewModel,
                     healthViewModel = healthViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
@@ -126,7 +129,8 @@ class PersonHealthScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag("HealthScreen_SaveButton").performClick()
+        // The tag is "HealthField_SaveButton" in PersonHealthComponents.kt
+        composeTestRule.onNodeWithTag("HealthField_SaveButton").performClick()
         verify { healthViewModel.saveCurrentEdit() }
     }
 
@@ -136,18 +140,14 @@ class PersonHealthScreenTest {
 
     @Test
     fun NAV_02_backButton_navigatesBack() {
-        val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState())
+        val detailViewModel = createMockDetailViewModel()
+        val healthViewModel = createMockHealthViewModel()
         
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreen(
                     detailViewModel = detailViewModel,
-                    healthViewModel = mockk(relaxed = true) {
-                        every { uiState } returns MutableStateFlow(PersonHealthUiState())
-                        every { viewEvent } returns MutableSharedFlow()
-                        every { uiEventFlow } returns MutableSharedFlow()
-                    },
+                    healthViewModel = healthViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
                 )
@@ -162,18 +162,36 @@ class PersonHealthScreenTest {
 
     // --- Helpers ---
 
+    private fun createMockDetailViewModel(): PersonDetailUiStateViewModel {
+        return mockk<PersonDetailUiStateViewModel>(relaxed = true).apply {
+            every { uiState } returns MutableStateFlow(PersonDetailUiState())
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
+            every { defaultRecorderName } returns MutableStateFlow("")
+            every { viewEvent } returns MutableSharedFlow()
+            every { uiEventFlow } returns MutableSharedFlow()
+        }
+    }
+
+    private fun createMockHealthViewModel(): PersonHealthViewModel {
+        return mockk<PersonHealthViewModel>(relaxed = true).apply {
+            every { uiState } returns MutableStateFlow(PersonHealthUiState())
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
+            every { defaultRecorderName } returns MutableStateFlow("")
+            every { viewEvent } returns MutableSharedFlow()
+            every { uiEventFlow } returns MutableSharedFlow()
+        }
+    }
+
     private fun setContent(
         widthClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
         detailState: PersonDetailUiState = PersonDetailUiState(),
         healthState: PersonHealthUiState = PersonHealthUiState()
     ) {
-        val detailViewModel = mockk<PersonDetailUiStateViewModel>(relaxed = true)
-        val healthViewModel = mockk<PersonHealthViewModel>(relaxed = true)
+        val detailViewModel = createMockDetailViewModel()
+        val healthViewModel = createMockHealthViewModel()
 
         every { detailViewModel.uiState } returns MutableStateFlow(detailState)
         every { healthViewModel.uiState } returns MutableStateFlow(healthState)
-        every { healthViewModel.viewEvent } returns MutableSharedFlow()
-        every { healthViewModel.uiEventFlow } returns MutableSharedFlow()
 
         composeTestRule.setContent {
             CareMemoTheme {

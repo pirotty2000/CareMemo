@@ -144,7 +144,8 @@ class BatchInputScreenTest {
         composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
         // Check if category name is resolved in implementation (it should be according to BatchInputScreen logic)
         val expectedCategoryName = composeTestRule.activity.getString(R.string.common_category_height_weight)
-        composeTestRule.onNodeWithText(expectedCategoryName, substring = true).assertIsDisplayed()
+        // Use hasAnyAncestor(isDialog()) to find the text inside the error dialog
+        composeTestRule.onNode(hasText(expectedCategoryName, substring = true) and hasAnyAncestor(isDialog())).assertIsDisplayed()
     }
 
     //endregion

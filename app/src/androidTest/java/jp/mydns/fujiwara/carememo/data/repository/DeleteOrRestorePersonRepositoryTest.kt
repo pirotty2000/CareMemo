@@ -66,7 +66,7 @@ class DeleteOrRestorePersonRepositoryTest {
         val deletedPerson = personDao.getPersonById("u1").first()
         assertNotNull(deletedPerson?.deletedAt)
         
-        val deletedHwList = hwDao.getByPersonId("u1").first()
+        val deletedHwList = hwDao.getAllRaw().filter { it.personId == "u1" }
         assertEquals(1, deletedHwList.size)
         assertNotNull(deletedHwList[0].deletedAt)
         assertEquals(deletedPerson?.deletedAt, deletedHwList[0].deletedAt)

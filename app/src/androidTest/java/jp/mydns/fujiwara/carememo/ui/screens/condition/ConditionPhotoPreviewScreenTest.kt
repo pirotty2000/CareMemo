@@ -123,8 +123,8 @@ class ConditionPhotoPreviewScreenTest {
     fun NAV_02_deleteConfirm_popsBackStack() {
         setContent()
         composeTestRule.onNodeWithTag("PhotoPreview_DeleteButton").performClick()
-        // Confirm delete in dialog
-        composeTestRule.onNodeWithText("削除").performClick()
+        // Confirm delete in dialog (ダイアログ内の「削除」ボタンを指定)
+        composeTestRule.onNode(hasText("削除") and hasAnyAncestor(isDialog())).performClick()
         verify { navController.popBackStack() }
     }
 

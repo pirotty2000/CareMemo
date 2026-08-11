@@ -9,6 +9,7 @@ import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,13 +38,23 @@ class AuditLogScreenTest {
 
     @Before
     fun setup() {
-        every { viewModel.uiState } returns MutableStateFlow(AuditLogUiState(auditLogs = mockLogs.toImmutableList(), filteredLogs = mockLogs.toImmutableList()))
+        val initialState = AuditLogUiState(
+            auditLogs = mockLogs.toImmutableList(),
+            filteredLogs = mockLogs.toImmutableList(),
+            isLoading = false,
+            availableFeatures = persistentListOf("PersonList", "PersonHealth"),
+            availableResults = persistentListOf("SUCCESS", "DB_ERROR")
+        )
+        every { viewModel.uiState } returns MutableStateFlow(initialState)
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
-        every { viewModel.viewEvent } returns MutableSharedFlow()
+        // Use buffer for events
+        every { viewModel.viewEvent } returns MutableSharedFlow(extraBufferCapacity = 1)
     }
 
-    private fun setContent(uiState: AuditLogUiState = AuditLogUiState(auditLogs = mockLogs.toImmutableList(), filteredLogs = mockLogs.toImmutableList())) {
-        every { viewModel.uiState } returns MutableStateFlow(uiState)
+    private fun setContent(uiState: AuditLogUiState? = null) {
+        if (uiState != null) {
+            every { viewModel.uiState } returns MutableStateFlow(uiState)
+        }
 
         composeTestRule.setContent {
             CareMemoTheme {
@@ -68,14 +79,14 @@ class AuditLogScreenTest {
 
     @Test
     fun DSP_02_emptyState_isDisplayed_whenNoLogs() {
-        setContent(AuditLogUiState(auditLogs = persistentListOf(), filteredLogs = persistentListOf()))
+        setContent(AuditLogUiState(isLoading = false, auditLogs = persistentListOf(), filteredLogs = persistentListOf()))
         composeTestRule.onNodeWithTag("AuditLog_EmptyState").assertIsDisplayed()
         composeTestRule.onNodeWithText("ログはありません", substring = true).assertIsDisplayed()
     }
 
     @Test
     fun DSP_03_loadingIndicator_isDisplayed() {
-        setContent(AuditLogUiState(isLoading = true))
+        setContent(AuditLogUiState(isLoading = true, auditLogs = persistentListOf()))
         composeTestRule.onNodeWithTag("AuditLog_Loading").assertIsDisplayed()
     }
 
@@ -83,7 +94,6 @@ class AuditLogScreenTest {
     fun DSP_04_labelsAreMappedToJapanese() {
         setContent()
         // Check if internal codes are mapped (e.g., PersonList -> 利用者一覧, SUCCESS -> 成功)
-        // Note: The specific mapping strings depend on Mappers.kt
         composeTestRule.onNodeWithText("成功", substring = true).assertIsDisplayed()
     }
 
@@ -93,7 +103,7 @@ class AuditLogScreenTest {
 
     @Test
     fun ACT_01_featureFilter_triggersViewModel() {
-        setContent(AuditLogUiState(availableFeatures = listOf("PersonList").toImmutableList()))
+        setContent()
         
         composeTestRule.onNodeWithTag("AuditLog_FeatureFilter").performClick()
         composeTestRule.onNodeWithTag("FeatureFilterItem_PersonList").performClick()
@@ -120,7 +130,4 @@ class AuditLogScreenTest {
     }
 
     //endregion
-
-    // Helper
-    private fun <T> persistentListOf(vararg elements: T) = kotlinx.collections.immutable.persistentListOf(*elements)
 }

@@ -50,14 +50,17 @@ class EmergencyContactEditScreenTest {
     }
 
     @Test
-    fun DSP_03_saveButton_reflectsValidity() {
+    fun DSP_03_saveButton_isEnabled_whenValid() {
         // Valid contact (facilityName not blank)
         val validContact = EmergencyContact(personId = "p1", facilityName = "A", contactType = "DOCTOR")
         setContent {
             EmergencyContactEditContentWrapper(contact = validContact)
         }
         composeTestRule.onNodeWithTag("EmergencyContact_SaveButton").assertIsEnabled()
+    }
 
+    @Test
+    fun DSP_03_saveButton_isDisabled_whenInvalid() {
         // Invalid contact (facilityName blank)
         val invalidContact = EmergencyContact(personId = "p1", facilityName = "", contactType = "DOCTOR")
         setContent {
@@ -118,7 +121,8 @@ class EmergencyContactEditScreenTest {
     fun NAV_01_navigateBack_onSaveSuccess() {
         val viewModel = mockk<EmergencyContactEditViewModel>(relaxed = true)
         val navController = mockk<NavHostController>(relaxed = true)
-        val viewEventFlow = MutableSharedFlow<EmergencyContactViewEvent>()
+        // Use extraBufferCapacity to ensure tryEmit succeeds
+        val viewEventFlow = MutableSharedFlow<EmergencyContactViewEvent>(extraBufferCapacity = 1)
         
         val contact = EmergencyContact(personId = "p1", facilityName = "A", contactType = "DOCTOR")
         every { viewModel.uiState } returns MutableStateFlow(EmergencyContactUiState(editingContact = contact))
@@ -135,6 +139,7 @@ class EmergencyContactEditScreenTest {
             viewEventFlow.tryEmit(EmergencyContactViewEvent.SaveSuccess)
         }
         
+        composeTestRule.waitForIdle()
         verify { navController.popBackStack() }
     }
 

@@ -56,11 +56,13 @@ class OrphanedPhotoManagementScreenTest {
     @Before
     fun setup() {
         every { viewModel.uiState } returns MutableStateFlow(OrphanedPhotoUiState(orphanedPhotos = mockPhotos.toImmutableList()))
-        every { viewModel.viewEvent } returns MutableSharedFlow()
+        every { viewModel.viewEvent } returns MutableSharedFlow(extraBufferCapacity = 1)
     }
 
-    private fun setContent(uiState: OrphanedPhotoUiState = OrphanedPhotoUiState(orphanedPhotos = mockPhotos.toImmutableList())) {
-        every { viewModel.uiState } returns MutableStateFlow(uiState)
+    private fun setContent(uiState: OrphanedPhotoUiState? = null) {
+        if (uiState != null) {
+            every { viewModel.uiState } returns MutableStateFlow(uiState)
+        }
 
         composeTestRule.setContent {
             CareMemoTheme {
@@ -85,9 +87,10 @@ class OrphanedPhotoManagementScreenTest {
 
     @Test
     fun DSP_03_emptyState_isDisplayed_whenNoPhotos() {
-        setContent(OrphanedPhotoUiState(orphanedPhotos = persistentListOf()))
+        setContent(OrphanedPhotoUiState(isLoading = false, orphanedPhotos = persistentListOf()))
         composeTestRule.onNodeWithTag("OrphanedPhoto_EmptyState").assertIsDisplayed()
-        composeTestRule.onNodeWithText("迷子写真はありません", substring = true).assertIsDisplayed()
+        // Match string from R.string.orphaned_photo_empty_msg
+        composeTestRule.onNodeWithText("見つかりませんでした", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -106,8 +109,8 @@ class OrphanedPhotoManagementScreenTest {
         // Click delete on the first item
         composeTestRule.onAllNodesWithTag("OrphanedPhoto_DeleteButton").onFirst().performClick()
         
-        // Dialog should appear
-        composeTestRule.onNodeWithText("写真を削除", substring = true).assertIsDisplayed()
+        // Match title from R.string.p_detail_dialog_title_delete ("データの削除")
+        composeTestRule.onNodeWithText("データの削除", substring = true).assertIsDisplayed()
     }
 
     @Test
