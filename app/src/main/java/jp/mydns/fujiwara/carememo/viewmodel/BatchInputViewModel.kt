@@ -14,12 +14,12 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
-import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputCategory
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.HealthProcessorRegistry
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -186,25 +186,10 @@ class BatchInputViewModel(
             }
 
             // 3. 重複チェック：同一日時の既存レコードがあるカテゴリを特定する
-            val effectiveCategories = BatchInputLogic.getEffectiveCategories(state)
-            val duplicateResIds = mutableListOf<Int>()
-
-            effectiveCategories.forEach { category ->
-                val isDuplicate = when (category) {
-                    BatchInputCategory.HEIGHT_WEIGHT -> healthRepository.findHeightAndWeightAtTime(requiredPersonId, time) != null
-                    BatchInputCategory.VITAL -> healthRepository.findBpAndPulseAtTime(requiredPersonId, time) != null
-                    BatchInputCategory.GLUCOSE -> healthRepository.findGlucoseAndHbA1cAtTime(requiredPersonId, time) != null
-                }
-                if (isDuplicate) {
-                    duplicateResIds.add(
-                        when (category) {
-                            BatchInputCategory.HEIGHT_WEIGHT -> R.string.common_category_height_weight
-                            BatchInputCategory.VITAL -> R.string.common_category_vital
-                            BatchInputCategory.GLUCOSE -> R.string.common_category_glucose
-                        }
-                    )
-                }
-            }
+            val duplicateResIds = HealthProcessorRegistry.getAll()
+                .filter { !it.isEmpty(state) && it.validate(state) == HealthInputValidationResult.SUCCESS }
+                .filter { it.findExisting(healthRepository, requiredPersonId, time) != null }
+                .map { it.categoryNameResId }
 
             // 重複がある場合は保存をブロックし、重複カテゴリ名をメッセージに含めて通知する
             if (duplicateResIds.isNotEmpty()) {
@@ -249,11 +234,9 @@ class BatchInputViewModel(
         }
 
         val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
-            val details = mutableListOf<String>()
-            // どの項目のバリデーションが失敗したかを特定し、メッセージを構築する
-            if (HealthLogic.validateHeightAndWeight(state.height, state.weight) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_height_weight}")
-            if (HealthLogic.validateBpAndPulse(state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_vital}")
-            if (HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c) == HealthInputValidationResult.OUT_OF_RANGE) details.add("__RES__${R.string.common_error_out_of_range_glucose}")
+            val details = HealthProcessorRegistry.getAll()
+                .filter { !it.isEmpty(state) && it.validate(state) == HealthInputValidationResult.OUT_OF_RANGE }
+                .map { "__RES__${it.outOfRangeErrorResId}" }
             
             if (details.isEmpty()) listOf("__RES__${R.string.common_error_invalid_input}") else listOf(details.joinToString("、"))
         } else {

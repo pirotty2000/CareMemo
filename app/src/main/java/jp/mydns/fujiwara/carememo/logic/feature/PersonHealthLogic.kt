@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
-import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -119,32 +118,13 @@ object PersonHealthLogic {
     fun validate(record: HistoryRecord?): HealthValidationResult {
         if (record == null) return HealthValidationResult.INVALID_VALUE
 
-        val isValid = when (record) {
-            is HeightAndWeight -> {
-                val hSpec = AppSpecifications.Health.Height
-                val wSpec = AppSpecifications.Health.Weight
-                (record.height == null || record.height in hSpec.MIN_VALUE..hSpec.MAX_VALUE) &&
-                (record.weight == null || record.weight in wSpec.MIN_VALUE..wSpec.MAX_VALUE)
-            }
-            is BpAndPulse -> {
-                val bpSpec = AppSpecifications.Health.BloodPressure
-                val pulseSpec = AppSpecifications.Health.Pulse
-                val satSpec = AppSpecifications.Health.OxygenSaturation
-                val tempSpec = AppSpecifications.Health.BodyTemperature
-                (record.bpSystolic == null || record.bpSystolic.toDouble() in bpSpec.MIN_VALUE..bpSpec.MAX_VALUE) &&
-                (record.bpDiastolic == null || record.bpDiastolic.toDouble() in bpSpec.MIN_VALUE..bpSpec.MAX_VALUE) &&
-                (record.pulse == null || record.pulse.toDouble() in pulseSpec.MIN_VALUE..pulseSpec.MAX_VALUE) &&
-                (record.sat == null || record.sat.toDouble() in satSpec.MIN_VALUE..satSpec.MAX_VALUE) &&
-                (record.bodyTemperature == null || record.bodyTemperature in tempSpec.MIN_VALUE..tempSpec.MAX_VALUE)
-            }
-            is GlucoseAndHbA1c -> {
-                val gSpec = AppSpecifications.Health.BloodGlucose
-                val hSpec = AppSpecifications.Health.HbA1c
-                (record.glucose == null || record.glucose.toDouble() in gSpec.MIN_VALUE..gSpec.MAX_VALUE) &&
-                (record.hba1c == null || record.hba1c in hSpec.MIN_VALUE..hSpec.MAX_VALUE)
-            }
-            else -> true
+        val processor = when (record) {
+            is HeightAndWeight -> HeightWeightProcessor
+            is BpAndPulse -> VitalProcessor
+            is GlucoseAndHbA1c -> GlucoseProcessor
+            else -> null
         }
+        val isValid = processor?.validateEntity(record) ?: true
 
         return if (isValid) HealthValidationResult.SUCCESS else HealthValidationResult.INVALID_VALUE
     }
@@ -173,24 +153,8 @@ object PersonHealthLogic {
         category: Category,
         values: Map<String, String>
     ): HealthInputValidationResult {
-        return when (category) {
-            Category.HEIGHT_AND_WEIGHT -> HealthLogic.validateHeightAndWeight(
-                values["height"] ?: "",
-                values["weight"] ?: ""
-            )
-            Category.BP_AND_PULSE -> HealthLogic.validateBpAndPulse(
-                values["bpSystolic"] ?: "",
-                values["bpDiastolic"] ?: "",
-                values["sat"] ?: "",
-                values["pulse"] ?: "",
-                values["bodyTemperature"] ?: ""
-            )
-            Category.GLUCOSE_AND_HBA1C -> HealthLogic.validateGlucoseAndHbA1c(
-                values["glucose"] ?: "",
-                values["hba1c"] ?: ""
-            )
-            else -> HealthInputValidationResult.SUCCESS
-        }
+        val processor = HealthProcessorRegistry.getByGeneralCategory(category)
+        return processor?.validateFromMap(values) ?: HealthInputValidationResult.SUCCESS
     }
 
     /**
@@ -213,12 +177,8 @@ object PersonHealthLogic {
         values: Map<String, Any?>
     ): Any {
         val finalId = if (IdLogic.isNew(recordId)) UUID.randomUUID().toString() else recordId
-        
-        return when (category) {
-            Category.HEIGHT_AND_WEIGHT -> HeightAndWeight(id = finalId, personId = personId, height = values["height"] as? Double, weight = values["weight"] as? Double, recordTime = recordTime)
-            Category.BP_AND_PULSE -> BpAndPulse(id = finalId, personId = personId, bpSystolic = values["bpSystolic"] as? Int, bpDiastolic = values["bpDiastolic"] as? Int, sat = values["sat"] as? Int, pulse = values["pulse"] as? Int, bodyTemperature = values["bodyTemperature"] as? Double, recordTime = recordTime)
-            Category.GLUCOSE_AND_HBA1C -> GlucoseAndHbA1c(id = finalId, personId = personId, glucose = values["glucose"] as? Int, hba1c = values["hba1c"] as? Double, recordTime = recordTime)
-            else -> throw IllegalArgumentException("Unsupported category")
-        }
+        val processor = HealthProcessorRegistry.getByGeneralCategory(category)
+        return processor?.createEntityFromValues(personId, finalId, recordTime, values)
+            ?: throw IllegalArgumentException("Unsupported category: $category")
     }
 }

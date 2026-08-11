@@ -1,14 +1,10 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import androidx.compose.runtime.Immutable
-import jp.mydns.fujiwara.carememo.data.BpAndPulse
-import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
-import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 
@@ -98,18 +94,6 @@ enum class BatchInputCategory {
 }
 
 /**
- * 内部評価用のカテゴリ別結果。
- */
-private sealed interface CategoryResult {
-    /** 項目が空 */
-    data object Empty : CategoryResult
-    /** 妥当な入力があり、Entity を生成済み */
-    data class Valid(val entity: Any) : CategoryResult
-    /** バリデーションエラー */
-    data class Invalid(val result: HealthInputValidationResult) : CategoryResult
-}
-
-/**
  * Logic：BatchInputLogic
  *
  * 【役割】
@@ -122,7 +106,7 @@ private sealed interface CategoryResult {
  * ・有効な入力が含まれるカテゴリの抽出。
  *
  * 【設計指針】
- * 1. 各カテゴリの評価は HealthLogic の共通ルールを再利用する。
+ * 1. 各カテゴリの評価は [HealthCategoryProcessor] を介して実行する。
  * 2. 「保存可能」の定義は、「不正な入力が1つもなく、かつ保存すべきデータが1つ以上ある」状態とする。
  * 3. 変更検知は、入力値の有無だけでなく、記録時刻の変更も考慮する。
  */
@@ -135,15 +119,15 @@ object BatchInputLogic {
      * @return [BatchInputValidationResult]
      */
     fun validate(state: BatchInputUiState): BatchInputValidationResult {
-        // バリデーション判定のみが目的のため、仮のIDと時間を使用
-        val results = evaluateCategories("dummy", Instant.EPOCH, state).values
+        val processors = HealthProcessorRegistry.getAll()
+        val results = processors.map { it.validate(state) to it.isEmpty(state) }
 
         return when {
-            // いずれかのカテゴリが Invalid なら、全体として INVALID
-            results.any { it is CategoryResult.Invalid } -> BatchInputValidationResult.INVALID_VALUE
+            // いずれかの入力済みカテゴリが Invalid なら、全体として INVALID
+            results.any { (res, empty) -> !empty && res != HealthInputValidationResult.SUCCESS } -> BatchInputValidationResult.INVALID_VALUE
             // 全てのカテゴリが Empty なら、全体として EMPTY
-            results.all { it is CategoryResult.Empty } -> BatchInputValidationResult.EMPTY_ALL
-            // 不正がなく、1つ以上の Valid があれば成功
+            results.all { (_, empty) -> empty } -> BatchInputValidationResult.EMPTY_ALL
+            // 不正がなく、1つ以上の有効な入力があれば成功
             else -> BatchInputValidationResult.SUCCESS
         }
     }
@@ -165,8 +149,9 @@ object BatchInputLogic {
      * @return [BatchInputCategory] のリスト
      */
     fun getEffectiveCategories(state: BatchInputUiState): List<BatchInputCategory> {
-        val results = evaluateCategories("dummy", Instant.EPOCH, state)
-        return results.filter { it.value is CategoryResult.Valid }.keys.toList()
+        return HealthProcessorRegistry.getAll()
+            .filter { !it.isEmpty(state) && it.validate(state) == HealthInputValidationResult.SUCCESS }
+            .map { it.category }
     }
 
     /**
@@ -176,8 +161,7 @@ object BatchInputLogic {
      * @return 変更がある場合は true
      */
     fun isChanged(state: BatchInputUiState): Boolean {
-        val results = evaluateCategories("dummy", Instant.EPOCH, state).values
-        val hasInput = results.any { it !is CategoryResult.Empty }
+        val hasInput = HealthProcessorRegistry.getAll().any { !it.isEmpty(state) }
         val isTimeChanged = state.recordTime != state.initialRecordTime
 
         return hasInput || isTimeChanged
@@ -190,101 +174,15 @@ object BatchInputLogic {
      * @param time 記録時刻
      * @param state 現在のUI状態
      * @return 生成された Entity オブジェクトのリスト
-     * @throws IllegalArgumentException 不正な入力（Invalid）が一つでもある場合にスロー
+     * @throws IllegalArgumentException 不正な入力が一つでもある場合にスロー
      */
     fun createEntities(personId: String, time: Instant, state: BatchInputUiState): List<Any> {
-        val results = evaluateCategories(personId, time, state).values
-
         // 不正な入力がある状態で呼び出された場合は異常系として扱う（呼び出し側でvalidate済みであることを期待）
-        if (results.any { it is CategoryResult.Invalid }) {
+        if (validate(state) == BatchInputValidationResult.INVALID_VALUE) {
             throw IllegalArgumentException("Invalid input state")
         }
 
-        return results.filterIsInstance<CategoryResult.Valid>().map { it.entity }
-    }
-
-    /**
-     * 全カテゴリの入力を評価し、その結果をカテゴリごとのマップで返します。
-     */
-    private fun evaluateCategories(
-        personId: String,
-        time: Instant,
-        state: BatchInputUiState
-    ): Map<BatchInputCategory, CategoryResult> {
-        return mapOf(
-            BatchInputCategory.HEIGHT_WEIGHT to evaluateHeightWeight(personId, time, state),
-            BatchInputCategory.VITAL to evaluateVital(personId, time, state),
-            BatchInputCategory.GLUCOSE to evaluateGlucose(personId, time, state)
-        )
-    }
-
-    /**
-     * 身長・体重の入力を評価します。
-     */
-    private fun evaluateHeightWeight(personId: String, time: Instant, state: BatchInputUiState): CategoryResult {
-        if (state.height.isBlank() && state.weight.isBlank()) return CategoryResult.Empty
-
-        val validation = HealthLogic.validateHeightAndWeight(state.height, state.weight)
-        return if (validation == HealthInputValidationResult.SUCCESS) {
-            CategoryResult.Valid(
-                HeightAndWeight(
-                    personId = personId,
-                    height = state.height.toDoubleOrNull(),
-                    weight = state.weight.toDoubleOrNull(),
-                    recordTime = time
-                )
-            )
-        } else {
-            CategoryResult.Invalid(validation)
-        }
-    }
-
-    /**
-     * バイタル（血圧、脈拍、酸素飽和度、体温）の入力を評価します。
-     */
-    private fun evaluateVital(personId: String, time: Instant, state: BatchInputUiState): CategoryResult {
-        val isAllBlank = state.bpSystolic.isBlank() && state.bpDiastolic.isBlank() &&
-                state.sat.isBlank() && state.pulse.isBlank() && state.bodyTemperature.isBlank()
-        if (isAllBlank) return CategoryResult.Empty
-
-        val validation = HealthLogic.validateBpAndPulse(
-            state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature
-        )
-        return if (validation == HealthInputValidationResult.SUCCESS) {
-            CategoryResult.Valid(
-                BpAndPulse(
-                    personId = personId,
-                    bpSystolic = state.bpSystolic.toIntOrNull(),
-                    bpDiastolic = state.bpDiastolic.toIntOrNull(),
-                    sat = state.sat.toIntOrNull(),
-                    pulse = state.pulse.toIntOrNull(),
-                    bodyTemperature = state.bodyTemperature.toDoubleOrNull(),
-                    recordTime = time
-                )
-            )
-        } else {
-            CategoryResult.Invalid(validation)
-        }
-    }
-
-    /**
-     * 血糖値・HbA1cの入力を評価します。
-     */
-    private fun evaluateGlucose(personId: String, time: Instant, state: BatchInputUiState): CategoryResult {
-        if (state.glucose.isBlank() && state.hba1c.isBlank()) return CategoryResult.Empty
-
-        val validation = HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c)
-        return if (validation == HealthInputValidationResult.SUCCESS) {
-            CategoryResult.Valid(
-                GlucoseAndHbA1c(
-                    personId = personId,
-                    glucose = state.glucose.toIntOrNull(),
-                    hba1c = state.hba1c.toDoubleOrNull(),
-                    recordTime = time
-                )
-            )
-        } else {
-            CategoryResult.Invalid(validation)
-        }
+        return HealthProcessorRegistry.getAll()
+            .mapNotNull { it.createEntity(personId, time, state) }
     }
 }
