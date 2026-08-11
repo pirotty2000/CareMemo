@@ -14,7 +14,6 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
-import jp.mydns.fujiwara.carememo.logic.feature.BatchInputCategory
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputValidationResult
