@@ -228,6 +228,9 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `SettingsLogic.kt`              | ZIP検証、バージョン互換性、空き容量チェック、開発者モード有効化判定。                           |
 | `AuditLogLogic.kt`              | 監査ログのフィルタリング、並び替え、選択肢の抽出。                                      |
 | `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、迷子写真の分類（リソースIDによる理由保持）。                       |
+| `HealthCategoryProcessor.kt`    | 健康記録の各カテゴリ（身長体重等）固有の処理を抽象化するインターフェース。                                |
+| `HeightWeightProcessor.kt` 等   | `HealthCategoryProcessor` の具体的な実装クラス群（身長体重・バイタル・血糖）。           |
+| `HealthProcessorRegistry.kt`    | カテゴリに応じたプロセッサを集中管理・提供するレジストリ。                                      |
 
 ### **表示用マッピングロジック (ui/mapping)**
 - ドメインモデルやシステム識別子（Enum/String）を、多言語対応可能な日本語ラベル（リソースID）やテーマカラーへ変換するレイヤーです。
@@ -358,4 +361,4 @@ ViewModel (androidx.lifecycle.ViewModel)
 
 ---
 
-最終更新日: 2026/08/09 (文言のリソース集約プロジェクト完了の反映)
+最終更新日: 2026/08/12 (健康記録プロセッサ基盤の追加)

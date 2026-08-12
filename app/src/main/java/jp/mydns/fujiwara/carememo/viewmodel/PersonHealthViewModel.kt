@@ -22,6 +22,7 @@ import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
+import jp.mydns.fujiwara.carememo.logic.feature.HealthProcessorRegistry
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
@@ -138,6 +139,7 @@ class PersonHealthViewModel(
                 next.copy(
                     isEditing = false,
                     editInput = HealthEditInput(),
+                    initialRecordTime = null,
                     initialSnapshot = null,
                     isChanged = false,
                     isSaveEnabled = false
@@ -150,20 +152,22 @@ class PersonHealthViewModel(
                         .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
                 } else ""
 
+                val now = Instant.now()
                 val initialInput = HealthEditInput(
                     heightText = latestHeight,
-                    recordTime = Instant.now()
+                    recordTime = now
                 )
                 next.copy(
                     isEditing = true,
                     editInput = initialInput,
+                    initialRecordTime = now,
                     initialSnapshot = initialInput,
                     isChanged = false,
                     isSaveEnabled = false
                 )
             } else {
                 // 既存レコード選択時は閲覧モードから開始
-                next.copy(isEditing = false)
+                next.copy(isEditing = false, initialRecordTime = null)
             }
         }
     }
@@ -192,6 +196,7 @@ class PersonHealthViewModel(
             it.copy(
                 isEditing = true,
                 editInput = initialInput,
+                initialRecordTime = record.recordTime,
                 initialSnapshot = initialInput,
                 isChanged = false,
                 isSaveEnabled = false
@@ -241,23 +246,10 @@ class PersonHealthViewModel(
         val recordId = currentState.selectedRecordId ?: ""
         val recordTime = input.recordTime ?: return
 
-        val values = when (category) {
-            Category.HEIGHT_AND_WEIGHT -> mapOf(
-                "height" to input.heightText.toDoubleOrNull(),
-                "weight" to input.weightText.toDoubleOrNull()
-            )
-            Category.BP_AND_PULSE -> mapOf(
-                "bpSystolic" to input.bpSystolicText.toIntOrNull(),
-                "bpDiastolic" to input.bpDiastolicText.toIntOrNull(),
-                "sat" to input.satText.toIntOrNull(),
-                "pulse" to input.pulseText.toIntOrNull(),
-                "bodyTemperature" to input.bodyTemperatureText.toDoubleOrNull()
-            )
-            Category.GLUCOSE_AND_HBA1C -> mapOf(
-                "glucose" to input.glucoseText.toIntOrNull(),
-                "hba1c" to input.hba1cText.toDoubleOrNull()
-            )
-            else -> emptyMap()
+        val values = input.toValidationMap().mapValues { (_, v) ->
+            if (v.isBlank()) null
+            else if (v.contains(".")) v.toDoubleOrNull()
+            else v.toIntOrNull() ?: v.toDoubleOrNull()
         }
 
         saveRecord(category, recordId, recordTime, values)
@@ -324,17 +316,18 @@ class PersonHealthViewModel(
             translateValidationResult(validationResult)
 
             val isUpdate = !IdLogic.isNew(recordId)
-            val existing = when (record) {
-                is HeightAndWeight -> healthRepository.findHeightAndWeightAtTime(record.personId, record.recordTime)
-                is BpAndPulse -> healthRepository.findBpAndPulseAtTime(record.personId, record.recordTime)
-                is GlucoseAndHbA1c -> healthRepository.findGlucoseAndHbA1cAtTime(record.personId, record.recordTime)
-                else -> null
-            }
+            
+            // プロセッサを使用した重複チェック
+            val processor = HealthProcessorRegistry.getByGeneralCategory(category)
+            val existing = processor?.findExisting(healthRepository, record.personId, record.recordTime) as? HistoryRecord
 
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            performSave(record, isUpdate)
+            if (processor != null) {
+                processor.save(healthRepository, record, featureName, OP_SAVE, isUpdate)
+            }
+
             sendUiEvent(UiEvent.SaveSuccess(record.personId))
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
         }
@@ -354,13 +347,6 @@ class PersonHealthViewModel(
         throw AppValidationException(R.string.common_error_title_save, messageRes, args, "Validation failed: $result")
     }
 
-    private suspend fun performSave(record: Any, isUpdate: Boolean) = when (record) {
-        is HeightAndWeight -> healthRepository.insertHeightAndWeight(record, featureName, OP_SAVE, isUpdate)
-        is BpAndPulse -> healthRepository.insertBpAndPulse(record, featureName, OP_SAVE, isUpdate)
-        is GlucoseAndHbA1c -> healthRepository.insertGlucoseAndHbA1c(record, featureName, OP_SAVE, isUpdate)
-        else -> {}
-    }
-
     fun deleteRecord(record: Any) {
         safeLaunch(
             operation = OP_DELETE,
@@ -370,16 +356,22 @@ class PersonHealthViewModel(
                 affectedId = (record as? HistoryRecord)?.id
             }
         ) {
-            performDelete(record)
+            val historyRecord = record as? HistoryRecord
+            val processor = historyRecord?.let {
+                val cat = when (it) {
+                    is HeightAndWeight -> Category.HEIGHT_AND_WEIGHT
+                    is BpAndPulse -> Category.BP_AND_PULSE
+                    is GlucoseAndHbA1c -> Category.GLUCOSE_AND_HBA1C
+                    else -> null
+                }
+                cat?.let { c -> HealthProcessorRegistry.getByGeneralCategory(c) }
+            }
+
+            if (processor != null) {
+                processor.delete(healthRepository, record, featureName, OP_DELETE)
+            }
             showSnackbar(R.string.p_health_msg_delete_success)
         }
-    }
-
-    private suspend fun performDelete(record: Any) = when (record) {
-        is HeightAndWeight -> healthRepository.deleteHeightAndWeight(record, featureName, OP_DELETE)
-        is BpAndPulse -> healthRepository.deleteBpAndPulse(record, featureName, OP_DELETE)
-        is GlucoseAndHbA1c -> healthRepository.deleteGlucoseAndHbA1c(record, featureName, OP_DELETE)
-        else -> {}
     }
 
     fun navigateToGraphExpansion(personId: String, category: Category, initialIndex: Int) {

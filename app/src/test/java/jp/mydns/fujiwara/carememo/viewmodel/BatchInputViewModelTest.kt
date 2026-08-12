@@ -130,11 +130,14 @@ class BatchInputViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        val nextTime = viewModel.uiState.value.recordTime.plusSeconds(3600)
-        viewModel.setRecordTime(nextTime)
+        val currentYear = viewModel.uiState.value.year
+        val nextYear = (currentYear.toInt() + 1).toString()
+        viewModel.updateYear(nextYear)
         
         assertTrue(viewModel.uiState.value.isChanged)
-        assertEquals(nextTime, viewModel.uiState.value.recordTime)
+        assertEquals(nextYear, viewModel.uiState.value.year)
+        // Verify recordTime also updated (and is non-null because the rest of the fields are valid)
+        assertNotNull(viewModel.uiState.value.recordTime)
     }
 
     // endregion

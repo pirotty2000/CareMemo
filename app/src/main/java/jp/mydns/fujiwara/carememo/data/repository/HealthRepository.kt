@@ -159,6 +159,31 @@ class HealthRepository(
     }
 
     /**
+     * 健康記録データを保存または更新します。
+     * 型判定を内部で行い、適切な DAO メソッドを呼び出します。
+     */
+    suspend fun insertHistoryRecord(item: HistoryRecord, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
+        return when (item) {
+            is HeightAndWeight -> insertHeightAndWeight(item, featureName, operation, isUpdate)
+            is BpAndPulse -> insertBpAndPulse(item, featureName, operation, isUpdate)
+            is GlucoseAndHbA1c -> insertGlucoseAndHbA1c(item, featureName, operation, isUpdate)
+            else -> throw IllegalArgumentException("Unsupported health record type: ${item::class.java.simpleName}")
+        }
+    }
+
+    /**
+     * 健康記録データを物理削除します。
+     */
+    suspend fun deleteHistoryRecord(item: HistoryRecord, featureName: String = "", operation: String = "") {
+        when (item) {
+            is HeightAndWeight -> deleteHeightAndWeight(item, featureName, operation)
+            is BpAndPulse -> deleteBpAndPulse(item, featureName, operation)
+            is GlucoseAndHbA1c -> deleteGlucoseAndHbA1c(item, featureName, operation)
+            else -> throw IllegalArgumentException("Unsupported health record type: ${item::class.java.simpleName}")
+        }
+    }
+
+    /**
      * 複数の健康記録データを一括で保存します（トランザクション対応）。
      *
      * ブロック内のすべての保存処理は一つのトランザクションとして実行され、
@@ -172,10 +197,8 @@ class HealthRepository(
     suspend fun insertHealthDataBatch(items: List<Any>, featureName: String, operation: String) {
         database.withTransaction {
             for (item in items) {
-                when (item) {
-                    is HeightAndWeight -> insertHeightAndWeight(item, featureName, operation)
-                    is BpAndPulse -> insertBpAndPulse(item, featureName, operation)
-                    is GlucoseAndHbA1c -> insertGlucoseAndHbA1c(item, featureName, operation)
+                if (item is HistoryRecord) {
+                    insertHistoryRecord(item, featureName, operation)
                 }
             }
         }
