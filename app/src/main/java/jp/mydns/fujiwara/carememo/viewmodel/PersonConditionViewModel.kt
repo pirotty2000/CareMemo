@@ -208,26 +208,29 @@ class PersonConditionViewModel(
                 next.copy(
                     isEditing = false,
                     editInput = ConditionEditInput(),
+                    initialRecordTime = null,
                     initialSnapshot = null,
                     isChanged = false,
                     isSaveEnabled = false
                 )
             } else if (IdLogic.isNew(id)) {
                 // 新規作成時は即座に編集セッションを開始
+                val now = Instant.now()
                 val initialInput = ConditionEditInput(
                     author = defaultRecorderName.value,
-                    recordTime = Instant.now()
+                    recordTime = now
                 )
                 next.copy(
                     isEditing = true,
                     editInput = initialInput,
+                    initialRecordTime = now,
                     initialSnapshot = initialInput,
                     isChanged = false,
                     isSaveEnabled = false
                 )
             } else {
                 // 既存レコード選択時は閲覧モードから開始
-                next.copy(isEditing = false)
+                next.copy(isEditing = false, initialRecordTime = null)
             }
         }
 
@@ -274,6 +277,7 @@ class PersonConditionViewModel(
             it.copy(
                 isEditing = true,
                 editInput = initialInput,
+                initialRecordTime = record.recordTime,
                 initialSnapshot = initialInput,
                 isChanged = false,
                 isSaveEnabled = false

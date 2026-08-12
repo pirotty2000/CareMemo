@@ -58,9 +58,9 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     private var loadPersonJob: Job? = null
 
     open fun loadPerson(personId: String) {
-        // 同じIDが既にロード済みであり、かつロード処理が完了（Jobが非アクティブ）していれば、
+        // 同じIDが既にロード済みであり、かつロード処理が一度でも開始（Jobが生成）されていれば、
         // 無駄なリロードを避けるためにスキップする。
-        if (currentState.personId == personId && loadPersonJob?.isActive != true) return
+        if (currentState.personId == personId && loadPersonJob != null) return
 
         updateUiState { onPrepareLoadPerson(it) }
 

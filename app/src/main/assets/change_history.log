@@ -1,5 +1,6 @@
 # Ver.3.2.3 (2026/08/12)
 - 所見メモに遷移しても「記録がありません」になる不具合の修正
+- 記録日時の入力不具合の修正(Health、Condition、BatchInput)
 
 # Ver.3.2.2 (2026/08/12)
 - 記録項目の処理構造の最適化 (HealthCategoryProcessor 導入)

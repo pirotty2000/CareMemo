@@ -37,6 +37,7 @@ data class PersonHealthUiState(
     override val isLoading: Boolean = false,
     val isEditing: Boolean = false,
     val editInput: HealthEditInput = HealthEditInput(),
+    val initialRecordTime: Instant? = null,
     val initialSnapshot: HealthEditInput? = null,
     val isChanged: Boolean = false,
     val isSaveEnabled: Boolean = false

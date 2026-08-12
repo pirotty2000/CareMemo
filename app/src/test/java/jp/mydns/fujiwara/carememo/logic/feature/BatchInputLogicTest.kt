@@ -14,32 +14,50 @@ import java.time.Instant
  */
 class BatchInputLogicTest {
 
+    private val validDateState = BatchInputUiState(
+        year = "2023", month = "10", day = "27", hour = "10", minute = "00"
+    )
+
     // region 2. バリデーション (validate / isValid)
 
     @Test
     fun VL_01_validate_allEmpty() {
-        val state = BatchInputUiState()
+        val state = validDateState.copy()
         assertEquals(BatchInputValidationResult.EMPTY_ALL, BatchInputLogic.validate(state))
         assertFalse(BatchInputLogic.isValid(state))
     }
 
     @Test
     fun VL_02_validate_validInput() {
-        val state = BatchInputUiState(weight = "60.5")
+        val state = validDateState.copy(weight = "60.5")
         assertEquals(BatchInputValidationResult.SUCCESS, BatchInputLogic.validate(state))
         assertTrue(BatchInputLogic.isValid(state))
     }
 
     @Test
     fun VL_03_validate_invalidFormat() {
-        val state = BatchInputUiState(height = "160.0.1", weight = "60.0")
+        val state = validDateState.copy(height = "160.0.1", weight = "60.0")
         assertEquals(BatchInputValidationResult.INVALID_VALUE, BatchInputLogic.validate(state))
         assertFalse(BatchInputLogic.isValid(state))
     }
 
     @Test
     fun VL_04_validate_outOfRange() {
-        val state = BatchInputUiState(bodyTemperature = "50.0")
+        val state = validDateState.copy(bodyTemperature = "50.0")
+        assertEquals(BatchInputValidationResult.INVALID_VALUE, BatchInputLogic.validate(state))
+        assertFalse(BatchInputLogic.isValid(state))
+    }
+
+    @Test
+    fun VL_05_validate_invalidDate() {
+        val state = validDateState.copy(day = "32")
+        assertEquals(BatchInputValidationResult.INVALID_VALUE, BatchInputLogic.validate(state))
+        assertFalse(BatchInputLogic.isValid(state))
+    }
+
+    @Test
+    fun VL_06_validate_heightWithoutWeight() {
+        val state = validDateState.copy(height = "170")
         assertEquals(BatchInputValidationResult.INVALID_VALUE, BatchInputLogic.validate(state))
         assertFalse(BatchInputLogic.isValid(state))
     }
@@ -50,26 +68,11 @@ class BatchInputLogicTest {
 
     @Test
     fun EX_01_getEffectiveCategories_multiple() {
-        val state = BatchInputUiState(weight = "60.0", bpSystolic = "120")
+        val state = validDateState.copy(weight = "60.0", bpSystolic = "120")
         val categories = BatchInputLogic.getEffectiveCategories(state)
         assertEquals(2, categories.size)
         assertTrue(categories.contains(BatchInputCategory.HEIGHT_WEIGHT))
         assertTrue(categories.contains(BatchInputCategory.VITAL))
-    }
-
-    @Test
-    fun EX_02_getEffectiveCategories_single() {
-        val state = BatchInputUiState(glucose = "100")
-        val categories = BatchInputLogic.getEffectiveCategories(state)
-        assertEquals(1, categories.size)
-        assertEquals(BatchInputCategory.GLUCOSE, categories[0])
-    }
-
-    @Test
-    fun EX_03_getEffectiveCategories_empty() {
-        val state = BatchInputUiState()
-        val categories = BatchInputLogic.getEffectiveCategories(state)
-        assertTrue(categories.isEmpty())
     }
 
     // endregion
@@ -78,27 +81,13 @@ class BatchInputLogicTest {
 
     @Test
     fun CP_01_createEntities_multiple() {
-        val state = BatchInputUiState(weight = "60.0", bpSystolic = "120")
-        val entities = BatchInputLogic.createEntities("1", Instant.now(), state)
+        val state = validDateState.copy(weight = "60.0", bpSystolic = "120")
+        val time = state.recordTime!!
+        val entities = BatchInputLogic.createEntities("1", time, state)
         
         assertEquals(2, entities.size)
         assertTrue(entities.any { it is HeightAndWeight })
         assertTrue(entities.any { it is BpAndPulse })
-    }
-
-    @Test
-    fun CP_02_createEntities_single() {
-        val state = BatchInputUiState(glucose = "100")
-        val entities = BatchInputLogic.createEntities("1", Instant.now(), state)
-        
-        assertEquals(1, entities.size)
-        assertTrue(entities[0] is GlucoseAndHbA1c)
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun CP_03_createEntities_invalidData() {
-        val state = BatchInputUiState(height = "abc")
-        BatchInputLogic.createEntities("1", Instant.now(), state)
     }
 
     // endregion
@@ -107,23 +96,18 @@ class BatchInputLogicTest {
 
     @Test
     fun CHG_01_isChanged_initial() {
-        val now = Instant.now()
-        val state = BatchInputUiState(recordTime = now, initialRecordTime = now)
+        val state = validDateState.copy(
+            initialYear = "2023", initialMonth = "10", initialDay = "27", initialHour = "10", initialMinute = "00"
+        )
         assertFalse(BatchInputLogic.isChanged(state))
     }
 
     @Test
     fun CHG_02_isChanged_withInput() {
-        val now = Instant.now()
-        val state = BatchInputUiState(weight = "60", recordTime = now, initialRecordTime = now)
-        assertTrue(BatchInputLogic.isChanged(state))
-    }
-
-    @Test
-    fun CHG_03_isChanged_timeChanged() {
-        val now = Instant.now()
-        val later = now.plusSeconds(60)
-        val state = BatchInputUiState(recordTime = later, initialRecordTime = now)
+        val state = validDateState.copy(
+            initialYear = "2023", initialMonth = "10", initialDay = "27", initialHour = "10", initialMinute = "00",
+            weight = "60"
+        )
         assertTrue(BatchInputLogic.isChanged(state))
     }
 

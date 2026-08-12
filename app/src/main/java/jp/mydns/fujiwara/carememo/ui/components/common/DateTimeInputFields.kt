@@ -80,20 +80,36 @@ class DateTimeInputState(
 
     /**
      * 指定された Instant で各フィールドの値を更新します。
-     * 現在の入力値（論理値）が指定された Instant と既に一致している場合は、
-     * ユーザーの入力を妨げないよう、表示文字列の上書きをスキップします。
+     * 
+     * すでに各フィールドの入力値が指定された Instant と論理的に一致している（年月日時分が同じ）場合は、
+     * ユーザーの入力（空文字や1桁入力などの編集中の状態）を妨げないよう、表示文字列の上書きをスキップします。
      *
      * @param instant 更新対象の日時
      */
     fun updateFromInstant(instant: Instant) {
-        if (toInstant() != instant) {
-            val zdt = instant.atZone(ZoneId.systemDefault())
-            year.value = zdt.year.toString()
-            month.value = zdt.monthValue.toString()
-            day.value = zdt.dayOfMonth.toString()
-            hour.value = "%02d".format(zdt.hour)
-            minute.value = "%02d".format(zdt.minute)
-        }
+        val zdt = instant.atZone(ZoneId.systemDefault())
+        
+        // 1. 現在の UI の値と論理的に同じ（年月日時分が一致）なら、秒精度の差による書き換えを避ける
+        val curY = year.value.toIntOrNull()
+        val curM = month.value.toIntOrNull()
+        val curD = day.value.toIntOrNull()
+        val curH = hour.value.toIntOrNull()
+        val curMin = minute.value.toIntOrNull()
+
+        val isLogicallySame = curY == zdt.year &&
+                              curM == zdt.monthValue &&
+                              curD == zdt.dayOfMonth &&
+                              curH == zdt.hour &&
+                              curMin == zdt.minute
+        
+        if (isLogicallySame) return
+
+        // 2. 明らかな変更（外部からの強制セット等）がある場合のみ表示を更新
+        year.value = zdt.year.toString()
+        month.value = zdt.monthValue.toString()
+        day.value = zdt.dayOfMonth.toString()
+        hour.value = "%02d".format(zdt.hour)
+        minute.value = "%02d".format(zdt.minute)
     }
 }
 

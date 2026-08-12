@@ -139,6 +139,7 @@ class PersonHealthViewModel(
                 next.copy(
                     isEditing = false,
                     editInput = HealthEditInput(),
+                    initialRecordTime = null,
                     initialSnapshot = null,
                     isChanged = false,
                     isSaveEnabled = false
@@ -151,20 +152,22 @@ class PersonHealthViewModel(
                         .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
                 } else ""
 
+                val now = Instant.now()
                 val initialInput = HealthEditInput(
                     heightText = latestHeight,
-                    recordTime = Instant.now()
+                    recordTime = now
                 )
                 next.copy(
                     isEditing = true,
                     editInput = initialInput,
+                    initialRecordTime = now,
                     initialSnapshot = initialInput,
                     isChanged = false,
                     isSaveEnabled = false
                 )
             } else {
                 // 既存レコード選択時は閲覧モードから開始
-                next.copy(isEditing = false)
+                next.copy(isEditing = false, initialRecordTime = null)
             }
         }
     }
@@ -193,6 +196,7 @@ class PersonHealthViewModel(
             it.copy(
                 isEditing = true,
                 editInput = initialInput,
+                initialRecordTime = record.recordTime,
                 initialSnapshot = initialInput,
                 isChanged = false,
                 isSaveEnabled = false

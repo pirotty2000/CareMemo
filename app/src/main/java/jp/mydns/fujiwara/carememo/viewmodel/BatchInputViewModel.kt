@@ -21,6 +21,8 @@ import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.HealthProcessorRegistry
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 /**
  * ViewModel：BatchInputViewModel
@@ -97,10 +99,18 @@ class BatchInputViewModel(
         person: Person,
         summary: PersonCategorySummary?
     ): BatchInputUiState {
-        // 利用者が切り替わった場合は、以前の入力を全てリセットし、記録日時を現在時刻に設定する
+        // 利用者が切り替わった場合、または初回ロード時は、入力をリセットし、記録日時を現在時刻に設定する
+        val isFirstLoad = state.personId == null
         val isDifferentPerson = state.personId != person.id
-        val next = if (isDifferentPerson) {
-            val now = Instant.now()
+        
+        val next = if (isFirstLoad || isDifferentPerson) {
+            val now = Instant.now().atZone(ZoneId.systemDefault())
+            val y = now.year.toString()
+            val m = now.monthValue.toString()
+            val d = now.dayOfMonth.toString()
+            val h = "%02d".format(now.hour)
+            val min = "%02d".format(now.minute)
+
             state.copy(
                 personId = person.id,
                 person = person,
@@ -108,11 +118,11 @@ class BatchInputViewModel(
                 personSummary = summary,
                 height = "", weight = "", bpSystolic = "", bpDiastolic = "",
                 sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
-                recordTime = now,
-                initialRecordTime = now
+                year = y, month = m, day = d, hour = h, minute = min,
+                initialYear = y, initialMonth = m, initialDay = d, initialHour = h, initialMinute = min
             )
         } else {
-            // 同一利用者の再ロード時は、基本情報とサマリーのみ更新する
+            // 同一利用者の再ロード時は、基本情報とサマリーのみ更新し、入力中の日時は維持する
             state.copy(
                 personId = person.id,
                 currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
@@ -130,7 +140,12 @@ class BatchInputViewModel(
     // --- UI 入力更新用メソッド群 ---
     // 各項目の更新は updateState ヘルパーを介して原子的に行われ、派生状態も同時に更新されます。
 
-    fun setRecordTime(time: Instant) = updateState { it.copy(recordTime = time) }
+    fun updateYear(v: String) = updateState { it.copy(year = v) }
+    fun updateMonth(v: String) = updateState { it.copy(month = v) }
+    fun updateDay(v: String) = updateState { it.copy(day = v) }
+    fun updateHour(v: String) = updateState { it.copy(hour = v) }
+    fun updateMinute(v: String) = updateState { it.copy(minute = v) }
+
     fun updateHeight(v: String) = updateState { it.copy(height = v) }
     fun updateWeight(v: String) = updateState { it.copy(weight = v) }
     fun updateBpSystolic(v: String) = updateState { it.copy(bpSystolic = v) }
@@ -146,10 +161,14 @@ class BatchInputViewModel(
      */
     private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
         updateUiState { current ->
-            val next = reducer(current)
-            next.copy(
-                isValid = BatchInputLogic.isValid(next),
-                isChanged = BatchInputLogic.isChanged(next)
+            val partialNext = reducer(current)
+            // 論理的なバリデーション結果を算出し、State に同期反映する
+            val finalIsValid = BatchInputLogic.isValid(partialNext)
+            val finalIsChanged = BatchInputLogic.isChanged(partialNext)
+            
+            partialNext.copy(
+                isValid = finalIsValid,
+                isChanged = finalIsChanged
             )
         }
     }
@@ -166,7 +185,7 @@ class BatchInputViewModel(
      */
     fun saveBatch() {
         val state = currentState
-        val time = state.recordTime
+        val time = state.recordTime ?: return
 
         safeLaunch(
             operation = OP_SAVE_BATCH,
@@ -186,7 +205,7 @@ class BatchInputViewModel(
 
             // 3. 重複チェック：同一日時の既存レコードがあるカテゴリを特定する
             val duplicateResIds = HealthProcessorRegistry.getAll()
-                .filter { !it.isEmpty(state) && it.validate(state) == HealthInputValidationResult.SUCCESS }
+                .filter { !it.isEmpty(state) }
                 .filter { it.findExisting(healthRepository, requiredPersonId, time) != null }
                 .map { it.categoryNameResId }
 
@@ -210,12 +229,16 @@ class BatchInputViewModel(
             sendUiEvent(UiEvent.SaveSuccess())
             showSnackbar(R.string.batch_msg_save_success)
             
-            // 入力値をクリアし、変更基準点を現在の時刻に更新して次の入力に備える
+            // 入力値をクリアし、変更基準点を現在の入力値（保存に成功した日時）に更新して次の入力に備える
             updateUiState { current ->
                 current.copy(
                     height = "", weight = "", bpSystolic = "", bpDiastolic = "",
                     sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
-                    initialRecordTime = current.recordTime,
+                    initialYear = current.year,
+                    initialMonth = current.month,
+                    initialDay = current.day,
+                    initialHour = current.hour,
+                    initialMinute = current.minute,
                     isChanged = false,
                     isValid = false
                 )

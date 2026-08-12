@@ -51,6 +51,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputStat
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import java.time.Instant
 
 /**
  * 全体像：健康管理（Health）
@@ -368,6 +369,7 @@ fun HealthRecordDetailPane(
                         category = uiState.currentCategory,
                         recordId = uiState.selectedRecordId ?: "",
                         editInput = uiState.editInput,
+                        initialRecordTime = uiState.initialRecordTime,
                         isSaveEnabled = uiState.isSaveEnabled,
                         onEditInputUpdate = onEditInputUpdate,
                         onCancel = {
@@ -405,13 +407,14 @@ private fun HealthRecordEditForm(
     category: Category,
     recordId: String,
     editInput: HealthEditInput,
+    initialRecordTime: Instant?,
     isSaveEnabled: Boolean,
     onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
     onCancel: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dateTimeState = rememberDateTimeInputState(initialInstant = editInput.recordTime)
+    val dateTimeState = rememberDateTimeInputState(initialInstant = initialRecordTime)
 
     // 日時状態を ViewModel へ同期
     LaunchedEffect(

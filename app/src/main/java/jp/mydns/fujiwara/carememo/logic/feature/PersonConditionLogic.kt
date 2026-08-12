@@ -63,6 +63,7 @@ data class PersonConditionUiState(
     // --- 編集セッション状態 ---
     val isEditing: Boolean = false,
     val editInput: ConditionEditInput = ConditionEditInput(),
+    val initialRecordTime: Instant? = null,
     val initialSnapshot: ConditionEditInput? = null,
     val isChanged: Boolean = false,
     val isSaveEnabled: Boolean = false

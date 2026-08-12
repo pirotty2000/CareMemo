@@ -290,6 +290,7 @@ fun ConditionDetailPane(
         ConditionRecordEditForm(
             conditionId = uiState.selectedConditionId,
             editInput = uiState.editInput,
+            initialRecordTime = uiState.initialRecordTime,
             photos = uiState.currentConditionPhotos,
             isProcessing = uiState.isProcessing,
             isSaveEnabled = uiState.isSaveEnabled,
@@ -362,6 +363,7 @@ fun ConditionDetailPane(
 private fun ConditionRecordEditForm(
     conditionId: String,
     editInput: ConditionEditInput,
+    initialRecordTime: Instant?,
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isSaveEnabled: Boolean,
@@ -389,7 +391,7 @@ private fun ConditionRecordEditForm(
         }
     }
 
-    val dateTimeState = rememberDateTimeInputState(initialInstant = editInput.recordTime)
+    val dateTimeState = rememberDateTimeInputState(initialInstant = initialRecordTime)
 
     // 日時状態を ViewModel へ同期
     LaunchedEffect(
@@ -845,6 +847,7 @@ private fun PreviewConditionRecordEditFormDirect() {
                 condition = MockData.condition.condition ?: "",
                 recordTime = Instant.now()
             ),
+            initialRecordTime = Instant.now(),
             photos = persistentListOf(),
             isProcessing = false,
             isSaveEnabled = true,

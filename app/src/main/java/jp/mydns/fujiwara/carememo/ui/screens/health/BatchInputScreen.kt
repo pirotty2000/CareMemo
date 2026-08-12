@@ -38,8 +38,6 @@ fun BatchInputScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
     
-    val recordTime = uiState.recordTime
-    val initialRecordTime = uiState.initialRecordTime
     val isChanged = uiState.isChanged
     val isValid = uiState.isValid
     val isLoading = uiState.isLoading
@@ -53,23 +51,6 @@ fun BatchInputScreen(
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
-
-    // 日時入力の状態管理
-    val dateTimeState = rememberDateTimeInputState(initialInstant = initialRecordTime)
-
-    // ViewModel からの recordTime 変更を dateTimeState に反映
-    LaunchedEffect(recordTime) {
-        dateTimeState.updateFromInstant(recordTime)
-    }
-
-    // dateTimeState の変更を ViewModel に通知
-    LaunchedEffect(dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value, dateTimeState.hour.value, dateTimeState.minute.value) {
-        dateTimeState.toInstant()?.let { newTime ->
-            if (newTime != recordTime) {
-                viewModel.setRecordTime(newTime)
-            }
-        }
-    }
 
     // イベント監視
     LaunchedEffect(Unit) {
@@ -198,9 +179,18 @@ fun BatchInputScreen(
                         .testTag("BatchInputScreen_InputScrollColumn"),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 記録日時
+                    // 記録日時 (Stateless)
                     DateTimeInputFields(
-                        state = dateTimeState,
+                        year = uiState.year,
+                        onYearChange = viewModel::updateYear,
+                        month = uiState.month,
+                        onMonthChange = viewModel::updateMonth,
+                        day = uiState.day,
+                        onDayChange = viewModel::updateDay,
+                        hour = uiState.hour,
+                        onHourChange = viewModel::updateHour,
+                        minute = uiState.minute,
+                        onMinuteChange = viewModel::updateMinute,
                         modifier = Modifier.testTag("BatchInputScreen_DateTimeInput")
                     )
 
