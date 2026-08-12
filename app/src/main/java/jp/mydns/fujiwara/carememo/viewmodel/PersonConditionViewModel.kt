@@ -32,6 +32,7 @@ import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 /**
@@ -76,6 +77,19 @@ class PersonConditionViewModel(
         
         // 利用者情報の購読開始
         startObservePersonId()
+
+        // 共通設定（デフォルト記録者名）の変更を購読し、新規作成時の入力に自動反映
+        scope.launch {
+            defaultRecorderName.collect { name ->
+                updateUiState { state ->
+                    if (state.isEditing && IdLogic.isNew(state.selectedConditionId ?: "") && state.editInput.author.isBlank()) {
+                        state.copy(editInput = state.editInput.copy(author = name))
+                    } else {
+                        state
+                    }
+                }
+            }
+        }
     }
 
     private fun initializeFromNavigation() {
