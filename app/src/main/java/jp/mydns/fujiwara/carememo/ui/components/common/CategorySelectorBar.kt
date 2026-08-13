@@ -64,7 +64,7 @@ fun CategorySelectorBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
-                .testTag("CategorySelectorBar"),
+                .testTag("CategorySelectorBar_List"),
             state = categoryListState,
             contentPadding = PaddingValues(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

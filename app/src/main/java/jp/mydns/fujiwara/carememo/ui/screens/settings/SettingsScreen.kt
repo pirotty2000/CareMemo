@@ -703,7 +703,8 @@ fun SettingsScreenContent(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .navigationBarsPadding()
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .testTag("Settings_ScrollColumn"),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 DisplayAndRecordingSection(
@@ -852,7 +853,7 @@ private fun UserManagementSection(
             headlineContent = { Text(stringResource(R.string.settings_item_restore_archived_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_restore_archived_desc, endedUserCount)) },
             trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
-            modifier = Modifier.clickable { onNavigateToRestore() }
+            modifier = Modifier.clickable { onNavigateToRestore() }.testTag("Settings_RestoreUserButton")
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_permanent_delete_archived_title), color = MaterialTheme.colorScheme.error) },
@@ -866,7 +867,7 @@ private fun UserManagementSection(
                     ) 
                 } 
             },
-            modifier = Modifier.clickable(enabled = endedUserCount > 0) { onEraseClick() }
+            modifier = Modifier.clickable(enabled = endedUserCount > 0) { onEraseClick() }.testTag("Settings_PermanentDeleteButton")
         )
     }
 }

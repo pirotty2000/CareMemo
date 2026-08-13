@@ -124,6 +124,7 @@ class BatchInputViewModel(
             // 同一利用者の再ロード時は、基本情報とサマリーのみ更新し、入力中の日時は維持する
             state.copy(
                 personId = person.id,
+                person = person,
                 currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
                 personSummary = summary
             )

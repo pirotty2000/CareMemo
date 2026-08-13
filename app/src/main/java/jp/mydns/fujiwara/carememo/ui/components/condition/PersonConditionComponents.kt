@@ -514,7 +514,11 @@ private fun ConditionRecordEditForm(
                     }
                     // カメラで撮影
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
-                        IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
+                        IconButton(
+                            onClick = onAddPhotoClick,
+                            enabled = !isProcessing,
+                            modifier = Modifier.testTag("Condition_AddPhotoButton")
+                        ) {
                             Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = stringResource(R.string.condition_btn_camera_desc), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -585,7 +589,10 @@ private fun PhotoGrid(
                             AsyncImage(
                                 model = ImageUtils.getPhotoFile(context, photo.thumbnailFileName),
                                 contentDescription = photo.caption,
-                                modifier = Modifier.fillMaxSize().clickable { onPhotoClick(photo) },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable { onPhotoClick(photo) }
+                                    .testTag("ConditionPhoto_${photo.id}"),
                                 contentScale = ContentScale.Crop
                             )
                             // 編集モード時のみ削除アイコンを表示

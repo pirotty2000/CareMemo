@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -164,21 +165,21 @@ fun DateTimeInputFields(
                 onValueChange = onYearChange,
                 maxLength = 4,
                 label = stringResource(R.string.common_year_suffix),
-                modifier = Modifier.weight(1.3f)
+                modifier = Modifier.weight(1.3f).testTag("DateTimeUnit_Year")
             )
             DateTimeUnitField(
                 value = month,
                 onValueChange = onMonthChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_month_suffix),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).testTag("DateTimeUnit_Month")
             )
             DateTimeUnitField(
                 value = day,
                 onValueChange = onDayChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_day_suffix),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("DateTimeUnit_Day"),
                 // 日付までで入力を止める場合は Done、時まで続ける場合は Next を指定
                 imeAction = if (autoFocusHour) ImeAction.Next else ImeAction.Done
             )
@@ -187,14 +188,14 @@ fun DateTimeInputFields(
                 onValueChange = onHourChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_hour_suffix),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).testTag("DateTimeUnit_Hour")
             )
             DateTimeUnitField(
                 value = minute,
                 onValueChange = onMinuteChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_minute_suffix),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("DateTimeUnit_Minute"),
                 imeAction = ImeAction.Done
             )
         }

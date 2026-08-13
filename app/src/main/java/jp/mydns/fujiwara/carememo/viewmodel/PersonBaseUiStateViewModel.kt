@@ -60,7 +60,21 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     open fun loadPerson(personId: String) {
         // 同じIDが既にロード済みであり、かつロード処理が一度でも開始（Jobが生成）されていれば、
         // 無駄なリロードを避けるためにスキップする。
-        if (currentState.personId == personId && loadPersonJob != null) return
+        if (currentState.personId == personId && loadPersonJob != null) {
+            // ガードが発動したことをログに残す（診断用）
+            scope.launch {
+                auditLogRepository.log(
+                    featureName = featureName,
+                    operation = OP_LOAD_PERSON,
+                    tableName = TABLE_PERSON,
+                    actionType = "INFO",
+                    affectedId = personId,
+                    details = "Skip loadPerson: Already loaded and job exists.",
+                    resultType = "GUARD_SKIPPED"
+                )
+            }
+            return
+        }
 
         updateUiState { onPrepareLoadPerson(it) }
 
