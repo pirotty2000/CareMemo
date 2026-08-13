@@ -25,9 +25,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
@@ -103,8 +105,9 @@ class PersonListViewModel(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val personsWithMatchedConditions: StateFlow<List<String>?> = uiState
-        .flatMapLatest { state ->
-            val query = state.searchQuery
+        .map { it.searchQuery }
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
             if (query.isBlank()) flowOf(null)
             else conditionRepository.getPersonIdsByConditionKeyword(query)
                 .catch<List<String>?> { emit(null) }
