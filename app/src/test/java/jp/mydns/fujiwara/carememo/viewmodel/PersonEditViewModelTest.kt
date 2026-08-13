@@ -12,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -210,6 +211,36 @@ class PersonEditViewModelTest {
         }
         
         coVerify(exactly = 0) { repository.insertPerson(any(), any(), any()) }
+    }
+
+    @Test
+    fun SAV_04_save_doubleClickPrevention() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        // Setup valid state
+        viewModel.updateLastName("A")
+        viewModel.updateFirstName("B")
+        viewModel.updateLastNameFurigana("あ")
+        viewModel.updateFirstNameFurigana("い")
+        viewModel.updateEra(BirthEra.REIWA)
+        viewModel.updateYear("1")
+        viewModel.updateMonth("5")
+        viewModel.updateDay("1")
+
+        // Mock repository with delay
+        coEvery { repository.insertPerson(any(), any(), any()) } coAnswers {
+            delay(1000)
+        }
+
+        // Call save twice
+        viewModel.save()
+        viewModel.save()
+
+        advanceUntilIdle()
+
+        // Verify repository was called ONLY once
+        coVerify(exactly = 1) { repository.insertPerson(any(), any(), any()) }
     }
 
     // endregion

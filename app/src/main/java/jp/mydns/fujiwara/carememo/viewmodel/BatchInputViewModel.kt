@@ -19,6 +19,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.HealthProcessorRegistry
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -74,6 +75,9 @@ class BatchInputViewModel(
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 保存処理の実行状態を管理する Job */
+    private var saveJob: Job? = null
 
     init {
         // 共通設定（氏名マスキング）の変更を購読し、UI 状態へ反映
@@ -184,10 +188,13 @@ class BatchInputViewModel(
      * 5. 成功時の UI 通知（エフェクト送出・スナックバー表示）および入力値のクリア。
      */
     fun saveBatch() {
+        // 二重保存防止：既に保存処理が実行中の場合は何もしない
+        if (saveJob?.isActive == true) return
+
         val state = currentState
         val time = state.recordTime ?: return
 
-        safeLaunch(
+        saveJob = safeLaunch(
             operation = OP_SAVE_BATCH,
             loadingState = loadingStateProxy,
             contextBuilder = {

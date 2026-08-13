@@ -17,6 +17,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -59,6 +60,9 @@ class PersonEditViewModel(
 
     /** コンストラクタで取得した personId（新規なら null） */
     private val personId: String?
+
+    /** 保存処理の実行状態を管理する Job */
+    private var saveJob: Job? = null
 
     init {
         // 標準のエラーハンドラをセットアップ
@@ -158,7 +162,10 @@ class PersonEditViewModel(
      * 入力内容をバリデーションし、DB へ保存（新規登録または更新）します。
      */
     fun save() {
-        safeLaunch(
+        // 二重保存防止：既に保存処理が実行中の場合は何もしない
+        if (saveJob?.isActive == true) return
+
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {

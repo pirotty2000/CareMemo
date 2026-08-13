@@ -9,6 +9,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -207,6 +208,49 @@ class BatchInputViewModelTest {
         coVerify {
             auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("DB Error") }, "OTHER_ERROR")
         }
+    }
+
+    @Test
+    fun SAV_06_saveBatch_doubleClickPrevention() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("60")
+
+        // Mock repository with delay
+        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } coAnswers {
+            delay(1000)
+        }
+
+        // Call saveBatch twice
+        viewModel.saveBatch()
+        viewModel.saveBatch()
+
+        advanceUntilIdle()
+
+        // Verify repository was called ONLY once
+        coVerify(exactly = 1) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+    }
+
+    @Test
+    fun SAV_07_saveBatch_failure_dataRetention() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("60")
+        val originalState = viewModel.uiState.value
+
+        // Mock repository with exception
+        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
+
+        viewModel.saveBatch()
+        advanceUntilIdle()
+
+        // Verify that data is STILL there
+        assertEquals("60", viewModel.uiState.value.weight)
+        assertTrue(viewModel.uiState.value.isChanged)
+        // Check that initial values (which determine isChanged) were NOT updated to current
+        assertEquals(originalState.initialYear, viewModel.uiState.value.initialYear)
     }
 
     // endregion
