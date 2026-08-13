@@ -18,6 +18,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Logic Test: PersonListViewModel
@@ -144,17 +145,17 @@ class PersonListViewModelTest {
 
         // Mock conditionRepository: "term1" is slow, "term2" is fast
         coEvery { conditionRepository.getPersonIdsByConditionKeyword("term1") } returns flow {
-            delay(2000)
+            delay(2000.milliseconds)
             emit(listOf("u1"))
         }
         coEvery { conditionRepository.getPersonIdsByConditionKeyword("term2") } returns flow {
-            delay(500)
+            delay(500.milliseconds)
             emit(listOf("u2"))
         }
 
         // Start search for term1
         viewModel.setSearchQuery("term1")
-        advanceTimeBy(1000) // "term1" is still running
+        advanceTimeBy(1000.milliseconds) // "term1" is still running
         
         // Change search to term2
         viewModel.setSearchQuery("term2")
