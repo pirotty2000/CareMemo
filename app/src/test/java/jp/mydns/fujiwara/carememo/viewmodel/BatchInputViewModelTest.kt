@@ -20,6 +20,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Logic Test: BatchInputViewModel
@@ -219,7 +220,7 @@ class BatchInputViewModelTest {
 
         // Mock repository with delay
         coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } coAnswers {
-            delay(1000)
+            delay(1000.milliseconds)
         }
 
         // Call saveBatch twice

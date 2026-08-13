@@ -25,6 +25,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Logic Test: PersonEditViewModel
@@ -230,7 +231,7 @@ class PersonEditViewModelTest {
 
         // Mock repository with delay
         coEvery { repository.insertPerson(any(), any(), any()) } coAnswers {
-            delay(1000)
+            delay(1000.milliseconds)
         }
 
         // Call save twice
