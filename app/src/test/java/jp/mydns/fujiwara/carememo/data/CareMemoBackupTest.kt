@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.data
 
 import kotlinx.serialization.encodeToString

@@ -159,7 +159,7 @@ class PersonListViewModelTest {
         
         // Change search to term2
         viewModel.setSearchQuery("term2")
-        advanceUntilIdle() // term2 should complete, term1 should be cancelled
+        advanceUntilIdle() // term2 should complete, term1 should be canceled
         
         // Result should be u2 only
         val result = viewModel.uiState.value.userList

@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.logic.common
 
 import org.junit.Assert.assertEquals

@@ -20,13 +20,13 @@
 ## 3. 写真メタデータ操作テスト (ConditionPhoto)
 **目的:** 写真の保存、削除、および複雑な紐付け操作（リンク、再登録）が正しく行われることを検証する。
 
-| ID     | テスト項目    | 検証内容                           | 期待結果                                              |
-|:-------|:---------|:-------------------------------|:--------------------------------------------------|
-| PHT-01 | 写真保存     | `insertConditionPhoto` の実行     | DAO の `insert` が呼ばれ、`condition_photo_db` のログが残ること |
-| PHT-02 | 一時保存の紐付け | `linkTemporaryPhotosToRecord`  | DAO の一括更新が呼ばれ、紐付け成功のログが残ること                       |
-| PHT-03 | 写真の再紐付け  | `reattachPhotoToRecord` (未割り当て救済) | DAO の `updateConditionId` が呼ばれ、再紐付けのログが残ること |
-| PHT-04 | ファイル救済登録 | `adoptFileAsPhoto` (未登録ファイル救済) | 物理情報から `ConditionPhoto` が構築・保存され、ログが残ること          |
-| PHT-05 | 写真削除     | `deleteConditionPhotoById`     | DAO の `deleteById` が呼ばれ、削除のログが残ること                |
+| ID     | テスト項目    | 検証内容                              | 期待結果                                              |
+|:-------|:---------|:----------------------------------|:--------------------------------------------------|
+| PHT-01 | 写真保存     | `insertConditionPhoto` の実行        | DAO の `insert` が呼ばれ、`condition_photo_db` のログが残ること |
+| PHT-02 | 一時保存の紐付け | `linkTemporaryPhotosToRecord`     | DAO の一括更新が呼ばれ、紐付け成功のログが残ること                       |
+| PHT-03 | 写真の再紐付け  | `reattachPhotoToRecord` (未割り当て救済) | DAO の `updateConditionId` が呼ばれ、再紐付けのログが残ること       |
+| PHT-04 | ファイル救済登録 | `adoptFileAsPhoto` (未登録ファイル救済)    | 物理情報から `ConditionPhoto` が構築・保存され、ログが残ること          |
+| PHT-05 | 写真削除     | `deleteConditionPhotoById`        | DAO の `deleteById` が呼ばれ、削除のログが残ること                |
 
 ## 4. データ取得・検索テスト (Query)
 **目的:** 各種条件によるデータ取得が DAO と正しく連携しているかを検証する。
