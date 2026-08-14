@@ -26,6 +26,8 @@ class DateTimeInputFieldsTest {
     @Test
     fun CMP_DT_01_IncrementalTyping_Day() {
         val initialInstant = Instant.parse("2026-08-12T22:46:00Z")
+        // 端末のタイムゾーンでの「日」を計算（JSTなら 13 になる）
+        val expectedInitialDay = initialInstant.atZone(java.time.ZoneId.systemDefault()).dayOfMonth.toString()
         
         composeTestRule.setContent {
             CareMemoTheme {
@@ -34,18 +36,18 @@ class DateTimeInputFieldsTest {
             }
         }
 
-        // 初期値の確認 (12日)
+        // 初期値の確認
         val dayField = composeTestRule.onNodeWithTag("DateTimeUnit_Day")
-        dayField.assertTextContains("12")
+        dayField.assertTextContains(expectedInitialDay)
 
-        // 1文字削除（"1" になる）
-        dayField.performTextReplacement("") // クリアしてから
+        // 1文字削除してから "1" を入力
+        dayField.performTextReplacement("") 
         dayField.performTextInput("1")
         
         // 即座に "1" であることを検証（"01" などに勝手に補完されないこと）
         dayField.assertTextContains("1")
 
-        // 2文字目を入力（"12" に戻る）
+        // 2文字目を入力（"12" になることを確認）
         dayField.performTextInput("2")
         dayField.assertTextContains("12")
     }
@@ -56,6 +58,7 @@ class DateTimeInputFieldsTest {
     @Test
     fun CMP_DT_02_IncrementalTyping_Month() {
         val initialInstant = Instant.parse("2026-08-12T22:46:00Z")
+        val expectedInitialMonth = initialInstant.atZone(java.time.ZoneId.systemDefault()).monthValue.toString()
         
         composeTestRule.setContent {
             CareMemoTheme {
@@ -65,7 +68,7 @@ class DateTimeInputFieldsTest {
         }
 
         val monthField = composeTestRule.onNodeWithTag("DateTimeUnit_Month")
-        monthField.assertTextContains("8") // 初期値は "8" または "08" (現在の実装は 8)
+        monthField.assertTextContains(expectedInitialMonth)
 
         monthField.performTextReplacement("")
         monthField.performTextInput("1")
