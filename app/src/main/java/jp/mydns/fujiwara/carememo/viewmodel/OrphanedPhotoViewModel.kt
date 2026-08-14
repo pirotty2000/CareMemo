@@ -14,6 +14,7 @@ import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -45,6 +46,9 @@ class OrphanedPhotoViewModel(
 
     override val featureName: String = "OrphanedPhotoManagement"
 
+    /** 処理実行用の Job */
+    private var actionJob: Job? = null
+
     override fun copyWithLoadingState(state: OrphanedPhotoUiState, isLoading: Boolean): OrphanedPhotoUiState {
         return state.copy(isLoading = isLoading)
     }
@@ -56,27 +60,48 @@ class OrphanedPhotoViewModel(
         }
     }
 
-    fun loadOrphanedPhotos() = safeLaunch(operation = "loadOrphanedPhotos", loadingState = loadingStateProxy) {
-        val dbPhotos = conditionRepository.getAllConditionPhotosRaw()
-        val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
-        val photosDir = ImageUtils.getPhotosDirPublic(context)
-        val physicalFiles = photosDir.listFiles()?.toList() ?: emptyList()
+    fun loadOrphanedPhotos() {
+        if (actionJob?.isActive == true) return
 
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(
-            dbPhotos = dbPhotos,
-            existingConditionIds = existingConditionIds,
-            physicalFiles = physicalFiles
-        )
+        actionJob = safeLaunch(operation = "loadOrphanedPhotos", loadingState = loadingStateProxy) {
+            val dbPhotos = conditionRepository.getAllConditionPhotosRaw()
+            val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
+            val photosDir = ImageUtils.getPhotosDirPublic(context)
+            val physicalFiles = photosDir.listFiles()?.toList() ?: emptyList()
 
-        updateUiState { it.copy(orphanedPhotos = orphaned.toImmutableList()) }
+            val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(
+                dbPhotos = dbPhotos,
+                existingConditionIds = existingConditionIds,
+                physicalFiles = physicalFiles
+            )
+
+            updateUiState { it.copy(orphanedPhotos = orphaned.toImmutableList()) }
+        }
     }
 
-    fun deletePhoto(info: OrphanedPhotoInfo) = safeLaunch(operation = "deletePhoto", loadingState = loadingStateProxy) {
-        info.photoId?.let {
-            conditionRepository.deleteConditionPhotoById(it, info.personId ?: "", featureName, "deletePhoto")
+    fun deletePhoto(info: OrphanedPhotoInfo) {
+        if (actionJob?.isActive == true) return
+
+        actionJob = safeLaunch(operation = "deletePhoto", loadingState = loadingStateProxy) {
+            info.photoId?.let {
+                conditionRepository.deleteConditionPhotoById(it, info.personId ?: "", featureName, "deletePhoto")
+            }
+            ImageUtils.deleteImageFiles(context, info.photoFileName, info.thumbnailFileName)
+            
+            // リロード処理をインラインで実行（actionJob が自分自身なので、loadOrphanedPhotos() 呼び出しは skip されるため）
+            val dbPhotos = conditionRepository.getAllConditionPhotosRaw()
+            val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
+            val photosDir = ImageUtils.getPhotosDirPublic(context)
+            val physicalFiles = photosDir.listFiles()?.toList() ?: emptyList()
+
+            val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(
+                dbPhotos = dbPhotos,
+                existingConditionIds = existingConditionIds,
+                physicalFiles = physicalFiles
+            )
+
+            updateUiState { it.copy(orphanedPhotos = orphaned.toImmutableList()) }
         }
-        ImageUtils.deleteImageFiles(context, info.photoFileName, info.thumbnailFileName)
-        loadOrphanedPhotos()
     }
 
     fun navigateBack() {

@@ -87,6 +87,9 @@ class PersonMedicationViewModel(
     /** 全レコード購読用 Job */
     private var allRecordsJob: Job? = null
 
+    /** 同期処理（保存・削除）用の Job */
+    private var syncJob: Job? = null
+
     init {
         // 引数（categoryName）の変更を購読
         scope.launch {
@@ -203,7 +206,10 @@ class PersonMedicationViewModel(
      * @param slotRecords 各スロットの服薬記録オブジェクトのリスト（未チェック時は null）
      */
     fun syncMedicationDay(date: String, slotRecords: List<MedicationRecord?>) {
-        safeLaunch(
+        // 二重実行防止
+        if (syncJob?.isActive == true) return
+
+        syncJob = safeLaunch(
             operation = OP_SYNC,
             loadingState = loadingStateProxy,
             contextBuilder = {

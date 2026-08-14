@@ -20,6 +20,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonListLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -93,6 +94,9 @@ class PersonListViewModel(
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** データ更新処理（追加・削除・復元）用の Job */
+    private var actionJob: Job? = null
 
     /** 特定の利用者の緊急連絡先ロード状態を管理する内部 Flow */
     private val emergencyContactLoadingState = MutableStateFlow(false)
@@ -205,7 +209,10 @@ class PersonListViewModel(
      * @param person 登録する利用者データ
      */
     fun addPerson(person: Person) {
-        safeLaunch(
+        // 二重実行防止
+        if (actionJob?.isActive == true) return
+
+        actionJob = safeLaunch(
             operation = OP_ADD,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -258,7 +265,10 @@ class PersonListViewModel(
      * @param person 対象の利用者
      */
     fun logicalDeletePerson(person: Person) {
-        safeLaunch(
+        // 二重実行防止
+        if (actionJob?.isActive == true) return
+
+        actionJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -277,7 +287,10 @@ class PersonListViewModel(
      * @param person 対象の利用者
      */
     fun restorePerson(person: Person) {
-        safeLaunch(
+        // 二重実行防止
+        if (actionJob?.isActive == true) return
+
+        actionJob = safeLaunch(
             operation = OP_RESTORE,
             loadingState = loadingStateProxy,
             contextBuilder = {

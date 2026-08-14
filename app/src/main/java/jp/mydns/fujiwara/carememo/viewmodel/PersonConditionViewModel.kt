@@ -71,6 +71,20 @@ class PersonConditionViewModel(
 
     override val featureName: String = FEATURE_NAME
 
+    /** 各種ロード用の Job */
+    private var recordsJob: Job? = null
+    private var photoJob: Job? = null
+    private var photoMapJob: Job? = null
+
+    /** 保存処理用の Job */
+    private var saveJob: Job? = null
+
+    /** 削除処理用の Job */
+    private var deleteJob: Job? = null
+
+    /** 写真操作（追加・削除・再紐付け）用の Job */
+    private var photoActionJob: Job? = null
+
     init {
         // 初期化
         initializeFromNavigation()
@@ -114,10 +128,6 @@ class PersonConditionViewModel(
             args.query?.let { updateSearchQuery(it) }
         } catch (_: Exception) {}
     }
-
-    private var recordsJob: Job? = null
-    private var photoJob: Job? = null
-    private var photoMapJob: Job? = null
 
     override fun copyWithLoadingState(state: PersonConditionUiState, isLoading: Boolean): PersonConditionUiState {
         return state.copy(isLoading = isLoading)
@@ -318,10 +328,13 @@ class PersonConditionViewModel(
      * 現在の入力内容で保存を実行します。
      */
     fun saveCurrentEdit(onSuccess: (String) -> Unit = {}) {
+        // 二重実行防止
+        if (saveJob?.isActive == true) return
+
         val input = currentState.editInput
         val conditionId = currentState.selectedConditionId ?: ""
         
-        safeLaunch(
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -374,7 +387,10 @@ class PersonConditionViewModel(
     }
 
     fun deleteRecord(record: ConditionAtVisit) {
-        safeLaunch(
+        // 二重実行防止
+        if (deleteJob?.isActive == true) return
+
+        deleteJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -393,8 +409,10 @@ class PersonConditionViewModel(
 
     fun reattachOrphanedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
         if (IdLogic.isNew(conditionId)) return
+        // 二重実行防止
+        if (photoActionJob?.isActive == true) return
 
-        safeLaunch(
+        photoActionJob = safeLaunch(
             operation = "reattachOrphanedPhoto",
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -420,7 +438,10 @@ class PersonConditionViewModel(
     }
 
     fun processAndSavePhoto(context: Context, uri: Uri, conditionId: String, caption: String) {
-        safeLaunch(
+        // 二重実行防止
+        if (photoActionJob?.isActive == true) return
+
+        photoActionJob = safeLaunch(
             operation = OP_SAVE_PHOTO,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -449,7 +470,10 @@ class PersonConditionViewModel(
     }
 
     fun deletePhoto(context: Context, photo: ConditionPhoto) {
-        safeLaunch(
+        // 二重実行防止
+        if (photoActionJob?.isActive == true) return
+
+        photoActionJob = safeLaunch(
             operation = OP_DELETE_PHOTO,
             loadingState = loadingStateProxy,
             contextBuilder = {

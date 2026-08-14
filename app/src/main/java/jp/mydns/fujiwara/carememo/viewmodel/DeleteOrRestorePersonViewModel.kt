@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -40,6 +41,9 @@ class DeleteOrRestorePersonViewModel(
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** データ更新処理（復帰・抹消）用の Job */
+    private var actionJob: Job? = null
 
     enum class OperationMode {
         RESTORE,
@@ -108,8 +112,11 @@ class DeleteOrRestorePersonViewModel(
     }
 
     fun restoreSelectedPersons(persons: List<Person>) {
+        // 二重実行防止
+        if (actionJob?.isActive == true) return
+
         val selectedIds = currentState.selectedIds
-        safeLaunch(
+        actionJob = safeLaunch(
             operation = OP_RESTORE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -129,8 +136,11 @@ class DeleteOrRestorePersonViewModel(
     }
 
     fun deleteSelectedPersons(persons: List<Person>) {
+        // 二重実行防止
+        if (actionJob?.isActive == true) return
+
         val selectedIds = currentState.selectedIds
-        safeLaunch(
+        actionJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {

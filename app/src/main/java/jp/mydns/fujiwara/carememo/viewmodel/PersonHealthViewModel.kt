@@ -67,7 +67,14 @@ class PersonHealthViewModel(
 
     override val featureName: String = FEATURE_NAME
 
+    /** 履歴ロード用の Job */
     private var recordsJob: Job? = null
+
+    /** 保存処理用の Job */
+    private var saveJob: Job? = null
+
+    /** 削除処理用の Job */
+    private var deleteJob: Job? = null
 
     init {
         // 引数（categoryName）の変更を購読
@@ -303,7 +310,10 @@ class PersonHealthViewModel(
     }
 
     fun saveRecord(category: Category, recordId: String, recordTime: Instant, values: Map<String, Any?>) {
-        safeLaunch(
+        // 二重実行防止
+        if (saveJob?.isActive == true) return
+
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -348,7 +358,10 @@ class PersonHealthViewModel(
     }
 
     fun deleteRecord(record: Any) {
-        safeLaunch(
+        // 二重実行防止
+        if (deleteJob?.isActive == true) return
+
+        deleteJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {

@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -71,6 +72,12 @@ class EmergencyContactEditViewModel(
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 保存処理用の Job */
+    private var saveJob: Job? = null
+
+    /** 削除処理用の Job */
+    private var deleteJob: Job? = null
 
     init {
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
@@ -179,9 +186,12 @@ class EmergencyContactEditViewModel(
     }
 
     fun saveContact() {
+        // 二重保存防止
+        if (saveJob?.isActive == true) return
+
         val contact = currentState.editingContact ?: return
         
-        safeLaunch(
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -203,7 +213,10 @@ class EmergencyContactEditViewModel(
     }
 
     fun deleteContact(contact: EmergencyContact) {
-        safeLaunch(
+        // 二重実行防止
+        if (deleteJob?.isActive == true) return
+
+        deleteJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {
