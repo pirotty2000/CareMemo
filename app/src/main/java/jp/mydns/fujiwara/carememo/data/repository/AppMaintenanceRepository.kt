@@ -27,7 +27,7 @@ import java.util.UUID
  * 【主な機能】
  * ・DB 全体のエクスポート/インポート（JSON + 写真ファイルの ZIP 形式）。
  * ・データの復元時におけるクレンジング（重複回避、生年月日正規化）。
- * ・データベースの不整合（親を失った孤立レコード）のスキャンと一括修正。
+ * ・データベースの不整合（親を失った未割り当てレコード）のスキャンと一括修正。
  * ・開発者向けのテスト用データ整合性破壊機能。
  * ・全臨床データおよび監査ログの消去。
  *
@@ -183,7 +183,7 @@ class AppMaintenanceRepository(
     }
 
     /**
-     * データベースの不整合（孤立レコード）をスキャンします。
+     * データベースの不整合（未割り当てレコード）をスキャンします。
      * 外部キー制約がありながら、論理削除等により親が事実上存在しなくなったレコードを特定します。
      *
      * @return 検出された不整合情報のリスト
@@ -192,26 +192,26 @@ class AppMaintenanceRepository(
         val result = mutableListOf<DatabaseInconsistency>()
 
         // 各テーブルから親のいない（利用者が存在しない）レコードを DAO 経由で取得
-        heightAndWeightDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_height_weight))
+        heightAndWeightDao.getUnassignedRecords().forEach {
+            result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_height_weight))
         }
-        bpAndPulseDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("bp_and_pulse_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_vital))
+        bpAndPulseDao.getUnassignedRecords().forEach {
+            result.add(DatabaseInconsistency("bp_and_pulse_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_vital))
         }
-        glucoseAndHbA1cDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("glucose_and_hba1c_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_glucose))
+        glucoseAndHbA1cDao.getUnassignedRecords().forEach {
+            result.add(DatabaseInconsistency("glucose_and_hba1c_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_glucose))
         }
-        conditionAtVisitDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("condition_at_visit_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_condition))
+        conditionAtVisitDao.getUnassignedRecords().forEach {
+            result.add(DatabaseInconsistency("condition_at_visit_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_condition))
         }
-        medicationRecordDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_orphaned_medication))
+        medicationRecordDao.getUnassignedRecords().forEach {
+            result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_medication))
         }
-        emergencyContactDao.getOrphanedRecords().forEach {
-            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, R.string.maintenance_err_orphaned_contact))
+        emergencyContactDao.getUnassignedRecords().forEach {
+            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, R.string.maintenance_err_unassigned_contact))
         }
-        conditionPhotoDao.getOrphanedPhotos().forEach {
-            result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, R.string.maintenance_err_orphaned_photo))
+        conditionPhotoDao.getUnassignedPhotos().forEach {
+            result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, R.string.maintenance_err_unassigned_photo))
         }
 
         return result

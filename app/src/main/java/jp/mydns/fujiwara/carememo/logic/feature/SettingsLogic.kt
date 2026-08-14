@@ -91,8 +91,8 @@ sealed interface SettingsViewEvent {
     data class NavigateToArchiveManagement(val mode: jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel.OperationMode) : SettingsViewEvent
     /** 監査ログ画面へ遷移 */
     data object NavigateToAuditLog : SettingsViewEvent
-    /** 迷子写真管理画面へ遷移 */
-    data object NavigateToOrphanedPhotos : SettingsViewEvent
+    /** 未割り当て写真管理画面へ遷移 */
+    data object NavigateToUnassignedPhotos : SettingsViewEvent
     /** 前の画面に戻る */
     data object NavigateBack : SettingsViewEvent
 }

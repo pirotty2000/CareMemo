@@ -190,6 +190,7 @@ class PersonEditViewModel(
             }
 
             val person = PersonEditLogic.createPerson(state, initialPerson)
+            val maskedName = person.getMaskedName(state.isNameMaskingEnabled)
             val existing = repository.findExistingPerson(person)
             if (existing != null && (personId == null || existing.id != personId)) {
                 handleDuplicateError(existing, person, isUpdate = personId != null)
@@ -198,11 +199,11 @@ class PersonEditViewModel(
             if (personId == null) {
                 repository.insertPerson(person, featureName, OP_SAVE)
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
-                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED))
+                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED, maskedName))
             } else {
                 repository.updatePerson(person, featureName, OP_SAVE)
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
-                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.UPDATED))
+                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.UPDATED, maskedName))
             }
         }
     }

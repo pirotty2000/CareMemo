@@ -19,6 +19,7 @@ enum class EditResult {
  */
 object NavigationKeys {
     const val PERSON_EDIT_RESULT = "person_edit_result"
+    const val PERSON_EDIT_NAME = "person_edit_name"
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +72,7 @@ sealed interface Destination {
     data class ArchiveManagement(val mode: String) : Destination
 
     @Serializable
-    object OrphanedPhotos : Destination
+    object UnassignedPhotos : Destination
 }
 
 

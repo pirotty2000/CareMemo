@@ -329,14 +329,14 @@ class MainActivity : FragmentActivity() {
                             DeleteOrRestorePersonScreen(viewModel = archiveViewModel, navController = navController)
                         }
 
-                        // SCR-S-004 設定・迷子写真管理
-                        composable<Destination.OrphanedPhotos> {
-                            val orphanedViewModel: OrphanedPhotoViewModel =
-                                viewModel(factory = OrphanedPhotoViewModel.Factory(
+                        // SCR-S-004 設定・未割り当て写真管理
+                        composable<Destination.UnassignedPhotos> {
+                            val unassignedViewModel: UnassignedPhotoViewModel =
+                                viewModel(factory = UnassignedPhotoViewModel.Factory(
                                     userSettingsRepository,
                                     conditionRepository,
                                     applicationContext))
-                            OrphanedPhotoManagementScreen(viewModel = orphanedViewModel, navController = navController)
+                            UnassignedPhotoManagementScreen(viewModel = unassignedViewModel, navController = navController)
                         }
                     }
                 }

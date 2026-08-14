@@ -16,10 +16,10 @@ class ConditionMaintenanceLogicTest {
 
     private val now = Instant.now()
 
-    // region 2. 迷子写真判定テスト (identifyOrphanedPhotos)
+    // region 2. 未割り当て写真判定テスト (identifyUnassignedPhotos)
 
     @Test
-    fun MAIN_01_identifyOrphanedPhotos_allNormal() {
+    fun MAIN_01_identifyUnassignedPhotos_allNormal() {
         val dbPhotos = listOf(
             ConditionPhoto(
                 id = "p1",
@@ -33,13 +33,13 @@ class ConditionMaintenanceLogicTest {
         val conditionIds = setOf("c1")
         val files = listOf(File("img_1.jpg"))
 
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(dbPhotos, conditionIds, files)
+        val unassigned = ConditionMaintenanceLogic.identifyUnassignedPhotos(dbPhotos, conditionIds, files)
         
-        assertTrue(orphaned.isEmpty())
+        assertTrue(unassigned.isEmpty())
     }
 
     @Test
-    fun MAIN_02_identifyOrphanedPhotos_temporary() {
+    fun MAIN_02_identifyUnassignedPhotos_temporary() {
         val dbPhotos = listOf(
             ConditionPhoto(
                 id = "p1",
@@ -53,15 +53,15 @@ class ConditionMaintenanceLogicTest {
         val conditionIds = emptySet<String>()
         val files = listOf(File("img_1.jpg"))
 
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(dbPhotos, conditionIds, files)
+        val unassigned = ConditionMaintenanceLogic.identifyUnassignedPhotos(dbPhotos, conditionIds, files)
         
-        assertEquals(1, orphaned.size)
-        assertEquals(OrphanedPhotoType.TEMPORARY, orphaned[0].type)
-        assertEquals(R.string.orphaned_photo_type_temporary, orphaned[0].descriptionResId)
+        assertEquals(1, unassigned.size)
+        assertEquals(UnassignedPhotoType.TEMPORARY, unassigned[0].type)
+        assertEquals(R.string.unassigned_photo_type_temporary, unassigned[0].descriptionResId)
     }
 
     @Test
-    fun MAIN_03_identifyOrphanedPhotos_orphanedRecord() {
+    fun MAIN_03_identifyUnassignedPhotos_unassignedRecord() {
         val dbPhotos = listOf(
             ConditionPhoto(
                 id = "p1",
@@ -75,34 +75,34 @@ class ConditionMaintenanceLogicTest {
         val conditionIds = setOf("existing-c") // deleted-c は含まれない
         val files = listOf(File("img_1.jpg"))
 
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(dbPhotos, conditionIds, files)
+        val unassigned = ConditionMaintenanceLogic.identifyUnassignedPhotos(dbPhotos, conditionIds, files)
         
-        assertEquals(1, orphaned.size)
-        assertEquals(OrphanedPhotoType.ORPHANED_RECORD, orphaned[0].type)
-        assertEquals(R.string.orphaned_photo_type_orphaned, orphaned[0].descriptionResId)
+        assertEquals(1, unassigned.size)
+        assertEquals(UnassignedPhotoType.UNASSIGNED_RECORD, unassigned[0].type)
+        assertEquals(R.string.unassigned_photo_type_unassigned, unassigned[0].descriptionResId)
     }
 
     @Test
-    fun MAIN_04_identifyOrphanedPhotos_fileOnly() {
+    fun MAIN_04_identifyUnassignedPhotos_fileOnly() {
         val dbPhotos = emptyList<ConditionPhoto>()
         val conditionIds = emptySet<String>()
         
         val mockFile = mockk<File>()
-        every { mockFile.name } returns "img_orphaned.jpg"
+        every { mockFile.name } returns "img_unassigned.jpg"
         every { mockFile.lastModified() } returns 1000L
         
         val files = listOf(mockFile)
 
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(dbPhotos, conditionIds, files)
+        val unassigned = ConditionMaintenanceLogic.identifyUnassignedPhotos(dbPhotos, conditionIds, files)
         
-        assertEquals(1, orphaned.size)
-        assertEquals(OrphanedPhotoType.FILE_ONLY, orphaned[0].type)
-        assertEquals("img_orphaned.jpg", orphaned[0].photoFileName)
-        assertEquals(R.string.orphaned_photo_db_unregistered, orphaned[0].descriptionResId)
+        assertEquals(1, unassigned.size)
+        assertEquals(UnassignedPhotoType.FILE_ONLY, unassigned[0].type)
+        assertEquals("img_unassigned.jpg", unassigned[0].photoFileName)
+        assertEquals(R.string.unassigned_photo_db_unregistered, unassigned[0].descriptionResId)
     }
 
     @Test
-    fun MAIN_05_identifyOrphanedPhotos_sorting() {
+    fun MAIN_05_identifyUnassignedPhotos_sorting() {
         val t1 = now
         val t2 = now.plusSeconds(3600)
         
@@ -125,21 +125,21 @@ class ConditionMaintenanceLogicTest {
             )
         )
         
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(dbPhotos, emptySet(), emptyList())
+        val unassigned = ConditionMaintenanceLogic.identifyUnassignedPhotos(dbPhotos, emptySet(), emptyList())
         
-        assertEquals(2, orphaned.size)
-        assertEquals("img_new.jpg", orphaned[0].photoFileName) // 降順
-        assertEquals("img_old.jpg", orphaned[1].photoFileName)
+        assertEquals(2, unassigned.size)
+        assertEquals("img_new.jpg", unassigned[0].photoFileName) // 降順
+        assertEquals("img_old.jpg", unassigned[1].photoFileName)
     }
 
     @Test
-    fun MAIN_06_identifyOrphanedPhotos_thumbnailExcluded() {
+    fun MAIN_06_identifyUnassignedPhotos_thumbnailExcluded() {
         val dbPhotos = emptyList<ConditionPhoto>()
         val files = listOf(File("thumb_1.jpg")) // サムネイルのみ
 
-        val orphaned = ConditionMaintenanceLogic.identifyOrphanedPhotos(dbPhotos, emptySet(), files)
+        val unassigned = ConditionMaintenanceLogic.identifyUnassignedPhotos(dbPhotos, emptySet(), files)
         
-        assertTrue(orphaned.isEmpty())
+        assertTrue(unassigned.isEmpty())
     }
 
     // endregion

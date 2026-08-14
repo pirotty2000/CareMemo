@@ -112,7 +112,7 @@ class AppMaintenanceRepositoryTest {
 
     @Test
     fun INC_01_02_scanAndCleanInconsistencies() = runBlocking {
-        // 1. Insert test inconsistency (orphaned record)
+        // 1. Insert test inconsistency (unassigned record)
         maintenanceRepository.insertTestInconsistency()
         
         // 2. Scan

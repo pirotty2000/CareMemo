@@ -26,8 +26,8 @@
     <string name="common_author_format">記録者: %1$s</string>
     <string name="common_no_photos">写真がありません</string>
     <string name="common_photo_count_format">写真 (%1$d/%2$d)</string>
-    <string name="common_orphaned_photo_reattach_title">迷子写真の再登録</string>
-    <string name="common_orphaned_photo_reattach_msg">紐付け先が不明な写真が見つかりました。この記録に登録する写真を選択してください。</string>
+    <string name="common_unassigned_photo_reattach_title">未割り当て写真の再登録</string>
+    <string name="common_unassigned_photo_reattach_msg">紐付け先が不明な写真が見つかりました。この記録に登録する写真を選択してください。</string>
 
     <!-- 健康記録用 -->
     <string name="health_title">健康記録</string>
@@ -159,7 +159,7 @@
     <string name="main_lock_unlock_button">解除する</string>
 
     <string name="main_msg_user_added">%1$s さんを登録しました</string>
-    <string name="main_msg_user_updated">利用者情報を更新しました</string>
+    <string name="main_msg_user_updated">%1$s さんの情報を更新しました</string>
     <string name="main_msg_user_archived">%1$s さんをアーカイブに移動しました</string>
     <string name="main_msg_user_restored">%1$s さんを利用者一覧に戻しました</string>
     <string name="main_err_edit_empty_last_name">姓を入力してください</string>
@@ -367,8 +367,8 @@
     <string name="settings_dev_clear_logs_desc">全ての操作ログを物理削除します</string>
     <string name="settings_dev_data_maintenance_desc">※ データメンテナンスを行います。</string>
     <string name="settings_dev_import_sample_desc">12名分のサンプルデータを生成して取り込みます</string>
-    <string name="settings_item_orphaned_photos_title">迷子写真の確認</string>
-    <string name="settings_item_orphaned_photos_desc">紐付けが途切れた写真の確認と削除</string>
+    <string name="settings_item_unassigned_photos_title">未割り当て写真の確認</string>
+    <string name="settings_item_unassigned_photos_desc">紐付けが途切れた写真の確認と削除</string>
     <string name="settings_item_force_import_title">バージョン不一致を無視してインポート</string>
     <string name="settings_item_force_import_desc">インポート元のバックアップデータが、現在のアプリより新しいバージョンであっても強制的に取り込みます。スキーマの不整合によりアプリが起動できなくなる恐れがあります。</string>
     <string name="settings_item_integrity_check_title">データベース整合性チェック</string>
@@ -555,19 +555,19 @@
     <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
     <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
 
-    <!-- 迷子写真タイプ -->
-    <string name="orphaned_photo_type_temporary">一時保存中の写真</string>
-    <string name="orphaned_photo_type_orphaned">紐付け先が消失した写真</string>
-    <string name="orphaned_photo_db_unregistered">DB未登録の画像ファイル</string>
+    <!-- 未割り当て写真タイプ -->
+    <string name="unassigned_photo_type_temporary">一時保存中の写真</string>
+    <string name="unassigned_photo_type_unassigned">紐付け先が消失した写真</string>
+    <string name="unassigned_photo_db_unregistered">DB未登録の画像ファイル</string>
 
     <!-- メンテナンス・不整合レポート用 -->
-    <string name="maintenance_err_orphaned_height_weight">利用者が存在しない身長・体重データ</string>
-    <string name="maintenance_err_orphaned_vital">利用者が存在しないバイタルデータ</string>
-    <string name="maintenance_err_orphaned_glucose">利用者が存在しない血糖値・HbA1cデータ</string>
-    <string name="maintenance_err_orphaned_condition">利用者が存在しない所見メモ</string>
-    <string name="maintenance_err_orphaned_medication">利用者が存在しない服薬記録</string>
-    <string name="maintenance_err_orphaned_contact">利用者が存在しない緊急連絡先</string>
-    <string name="maintenance_err_orphaned_photo">所見メモが存在しない写真データ</string>
+    <string name="maintenance_err_unassigned_height_weight">利用者が存在しない身長・体重データ</string>
+    <string name="maintenance_err_unassigned_vital">利用者が存在しないバイタルデータ</string>
+    <string name="maintenance_err_unassigned_glucose">利用者が存在しない血糖値・HbA1cデータ</string>
+    <string name="maintenance_err_unassigned_condition">利用者が存在しない所見メモ</string>
+    <string name="maintenance_err_unassigned_medication">利用者が存在しない服薬記録</string>
+    <string name="maintenance_err_unassigned_contact">利用者が存在しない緊急連絡先</string>
+    <string name="maintenance_err_unassigned_photo">所見メモが存在しない写真データ</string>
     <string name="maintenance_err_file_read">ファイルの読み込みに失敗しました。</string>
     <string name="maintenance_err_no_json">バックアップデータ(backup.json)が見つかりません。</string>
     <string name="maintenance_err_json_parse">データの解析に失敗しました。ファイルが破損しているか、形式が異なります。</string>
@@ -578,7 +578,7 @@
     <string name="pdf_err_no_app">PDFファイルを共有できるアプリが見つかりません。</string>
     <string name="pdf_label_trend">%1$s 推移</string>
 
-    <!-- Orphaned Photo -->
-    <string name="orphaned_photo_title">迷子写真の確認</string>
-    <string name="orphaned_photo_empty_msg">迷子写真は見つかりませんでした。</string>
+    <!-- Unassigned Photo -->
+    <string name="unassigned_photo_title">未割り当て写真の確認</string>
+    <string name="unassigned_photo_empty_msg">未割り当て写真は見つかりませんでした。</string>
 </resources>

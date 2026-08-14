@@ -86,7 +86,7 @@ Material 3 の特性を活かし、開発効率とユーザー体験を向上さ
 - [x] `SettingsViewModel` (SCR-S-001)
 - [x] `AuditLogViewModel` (SCR-S-002)
 - [x] `DeleteOrRestorePersonViewModel` (SCR-S-003)
-- [x] `OrphanedPhotoViewModel` (SCR-S-004)
+- [x] `UnassignedPhotoViewModel` (SCR-S-004)
 
 ### ステップ 3：UI (Screen) 層の遷移ロジック一元化
 Composable の `LaunchedEffect` で ViewModel の `ViewEvent` を購読し、`navController.navigate()` を実行するように変更する。
@@ -97,7 +97,7 @@ Composable の `LaunchedEffect` で ViewModel の `ViewEvent` を購読し、`na
 - [x] `BatchInputScreen`
 - [x] `PersonConditionScreen` / `ConditionPhotoPreviewScreen` / `ConditionPhotoFullScreen`
 - [x] `PersonMedicationScreen`
-- [x] `SettingsScreen` / `AuditLogScreen` / `DeleteOrRestorePersonScreen` / `OrphanedPhotoManagementScreen`
+- [x] `SettingsScreen` / `AuditLogScreen` / `DeleteOrRestorePersonScreen` / `UnassignedPhotoManagementScreen`
 
 ### ステップ 4：MainActivity での最終結合（システム切り替え）
 - [x] **NavHost 刷新**: `composable<T>` 形式に全面移行し、文字列ベースの定義を廃止する。
@@ -134,7 +134,7 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 - [x] `PersonHealth` / `BatchInput` (SCR-PH-001, 002, 003)
 - [x] `PersonCondition` (SCR-PM-001, 002, 003)
 - [x] `PersonMedication` (SCR-PM-001)
-- [x] `Settings` / `AuditLog` / `DeleteOrRestorePerson` / `OrphanedPhoto` (SCR-S-001〜004)
+- [x] `Settings` / `AuditLog` / `DeleteOrRestorePerson` / `UnassignedPhoto` (SCR-S-001〜004)
 
 ### ステップ 3：Logic 層・ViewModel 層の整合
 - [x] **Logic 戻り値の型変更**: リストを生成・返却する Logic メソッドの戻り値を `ImmutableList` に変更。
@@ -168,7 +168,7 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 ### ステップ 4：設定・管理系 Screen (SCR-S-xxx) [完了]
 - [x] **Settings**: `SettingsScreenContent` および内部セクションへの適用。
 - [x] **AuditLog**: `AuditLogScreenContent` への適用。
-- [x] **その他**: `DeleteOrRestorePersonScreen`, `OrphanedPhotoManagementScreen` への適用。
+- [x] **その他**: `DeleteOrRestorePersonScreen`, `UnassignedPhotoManagementScreen` への適用。
 
 ---
 
@@ -204,7 +204,7 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 ### フェーズ 2：設定・管理系画面 (SCR-S-xxx)
 - [x] **Settings**: `SettingsScreen` (全設定項目、ダイアログメッセージ)。
 - [x] **AuditLog**: `AuditLogScreen` (タイトル、空状態、フィルタラベル)。
-- [x] **Maintenance**: `DeleteOrRestorePerson`, `OrphanedPhotoManagement` (警告文、案内メッセージ)。
+- [x] **Maintenance**: `DeleteOrRestorePerson`, `UnassignedPhotoManagement` (警告文、案内メッセージ)。
 
 ### フェーズ 3：主要3カテゴリ機能画面 (SCR-PH/PC/PM-xxx)
 - [x] **健康記録 (Health)**: `BatchInputScreen`, `GraphExpansionScreen`, `HealthGraphView` (タイトル、ツールチップ、エラー文)。
@@ -216,7 +216,7 @@ UI 状態 (UiState) におけるリストの不変性を保証し、Compose コ�
 - [x] **PersonEdit / EmergencyContact**: バリデーションメッセージ、共通サフィックス（「さん」付け等）、カテゴリバッジ説明。
 
 ### フェーズ 5：ロジック層・例外メッセージ・PDF
-- [x] **不整合レポート**: `DatabaseInconsistency` の理由説明、迷子写真の分類ラベル。
+- [x] **不整合レポート**: `DatabaseInconsistency` の理由説明、未割り当て写真の分類ラベル。
 - [x] **例外メッセージ**: `AppMaintenanceRepository` での I/O エラー、インポート/エクスポート例外。
 - [x] **PDF ユーティリティ**: `PdfExporter` 内の固定タイトル、表ヘッダー、グラフ見出し。
 

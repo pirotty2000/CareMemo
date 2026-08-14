@@ -108,10 +108,16 @@ fun PersonConditionScreen(
     LaunchedEffect(Unit) {
         conditionViewModel.viewEvent.collect { event ->
             when (event) {
+                is PersonConditionViewEvent.LaunchCamera -> {
+                    // ViewModel から直接 Camera 起動を要求する場合に備える (現在は Screen 側で制御)
+                }
+                is PersonConditionViewEvent.OpenPhotoPicker -> {
+                    // ViewModel から直接 Picker 起動を要求する場合に備える (現在は Screen 側で制御)
+                }
                 is PersonConditionViewEvent.NavigateToPhotoPreview -> {
                     detailState.personId?.let { personId ->
                         navController.navigate(
-                            Destination.PhotoPreview(event.uri.toString(), personId, event.conditionId)
+                            Destination.PhotoPreview(event.uri, personId, event.conditionId)
                         )
                     }
                 }
@@ -122,11 +128,6 @@ fun PersonConditionScreen(
                         )
                     }
                 }
-                /*
-                is PersonConditionViewEvent.NavigateBackToMain -> {
-                    detailViewModel.navigateBackToMain()
-                }
-                */
             }
         }
     }
@@ -200,7 +201,7 @@ fun PersonConditionScreen(
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
-                conditionViewModel.reattachOrphanedPhoto(cid, info)
+                conditionViewModel.reattachUnassignedPhoto(cid, info)
             },
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
@@ -254,10 +255,10 @@ fun PersonConditionScreen(
             onCancelEdit = { conditionViewModel.cancelEditSession() },
             // サムネイルのごみ箱アイコン
             onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
-            // 迷子写真の再アタッチ処理
+            // 未割り当て写真の再アタッチ処理
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
-                conditionViewModel.reattachOrphanedPhoto(cid, info)
+                conditionViewModel.reattachUnassignedPhoto(cid, info)
             },
             // マイク
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
@@ -369,7 +370,7 @@ fun PersonConditionScreen(
                     },
                     onReattachPhoto = { info ->
                         val cid = conditionState.selectedConditionId ?: ""
-                        conditionViewModel.reattachOrphanedPhoto(cid, info)
+                        conditionViewModel.reattachUnassignedPhoto(cid, info)
                     },
                     onNavigateToFullScreen = { photoId, condId ->
                         conditionViewModel.navigateToPhotoFullScreen(photoId, condId)

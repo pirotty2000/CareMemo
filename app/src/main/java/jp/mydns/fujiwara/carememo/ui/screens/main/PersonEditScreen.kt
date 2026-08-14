@@ -85,10 +85,16 @@ fun PersonEditScreen(
             when (event) {
                 is PersonEditViewEvent.NavigateBack -> {
                     if (event.result != null) {
-                        navController.previousBackStackEntry?.savedStateHandle?.set(
-                            NavigationKeys.PERSON_EDIT_RESULT,
-                            event.result.name
-                        )
+                        navController.previousBackStackEntry?.savedStateHandle?.let { handle ->
+                            handle.set(
+                                NavigationKeys.PERSON_EDIT_RESULT,
+                                event.result.name
+                            )
+                            handle.set(
+                                NavigationKeys.PERSON_EDIT_NAME,
+                                event.personName
+                            )
+                        }
                     }
                     navController.popBackStack()
                 }

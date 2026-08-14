@@ -208,7 +208,7 @@ class SettingsViewModel(
     fun canAuthenticate(context: Context): Boolean { val biometricManager = BiometricManager.from(context); return biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS }
     fun navigateToArchiveManagement(mode: DeleteOrRestorePersonViewModel.OperationMode) { sendViewEvent(SettingsViewEvent.NavigateToArchiveManagement(mode)) }
     fun navigateToAuditLog() { sendViewEvent(SettingsViewEvent.NavigateToAuditLog) }
-    fun navigateToOrphanedPhotos() { sendViewEvent(SettingsViewEvent.NavigateToOrphanedPhotos) }
+    fun navigateToUnassignedPhotos() { sendViewEvent(SettingsViewEvent.NavigateToUnassignedPhotos) }
     fun navigateBack() { sendViewEvent(SettingsViewEvent.NavigateBack) }
 
     class Factory(

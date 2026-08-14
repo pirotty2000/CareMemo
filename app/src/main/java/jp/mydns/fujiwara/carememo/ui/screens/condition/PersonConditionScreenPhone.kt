@@ -41,7 +41,7 @@ fun PersonConditionScreenPhone(
     onSaveClick: ((String) -> Unit) -> Unit,
     onCancelEdit: () -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
+    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit,
     onMicClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {

@@ -80,7 +80,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  *           │    ├─ <ヘッダー> 戻るボタン、タイトル、編集ボタン
  *           │    ├─ <内容部> 記録日時、タイトル、本文、記録者名
  *           │    └─ [2-2-1] PhotoGrid (写真一覧：閲覧・フルスクリーン遷移)
- *           └─ [2-3] OrphanedPhotoSelectionDialog (迷子写真の再登録用ダイアログ)
+ *           └─ [2-3] UnassignedPhotoSelectionDialog (未割り当て写真の再登録用ダイアログ)
  */
 
 @Composable
@@ -97,7 +97,7 @@ fun PersonConditionScreenContent(
     onCancelEdit: () -> Unit,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onAddPhotoClick: () -> Unit,
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit,
+    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit,
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
     isAnyDialogOpen: Boolean,

@@ -358,13 +358,13 @@ class PersonDetailScenarioTest {
         composeTestRule.onNodeWithTag("DeleteOrRestore_BackButton").performClick()
         composeTestRule.waitForIdle()
 
-        // 5. 迷子写真の確認 (NAV-S-004) - 下にある
-        robustScrollDownTo("Settings_OrphanedPhotosButton")
-        composeTestRule.onNodeWithTag("Settings_OrphanedPhotosButton").performClick()
+        // 5. 未割り当て写真の確認 (NAV-S-004) - 下にある
+        robustScrollDownTo("Settings_UnassignedPhotosButton")
+        composeTestRule.onNodeWithTag("Settings_UnassignedPhotosButton").performClick()
         composeTestRule.waitUntil(25000) {
-            composeTestRule.onAllNodesWithTag("OrphanedPhoto_BackButton", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithTag("UnassignedPhoto_BackButton", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.onNodeWithTag("OrphanedPhoto_BackButton").performClick()
+        composeTestRule.onNodeWithTag("UnassignedPhoto_BackButton").performClick()
         composeTestRule.waitForIdle()
 
         // 6. メイン画面に戻る

@@ -188,14 +188,14 @@ class PersonConditionViewModel(
             val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
             val physicalFiles = ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
 
-            val allOrphaned = jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic.identifyOrphanedPhotos(
+            val allUnassigned = jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic.identifyUnassignedPhotos(
                 dbPhotos = dbPhotos,
                 existingConditionIds = existingConditionIds,
                 physicalFiles = physicalFiles
             )
 
-            val adoptableOrphans = allOrphaned.filter { 
-                (it.personId == personId) || (it.type == jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoType.FILE_ONLY) 
+            val adoptableUnassigned = allUnassigned.filter { 
+                (it.personId == personId) || (it.type == jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoType.FILE_ONLY) 
             }
 
             updateUiState { current ->
@@ -204,8 +204,8 @@ class PersonConditionViewModel(
                 }
                 current.copy(
                     conditionPhotoMap = map, 
-                    orphanedPhotoCount = adoptableOrphans.size,
-                    availableOrphanedPhotos = adoptableOrphans.toImmutableList()
+                    unassignedPhotoCount = adoptableUnassigned.size,
+                    availableUnassignedPhotos = adoptableUnassigned.toImmutableList()
                 )
             }
         }
@@ -404,16 +404,16 @@ class PersonConditionViewModel(
     }
 
     fun onPhotoCaptured(uri: Uri, conditionId: String) {
-        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, requiredPersonId, conditionId))
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri.toString(), conditionId))
     }
 
-    fun reattachOrphanedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
+    fun reattachUnassignedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) {
         if (IdLogic.isNew(conditionId)) return
         // 二重実行防止
         if (photoActionJob?.isActive == true) return
 
         photoActionJob = safeLaunch(
-            operation = "reattachOrphanedPhoto",
+            operation = "reattachUnassignedPhoto",
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
@@ -421,7 +421,7 @@ class PersonConditionViewModel(
             }
         ) {
             if (photoInfo.photoId != null) {
-                conditionRepository.reattachPhotoToRecord(photoInfo.photoId, conditionId, featureName, "reattachOrphanedPhoto")
+                conditionRepository.reattachPhotoToRecord(photoInfo.photoId, conditionId, featureName, "reattachUnassignedPhoto")
             } else {
                 conditionRepository.adoptFileAsPhoto(
                     personId = requiredPersonId,
@@ -497,7 +497,7 @@ class PersonConditionViewModel(
     }
 
     fun navigateToPhotoFullScreen(photoId: String, conditionId: String) {
-        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(photoId, conditionId))
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(conditionId, photoId))
     }
 
     /*

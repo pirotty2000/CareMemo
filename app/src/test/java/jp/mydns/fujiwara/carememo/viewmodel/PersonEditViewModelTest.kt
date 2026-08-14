@@ -178,10 +178,55 @@ class PersonEditViewModelTest {
             
             val event = awaitItem()
             assertTrue(event is PersonEditViewEvent.NavigateBack)
-            assertEquals(EditResult.ADDED, (event as PersonEditViewEvent.NavigateBack).result)
+            val navBack = event as PersonEditViewEvent.NavigateBack
+            assertEquals(EditResult.ADDED, navBack.result)
+            assertEquals("A　B", navBack.personName)
         }
 
         coVerify { repository.insertPerson(any(), any(), any()) }
+    }
+
+    @Test
+    fun SAV_02_save_updateSuccess() = runTest {
+        val viewModel = createViewModel("u1")
+        advanceUntilIdle()
+
+        viewModel.updateLastName("佐藤")
+        viewModel.updateFirstName("花子")
+
+        viewModel.viewEvent.test {
+            viewModel.save()
+            advanceUntilIdle()
+
+            val event = awaitItem()
+            assertTrue(event is PersonEditViewEvent.NavigateBack)
+            val navBack = event as PersonEditViewEvent.NavigateBack
+            assertEquals(EditResult.UPDATED, navBack.result)
+            assertEquals("佐藤　花子", navBack.personName)
+        }
+
+        coVerify { repository.updatePerson(any(), any(), any()) }
+    }
+
+    @Test
+    fun SAV_02_save_updateSuccess_masked() = runTest {
+        isNameMaskingEnabledFlow.value = true
+        val viewModel = createViewModel("u1")
+        advanceUntilIdle()
+
+        viewModel.updateLastName("佐藤")
+        viewModel.updateFirstName("花子")
+
+        viewModel.viewEvent.test {
+            viewModel.save()
+            advanceUntilIdle()
+
+            val event = awaitItem()
+            assertTrue(event is PersonEditViewEvent.NavigateBack)
+            val navBack = event as PersonEditViewEvent.NavigateBack
+            assertEquals(EditResult.UPDATED, navBack.result)
+            assertEquals("佐○　花○", navBack.personName)
+        }
     }
 
     @Test

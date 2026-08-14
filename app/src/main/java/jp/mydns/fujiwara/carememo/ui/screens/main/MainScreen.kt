@@ -83,6 +83,11 @@ fun MainScreen(
     }
     val editResult by editResultFlow?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
 
+    val editNameFlow = remember(navBackStackEntry) {
+        navBackStackEntry?.savedStateHandle?.getStateFlow<String?>(NavigationKeys.PERSON_EDIT_NAME, null)
+    }
+    val editName by editNameFlow?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
+
     LaunchedEffect(editResult) {
         editResult?.let { result ->
             val messageRes = if (result == EditResult.ADDED.name) {
@@ -90,9 +95,10 @@ fun MainScreen(
             } else {
                 R.string.main_msg_user_updated
             }
-            snackbarHostState.showSnackbar(context.getString(messageRes))
+            snackbarHostState.showSnackbar(context.getString(messageRes, editName ?: ""))
             // 通知を消費
             navBackStackEntry?.savedStateHandle?.remove<String>(NavigationKeys.PERSON_EDIT_RESULT)
+            navBackStackEntry?.savedStateHandle?.remove<String>(NavigationKeys.PERSON_EDIT_NAME)
         }
     }
 

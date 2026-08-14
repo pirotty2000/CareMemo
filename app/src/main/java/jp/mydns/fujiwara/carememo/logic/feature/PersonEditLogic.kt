@@ -56,7 +56,7 @@ data class PersonEditUiState(
  */
 sealed interface PersonEditViewEvent {
     /** 前の画面に戻る */
-    data class NavigateBack(val result: EditResult? = null) : PersonEditViewEvent
+    data class NavigateBack(val result: EditResult? = null, val personName: String? = null) : PersonEditViewEvent
 }
 
 /**

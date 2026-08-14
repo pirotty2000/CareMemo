@@ -13,7 +13,7 @@ import java.time.Instant
  *
  * 【主な機能】
  * ・所見メモの CRUD 操作、および同一日時レコードの検索。
- * ・写真メタデータの管理（一時保存写真の紐付け、迷子写真の救済登録を含む）。
+ * ・写真メタデータの管理（一時保存写真の紐付け、未割り当て写真の救済登録を含む）。
  * ・キーワードによる所見内容の検索と、該当する利用者IDの抽出。
  * ・データ操作に応じた監査ログの自動生成。
  *
@@ -153,7 +153,7 @@ class ConditionRepository(
     }
 
     /**
-     * 特定の写真を既存の所見メモに紐付け直します（迷子写真の再登録用）。
+     * 特定の写真を既存の所見メモに紐付け直します（未割り当て写真の再登録用）。
      *
      * @param photoId 対象の写真ID
      * @param conditionId 紐付け先の所見メモID
@@ -174,7 +174,7 @@ class ConditionRepository(
     }
 
     /**
-     * 物理ファイルのみ存在していた写真を、特定の利用者の記録として登録します（迷子写真の救済）。
+     * 物理ファイルのみ存在していた写真を、特定の利用者の記録として登録します（未割り当て写真の救済）。
      *
      * @param personId 利用者ID
      * @param conditionId 所見メモID
@@ -208,7 +208,7 @@ class ConditionRepository(
             tableName = "condition_photo_db",
             actionType = "INSERT",
             affectedId = photo.id,
-            details = "Adopted orphaned file: $photoFileName into person: $personId",
+            details = "Adopted unassigned file: $photoFileName into person: $personId",
             resultType = "SUCCESS"
         )
     }

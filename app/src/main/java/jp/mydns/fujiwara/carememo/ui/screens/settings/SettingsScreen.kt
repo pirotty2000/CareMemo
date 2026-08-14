@@ -145,12 +145,13 @@ fun SettingsScreen(
                     SettingsViewEvent.NavigateToAuditLog -> {
                         navController.navigate(Destination.AuditLog)
                     }
-                    SettingsViewEvent.NavigateToOrphanedPhotos -> {
-                        navController.navigate(Destination.OrphanedPhotos)
+                    SettingsViewEvent.NavigateToUnassignedPhotos -> {
+                        navController.navigate(Destination.UnassignedPhotos)
                     }
                     SettingsViewEvent.NavigateBack -> {
                         performBack()
                     }
+                    else -> {}
                 }
             }
         }
@@ -555,6 +556,7 @@ fun SettingsScreen(
             viewModel.setLockBypassEnabled(true)
             importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
         },
+        onUnassignedPhotosClick = { viewModel.navigateToUnassignedPhotos() },
         isBiometricEnabled = uiState.isBiometricEnabled,
         lockTimeoutMinutes = uiState.lockTimeoutMinutes,
         onBiometricEnabledChange = { enabled ->
@@ -599,7 +601,6 @@ fun SettingsScreen(
         auditLogCount = uiState.auditLogCount,
         onRetentionClick = { showRetentionDialog = true },
         onViewLogsClick = { viewModel.navigateToAuditLog() },
-        onOrphanedPhotosClick = { viewModel.navigateToOrphanedPhotos() },
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
         onImportSampleDataClick = {
@@ -647,6 +648,7 @@ fun SettingsScreenContent(
     onPasswordVisibilityToggle: () -> Unit,
     onExportClick: () -> Unit,
     onImportClick: () -> Unit,
+    onUnassignedPhotosClick: () -> Unit,
     isBiometricEnabled: Boolean,
     lockTimeoutMinutes: Int,
     onBiometricEnabledChange: (Boolean) -> Unit,
@@ -661,7 +663,6 @@ fun SettingsScreenContent(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
-    onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
@@ -729,7 +730,8 @@ fun SettingsScreenContent(
                     onBackupPasswordChange = onBackupPasswordChange,
                     onPasswordVisibilityToggle = onPasswordVisibilityToggle,
                     onExportClick = onExportClick,
-                    onImportClick = onImportClick
+                    onImportClick = onImportClick,
+                    onUnassignedPhotosClick = onUnassignedPhotosClick
                 )
 
                 SecuritySection(
@@ -757,7 +759,6 @@ fun SettingsScreenContent(
                         auditLogCount = auditLogCount,
                         onRetentionClick = onRetentionClick,
                         onViewLogsClick = onViewLogsClick,
-                        onOrphanedPhotosClick = onOrphanedPhotosClick,
                         onRotateLogsClick = onRotateLogsClick,
                         onClearLogsClick = onClearLogsClick,
                         onImportSampleDataClick = onImportSampleDataClick,
@@ -883,6 +884,7 @@ private fun DataManagementSection(
     onPasswordVisibilityToggle: () -> Unit,
     onExportClick: () -> Unit,
     onImportClick: () -> Unit,
+    onUnassignedPhotosClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_data_management), modifier = modifier) {
@@ -953,6 +955,12 @@ private fun DataManagementSection(
             supportingContent = { Text(stringResource(R.string.settings_item_import_desc)) },
             trailingContent = { IconButton(onClick = onImportClick, modifier = Modifier.testTag("Settings_ImportButton")) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } },
             modifier = Modifier.clickable { onImportClick() }
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_item_unassigned_photos_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_unassigned_photos_desc)) },
+            leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
+            modifier = Modifier.clickable { onUnassignedPhotosClick() }.testTag("Settings_UnassignedPhotosButton")
         )
     }
 }
@@ -1048,7 +1056,6 @@ private fun ResetSection(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
-    onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
@@ -1107,13 +1114,6 @@ private fun ResetSection(
             supportingContent = { Text(stringResource(R.string.settings_dev_import_sample_desc)) },
             leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
             modifier = Modifier.clickable { onImportSampleDataClick() }.testTag("Settings_ImportSampleButton")
-        )
-        
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_item_orphaned_photos_title)) },
-            supportingContent = { Text(stringResource(R.string.settings_item_orphaned_photos_desc)) },
-            leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
-            modifier = Modifier.clickable { onOrphanedPhotosClick() }.testTag("Settings_OrphanedPhotosButton")
         )
 
         ListItem(
@@ -1189,6 +1189,7 @@ fun SettingsScreenPreview() {
             onPasswordVisibilityToggle = {},
             onExportClick = {},
             onImportClick = {},
+            onUnassignedPhotosClick = {},
             isBiometricEnabled = true,
             lockTimeoutMinutes = 5,
             onBiometricEnabledChange = {},
@@ -1203,7 +1204,6 @@ fun SettingsScreenPreview() {
             auditLogCount = 120,
             onRetentionClick = {},
             onViewLogsClick = {},
-            onOrphanedPhotosClick = {},
             onRotateLogsClick = {},
             onClearLogsClick = {},
             onImportSampleDataClick = {},
