@@ -354,8 +354,10 @@ class PersonHealthViewModel(
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            if (processor != null) {
-                processor.save(healthRepository, record, featureName, OP_SAVE, isUpdate)
+            when {
+                processor != null -> {
+                    processor.save(healthRepository, record, featureName, OP_SAVE, isUpdate)
+                }
             }
 
             sendUiEvent(UiEvent.SaveSuccess(record.personId))
@@ -400,9 +402,7 @@ class PersonHealthViewModel(
                 cat?.let { c -> HealthProcessorRegistry.getByGeneralCategory(c) }
             }
 
-            if (processor != null) {
-                processor.delete(healthRepository, record, featureName, OP_DELETE)
-            }
+            processor?.delete(healthRepository, record, featureName, OP_DELETE)
             showSnackbar(R.string.p_health_msg_delete_success)
         }
     }
