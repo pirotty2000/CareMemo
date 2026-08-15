@@ -11,6 +11,8 @@ import java.time.Instant
 
 /**
  * バイタル（血圧、脈拍、SAT、体温）カテゴリの処理を担当するプロセッサ。
+ *
+ * 【注意】現状 `HealthRepository` に依存しており、アーキテクチャ境界のリファクタリング対象です。
  */
 object VitalProcessor : HealthCategoryProcessor {
     override val category: BatchInputCategory = BatchInputCategory.VITAL

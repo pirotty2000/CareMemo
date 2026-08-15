@@ -4,7 +4,11 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
 /**
- * 緊急連絡先 (EmergencyContact) に関する仕様定義。
+ * Spec：EmergencyContactSpecifications
+ *
+ * 【役割】
+ * 緊急連絡先（SCR-M-003, M-004）に関連する入力制約（文字数等）、および
+ * データベース・表示上で使用される連絡先種別の定数値を定義します。
  */
 object EmergencyContactSpecifications {
 

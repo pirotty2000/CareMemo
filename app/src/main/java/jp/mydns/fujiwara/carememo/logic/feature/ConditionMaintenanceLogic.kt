@@ -26,6 +26,9 @@ object ConditionMaintenanceLogic {
     /**
      * DBレコードと物理ファイルを突き合わせ、未割り当て写真を特定・分類します。
      *
+     * 【設計意図】
+     * Logic レイヤーの純粋性を保つため、戻り値には標準の [List] を使用します。
+     *
      * 分類ルール：
      * 1. [UnassignedPhotoType.TEMPORARY]: DBにあるが、親の所見記録IDが空。
      * 2. [UnassignedPhotoType.UNASSIGNED_RECORD]: DBにあるが、紐付け先の所見記録が既に削除されている。

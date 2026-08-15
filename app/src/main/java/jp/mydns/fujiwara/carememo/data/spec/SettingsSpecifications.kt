@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
 /**
- * アプリ設定に関する仕様定義
+ * Spec：SettingsSpecifications
+ *
+ * 【役割】
+ * 設定画面で使用する選択肢（自動ロックのタイムアウト時間、監査ログの保持期間等）のバリエーションを定義します。
  */
 object SettingsSpecifications {
     /** 再ロック時間の選択肢 (分 to ラベル) */

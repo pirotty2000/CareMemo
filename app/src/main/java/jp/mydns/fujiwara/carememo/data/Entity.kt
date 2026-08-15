@@ -23,18 +23,37 @@ import java.util.UUID
 
 /**********************************************************************
  * <care_memo_database>
- **********************************************************************
+ * データベースのテーブル階層構造（Table Hierarchy）
  *
- * [person_db(pk:id)] 利用者の基本情報(氏名、生年月日)を格納
- *   ├ [height_and_weight_db(pk:id, fk:person_id)] 利用者の「身長・体重」情報を格納
- *   ├ [bp_and_pulse_db(pk:id, fk:person_id)] 利用者の「バイタル」情報を格納
- *   ├ [glucose_and_hba1c_db(pk:id, fk:person_id)] 利用者の「血糖値・HbA1c」を格納
- *   ├ [condition_at_visit_db(pk:id, fk:person_id)] 利用者の「所見メモ」を格納
- *   ├   └ [condition_photo_db(pk:id, fk:condition_id)] 所見メモに添付した写真のファイル名を格納
- *   ├ [medication_record_db(pk:id, fk:person_id)] 利用者の服薬状況を格納
- *   └ [emergency_contact_db(pk:id, fk:person_id)] 利用者の緊急連絡先を格納
+ * [person_db] 利用者の基本情報（姓名、生年月日、論理削除フラグ）
+ *   ├─ [height_and_weight_db] 身長・体重記録（FK: person_id）
+ *   ├─ [bp_and_pulse_db] バイタル記録（FK: person_id）
+ *   ├─ [glucose_and_hba1c_db] 血糖値・HbA1c記録（FK: person_id）
+ *   ├─ [condition_at_visit_db] 所見メモ（FK: person_id）
+ *   │    └─ [condition_photo_db] 所見添付写真メタデータ（FK: condition_id）
+ *   ├─ [medication_record_db] 服薬状況（FK: person_id）
+ *   └─ [emergency_contact_db] 緊急連絡先（FK: person_id）
  *
+ * [audit_log_db] 操作・エラーログ（独立テーブル）
  **********************************************************************/
+
+/**
+ * Data：Entities
+ *
+ * 【役割】
+ * CareMemo のデータベース（Room）における各テーブルのレコードを表現する不変のデータクラス群です。
+ * ビジネスドメインの核となる情報（利用者、健康指標、服薬状況等）の状態を保持します。
+ *
+ * 【主な機能】
+ * ・Room エンティティ：SQLite テーブルとの O/R マッピング。
+ * ・シリアライズ：Kotlin Serialization によるバックアップ DTO への変換。
+ * ・計算・判定補助：Entity 自体に付随する、名前の伏せ字（マスク）処理等のロジック提供。
+ *
+ * 【設計指針】
+ * 1. 不変性：全ての Entity は `data class` かつプロパティを `val` で定義し、不変性を維持する。
+ * 2. ID 管理：原則として UUID (String) を主キーとし、作成時に自動生成する（AuditLog を除く）。
+ * 3. 履歴の共通化：[HistoryRecord] インターフェースにより、時系列データの基本属性を統一する。
+ */
 
 object InstantSerializer : KSerializer<Instant> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Instant", PrimitiveKind.STRING)

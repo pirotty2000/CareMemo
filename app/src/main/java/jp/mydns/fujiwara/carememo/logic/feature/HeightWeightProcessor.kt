@@ -11,6 +11,8 @@ import java.time.Instant
 
 /**
  * 身長・体重カテゴリの処理を担当するプロセッサ。
+ *
+ * 【注意】現状 `HealthRepository` に依存しており、アーキテクチャ境界のリファクタリング対象です。
  */
 object HeightWeightProcessor : HealthCategoryProcessor {
     override val category: BatchInputCategory = BatchInputCategory.HEIGHT_WEIGHT

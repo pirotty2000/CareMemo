@@ -11,6 +11,8 @@ import java.time.Instant
 
 /**
  * 血糖値・HbA1cカテゴリの処理を担当するプロセッサ。
+ *
+ * 【注意】現状 `HealthRepository` に依存しており、アーキテクチャ境界のリファクタリング対象です。
  */
 object GlucoseProcessor : HealthCategoryProcessor {
     override val category: BatchInputCategory = BatchInputCategory.GLUCOSE

@@ -20,12 +20,8 @@ import jp.mydns.fujiwara.carememo.R
  * 【想定する利用場所】
  * 健康記録の削除、所見写真の削除、全データの消去、アーカイブ抹消等の確認。
  *
- * @param onDismiss ダイアログを閉じる、またはキャンセルした際のコールバック
- * @param onDelete 削除を確定した際のコールバック
- * @param title ダイアログのタイトル
- * @param message ダイアログの本文メッセージ
- * @param confirmButtonText 削除ボタンのラベル
- * @param dismissButtonText キャンセルボタンのラベル
+ * 【このコンポーネントでは行わないこと】
+ * 実際の削除処理（引数で渡された onDelete ラムダを通じて親側で実行する）。
  */
 @Composable
 fun AppDeleteConfirmDialog(

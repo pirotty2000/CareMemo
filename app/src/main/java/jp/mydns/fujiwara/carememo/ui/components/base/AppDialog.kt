@@ -37,6 +37,20 @@ import androidx.compose.ui.window.DialogProperties
  */
 
 /**
+ * 全体像：共通ダイアログ基盤（AppDialog）
+ *
+ * ■ AppDialog (最外位：AlertDialog ラッパー)
+ * │
+ * ├─ title (スロット：タイトル領域)
+ * ├─ text (スロット：コンテンツ領域)
+ * │    └─ [1] AppDialogContent (スクロール・余白制御用コンテナ)
+ * │         └─ <実際のコンテンツ> (テキスト、TextField、写真等)
+ * └─ buttons (Bottom Area)
+ *      ├─ [2] AppDialogDismissButton (キャンセル・閉じる：通常は左側)
+ *      └─ [3] AppDialogConfirmButton (保存・実行・削除：通常は右側)
+ */
+
+/**
  * ダイアログの確定ボタンの種類。
  * 操作の性質（セマンティクス）に応じて色を決定します。
  */

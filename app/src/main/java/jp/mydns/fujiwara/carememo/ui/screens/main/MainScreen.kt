@@ -1,20 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.main
 
-/**
- * Screen : MainScreen
- *
- * 【画面名】：
- * 利用者一覧画面
- *
- * 【役割】：
- * 登録された利用者（ケア対象者）の一覧を表示し、各記録カテゴリへの橋渡しや、
- * 利用者情報の管理（登録・変更・サービス終了処理）を行うアプリのメインエントランス。
- *
- * 【遷移】：
- * ViewModel から発行される ViewEvent (PersonListViewEvent) に基づき、
- * Composable 側で NavHostController を操作して遷移を行う。
- */
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -47,8 +32,38 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 
 /**
- * 利用者一覧画面のメインエントランス。
- * ViewModelとの接続、UI状態の監視、ダイアログやボトムシートの表示制御を行う。
+ * Screen：MainScreen
+ *
+ * 【役割】
+ * アプリケーションのメイン画面（利用者一覧）を統括する最上位 Screen コンポーネントです。
+ * ViewModel からの状態購読、画面遷移の実行、およびボトムシートやダイアログといった「副作用」の制御を集中管理します。
+ *
+ * 【主な機能】
+ * ・状態購読：`PersonListViewModel` からの UI 状態（利用者リスト、検索クエリ等）の収集。
+ * ・イベントハンドリング：ViewModel からの通知（Snackbar, InfoDialog 等）の適切な表示。
+ * ・画面遷移：Type-safe Navigation に基づく詳細画面、編集画面、設定画面への遷移制御。
+ * ・副作用管理：カテゴリ選択シート、緊急連絡先選択シート、論理削除後の Undo スナックバーの表示制御。
+ *
+ * 【全体像：メイン画面階層（Main Hierarchy）】
+ *
+ * ■ MainScreen (★本コンポーネント：制御層)
+ * │
+ * ├─ [1] MainScreenContent (表示層：ui/screens/main/MainScreenContent.kt)
+ * │    ├─ TopAppBar (ハンバーガーメニュー：設定、バージョン)
+ * │    └─ Column (コンテンツエリア)
+ * │         ├─ SearchBox (検索バー)
+ * │         ├─ KanaIndexBar (五十音バー)
+ * │         └─ UserList (LazyColumn)
+ * │              └─ UserListItem (カード ＋ クイックメニュー [QuickActionMenu])
+ * │
+ * └─ [2] 副作用・シート群 (制御層内で完結)
+ *      ├─ CategorySelectionSheet (機能選択ボトムシート)
+ *      ├─ EmergencyContactSelectionSheet (緊急連絡先選択ボトムシート)
+ *      └─ AppInfoDialog (通知・エラー用共通ダイアログ)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・具体的な UI レイアウトの構築（MainScreenContent が担当）。
+ * ・ビジネスロジックの判定（ViewModel および Logic 層が担当）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -260,7 +275,16 @@ fun MainScreen(
 }
 
 /**
- * 緊急連絡先選択用シート
+ * Component：EmergencyContactSelectionSheet
+ *
+ * 【役割】
+ * 特定の利用者に紐付く緊急連絡先を一覧表示し、タップによる発信操作、
+ * または管理画面への遷移を選択するためのボトムシートです。
+ *
+ * @param contacts 表示対象の連絡先リスト
+ * @param personName 利用者名（表示用）
+ * @param onContactClick 連絡先がタップされた際のコールバック（発信等を想定）
+ * @param onManageClick 管理画面への遷移が選択された際のコールバック
  */
 @Composable
 fun EmergencyContactSelectionSheet(

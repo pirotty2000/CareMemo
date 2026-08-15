@@ -16,6 +16,16 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel：AuditLogViewModel
+ *
+ * 【役割】
+ * 監査ログ（操作履歴）の表示、フィルタリング、およびソート状態を管理します。
+ *
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の不変化：Logic 層から提供される標準の List を、UI での安定したレンダリングのために 
+ *    `toImmutableList()` を用いて ImmutableList へ変換し、UiState として提供します。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・監査ログのフィルタリングや並び替えの具体的なロジック（AuditLogLogic が担当）。
  */
 class AuditLogViewModel(
     private val auditLogRepository: AuditLogRepository,
@@ -65,6 +75,7 @@ class AuditLogViewModel(
             }
         ) { (filtered, features, results) ->
             updateUiState { current ->
+                // UI 境界において ImmutableList へ変換し、不変性を保証する
                 current.copy(
                     filteredLogs = filtered.toImmutableList(),
                     availableFeatures = features.toImmutableList(),

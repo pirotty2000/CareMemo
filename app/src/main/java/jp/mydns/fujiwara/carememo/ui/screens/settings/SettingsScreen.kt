@@ -1,16 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.settings
 
-/**
- * Screen : SettingsScreen
- *
- * 【画面名】
- * 設定・管理画面
- *
- * 【遷移】：
- * ViewModel から発行される ViewEvent (SettingsViewEvent) に基づき、
- * Composable 側で NavHostController を操作して遷移を行う。
- */
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -53,6 +42,40 @@ import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.launch
 
+/**
+ * Screen：SettingsScreen
+ *
+ * 【役割】
+ * アプリケーションの設定・管理機能を統括する最上位 Screen コンポーネントです。
+ * 表示設定、セキュリティ、データ管理、および開発者向けツールに至るまで、アプリの振る舞いをカスタマイズする全設定項目を集約します。
+ *
+ * 【主な機能】
+ * ・設定管理：氏名伏せ字、自動ロック、バックアップパスワード、テーマ等の永続設定の変更。
+ * ・データ操作：DB バックアップ（エクスポート）および復元（インポート）の仲介。
+ * ・保守ツール：整合性チェック、サンプルデータ投入、監査ログ消去等の管理用機能。
+ * ・OS 連携：SAF（Storage Access Framework）によるファイル入出力、および生体認証の要求。
+ *
+ * 【全体像：設定画面階層（Settings Hierarchy）】
+ *
+ * ■ SettingsScreen (★本コンポーネント：全体制御・ダイアログ管理)
+ * │
+ * ├─ [1] SettingsScreenContent (表示層：各セクションの配置)
+ * │    ├─ DisplayAndRecordingSection (表示・記録設定)
+ * │    ├─ UserManagementSection (利用者管理) ➔ [子画面] DeleteOrRestorePerson
+ * │    ├─ DataManagementSection (データ管理) ➔ [子画面] UnassignedPhotoManagement
+ * │    ├─ SecuritySection (セキュリティ)
+ * │    ├─ ThemeSection (テーマ設定)
+ * │    ├─ OtherSection (その他) ➔ バージョン情報
+ * │    └─ ResetSection (開発者用：条件付き表示) ➔ [子画面] AuditLogScreen
+ * │
+ * └─ [2] 各種設定ダイアログ群 (制御層内で完結)
+ *      ├─ ThemeDialog, TimeoutDialog, RetentionDialog (選択肢系)
+ *      ├─ ImportConfirm, EraseConfirm, ClearLogsConfirm (確認系)
+ *      └─ InconsistencyReportDialog (データ不整合報告)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際のデータ永続化処理（SettingsViewModel および Repository 層が担当）。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -626,7 +649,11 @@ fun SettingsScreen(
 }
 
 /**
- * 設定画面のUIレイアウト本体。
+ * Component：SettingsScreenContent
+ *
+ * 【役割】
+ * 設定画面の UI レイアウト本体を構築します。
+ * 各設定項目（表示、ユーザー、データ、セキュリティ、テーマ等）をセクションごとに整理して表示します。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -40,6 +40,19 @@ import java.time.ZonedDateTime
  */
 
 /**
+ * 全体像：日時入力部品（DateTimeInput）
+ *
+ * ■ DateTimeInputFields (コンテナ)
+ * │
+ * ├─ [1] DateTimeUnitField (年：4桁)
+ * ├─ [2] DateTimeUnitField (月：2桁)
+ * ├─ [3] DateTimeUnitField (日：2桁)
+ * ├─ [4] DateTimeUnitField (時：2桁)
+ * └─ [5] DateTimeUnitField (分：2桁)
+ *      └─ 内部で AppCompactTextField (ui/components/base/AppCompactTextField.kt) を利用
+ */
+
+/**
  * 日時入力フィールドのステートを管理するクラス
  * 5つの入力フィールドの状態をカプセル化し、業務ロジック（Instant変換等）を提供します。
  */

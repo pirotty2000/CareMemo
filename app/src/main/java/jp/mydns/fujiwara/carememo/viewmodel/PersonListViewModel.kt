@@ -43,27 +43,15 @@ import kotlinx.coroutines.launch
  * 全利用者のリスト表示、五十音順セクション切り替え、検索（氏名および経過記録内容）、
  * アーカイブ（論理削除）・復元、およびクイックアクションメニューの制御を行います。
  *
- * 【主要な機能】
- * ・利用者リストの継続的な購読と、検索・セクションフィルタの動的適用。
- * ・経過記録のキーワード検索結果に基づく利用者絞り込み（リレーショナル検索）。
- * ・未読件数や最終記録日などのサマリー情報の統合。
- * ・利用者の追加、アーカイブ（論理削除）、復元。
- * ・緊急連絡先のオンデマンド取得と表示制御。
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の不変化：UI に公開する利用者リストはすべて ImmutableList に変換し、リスト更新時の
+ *    Compose 側の再描画コストを最適化します。
+ * 2. 検索ロジックの統合：氏名検索と経過記録検索の検索結果を ViewModel で統合し、
+ *    UI に対しては単一のフィルタリング済みリストとして透過的に提供します。
  *
- * 【依存している Repository】
- * ・PersonRepository: 利用者情報の取得と追加。
- * ・DeleteOrRestorePersonRepository: 利用者の論理削除および復元。
- * ・PersonSummaryRepository: カテゴリ別の未読数等のサマリー情報取得。
- * ・ConditionRepository: 経過記録の内容に基づいた利用者検索。
- * ・EmergencyContactRepository: 緊急連絡先の取得。
- * ・AuditLogRepository: 操作ログの記録。
- * ・UserSettingsRepository: 共通設定（マスキング）および表示モードの管理。
- *
- * 【設計指針】
- * 1. リアクティブなリスト構築：リポジトリの Flow、UI 状態（検索クエリ等）、外部検索結果、サマリーを `combine` し、
- *    いずれかが変更された際に整合性の取れたリストを自動再生成する。
- * 2. 多角的な検索：氏名だけでなく、経過記録の内容からも関連する利用者を特定し、透過的にリストへ反映する。
- * 3. 即時性の確保：アーカイブや復元などのデータ操作後は、スナックバーによるフィードバックを即座に行う。
+ * 【この ViewModel では行わないこと】
+ * ・検索ロジックの具体的な実装（PersonListLogic が担当）。
+ * ・個別の健康記録や服薬情報の詳細管理（各専門 ViewModel が担当）。
  */
 class PersonListViewModel(
     private val repository: PersonRepository,
@@ -171,6 +159,7 @@ class PersonListViewModel(
                 }
             }
         ) { newList ->
+            // UI 境界において ImmutableList へ変換し、安定したリスト表示を保証する
             updateUiState { it.copy(userList = newList.toImmutableList()) }
         }
     }

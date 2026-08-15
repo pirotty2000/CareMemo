@@ -9,7 +9,11 @@ import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
 import jp.mydns.fujiwara.carememo.logic.common.MedicationTimeSlot
 
 /**
- * 服薬管理の判定結果(Enum)を表示用の資源に変換するマッパー。
+ * Component：MedicationDisplayMapper
+ *
+ * 【役割】
+ * 服薬管理の判定結果（Enum）を表示用の資源（記号、色、ラベル）に変換するマッパーです。
+ * カレンダー表示や履歴テーブルにおける一貫した視覚表現を保証します。
  */
 object MedicationDisplayMapper {
 

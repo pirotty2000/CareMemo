@@ -25,7 +25,30 @@ import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import kotlinx.coroutines.launch
 
 /**
- * 健康記録の一括入力画面
+ * Screen：BatchInputScreen
+ *
+ * 【役割】
+ * 健康記録の各指標（身長体重、バイタル、血糖値）を一画面で同時に記録するための「一括入力」画面です。
+ * 巡回時や定期測定時など、複数のデータを効率的に連続入力することを目的としています。
+ *
+ * 【主な機能】
+ * ・同時入力：全健康カテゴリの入力フィールドを縦スクロール形式で一括提供。
+ * ・日時一括設定：入力された全データに対して、指定された記録日時を共通で適用。
+ * ・相関バリデーション：ViewModel（BatchInputViewModel）と連携した、画面全体の保存可否判定。
+ * ・変更検知：初期状態からの差分をリアルタイムに計算し、未保存での離脱時に警告を表示。
+ *
+ * 【全体像：一括入力構成（Batch Input Layout）】
+ *
+ * ■ BatchInputScreen (★本コンポーネント)
+ * │
+ * ├─ TopAppBar (利用者情報 ＋ 戻るボタン)
+ * └─ Column (縦スクロールエリア)
+ *      ├─ DateTimeInputFields (日時設定：共通)
+ *      ├─ カテゴリ別入力（AppTextField x N）
+ *      │    ├─ 身長・体重
+ *      │    ├─ バイタル（血圧、SAT、脈拍、体温）
+ *      │    └─ 血糖値（血糖、HbA1c）
+ *      └─ アクションボタン (キャンセル、保存)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

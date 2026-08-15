@@ -32,22 +32,14 @@ import java.time.ZoneId
  * 身長体重、バイタル（血圧・脈拍等）、血糖値の複数カテゴリにわたる入力内容を同時に扱い、
  * 一つの画面で効率的に記録できる機能を提供します。
  *
- * 【主要な機能】
- * ・複数カテゴリの入力状態の一元保持。
- * ・全項目に対するバリデーション（範囲チェックおよび相関チェック）の実施。
- * ・保存前の「同一日時データ」の重複チェック（上書き防止仕様）。
- * ・保存成功時のアニメーション演出イベントの通知および入力値のクリア。
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の統合管理：複数の健康カテゴリにまたがる広範な入力状態を一元管理し、整合性を保ちます。
+ * 2. リアルタイム・バリデーション：ユーザーの入力ごとに、保存の妥当性 (`isValid`) および
+ *    初期状態からの変更の有無 (`isChanged`) を ViewModel 側で即座に判定し、UI のボタン活性制御などに反映します。
  *
- * 【依存している Repository】
- * ・HealthRepository: 各健康データの取得（重複確認）および保存。
- * ・PersonRepository / PersonSummaryRepository: 利用者情報およびサマリーの管理（基底クラスで使用）。
- * ・AuditLogRepository: 保存・バリデーション失敗等の操作証跡を記録。
- * ・UserSettingsRepository: 共通設定（氏名のマスキング等）の参照。
- *
- * 【設計指針】
- * 1. 整合性の優先：保存前に全カテゴリに対して同一日時の既存レコードがないかを確認し、不整合な上書きを防止する。
- * 2. 入力効率の最大化：各項目の更新時に即座に `isValid` や `isChanged` を計算し、保存ボタンの活性状態を制御する。
- * 3. 単一方向データフロー：`PersonBaseUiStateViewModel` の仕組みを利用し、利用者コンテキストに基づいたデータ管理を行う。
+ * 【この ViewModel では行わないこと】
+ * ・各カテゴリ固有の Entity 生成ロジック（BatchInputLogic が担当）。
+ * ・複数カテゴリを跨いだ詳細な入力相関チェック（BatchInputLogic が担当）。
  */
 class BatchInputViewModel(
     private val healthRepository: HealthRepository,
@@ -162,6 +154,10 @@ class BatchInputViewModel(
 
     /**
      * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
+     *
+     * 【設計指針：UI 境界の責務】
+     * 以前は UI コンポーネント側で行っていた複雑な相関バリデーションや変更状態の判定を、
+     * ここで一括して行い、UiState を通じて Composable に伝えます。
      */
     private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
         updateUiState { current ->

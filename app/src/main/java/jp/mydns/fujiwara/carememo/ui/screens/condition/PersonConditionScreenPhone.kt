@@ -18,6 +18,17 @@ import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 
+/**
+ * Screen：PersonConditionScreenPhone
+ *
+ * 【役割】
+ * スマートフォン等の狭い画面（WindowWidthSizeClass.Compact/Medium）向けに最適化された所見記録画面です。
+ *
+ * 【主な機能】
+ * ・シングルペイン制御：リスト表示と詳細表示（ダイアログ）を切り替えて表示。
+ * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、および PDF 出力ボタンの配置。
+ * ・フローティングアクションボタン（FAB）：新規レコード作成のショートカット提供。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenPhone(

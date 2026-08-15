@@ -29,14 +29,30 @@ import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
 
 /**
- * Screen : PersonEditScreen
+ * Screen：PersonEditScreen
  *
- * 【役割】：
- * 利用者の新規登録および情報編集を行うための独立した画面。
- * 
- * 【遷移】：
- * ViewModel から発行される ViewEvent (PersonEditViewEvent) に基づき、
- * Composable 側で NavHostController を操作して遷移を行う。
+ * 【役割】
+ * 利用者の新規登録および情報編集（SCR-M-002）を行うための独立した画面です。
+ * ViewModel との接続（State 購読、イベント監視）および破棄確認ダイアログ等の「副作用」を制御します。
+ *
+ * 【主な機能】
+ * ・状態管理：`PersonEditViewModel` からの入力状態やバリデーション結果の購読。
+ * ・イベントハンドリング：保存成功時の戻り遷移（SavedStateHandle への結果セット込み）やエラー通知の制御。
+ * ・破棄保護：入力中に戻る操作を行った際の、変更破棄確認ダイアログの表示制御。
+ * ・重複エラー対応：同姓同名（またはアーカイブ済み）が発見された際のエラーダイアログとフォーカス制御。
+ *
+ * 【全体像：利用者編集構成（Person Edit Layout）】
+ *
+ * ■ PersonEditScreen (★本コンポーネント：制御層)
+ * │
+ * └─ [1] PersonEditScreenContent (表示層：内部定義)
+ *      ├─ Scaffold (AppBar ＋ SnackbarHost)
+ *      └─ Column (スクロールエリア)
+ *           ├─ 氏名入力 (AppTextField x 4)
+ *           ├─ 識別メモ (AppTextField)
+ *           ├─ [2] BirthdayInputSection (生年月日入力：ブリッジ用)
+ *           │    └─ BirthdayInputFields (ui/components/main/)
+ *           └─ アクションボタン (保存、キャンセル)
  */
 @Composable
 fun PersonEditScreen(

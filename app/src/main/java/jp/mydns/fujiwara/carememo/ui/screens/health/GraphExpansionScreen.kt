@@ -37,7 +37,31 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Screen : GraphExpansionScreen
+ * Screen：GraphExpansionScreen
+ *
+ * 【役割】
+ * 健康記録の各グラフ（血圧、血糖、BMI 等）を全画面かつ横向き（ランドスケープ）で詳細に閲覧するための画面です。
+ * 時間軸を広く取ることで、長期的な推移や微妙な変化を捉えやすくします。
+ *
+ * 【主な機能】
+ * ・ランドスケープ固定：`DisposableEffect` を使用し、画面表示中のみ強制的に横画面へ切り替え。
+ * ・初期位置へのスクロール：遷移元のグラフインデックスに基づき、対象グラフを自動的にフォーカス。
+ * ・ハイライト表示：対象グラフに一時的な枠線アニメーションを適用し、視認性を向上。
+ * ・詳細閲覧：`LineChart` エンジンによる詳細な推移表示（ズーム・ツールチップ対応）。
+ *
+ * 【全体像：グラフ拡大構成（Graph Expansion）】
+ *
+ * ■ GraphExpansionScreen (★本コンポーネント)
+ * │
+ * ├─ TopAppBar (利用者名 ＋ 戻るボタン)
+ * └─ LazyColumn (グラフリスト)
+ *      └─ Card (各グラフの器)
+ *           └─ [1] SingleGraphInLandscape (横画面用描画コンテナ)
+ *                └─ LineChart (描画エンジン：ui/components/health/LineChart.kt)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・データの保存や削除操作。
+ * ・詳細入力画面（ScreenContent）との共有状態管理（拡大表示に特化）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

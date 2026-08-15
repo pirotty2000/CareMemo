@@ -35,6 +35,17 @@ sealed interface UnassignedPhotoViewEvent {
 
 /**
  * ViewModel：UnassignedPhotoViewModel
+ *
+ * 【役割】
+ * データベースとの紐付けが失われた「未割り当て写真」の検出および削除操作を制御します。
+ *
+ * 【設計指針：レイヤー責務と課題】
+ * 1. メンテナンス制御：ファイルシステムと DB レコードの不整合を解消するための特殊な操作を安全に実行します。
+ * 2. プラットフォーム依存（注意）: コンストラクタで `Context` を受け取っており、本来はリポジトリまたは
+ *    ファイル操作ユーティリティに隠蔽されるべきプラットフォーム依存が露出しています。将来のリファクタリング対象です。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・未割り当て写真の具体的な検出アルゴリズム（ConditionMaintenanceLogic が担当）。
  */
 class UnassignedPhotoViewModel(
     userSettingsRepository: UserSettingsRepository,

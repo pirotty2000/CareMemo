@@ -76,16 +76,25 @@ import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 
 /**
- * コンポーネント構造ツリー：
- * ├─ [1] ConditionList (履歴リスト)
- * │    └─ [1-1] ConditionMemoContent (1行分の要約：タイトル・本文・写真アイコン)
- * └─ [2] ConditionDetailPane (詳細ペイン：閲覧/編集の器)
- *      ├─ [2-1] ConditionRecordEditForm (【編集モード】入力フォーム)
- *      │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
- *      │    └─ 音声入力ランチャー
- *      ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示)
- *      │    └─ [2-2-1] PhotoGrid (写真一覧：フルスクリーン遷移)
- *      └─ [2-3] UnassignedPhotoSelectionDialog (未割り当て写真の再紐付け用)
+ * 全体像：利用者所見記録（Condition）
+ *
+ * ■ ui/screens/condition/PersonConditionScreenContent.kt の PersonConditionScreenContent (画面全体の器)
+ * │
+ * ├─【一覧セクション】
+ * │  └─ [1] ConditionList (所見記録リスト：PersonConditionComponents.kt)
+ * │       └─ ■ ui/components/common/HistoryComponents.kt の PersonHistoryList (共通履歴リストの枠)
+ * │            └─ [1-1] ConditionMemoContent (履歴1行分の要約：タイトル・本文・写真アイコン)
+ * │
+ * └─【詳細セクション】
+ *      └─ [2] ConditionDetailPane (詳細・編集パネル：PersonConditionComponents.kt)
+ *           ├─ [2-1] ConditionRecordEditForm (【編集モード】入力フォーム)
+ *           │    ├─ DateTimeInputFields (日時入力：ui/components/common/DateTimeInputFields.kt)
+ *           │    ├─ AppTextField (各種入力：ui/components/base/AppTextField.kt)
+ *           │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
+ *           │    └─ 音声入力ランチャー
+ *           ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示)
+ *           │    └─ [2-2-1] PhotoGrid (写真一覧：閲覧・フルスクリーン遷移)
+ *           └─ [2-3] UnassignedPhotoSelectionDialog (未割り当て写真の再紐付け用)
  */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,6 +109,7 @@ import java.time.Instant
  * @param isAnyDialogOpen スワイプ削除状態の制御用フラグ
  * @param onSelect アイテム選択時のコールバック
  * @param onDelete アイテム削除（スワイプ）時のコールバック
+ * @param modifier 修飾子
  * @param lazyListState スクロール状態
  */
 @Composable
@@ -191,6 +201,7 @@ private fun ConditionMemoContent(
  * 所見メモの詳細・編集ペイン。
  *
  * @param uiState UI 状態
+ * @param modifier 修飾子
  * @param onDeletePhoto 写真削除処理のコールバック
  * @param onSelectedIdChange 選択ID変更（新規作成中止時など）のコールバック
  * @param onCancel 閲覧モードの終了コールバック
@@ -561,6 +572,7 @@ private fun ConditionRecordEditForm(
  *
  * @param photos 表示対象の写真リスト
  * @param isEditable 削除ボタンを表示するかどうか
+ * @param modifier 修飾子
  * @param onPhotoClick 写真タップ時のコールバック
  * @param onDeletePhoto 削除ボタンタップ時のコールバック
  */
@@ -748,6 +760,7 @@ private fun ConditionRecordDisplayCard(
  * 現在の記録に再紐付けするための選択ダイアログです。
  *
  * @param unassignedPhotos 未割り当て写真情報のリスト
+ * @param modifier 修飾子
  * @param onDismiss キャンセル時のコールバック
  * @param onSelect 写真選択時のコールバック
  */

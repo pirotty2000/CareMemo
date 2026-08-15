@@ -20,6 +20,23 @@ package jp.mydns.fujiwara.carememo.ui.components.health
  * Canvas を用いた直接の描画処理（LineChart コンポーネントが担当）。
  */
 
+/**
+ * 全体像：グラフデータ変換（Chart Data Flow）
+ *
+ * [入力：ドメインモデル]
+ * ├─ HistoryRecord (BpAndPulse, GlucoseAndHbA1c 等)
+ * └─ AppSpecifications (判定閾値)
+ *        ↓
+ * [変換：HealthChartHelper]
+ * ├─ calculateGlobalXRange (時間軸の同期)
+ * ├─ getChartConfig (設定の集約)
+ * └─ mapRanges / mapLimits (視覚情報の変換)
+ *        ↓
+ * [出力：描画用データ]
+ * ├─ ChartLineData (座標点 ChartPoint のリスト)
+ * └─ HealthChartConfig (LineChart への設定注入)
+ */
+
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.R

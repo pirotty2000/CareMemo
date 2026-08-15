@@ -63,19 +63,24 @@ import kotlinx.collections.immutable.ImmutableMap
 /**
  * 全体像：服薬管理（Medication）
  *
- * ■ ui/screens/medication/PersonMedicationScreenContent.kt の PersonMedicationScreenContent
+ * ■ ui/screens/medication/PersonMedicationScreenContent.kt の PersonMedicationScreenContent (画面全体の器)
+ * │
  * ├── [レイアウト制御：Phone版 (カレンダー/履歴 切り替え) ・ Tablet版 (2カラム固定)]
+ * │
  * ├──【カレンダー表示】
- * │  └─ [1] CalendarGrid (月間グリッド)
- * │       └─ [1-1] DayCell (1日分のセル)
+ * │  └─ [1] CalendarGrid (月間グリッド：PersonMedicationComponents.kt)
+ * │       └─ [1-1] DayCell (1日分のセル：タップで入力ダイアログ起動)
  * │            └─ [1-1-1] MedicationStatusIcon (朝/昼/夕/寝る前 4スロットの状況アイコン)
+ * │
  * ├──【履歴テーブル表示】
- * │  └─ [2] MedicationHistoryTable (月間一覧テーブル)
+ * │  └─ [2] MedicationHistoryTable (月間一覧テーブル：PersonMedicationComponents.kt)
+ * │       └─ <テーブル行> 日付ごとの服薬状況を記号（○/△/×/－）で一覧表示
+ * │
  * └──【入力・編集セクション】
- *      └─ [3] MedicationInputDialog (登録・編集用ダイアログ)
+ *      └─ [3] MedicationInputDialog (登録・編集用ダイアログ：PersonMedicationComponents.kt)
  *           ├─ [3-1] MedicationRow (時間枠ごとの入力行：朝・昼・夕・寝る前)
- *           │    └─ [3-1-1] StatusChip (服薬状況選択：未・介助・服用)
- *           └─ [3-2] DateTimeInputFields (特定の時間枠の「記録時刻」を詳細編集)
+ *           │    └─ StatusChip (服薬状況選択：未・介助・服用)
+ *           └─ [3-2] DateTimeInputFields (特定の時間枠の「記録時刻」を詳細編集：ui/components/common/DateTimeInputFields.kt)
  */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,6 +91,7 @@ import kotlinx.collections.immutable.ImmutableMap
  *
  * @param yearMonth 表示対象の年月
  * @param recordsByDate 日付（文字列）をキーとした服薬記録のマップ
+ * @param modifier 修飾子
  * @param onDayClick 日付セルがタップされた際のコールバック（ダイアログ起動用）
  */
 @Composable
@@ -180,6 +186,7 @@ fun CalendarGrid(
  *
  * @param date 対象の日付
  * @param records その日の服薬記録リスト
+ * @param modifier 修飾子
  * @param onClick タップ時のコールバック
  */
 @Composable
@@ -242,6 +249,7 @@ private fun DayCell(
  *
  * @param slot 時間枠（MORNING, LUNCH 等）
  * @param status 服薬状況（TAKEN, ASSIST, NONE または null）
+ * @param modifier 修飾子
  */
 @Composable
 private fun MedicationStatusIcon(
@@ -303,6 +311,7 @@ private fun MedicationStatusIcon(
  *
  * @param yearMonth 表示対象の年月
  * @param recordsByDate 日付（文字列）をキーとした服薬記録のマップ
+ * @param modifier 修飾子
  * @param lazyListState スクロール状態
  */
 @Composable
@@ -431,6 +440,7 @@ fun MedicationHistoryTable(
  * @param date 対象の日付
  * @param personId 利用者ID
  * @param records 現在保存されている記録リスト
+ * @param modifier 修飾子
  * @param onDismiss ダイアログを閉じる際のコールバック
  * @param onConfirm 保存が確定した際のコールバック（全スロットの最新状態を渡す）
  */
@@ -573,6 +583,7 @@ fun MedicationInputDialog(
  * @param label スロット名（朝 等）
  * @param currentRecord 現在選択されている記録（null なら未入力）
  * @param isSelectedForTime この行が時刻編集の対象として選択されているか
+ * @param modifier 修飾子
  * @param onStatusToggle ステータスチップがタップされた際のコールバック
  * @param onTimeClick 時刻ラベルがタップされた際のコールバック
  */
@@ -637,8 +648,14 @@ private fun MedicationRow(
 }
 
 /**
- *  [3-1-1] StatusChip
+ * [3-1-1] StatusChip
  * 服薬状況（未・介助・服用）を選択するための、視覚的に分かりやすいチップ。
+ *
+ * @param text チップに表示するテキスト
+ * @param isSelected 選択状態かどうか
+ * @param color 選択時のメインカラー
+ * @param modifier 修飾子
+ * @param onClick タップ時のコールバック
  */
 @Composable
 private fun StatusChip(

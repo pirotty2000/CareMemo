@@ -70,8 +70,8 @@ import java.time.Instant
  *      └─ [2] HealthRecordDetailPane (詳細・編集パネル：PersonHealthComponents.kt)
  *           │
  *           ├─ [2-1] HealthRecordEditForm (【編集モード】入力フォーム)
- *           │    ├─ DateTimeInputFields (日時入力)
- *           │    ├─ <カテゴリ別入力> AppCompactTextField (各項目：数値入力)
+ *           │    ├─ DateTimeInputFields (日時入力：ui/components/common/DateTimeInputFields.kt)
+ *           │    ├─ <カテゴリ別入力> AppCompactTextField (各項目：ui/components/base/AppCompactTextField.kt)
  *           │    └─ <アクション> キャンセルボタン、保存ボタン
  *           │
  *           └─ [2-2] HealthRecordDisplayCard (【閲覧モード】詳細表示用)
@@ -90,6 +90,7 @@ import java.time.Instant
  *
  * @param category 表示対象のカテゴリ
  * @param record 履歴レコード
+ * @param modifier 修飾子
  */
 @Composable
 fun HealthHistoryItemBody(

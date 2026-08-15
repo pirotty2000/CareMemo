@@ -1,7 +1,11 @@
 package jp.mydns.fujiwara.carememo.data
 
 /**
- * アプリのテーマ設定を定義する列挙型
+ * Data：ThemeSetting
+ *
+ * 【役割】
+ * アプリケーションの配色テーマ設定を定義する Enum です。
+ * システム連動（SYSTEM）、標準色（LIGHT, DARK）、および独自定義のカラーパレットを管理します。
  */
 enum class ThemeSetting {
     SYSTEM,

@@ -24,6 +24,18 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 
+/**
+ * Screen：ConditionPhotoPreviewScreen
+ *
+ * 【役割】
+ * 写真撮影直後に表示される、保存前の確認およびキャプション編集のための画面です。
+ *
+ * 【主な機能】
+ * ・撮影画像のプレビュー表示。
+ * ・キャプション入力：写真に対する説明文の編集。
+ * ・保存・破棄：撮影した写真を記録に確定保存するか、破棄するかの選択。
+ * ・変更保護：キャプション編集中の不用意な戻り操作に対する警告ダイアログの表示。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionPhotoPreviewScreen(

@@ -72,6 +72,30 @@ private val ClassicSandColorScheme = lightColorScheme(
     surface = Color(0xFFFFFBFF)
 )
 
+/**
+ * Component：CareMemoTheme
+ *
+ * 【役割】
+ * アプリケーション全体の視覚的テーマ（ColorScheme, Typography）を定義・適用する最上位コンポーネントです。
+ * Material 3 に準拠し、システムのダークモード、動的カラー（Android 12+）、およびユーザー設定によるカスタムテーマの切り替えをサポートします。
+ *
+ * 【主な機能】
+ * ・テーマ切り替え：`ThemeSetting` に基づく複数のカラーパレット（Healing Green, Serene Blue 等）の動的適用。
+ * ・ダークモード対応：システム設定および手動設定によるライト/ダークパレットの選択。
+ * ・動的カラー統合：対応デバイスにおいて、壁紙に基づいた `dynamicColorScheme` の適用。
+ *
+ * 【全体像：テーマ構造 (Theme Structure)】
+ *
+ * [ThemeSetting] (data/ThemeSetting)
+ *  ├─ SYSTEM ➔ Dynamic (12+) or Light/Dark
+ *  ├─ LIGHT / DARK ➔ 標準 Material パレット
+ *  └─ カスタムテーマ (独自定義 ColorScheme)
+ *       ├─ HEALING_GREEN (緑：癒やし)
+ *       ├─ SERENE_BLUE (青：平穏)
+ *       ├─ WARM_APRICOT (橙：温かみ)
+ *       ├─ MIDNIGHT_NAVY (紺：夜間・高コントラスト)
+ *       └─ CLASSIC_SAND (茶：伝統・安心)
+ */
 @Composable
 fun CareMemoTheme(
     themeSetting: ThemeSetting = ThemeSetting.SYSTEM,

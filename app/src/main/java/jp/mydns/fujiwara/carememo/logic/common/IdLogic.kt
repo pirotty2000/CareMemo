@@ -8,12 +8,10 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
  * 【役割】
  * アプリ内で使用される各種エンティティのID（主キー）に関する共通ロジックを提供します。
  *
- * 【主な機能】
- * ・IDが新規レコード（保存前）のものかどうかの判定。
- *
- * 【設計指針】
- * 1. 永続化前のデータと永続化済みのデータを区別するための統一された判定基準を提供します。
- * 2. null や空文字に加え、システム共通の新規用ID定数 [AppSpecifications.Id.NEW_RECORD_ID] を「新規」として扱います。
+ * 【設計指針：Pure Kotlin / Android 非依存】
+ * 1. 本クラスは Pure Kotlin で実装されており、Android API に依存しません。
+ * 2. 永続化前のデータと永続化済みのデータを区別するための統一された判定基準を提供します。
+ * 3. null や空文字に加え、システム共通の新規用ID定数 [AppSpecifications.Id.NEW_RECORD_ID] を「新規」として扱います。
  */
 object IdLogic {
     /**

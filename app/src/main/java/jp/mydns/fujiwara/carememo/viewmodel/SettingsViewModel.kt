@@ -27,6 +27,18 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel：SettingsViewModel
+ *
+ * 【役割】
+ * アプリケーションの設定管理、バックアップ・復元、およびシステムメンテナンス操作の実行制御を担当します。
+ *
+ * 【設計指針：レイヤー責務と課題】
+ * 1. 統括制御：複数のリポジトリを横断して、アプリ全体の動作設定や整合性修復などの「副作用を伴う操作」を安全に実行します。
+ * 2. プラットフォーム依存の混入（注意）: 現状、生体認証判定 (`BiometricManager`) や `Context` への依存が ViewModel 内に含まれています。
+ *    これはテスタビリティを低下させる要因であり、将来的に Activity への委譲や専用のプラットフォーム・ヘルパーへの抽出が推奨されます。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・ZIP ファイルの物理的な圧縮・解凍処理（AppMaintenanceRepository または Utils が担当）。
+ * ・データのインポート/エクスポートにおける具体的な整合性検証（SettingsLogic が担当）。
  */
 class SettingsViewModel(
     private val maintenanceRepository: AppMaintenanceRepository,

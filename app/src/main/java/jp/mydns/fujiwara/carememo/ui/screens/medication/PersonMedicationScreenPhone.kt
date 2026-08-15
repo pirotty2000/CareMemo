@@ -58,6 +58,18 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 
+/**
+ * Screen：PersonMedicationScreenPhone
+ *
+ * 【役割】
+ * スマートフォン等の狭い画面（WindowWidthSizeClass.Compact/Medium）向けに最適化された服薬記録画面です。
+ * カレンダー表示と履歴テーブル表示をタブ形式で切り替えて利用します。
+ *
+ * 【主な機能】
+ * ・シングルペイン制御：カレンダーと履歴を排他的に表示し、限られた画面領域を有効活用。
+ * ・モード切り替え：カレンダー ↔ 履歴 の表示モード選択（SegmentedButton）。
+ * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、および PDF 出力ボタンの配置。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonMedicationScreenPhone(

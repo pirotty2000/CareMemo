@@ -32,7 +32,37 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 /**
- * 利用者所見記録画面
+ * Screen：PersonConditionScreen
+ *
+ * 【役割】
+ * 利用者の所見記録（カテゴリB）画面のエントリポイントとなる最上位 Screen コンポーネントです。
+ * デバイスの形状（Phone/Tablet）に応じたレイアウトの振り分け、共通ダイアログの制御、
+ * および ViewModel からのイベント（通知、遷移等）の購読を担当します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト制御：WindowWidthSizeClass に基づく Phone/Tablet 版の出し分け。
+ * ・イベントハンドリング：ViewModel からの通知（Snackbar, ErrorDialog 等）の UI への反映。
+ * ・共通ダイアログ管理：削除確認、上書き確認、PDF 設定、詳細編集（Phone版用ダイアログ）の表示制御。
+ * ・外部連携：OS のカメラおよびギャラリー起動の仲介。
+ *
+ * 【全体像：所見記録画面階層（Condition Hierarchy）】
+ *
+ * ■ PersonConditionScreen (★本コンポーネント：全体制御)
+ * │
+ * ├─ [A] PersonConditionScreenPhone (Phone版：シングルペイン)
+ * │    └─ PersonConditionScreenContent (リスト・詳細トグル)
+ * │         └─ ConditionDetailPane (ダイアログ表示)
+ * │
+ * ├─ [B] PersonConditionScreenTablet (Tablet版：2ペイン固定)
+ * │    └─ PersonConditionScreenContent (リスト・詳細並列表示)
+ * │
+ * └─ [共通パーツ]
+ *      ├─ PdfExportActionHandler (PDF出力制御)
+ *      ├─ AppDeleteConfirmDialog (削除確認)
+ *      └─ AppInfoDialog (通知・エラー)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際の UI 描画（下位の ScreenPhone/Tablet または Content が担当）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

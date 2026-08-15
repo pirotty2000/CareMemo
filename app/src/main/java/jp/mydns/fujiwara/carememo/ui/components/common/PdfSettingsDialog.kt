@@ -69,9 +69,14 @@ enum class ExportOrder(val displayNameRes: Int) {
  *
  * 【このコンポーネントでは行わないこと】
  * 実際のPDF生成処理（PdfExporter および PdfExportActionHandler が担当）。
+ */
+
+/**
+ * PDFを出力する際の詳細設定ダイアログを表示します。
  *
  * @param category 対象のカテゴリ
  * @param onDismiss ダイアログを閉じる際のコールバック
+ * @param modifier 修飾子
  * @param onRequireAuthentication セキュリティ設定の変更やパスワード表示に際して認証が必要な場合に呼び出されるコールバック
  * @param onExport 設定完了後にPDF生成を開始するためのコールバック
  */

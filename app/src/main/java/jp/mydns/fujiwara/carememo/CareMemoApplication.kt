@@ -22,6 +22,18 @@ import java.time.LocalDate
  * ・設定に基づいた操作ログ（監査ログ）の自動ローテーション実行。
  * ・アプリ内の全リポジトリインスタンスの保持と提供（サービスロケーター的な役割）。
  *
+ * 【全体像：依存関係供給構造 (Dependency Supply Chain)】
+ *
+ * [基盤：AppDatabase] (★ Room + SQLCipher)
+ *  │
+ *  ├─ [データアクセス：DAO] (PersonDao, HealthDao 等)
+ *  │    ↓
+ *  ├─ [ビジネス境界：Repository] (★本クラスでシングルトンとして保持)
+ *  │    ├─ PersonRepository / HealthRepository / ConditionRepository 等
+ *  │    └─ AppMaintenanceRepository (インポート・エクスポート)
+ *  │         ↓
+ *  └─ [画面：ViewModel] (MainActivity 等の Factory 経由で注入)
+ *
  * 【設計指針】
  * 1. パフォーマンス：起動時にバックグラウンドで DB 接続を試行し、初回のデータアクセス時の遅延を軽減する。
  * 2. 単純性：DI フレームワークを導入せず、Application インスタンスを介したプロパティ参照による依存性の解決を行う。

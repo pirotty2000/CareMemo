@@ -4,7 +4,10 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 
 /**
- * 元号の表示用マッピングロジック
+ * Component：BirthEraDisplayMapper
+ *
+ * 【役割】
+ * 生年月日入力等で使用される元号（BirthEra）に対応する表示名のリソースIDを解決します。
  */
 object BirthEraDisplayMapper {
 

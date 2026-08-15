@@ -30,13 +30,25 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
 
 /**
- * バッジタップ時に表示されるクイックアクションメニュー
+ * 全体像：クイックアクションメニュー（Quick Action Menu）
+ *
+ * ■ UserListItem (内のバッジタップ時)
+ * │
+ * └─ [1] QuickActionMenu (★本コンポーネント：DropdownMenu)
+ *      ├─ DropdownMenuItem (ヘッダー：利用者名表示)
+ *      ├─ HorizontalDivider
+ *      └─ DropdownMenuItem (アクション：緊急連絡先への連絡)
+ */
+
+/**
+ * バッジタップ時に表示されるクイックアクションメニューを表示します。
  *
  * @param expanded メニューを表示するかどうか
  * @param person 対象の利用者情報
  * @param isNameMaskingEnabled 氏名を伏せ字にするかどうか
  * @param onDismissRequest メニューを閉じる際のコールバック
  * @param onEmergencyContactClick 緊急連絡先へのアクセスが選択された際のコールバック
+ * @param modifier 修飾子
  */
 @Composable
 fun QuickActionMenu(

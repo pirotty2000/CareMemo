@@ -28,8 +28,17 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 
 /**
- * 緊急連絡先の登録・編集画面 (SCR-M-003 内のサブ機能)
- * ViewModel との接続を担当する Stateful な Composable。
+ * Screen：EmergencyContactEditScreen
+ *
+ * 【役割】
+ * 緊急連絡先（SCR-M-004）の新規登録および既存情報の修正を行うための独立した画面です。
+ * 施設種別（医師・家族等）、名称、電話番号、および優先順位の入力を担当します。
+ *
+ * 【主な機能】
+ * ・入力フォーム：`AppTextField` およびドロップダウンを用いた連絡先情報の編集。
+ * ・バリデーション連携：ViewModel からの `isValid` 状態に基づいた保存ボタンの制御。
+ * ・書式整形：`PhoneNumberVisualTransformation` を用いた電話番号の読みやすい表示。
+ * ・破棄保護：未保存での離脱時に `AppDialog` による変更破棄の確認。
  */
 @Composable
 fun EmergencyContactEditScreen(

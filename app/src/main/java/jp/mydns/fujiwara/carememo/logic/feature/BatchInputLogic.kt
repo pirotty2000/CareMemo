@@ -213,6 +213,9 @@ object BatchInputLogic {
     /**
      * 有効な入力がある（正常なデータとして保存対象となる）カテゴリのリストを取得します。
      *
+     * 【設計意図】
+     * UI 境界の外側である Logic クラスの戻り値には、標準の [List] を使用します。
+     *
      * @param state 現在のUI状態
      * @return [BatchInputCategory] のリスト
      */
@@ -243,6 +246,9 @@ object BatchInputLogic {
 
     /**
      * UI状態から、DB保存対象となる Entity（HeightAndWeight等）のリストを生成します。
+     *
+     * 【設計意図】
+     * UI 境界の外側である Logic クラスの戻り値には、標準の [List] を使用します。
      *
      * @param personId 対象者のID
      * @param time 記録時刻

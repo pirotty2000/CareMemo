@@ -33,7 +33,16 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 import kotlinx.collections.immutable.persistentListOf
 
 /**
- * 緊急連絡先一覧画面 (SCR-M-003)
+ * Screen：EmergencyContactListScreen
+ *
+ * 【役割】
+ * 特定の利用者に紐付く緊急連絡先（SCR-M-003）の一覧を表示し、各項目の編集・追加・削除操作を統括します。
+ *
+ * 【主な機能】
+ * ・一覧表示：`EmergencyContactItem` を用いた施設名、担当者、電話番号のリスト表示。
+ * ・削除確認：破壊的な操作（物理削除）の前に `AppDeleteConfirmDialog` を表示して確認。
+ * ・遷移制御：新規追加画面（MedicalContactEdit）や既存項目の編集画面への遷移実行。
+ * ・空状態表示：登録がない場合のガイダンス表示。
  */
 @Composable
 fun EmergencyContactListScreen(

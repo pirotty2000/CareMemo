@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
 /**
- * 健康データに関する仕様定義
+ * Spec：HealthSpecifications
+ *
+ * 【役割】
+ * 健康記録（カテゴリA, C, D）に関連する閾値、バリデーションルール、およびグラフ表示設定を定義します。
  */
 object HealthSpecifications {
 

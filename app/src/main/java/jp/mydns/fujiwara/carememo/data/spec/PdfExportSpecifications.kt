@@ -3,7 +3,10 @@ package jp.mydns.fujiwara.carememo.data.spec
 import android.graphics.Color
 
 /**
- * 出力・エクスポートに関する仕様定義
+ * Spec：ExportSpecifications
+ *
+ * 【役割】
+ * PDF 帳票出力時のレイアウト、テーブル幅、フォントサイズ、および印刷に適した配色（カラーパレット）を定義します。
  */
 object ExportSpecifications {
     /** PDF帳票仕様 */

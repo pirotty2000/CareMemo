@@ -1,11 +1,11 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
 /**
- * アプリ全体の制約事項（Min/Max, 文字数制限等）を網羅する辞書。
- * ドメイン別（対象別）に分類し、その中で用途（Logic/UI等）を整理する。
+ * Spec：ConstraintSpecifications
  *
- * ※ 健康データの閾値など、既に個別のドメイン仕様（HealthSpecifications等）に
- *    定義されているものは、そちらを優先する。
+ * 【役割】
+ * アプリ全体における「入力制約（文字数制限）」、写真の「ファイルサイズ・サムネイルサイズ」、
+ * およびシステムの「パスワードルール」を一括定義します。
  */
 object ConstraintSpecifications {
 

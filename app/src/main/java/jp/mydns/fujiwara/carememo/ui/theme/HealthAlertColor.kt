@@ -7,6 +7,19 @@ import androidx.compose.ui.graphics.Color
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel
 
 /**
+ * Component：HealthAlertColor
+ *
+ * 【役割】
+ * バイタルや血糖値などの健康記録において、各指標の「アラートレベル」に応じた表示色を解決します。
+ * 視覚的な警告により、ケアスタッフが異常を早期発見することを支援します。
+ *
+ * 【主な機能】
+ * ・レベル別配色：NORMAL, WARNING, ALERT, INFO の各状態に最適な色の提供。
+ * ・ハイライトカラー：グラフの背景等、広い面積に使用するための淡い背景色の提供。
+ * ・ダークモード対応：テーマの輝度に応じた自動的な明度調整。
+ */
+
+/**
  * HealthAlertLevel (NORMAL, WARNING, ALERT, INFO) を、
  * 現在のテーマ（ColorScheme）に基づいた具体的な表示色に変換します。
  */

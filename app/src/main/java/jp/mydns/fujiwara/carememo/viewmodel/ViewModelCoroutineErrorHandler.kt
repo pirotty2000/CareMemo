@@ -12,21 +12,13 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
  *
  * 【役割】
  * ViewModel におけるコルーチン実行中の例外発生時の「標準的な振る舞い」を定義・実装するハンドラです。
- * 発生した例外を適切にログ（Logcat および 監査ログ）に記録し、ユーザーに対して適切なエラーダイアログを表示する橋渡しを行います。
  *
- * 【主要な機能】
- * ・Logcat への詳細なスタックトレース出力。
- * ・例外の型に応じたエラーカテゴリ（resultType）の判定。
- * ・監査ログ（AuditLogRepository）へのエラー情報の自動記録。
- * ・アプリ定義の例外（AppException）またはシステム例外に応じたエラーメッセージの UI 通知（showError）。
+ * 【設計指針：レイヤー責務】
+ * 1. エラー処理の統合：個別の ViewModel から例外ハンドリングの関心を分離し、ログ記録と UI 通知を一箇所で集中管理します。
+ * 2. 証跡の保証：例外発生時には必ず監査ログ (AuditLogRepository) への記録を行い、不具合調査の透明性を確保します。
  *
- * 【設計指針】
- * 1. 統一的な例外処理：個別の ViewModel で try-catch を繰り返すのではなく、本ハンドラに集約することでエラー対応の漏れを防ぐ。
- * 2. 証跡の確保：UI への通知だけでなく、必ず監査ログに記録を残すことで、後からの原因究明を可能にする。
- * 3. 堅牢性：ハンドラ自体の中でのエラー（UI通知処理の失敗など）が、アプリ全体のクラッシュを引き起こさないよう適切にガードする。
- *
- * @param auditLogRepository 監査ログ記録用のリポジトリ
- * @param showError エラーダイアログを表示するための UI コールバック
+ * 【このクラスでは行わないこと】
+ * ・UI の直接的な描画（引数で渡された showError ラムダを通じて通知を依頼するのみ）。
  */
 class ViewModelCoroutineErrorHandler(
     private val auditLogRepository: AuditLogRepository,

@@ -22,6 +22,20 @@ package jp.mydns.fujiwara.carememo.ui.components.health
  * データの加工ロジックや、カテゴリに応じた特定の設定生成（HealthChartHelper が担当）。
  */
 
+/**
+ * 全体像：折れ線グラフエンジン（Line Chart Engine）
+ *
+ * ■ HealthGraphView 等 (親コンポーネント)
+ * │
+ * └─ [1] LineChart (★本コンポーネント)
+ *      ├─ Column (凡例表示)
+ *      └─ Row
+ *           ├─ Canvas (Y軸目盛りラベル)
+ *           └─ BoxWithConstraints (ジェスチャー・クリッピング領域)
+ *                ├─ Canvas (描画本体：背景、グリッド、折れ線、点、補助線)
+ *                └─ Surface (ツールチップ：タップ時にオーバーレイ表示)
+ */
+
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures

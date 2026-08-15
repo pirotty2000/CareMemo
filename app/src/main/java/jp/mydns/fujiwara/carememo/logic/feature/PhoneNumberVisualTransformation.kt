@@ -12,16 +12,11 @@ import androidx.compose.ui.text.input.VisualTransformation
  * 入力された電話番号の数字列に対して、日本の主要な電話番号パターンに基づいたハイフンを動的に挿入し、
  * ユーザーが読みやすい形式で表示するための VisualTransformation を提供します。
  *
- * 【主な機能】
- * ・11桁（携帯電話・IP電話：090-xxxx-xxxx 等）の自動フォーマット。
- * ・10桁かつ市外局番2桁（東京03, 大阪06等：03-xxxx-xxxx）の自動フォーマット。
- * ・その他の10桁（地方の市外局番：0xx-xxx-xxxx 等）の自動フォーマット。
- * ・入力カーソル位置と表示文字列の整合性を保つためのオフセットマッピング。
- *
- * 【設計指針】
- * 1. 保存されるデータ（Raw文字列）には影響を与えず、表示のみを加工する。
- * 2. 入力中の末尾ハイフンは視覚的な違和感を避けるために削除する。
- * 3. offsetMapping を厳密に定義し、ハイフン挿入後もカーソル移動が不自然にならないように制御する。
+ * 【設計指針：レイヤー責務と課題】
+ * 1. 表示ロジック：保存されるデータには影響を与えず、表示のみを加工します。
+ * 2. 配置の不整合（注意）: 本クラスは Compose UI (`VisualTransformation`) に直接依存しており、
+ *    本来は `ui/utils` または `ui/mapping` に配置されるべき表示ロジックです。
+ *    将来的なパッケージ整理の対象です。
  */
 class PhoneNumberVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {

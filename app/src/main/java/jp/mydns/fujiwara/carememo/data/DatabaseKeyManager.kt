@@ -12,12 +12,13 @@ import java.security.SecureRandom
  * Data：DatabaseKeyManager
  *
  * 【役割】
- * SQLCipher によるデータベース暗号化に使用する「パスフレーズ（暗号化鍵）」を安全に生成・保持・管理します。
+ * SQLCipher によるデータベース暗号化に使用する「パスフレーズ」の生成・保存・取得を安全に管理します。
+ * Android Keystore システムを使用してマスターキーを保護し、機密情報を平文で保存しないように設計されています。
  *
  * 【主な機能】
- * ・Android Keystore System と連携したマスターキーの管理。
- * ・暗号化された SharedPreference (EncryptedSharedPreferences) を用いた鍵の永続化。
- * ・初回起動時における 256ビット（32バイト）のセキュアなランダム鍵の自動生成。
+ * ・パスフレーズ生成：セキュアな乱数による暗号鍵の作成。
+ * ・暗号化保存：生成した鍵を AES 暗号化し、SharedPreferences に永続化。
+ * ・鍵の復元：デバイス起動時、Keystore のマスターキーを用いて保存済みの鍵を復号し、Room 構成時に提供。
  *
  * 【設計指針】
  * 1. データベースの物理ファイルが盗難された場合でも、鍵がデバイス内の安全な領域（Keystore）に

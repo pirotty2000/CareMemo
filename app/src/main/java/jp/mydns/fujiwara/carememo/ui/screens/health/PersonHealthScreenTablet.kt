@@ -55,6 +55,18 @@ import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
+/**
+ * Screen：PersonHealthScreenTablet
+ *
+ * 【役割】
+ * タブレット等の広い画面（WindowWidthSizeClass.Expanded）向けに最適化された健康記録画面です。
+ * 履歴データと統計分析・詳細入力を並列に扱うことができ、管理作業の効率を最大化します。
+ *
+ * 【主な機能】
+ * ・2ペインレイアウト：左側に履歴リスト、右側にグラフまたは詳細入力パネルを常時固定配置。
+ * ・マルチタスク：過去の記録を参照しながらの分析や入力が可能。
+ * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、新規追加ボタン、および PDF 出力ボタンの配置。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenTablet(

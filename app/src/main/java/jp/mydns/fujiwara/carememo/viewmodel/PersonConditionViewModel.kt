@@ -37,6 +37,18 @@ import java.time.Instant
 
 /**
  * ViewModel：PersonConditionViewModel
+ *
+ * 【役割】
+ * 所見メモ（訪問時の状態記録）の表示、検索、入力、および写真の管理を担当します。
+ *
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の不変化：UI に公開するリストデータはすべて ImmutableList に変換し、Compose の再描画効率を最適化します。
+ * 2. 変更検知の集約：編集中の入力内容と初期状態の比較ロジックを ViewModel に持たせ、
+ *    「変更破棄ダイアログ」の表示判定などの業務判断を UI から分離しています。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・写真の物理的なリサイズや保存処理（ImageUtils が担当）。
+ * ・未割り当て写真の具体的な判定アルゴリズム（ConditionMaintenanceLogic が担当）。
  */
 class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
@@ -166,6 +178,7 @@ class PersonConditionViewModel(
             flowProvider = { conditionRepository.getConditionAtVisitByPersonId(personId) }
         ) { records ->
             updateUiState { current ->
+                // UI 境界で ImmutableList に変換し、表示の安定性を確保
                 val immutableRecords = records.toImmutableList()
                 current.copy(
                     records = immutableRecords,
@@ -309,6 +322,10 @@ class PersonConditionViewModel(
 
     /**
      * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
+     *
+     * 【設計指針：UI 境界の責務】
+     * 入力変更に伴う「変更あり」フラグの判定は、業務ロジックの重要な一部であるため 
+     * ViewModel で行います。
      */
     fun updateEditInput(update: (ConditionEditInput) -> ConditionEditInput) {
         updateUiState { state ->

@@ -48,11 +48,25 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  */
 
 /**
+ * 全体像：履歴リスト基盤（History Base）
+ *
+ * ■ 各機能の ScreenContent (PersonHealthScreenContent 等)
+ * │
+ * └─ [1] PersonHistoryList (共通履歴リストの枠：HistoryComponents.kt)
+ *      ├─ stickyHeader (日付見出し)
+ *      └─ SwipeToDismissBox (スワイプ削除の器)
+ *           └─ itemContent (外部から注入される具体的な行コンテンツ)
+ *                ├─ HealthHistoryItemBody (健康記録の場合)
+ *                └─ ConditionMemoContent (所見メモの場合)
+ */
+
+/**
  * 利用者情報の履歴リストを表示する汎用コンポーネント
  *
  * 内部でデータを日付単位にグルーピングし、日付見出し（stickyHeader）を付けて表示します。
  *
  * @param records 表示対象の履歴レコードリスト
+ * @param modifier 修飾子
  * @param selectedRecordId 現在選択（強調）されているレコードのID
  * @param onItemClick アイテムがタップされた際のコールバック
  * @param onDeleteSwipe アイテムがスワイプ削除された際のコールバック

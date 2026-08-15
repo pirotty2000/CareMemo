@@ -20,6 +20,19 @@ package jp.mydns.fujiwara.carememo.ui.components.main
  * ・氏名や性別など、生年月日以外の情報の管理。
  */
 
+/**
+ * 全体像：生年月日入力（Birthday Input）
+ *
+ * ■ PersonEditScreenContent (利用者登録・編集画面)
+ * │
+ * └─ [1] BirthdayInputFields (★本コンポーネント：コンテナ)
+ *      ├─ ExposedDropdownMenuBox (元号選択：西暦、昭和、平成、令和)
+ *      ├─ AppCompactTextField (年入力：ADなら4桁、和暦なら2桁)
+ *      ├─ AppCompactTextField (月入力：2桁)
+ *      └─ AppCompactTextField (日入力：2桁)
+ *           └─ 内部で JapaneseDateLogic を使用した妥当性チェック
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*

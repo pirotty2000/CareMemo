@@ -32,6 +32,23 @@ import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
  *
  * 【このコンポーネントでは行わないこと】
  * 実際の画面遷移の実行（クリックイベントを親コンポーネントに通知するのみ）。
+ */
+
+/**
+ * 全体像：詳細画面カテゴリ切り替え（Category Navigation）
+ *
+ * ■ 利用者詳細画面 (PersonDetailUiStateViewModel 等で制御)
+ * │
+ * └─ [1] CategorySelectorBar (★本コンポーネント)
+ *      └─ LazyRow (水平スクロールリスト)
+ *           └─ items (Category.entries)
+ *                └─ FilterChip (個別の切り替えボタン)
+ *                     ├─ leadingIcon (選択中のチェックマーク)
+ *                     └─ border (データ存在の有無を強調表示)
+ */
+
+/**
+ * 利用者詳細画面において、記録カテゴリを切り替えるバーを表示します。
  *
  * @param currentCategory 現在選択されているカテゴリ
  * @param personCategorySummary カテゴリごとのデータ存在有無を示すサマリーデータ
@@ -70,44 +87,44 @@ fun CategorySelectorBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(Category.entries) { _, category ->
-            // カテゴリごとのデータ存在確認
-            val hasData = when (category) {
-                Category.HEIGHT_AND_WEIGHT -> personCategorySummary?.hasHeightWeight == true
-                Category.BP_AND_PULSE -> personCategorySummary?.hasBpAndPulse == true
-                Category.GLUCOSE_AND_HBA1C -> personCategorySummary?.hasGlucoseAndHbA1c == true
-                Category.CONDITION_AT_VISIT -> personCategorySummary?.hasCondition == true
-                Category.MEDICATION -> personCategorySummary?.hasMedication == true
-            }
+                // カテゴリごとのデータ存在確認
+                val hasData = when (category) {
+                    Category.HEIGHT_AND_WEIGHT -> personCategorySummary?.hasHeightWeight == true
+                    Category.BP_AND_PULSE -> personCategorySummary?.hasBpAndPulse == true
+                    Category.GLUCOSE_AND_HBA1C -> personCategorySummary?.hasGlucoseAndHbA1c == true
+                    Category.CONDITION_AT_VISIT -> personCategorySummary?.hasCondition == true
+                    Category.MEDICATION -> personCategorySummary?.hasMedication == true
+                }
 
-            FilterChip(
-                selected = currentCategory == category,
-                onClick = { onCategoryClick(category) },
-                label = { Text(stringResource(category.displayNameRes)) },
-                modifier = Modifier.testTag("CategoryChip_${category.name}"),
-                leadingIcon = if (currentCategory == category) {
-                    {
-                        Icon(
-                            Icons.Rounded.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(FilterChipDefaults.IconSize)
-                        )
-                    }
-                } else null,
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
+                FilterChip(
                     selected = currentCategory == category,
-                    // データがある場合はボーダーを強調し、入力漏れ防止や入力済み確認を補助する
-                    borderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                    borderWidth = if (hasData) 1.5.dp else 1.0.dp,
-                    selectedBorderColor = MaterialTheme.colorScheme.primary
+                    onClick = { onCategoryClick(category) },
+                    label = { Text(stringResource(category.displayNameRes)) },
+                    modifier = Modifier.testTag("CategoryChip_${category.name}"),
+                    leadingIcon = if (currentCategory == category) {
+                        {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(FilterChipDefaults.IconSize)
+                            )
+                        }
+                    } else null,
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = currentCategory == category,
+                        // データがある場合はボーダーを強調し、入力漏れ防止や入力済み確認を補助する
+                        borderColor = if (hasData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        borderWidth = if (hasData) 1.5.dp else 1.0.dp,
+                        selectedBorderColor = MaterialTheme.colorScheme.primary
+                    )
                 )
-            )
+            }
         }
     }
-}
 }

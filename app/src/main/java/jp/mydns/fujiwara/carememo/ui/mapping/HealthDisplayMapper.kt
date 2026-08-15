@@ -6,13 +6,34 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.*
 
 /**
- * 健康記録の判定結果(Enum)を、表示用の資源（リソースID）や
- * セマンティックな警告レベル（HealthAlertLevel）に変換するマッパー。
+ * Component：HealthDisplayMapper
  *
- * 【設計方針】
- * ・本クラスは「表示内容（何を表示するか）」の決定に専念します。
- * ・具体的な「色（Color）」の決定は行わず、HealthAlertLevel を返すに留めます。
- * ・色は UI 層で HealthAlertLevel.getDisplayColor() を使用して取得してください。
+ * 【役割】
+ * 健康記録の判定結果（Logic 層の Enum）を、UI 層で表示するための「資源（リソースID）」や
+ * 「セマンティックな警告レベル（HealthAlertLevel）」へ翻訳するマッパーです。
+ *
+ * 【主な機能】
+ * ・ラベル解決：BMI, バイタル, 血糖値等の状態に応じた日本語名称のリソースIDを提供。
+ * ・グラフ補助：グラフ描画に必要な境界線（GraphLimit）や、閾値の根拠となる説明文の生成。
+ * ・PDF 配色解決：PDF 出力時（Canvas 描画）に使用するアラート別の背景色の提供。
+ *
+ * 【全体像：健康表示マッピングフロー】
+ *
+ * [入力：判定結果 (Enum)] (jp.mydns.fujiwara.carememo.logic.common.*)
+ *  │  ├─ BmiStatus
+ *  │  ├─ VitalStatus
+ *  │  └─ GlucoseStatus / HbA1cStatus
+ *  ↓
+ * [本マッパー：HealthDisplayMapper]
+ *  ├─ getXXXLabel() ➔ StringRes (表示名)
+ *  └─ getVitalIndicatorLevel() ➔ HealthAlertLevel (★意味論的な警告度)
+ *      ↓
+ * [出力：UI 表現]
+ *  ├─ Text(stringResource(labelRes))
+ *  └─ Modifier.background(alertLevel.getDisplayColor()) (➔ ui/theme/HealthAlertColor.kt)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際の「色（Color）」の具体的な決定（UI テーマに依存するため、HealthAlertLevel への変換に留める）。
  */
 object HealthDisplayMapper {
 

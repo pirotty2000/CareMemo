@@ -19,6 +19,33 @@ interface PersonAwareState {
     val isLoading: Boolean
 }
 
+/**
+ * ViewModel：PersonBaseUiStateViewModel (利用者コンテキスト基底クラス)
+ *
+ * 【役割】
+ * 特定の利用者に紐付く詳細画面（健康記録、所見メモ、服薬管理等）に共通の「利用者情報の自動ロード」機能を提供します。
+ *
+ * 【設計指針：レイヤー責務】
+ * 1. コンテキストの自動管理：`SavedStateHandle` からの `personId` 取得と、それに基づく利用者情報の初期ロードを自動化します。
+ * 2. 重複ロードの防止：ガード節と Job 状態のチェックにより、画面遷移時などの無駄なリロードを抑制し、パフォーマンスを最適化します。
+ */
+
+/**
+ * 全体像：利用者詳細系 ViewModel 構成（Composition）
+ *
+ * ■ 利用者詳細画面（各カテゴリ共通）
+ * │
+ * ├─ [1] PersonDetailUiStateViewModel (基盤：ヘッダー表示、カテゴリ遷移、戻る操作)
+ * │
+ * └─ [2] 専門 ViewModel (各カテゴリ固有の業務ロジック)
+ *      ├─ PersonHealthViewModel (健康記録：バイタル、血糖、グラフ)
+ *      ├─ PersonConditionViewModel (所見メモ：テキスト、音声入力、写真)
+ *      └─ PersonMedicationViewModel (服薬管理：カレンダー、同期)
+ *
+ * ※ これら全ての ViewModel は本クラスを継承しており、
+ *    SavedStateHandle から同一の personId を自律的にロードすることで、
+ *    画面を跨いでも利用者コンテキストが一貫して維持される構造となっています。
+ */
 abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     protected val personRepository: PersonRepository,
     protected val summaryRepository: PersonSummaryRepository,

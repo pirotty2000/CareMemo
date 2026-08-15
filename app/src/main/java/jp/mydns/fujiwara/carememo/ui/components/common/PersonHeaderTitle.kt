@@ -27,6 +27,21 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
  *
  * 【このコンポーネントでは行わないこと】
  * 利用者情報の編集機能の提供（表示専用）。
+ */
+
+/**
+ * 全体像：利用者情報ヘッダー（Person Header）
+ *
+ * ■ TopAppBar 等の title スロット
+ * │
+ * └─ [1] PersonHeaderTitle (★本コンポーネント)
+ *      └─ Column (縦並びレイアウト)
+ *           ├─ [1-1] マスク済みふりがな (サブタイトル)
+ *           └─ [1-2] マスク済み氏名 + 敬称 + 年齢 + 備考
+ */
+
+/**
+ * TopAppBar 等に表示される、利用者の基本情報を含むタイトル部分を表示します。
  *
  * @param person 表示対象の利用者情報（null の場合はデフォルトタイトルを表示）
  * @param isNameMaskingEnabled 名前とふりがなを伏せ字にするかどうか

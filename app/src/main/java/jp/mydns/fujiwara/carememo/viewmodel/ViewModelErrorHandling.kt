@@ -5,18 +5,25 @@ package jp.mydns.fujiwara.carememo.viewmodel
  *
  * 【役割】
  * CareMemo アプリにおける「意味のある例外」の基底クラスです。
- * 単なるエラーメッセージだけでなく、UI（ダイアログ等）で表示するためのリソースIDを保持できることが特徴です。
  *
- * 【主な機能】
- * ・ダイアログタイトルおよびメッセージの多言語化対応（Resource ID）。
- * ・動的なメッセージ構築のための引数リスト（args）の保持。
- * ・監査ログへの記録を目的とした詳細なログメッセージの保持。
+ * 【設計指針：レイヤー責務】
+ * 1. エラー情報の抽象化：低レベルの例外 (Throwable) を、UI で表示可能なリソース情報や監査ログ用のメタデータへ
+ *    翻訳・保持する役割を担います。
+ * 2. 伝搬の標準化：ViewModel からのエラー通知において、一貫した情報構造を提供し、`CoroutineErrorHandler` での
+ *    統一的なハンドリングを可能にします。
+ */
+
+/**
+ * 全体像：エラーハンドリング構造
  *
- * @param titleResId UIに表示するタイトルのリソースID（null の場合はデフォルトを使用）
- * @param messageResId UIに表示するメッセージのリソースID
- * @param args メッセージリソースに埋め込む動的な引数リスト
- * @param logMessage Logcat や監査ログに記録する、開発者向けの非公開メッセージ
- * @param cause 原因となった低レベルの例外（Throwable）
+ * ■ BaseUiStateViewModel.safeLaunch
+ * │
+ * ├─ try { block() }
+ * └─ catch (t) {
+ *      └─ [1] ErrorContext (DSL Builder により構築される文脈情報)
+ *           └─ [2] CoroutineErrorHandler.handleException (本インターフェース：振る舞いの定義)
+ *                └─ ViewModelCoroutineErrorHandler (具体的実装：ログ記録 ＋ UI通知)
+ *                     └─ [3] AppException (UI表示用リソースIDを保持する例外)
  */
 open class AppException(
     val titleResId: Int? = null,

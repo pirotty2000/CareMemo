@@ -18,6 +18,16 @@ import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 
+/**
+ * Screen：PersonConditionScreenTablet
+ *
+ * 【役割】
+ * タブレット等の広い画面（WindowWidthSizeClass.Expanded）向けに最適化された所見記録画面です。
+ *
+ * 【主な機能】
+ * ・2ペイン構成：左側に履歴リスト、右側に詳細・編集パネルを常時並列表示し、大画面を有効活用。
+ * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、新規追加ボタン、および PDF 出力ボタンの配置。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonConditionScreenTablet(

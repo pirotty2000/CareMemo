@@ -6,7 +6,33 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 /**
- * プレビューおよびテスト用のモックデータ集約クラス
+ * Component：MockData
+ *
+ * 【役割】
+ * Compose プレビューおよびユニットテストにおいて、各画面に供給する「ダミーデータ」を集約して管理するシングルトンオブジェクトです。
+ *
+ * 【主な機能】
+ * ・基本エンティティ（Person, HistoryRecord 等）の正常系データの保持。
+ * ・不変リスト（ImmutableList）形式での履歴データの提供。
+ * ・多種多様な健康カテゴリ（バイタル、血糖、身長体重）のサンプルデータの完備。
+ *
+ * 【全体像：プレビューデータフロー】
+ *
+ * [ソース：MockData] (★本クラス)
+ * │   ├─ person (利用者基本情報)
+ * │   ├─ healthRecords (健康記録リスト：persistentListOf)
+ * │   └─ conditionRecords (所見メモリスト：persistentListOf)
+ * ↓
+ * [供給：PreviewState] (PreviewStates.kt)
+ * │   ├─ PersonHealthPreviewState
+ * │   └─ PersonConditionPreviewState
+ * ↓
+ * [消費：Composable Preview]
+ *     └─ PersonHealthScreenContent 等
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・実際の DB へのアクセスや書き込み操作。
+ * ・実行環境（現在時刻等）に依存しすぎる動的な値の生成（可能な限り再現性を重視）。
  */
 object MockData {
     val person = Person(

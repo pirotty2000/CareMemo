@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
 /**
- * 服薬管理に関する業務仕様定義
+ * Spec：MedicationSpecifications
+ *
+ * 【役割】
+ * 服薬管理（カテゴリE）に関連する時間枠定義（4スロット）およびステータスコードを定義します。
  */
 object MedicationSpecifications {
 

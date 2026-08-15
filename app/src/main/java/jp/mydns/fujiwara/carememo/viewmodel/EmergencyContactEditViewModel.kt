@@ -50,6 +50,19 @@ sealed interface EmergencyContactViewEvent {
 
 /**
  * ViewModel：EmergencyContactEditViewModel
+ *
+ * 【役割】
+ * 特定の利用者に紐付く緊急連絡先の一覧表示、および新規追加・編集画面の状態管理と保存を制御します。
+ * 
+ * 【設計指針：レイヤー責務と課題】
+ * 1. 複数モードの統合：一覧表示と個別の編集セッションを単一の ViewModel でシームレスに切り替えます。
+ * 2. 状態管理ルールの逸脱（注意）: 現状、`EmergencyContactUiState` の `get()` プロパティ内で
+ *    `isChanged`, `isValid` を動的に計算しています。これは計算ロジックが State に混入している状態であり、
+ *    将来的に ViewModel 側で算出し、データクラスのプロパティとして保持する構造への修正が推奨されます。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・緊急連絡先の保存用 Entity の詳細な構築ロジック（EmergencyContactLogic が担当）。
+ * ・電話番号の書式整形（Logic または UI 側の VisualTransformation が担当）。
  */
 class EmergencyContactEditViewModel(
     private val savedStateHandle: SavedStateHandle,

@@ -5,8 +5,11 @@ import jp.mydns.fujiwara.carememo.data.Category
 /**
  * 健康記録の各カテゴリプロセッサを管理するレジストリ。
  * 
- * カテゴリの追加・削除時には本レジストリを修正することで、
- * 呼び出し側のロジックを変更することなく機能拡張が可能です。
+ * 【設計指針：Open-Closed Principle】
+ * 1. 拡張性：健康記録のカテゴリ追加時には、本レジストリに新しいプロセッサを登録するだけで、
+ *    ViewModel や一括入力ロジックなどの既存コードを修正することなく機能拡張が可能です。
+ * 2. 責務の集中：各カテゴリ固有の知識（名称、バリデーション、Entity変換）をプロセッサに封じ込め、
+ *    レジストリを介して一貫したインターフェースでアクセスすることを保証します。
  */
 object HealthProcessorRegistry {
     private val processors = listOf(

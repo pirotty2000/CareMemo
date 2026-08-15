@@ -45,6 +45,30 @@ import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
+/**
+ * Screen：AuditLogScreen
+ *
+ * 【役割】
+ * アプリケーション内で発生した重要な操作やエラー（監査ログ：SCR-S-002）を一覧参照するための画面です。
+ * 開発者モードにおいて、データの不整合や操作履歴のデバッグ・追跡を支援します。
+ *
+ * 【主な機能】
+ * ・一覧表示：`AuditLogItem` による操作日時、機能名、アクション種別、結果のリスト表示。
+ * ・フィルタリング：機能（PersonList, Health 等）や結果（SUCCESS, DB_ERROR 等）による動的な絞り込み。
+ * ・ソート機能：タイムスタンプに基づく昇順・降順の切り替え。
+ * ・詳細確認：発生した例外メッセージや影響を受けたレコード ID の詳細閲覧。
+ *
+ * 【全体像：監査ログ構成（Audit Log Layout）】
+ *
+ * ■ AuditLogScreen (★本コンポーネント：制御層)
+ * │
+ * └─ [1] AuditLogScreenContent (表示層)
+ *      ├─ AuditLogFilterBar (フィルタ・ソート操作バー)
+ *      │    ├─ FilterChip (結果・機能別のドロップダウン)
+ *      │    └─ IconButton (昇順/降順トグル、フィルタクリア)
+ *      └─ LazyColumn (ログリスト)
+ *           └─ [2] AuditLogItem (ログ項目：ui/mapping と連携した配色・ラベル表示)
+ */
 @Composable
 fun AuditLogScreen(
     viewModel: AuditLogViewModel,

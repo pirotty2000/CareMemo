@@ -27,6 +27,17 @@ import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoUiState
 
+/**
+ * Component：UnassignedPhotoManagementContent
+ *
+ * 【役割】
+ * 未割り当て写真の一覧をグリッド形式で描画する表示層コンポーネントです。
+ *
+ * 【主な機能】
+ * ・アダプティブグリッド：画面幅に応じた列数調整（LazyVerticalGrid）。
+ * ・項目表示：サムネイル画像、ファイル名、およびエラー原因の要約を表示。
+ * ・空状態管理：未割り当て写真が存在しない場合のガイダンス表示。
+ */
 @Composable
 fun UnassignedPhotoManagementContent(
     uiState: UnassignedPhotoUiState,

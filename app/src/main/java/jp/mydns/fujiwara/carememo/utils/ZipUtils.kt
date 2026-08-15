@@ -14,8 +14,33 @@ import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Zip4jを使用して、パスワード付きZip圧縮・解凍を行うユーティリティ。
- * 全ての重い処理は Dispatchers.IO で実行され、進捗状況の取得に対応している。
+ * Utility：ZipUtils
+ *
+ * 【役割】
+ * Zip4j ライブラリを使用して、パスワード付き Zip 圧縮および解凍を行うユーティリティです。
+ * アプリデータのバックアップ（エクスポート）および復元（インポート）の基盤として機能します。
+ *
+ * 【主な機能】
+ * ・パスワード付き圧縮：AES 暗号化を用いたセキュアな Zip ファイル作成。
+ * ・解凍処理：パスワード検証を含む一括解凍機能。
+ * ・進捗通知：非同期モードによるリアルタイムな処理状況（0-100%）のフィードバック。
+ * ・バリデーション：Zip ファイルの暗号化有無、およびパスワードの妥当性チェック。
+ *
+ * 【全体像：Zip 処理フロー】
+ *
+ * [圧縮時]
+ * 1. Dispatchers.IO への切り替え
+ * 2. ZipParameters (AES) の設定
+ * 3. 非同期モード起動 (isRunInThread = true)
+ * 4. ファイル/フォルダの追加 ➔ 完了待機 (ProgressMonitor 監視)
+ *
+ * [解凍時]
+ * 1. Dispatchers.IO への切り替え
+ * 2. パスワード設定（必要な場合）
+ * 3. 全ファイル抽出 ➔ 完了待機 (ProgressMonitor 監視)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * ・UI スレッドでの直接実行（必ず coroutine で呼び出すこと）。
  */
 object ZipUtils {
 

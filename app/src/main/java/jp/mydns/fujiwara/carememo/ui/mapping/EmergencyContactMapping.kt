@@ -9,7 +9,11 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactType
 
 /**
- * 緊急連絡先種別の表示用マッピング
+ * Component：EmergencyContactMapping
+ *
+ * 【役割】
+ * 緊急連絡先に関連するデータの表示用マッピングおよび書式整形を担当します。
+ * 種別に応じた名称・アイコンの解決や、電話番号のハイフン付与ロジックを提供します。
  */
 object EmergencyContactMapping {
 

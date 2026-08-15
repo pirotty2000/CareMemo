@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
 /**
- * ID体系に関する仕様定義.
+ * Spec：IdSpecifications
+ *
+ * 【役割】
+ * ID 管理に関連するシステム予約語（新規レコードを示す ID 等）を定義します。
  */
 object IdSpecifications {
     /**

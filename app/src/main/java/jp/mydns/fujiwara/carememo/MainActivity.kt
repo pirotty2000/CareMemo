@@ -41,6 +41,46 @@ import jp.mydns.fujiwara.carememo.ui.screens.settings.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.*
 
+/**
+ * Class：MainActivity
+ *
+ * 【役割】
+ * アプリケーションのメインエントリポイントとなる Activity です。
+ * 画面遷移（NavHost）の定義、依存関係（Repository）の注入、およびセキュリティ保護の中枢を担います。
+ *
+ * 【主な機能】
+ * ・画面遷移ルーティング：`NavHost` による型安全な目的地（Destination）の管理。
+ * ・セキュリティ統合：生体認証（指紋・顔）およびデバイス認証を用いたアプリロック機能。
+ * ・機密保護：`FLAG_SECURE` による履歴画面・キャプチャからの情報漏洩防止。
+ * ・ライフサイクル監視：アプリのフォアグラウンド/バックグラウンド遷移に基づく自動ロック制御。
+ * ・テーマ・エッジ対応：システム設定やユーザー設定に基づいた視覚効果の適用。
+ *
+ * 【全体像：アプリ画面ルーティング (Routing Table)】
+ *
+ * [エントリ] MainActivity
+ *  └─ [ロック] LockScreen (認証待機)
+ *  └─ [遷移基盤] NavHost (jp.mydns.fujiwara.carememo.ui.navigation.Destination)
+ *       │
+ *       ├─ [Main] 利用者一覧 ➔ MainScreen (SCR-M-001)
+ *       │    ├─ [Edit] 登録・編集 ➔ PersonEditScreen (SCR-M-002)
+ *       │    └─ [Contacts] 連絡先 ➔ EmergencyContactList (SCR-M-003)
+ *       │         └─ [Edit] ➔ EmergencyContactEdit (SCR-M-004)
+ *       │
+ *       ├─ [Health] 健康記録 ➔ PersonHealthScreen (SCR-PH-001)
+ *       │    ├─ [Batch] 一括入力 ➔ BatchInputScreen (SCR-PH-002)
+ *       │    └─ [Chart] グラフ拡大 ➔ GraphExpansionScreen (SCR-PH-003)
+ *       │
+ *       ├─ [Condition] 所見メモ ➔ PersonConditionScreen (SCR-PC-001)
+ *       │    ├─ [Preview] 写真確認 ➔ ConditionPhotoPreview (SCR-PC-002)
+ *       │    └─ [Full] 写真全画面 ➔ ConditionPhotoFull (SCR-PC-003)
+ *       │
+ *       ├─ [Medication] 服薬管理 ➔ PersonMedicationScreen (SCR-PM-001)
+ *       │
+ *       └─ [Settings] 設定・保守 ➔ SettingsScreen (SCR-S-001)
+ *            ├─ [Logs] 監査ログ ➔ AuditLogScreen (SCR-S-002)
+ *            ├─ [Archive] 終了利用者 ➔ DeleteOrRestorePerson (SCR-S-003)
+ *            └─ [Photos] 孤立写真 ➔ UnassignedPhotoManagement (SCR-S-004)
+ */
 class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -345,7 +385,12 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
-     * セキュリティ保護の実行、認証方式の統合管理、コールバック制御
+     * セキュリティ保護の実行、認証方式の統合管理、コールバック制御。
+     * 指紋、顔認証、またはデバイスの PIN/パターンを用いてユーザーを認証します。
+     *
+     * @param titleResId 認証ダイアログのタイトル（リソースID）
+     * @param subtitleResId 認証ダイアログのサブタイトル（リソースID）
+     * @param onSuccess 認証成功時に実行されるコールバック
      */
     private fun authenticate(titleResId: Int? = null, subtitleResId: Int? = null, onSuccess: () -> Unit) {
         val executor = ContextCompat.getMainExecutor(this)
@@ -362,6 +407,16 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+/**
+ * Component：LockScreen
+ *
+ * 【役割】
+ * アプリの自動ロックが有効な場合に、他の画面を覆い隠して表示される認証待機画面です。
+ *
+ * 【主な機能】
+ * ・ロックアイコンと「解除」ボタンの表示。
+ * ・ボタン押下時に認証（指紋・顔・PIN）を要求するトリガーの提供。
+ */
 @Composable
 fun LockScreen(onUnlockRequest: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

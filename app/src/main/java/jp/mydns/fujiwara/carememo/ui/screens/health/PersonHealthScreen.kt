@@ -16,9 +16,37 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
 
 /**
- * 利用者健康記録画面 (エントリポイント)
+ * Screen：PersonHealthScreen
  *
- * 画面サイズに応じて Phone 版または Tablet 版のレイアウトに振り分けます。
+ * 【役割】
+ * 利用者の健康記録（カテゴリA）画面のエントリポイントとなる最上位 Screen コンポーネントです。
+ * デバイスの形状（Phone/Tablet）に応じたレイアウトの振り分け、共通ダイアログの制御、
+ * および ViewModel からのイベント（通知、遷移等）の購読を担当します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト制御：WindowWidthSizeClass に基づく Phone/Tablet 版の出し分け。
+ * ・イベントハンドリング：ViewModel からの通知（Snackbar, ErrorDialog 等）の UI への反映。
+ * ・共有ステート管理：詳細編集、PDF 設定などの表示フラグ制御。
+ * ・同期：詳細 ViewModel とカテゴリ別 ViewModel 間のデータ整合性維持。
+ *
+ * 【全体像：健康記録画面階層（Health Hierarchy）】
+ *
+ * ■ PersonHealthScreen (★本コンポーネント：全体制御)
+ * │
+ * ├─ [A] PersonHealthScreenPhone (Phone版：シングルペイン)
+ * │    └─ PersonHealthScreenContent (履歴・グラフ切り替え)
+ * │         └─ HealthRecordDetailPane (詳細・編集：ui/components/health/)
+ * │
+ * ├─ [B] PersonHealthScreenTablet (Tablet版：2ペイン固定)
+ * │    └─ PersonHealthScreenContent (履歴リスト ＋ 詳細/グラフ並列)
+ * │
+ * └─ [共通パーツ]
+ *      ├─ PdfExportActionHandler (PDF出力制御)
+ *      ├─ AppDeleteConfirmDialog (削除確認)
+ *      └─ AppInfoDialog (通知・エラー)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際の UI 描画（下位の ScreenPhone/Tablet または Content が担当）。
  */
 @Composable
 fun PersonHealthScreen(

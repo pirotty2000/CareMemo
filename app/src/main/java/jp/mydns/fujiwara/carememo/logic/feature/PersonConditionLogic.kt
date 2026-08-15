@@ -109,7 +109,12 @@ enum class PersonConditionValidationResult {
 
 /**
  * Logic：PersonConditionLogic
- * 所見メモに関連するビジネスロジック。
+ *
+ * 【役割】
+ * 所見メモに関連するビジネスロジック（バリデーション、変更検知、レコード構築）を提供します。
+ *
+ * 【設計指針：UI 境界の責務】
+ * Logic レイヤーの純粋性を保つため、戻り値には標準の型を使用します。
  */
 object PersonConditionLogic {
 

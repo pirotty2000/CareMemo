@@ -56,30 +56,17 @@ enum class AppTextFieldType {
  * 1. 数値入力時は専用キーボードを表示し、不正な文字入力をシステム的に遮断する。
  * 2. 入力完了（Next）時は、直感的に次の項目へフォーカスを移す。
  * 3. 編集開始時はカーソルを末尾に置くことで、追記操作を優先する。
+ */
+
+/**
+ * 全体像：共通入力フィールド（AppTextField）
  *
- * @param value 入力値（String）
- * @param onValueChange 値変更時のコールバック
- * @param modifier 修飾子
- * @param type 入力タイプ。キーボードレイアウトや文字フィルタを決定します。
- * @param label ラベル要素
- * @param placeholder ヒントテキスト要素
- * @param leadingIcon 先頭アイコン
- * @param trailingIcon 末尾アイコン
- * @param prefix 接頭辞（単位や通貨記号など）
- * @param suffix 接尾辞（単位など）
- * @param supportingText 補助テキスト（エラーメッセージや注意書き）
- * @param isError エラー状態かどうか
- * @param readOnly 読み取り専用かどうか
- * @param enabled 有効かどうか
- * @param singleLine 単一行入力かどうか（デフォルト: true）
- * @param minLines 最小行数
- * @param maxLines 最大行数
- * @param maxLength 最大入力文字数。到達時に自動で次の項目へフォーカスが移動します。
- * @param imeAction IMEアクション（Next, Done等）。未指定時は singleLine 設定に基づき自動決定。
- * @param autoMoveFocus 自動フォーカス移動を有効にするか（デフォルト: true）
- * @param keyboardActions カスタムのキーボードアクション。未指定時は標準の移動制御を適用。
- * @param visualTransformation 視覚変換（パスワード秘匿やフォーマットなど）。未指定時は type に応じて設定。
- * @param onFocusChanged フォーカス状態変更時のコールバック
+ * ■ AppTextField (最外位：OutlinedTextField ラッパー)
+ * │
+ * ├─ [1] TextFieldValue (内部状態：カーソル位置、選択範囲の管理)
+ * ├─ [2] KeyboardOptions (タイプ別設定：TEXT, INTEGER, DECIMAL, PASSWORD, EMAIL, PHONE)
+ * ├─ [3] VisualTransformation (視覚変換：パスワード秘匿、フォーマット)
+ * └─ [4] BringIntoView (フォーカス時の自動スクロール制御)
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

@@ -1,41 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
-/**
- * Screen : PersonConditionScreenContent
- *
- * 【画面名】：
- * 利用者所見記録画面（共通コンテンツレイアウト）
- *
- * 【役割】：
- * 所見記録（カテゴリB）において、Phone版とTablet版で共通して使用される表示・入力ロジックの基盤を提供する。
- * デバイスの形状（1カラム/2カラム）に応じた動的なレイアウト切り替えを担当する。
- *
- * 【主な機能】：
- * ・マルチレイアウト制御（Phone版の表示切り替え型とTablet版の2ペイン固定型を管理）
- * ・履歴リスト表示（ConditionListを用いた時系列データの描画とスワイプ削除の統合）
- * ・詳細入力・編集（ConditionDetailPaneによる入力フォームと写真管理の提供）
- * ・空状態の管理（記録がない場合の EmptyState 表示制御）
- *
- * 【遷移】：
- * なし（親画面である PersonConditionScreenPhone/Tablet が制御）
- *
- * 【使用するViewModel】：
- * なし（Stateless化済み。親からラムダ経由で操作を実行）
- *
- * 【使用するComponents】：
- * ・detail/condition/ConditionList (PersonConditionComponents.kt)
- * ・detail/condition/ConditionDetailPane (PersonConditionComponents.kt)
- * ・base/EmptyState.kt
- * ・base/LoadingScreen.kt
- * ・base/VerticalScrollIndicator.kt
- *
- * 【備考】：
- * このコンポーネントをStatelessに保つことで、Phone/Tabletの両レイアウトでのプレビュー表示とロジックの共通化を両立している。
- *
- * ---
- * 最終更新日: 2026/07/20 (UUID対応)
- */
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -62,27 +26,29 @@ import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
 /**
- * 全体像：利用者所見記録（Condition）
+ * Screen：PersonConditionScreenContent
  *
- * ■ PersonConditionScreenContent (画面全体の器)
- * ├─【一覧セクション】
- * │  └─ [1] ConditionList (所見記録リスト：PersonConditionComponents.kt)
- * │       └─ ■ ui/components/common/HistoryComponents.kt の PersonHistoryList (共通履歴リストの枠)
- * │            └─ [1-1] ConditionMemoContent (履歴1行分の要約：タイトル・本文・写真アイコン)
- * └─【詳細セクション】
- *      └─ [2] ConditionDetailPane (詳細・編集パネル：PersonConditionComponents.kt)
- *           ├─ [2-1] ConditionRecordEditForm (【編集モード】入力フォーム)
- *           │    ├─ DateTimeInputFields (日時入力)
- *           │    ├─ AppTextField (タイトル、記録者、本文/音声入力対応)
- *           │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
- *           │    └─ <アクション> キャンセル、保存ボタン
- *           ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示用)
- *           │    ├─ <ヘッダー> 戻るボタン、タイトル、編集ボタン
- *           │    ├─ <内容部> 記録日時、タイトル、本文、記録者名
- *           │    └─ [2-2-1] PhotoGrid (写真一覧：閲覧・フルスクリーン遷移)
- *           └─ [2-3] UnassignedPhotoSelectionDialog (未割り当て写真の再登録用ダイアログ)
+ * 【役割】
+ * 所見記録ドメインにおいて、Phone 版と Tablet 版で共通して使用される「履歴リスト」と「詳細・編集ペイン」のレイアウト基盤を提供します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト対応：画面幅（isExpanded）に応じた 1 カラム / 2 カラム構成の動的な切り替え。
+ * ・履歴リスト表示：`ConditionList` を用いた時系列データの描画とスワイプ削除、検索バーの統合。
+ * ・空状態管理：記録が存在しない場合の `EmptyState` 表示制御。
+ * ・垂直スクロール補助：`VerticalScrollIndicator` によるリスト位置の可視化。
+ *
+ * 【全体像：レイアウト構成（Condition Layout）】
+ *
+ * ■ PersonConditionScreenContent (★本コンポーネント)
+ * │
+ * ├─ [Phone版] (Column 構成)
+ * │    ├─ SearchBox (検索バー)
+ * │    └─ ConditionList (リスト：タップで詳細ダイアログへ)
+ * │
+ * └─ [Tablet版] (Row 構成：2ペイン固定)
+ *      ├─ 左側 (weight 1)：SearchBox + ConditionList (リスト)
+ *      └─ 右側 (weight 2)：ConditionDetailPane (詳細・編集パネル)
  */
-
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,

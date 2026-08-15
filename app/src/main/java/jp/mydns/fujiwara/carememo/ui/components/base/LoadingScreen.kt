@@ -29,9 +29,16 @@ import jp.mydns.fujiwara.carememo.R
  *
  * 【このコンポーネントでは行わないこと】
  * 処理の実行制御（処理が完了したら Composable 自体が消えるように親側で制御する）。
+ */
+
+/**
+ * 全体像：共通ローディング画面（LoadingScreen）
  *
- * @param modifier 修飾子
- * @param message 表示する待機メッセージ
+ * ■ LoadingScreen (コンテナ：Box)
+ * │
+ * └─ Column (中央配置)
+ *      ├─ CircularProgressIndicator (くるくる)
+ *      └─ Text (メッセージ：デフォルト「読み込み中...」)
  */
 @Composable
 fun LoadingScreen(

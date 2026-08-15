@@ -39,6 +39,19 @@ import androidx.compose.ui.unit.dp
  */
 
 /**
+ * 全体像：垂直スクロールインジケーター（VerticalScrollIndicator）
+ *
+ * ■ スクロール可能な親コンテナ (Box 等)
+ * │
+ * ├─ <コンテンツ> (LazyColumn または Column + verticalScroll)
+ * └─ [1] VerticalScrollIndicator (★本コンポーネント)
+ *      ├─ IndicatorContent (描画本体)
+ *      │    ├─ [1-1] 上部/下部ドット (現在のセクション明示)
+ *      │    └─ [1-2] スライドバー (スクロール量に応じた動的オフセット)
+ *      └─ derivedStateOf (スクロール状態 [ScrollState/LazyListState] とのバインド)
+ */
+
+/**
  * 垂直スクロールインジケーター (通常の ScrollState / Column 用)
  *
  * @param scrollState スクロール状態
