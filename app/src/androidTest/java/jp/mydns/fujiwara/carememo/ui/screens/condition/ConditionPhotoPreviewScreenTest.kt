@@ -103,7 +103,7 @@ class ConditionPhotoPreviewScreenTest {
     fun ACT_02_saveButton_triggersViewModel() {
         setContent()
         composeTestRule.onNodeWithTag("PhotoPreview_SaveButton").performClick()
-        verify { conditionViewModel.processAndSavePhoto(any(), eq(mockUri), any(), any()) }
+        verify { conditionViewModel.processAndSavePhoto(eq(mockUri), any(), any()) }
         verify { navController.popBackStack() }
     }
 

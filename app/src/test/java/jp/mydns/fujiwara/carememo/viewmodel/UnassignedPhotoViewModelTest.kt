@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.content.Context
 import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
@@ -8,7 +7,6 @@ import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoType
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -17,7 +15,6 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import java.io.File
 import java.time.Instant
 
 /**
@@ -28,7 +25,6 @@ class UnassignedPhotoViewModelTest {
 
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
-    private val context = mockk<Context>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
 
@@ -38,32 +34,20 @@ class UnassignedPhotoViewModelTest {
         every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
         
-        mockkObject(ImageUtils)
-        
-        // Stub context properties that are often accessed
-        val tempDir = File("build/tmp/test_photos")
-        tempDir.mkdirs()
-        every { context.filesDir } returns tempDir
-        every { context.cacheDir } returns tempDir
-        
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
-        every { ImageUtils.getPhotosDirPublic(any()) } returns mockk<File> {
-            every { listFiles() } returns emptyArray()
-        }
-        coEvery { ImageUtils.deleteImageFiles(any(), any(), any()) } returns Unit
+        every { conditionRepository.getPhotoPhysicalFiles() } returns emptyList()
+        coEvery { conditionRepository.deletePhotoFiles(any(), any()) } returns Unit
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        unmockkObject(ImageUtils)
         unmockkStatic(Log::class)
     }
 
     private fun createViewModel() = UnassignedPhotoViewModel(
         userSettingsRepository,
-        conditionRepository,
-        context
+        conditionRepository
     )
 
     // region 2. 初期化・データロードテスト (Initialization)
@@ -108,7 +92,7 @@ class UnassignedPhotoViewModelTest {
         advanceUntilIdle()
 
         coVerify { conditionRepository.deleteConditionPhotoById("p1", "u1", any(), any()) }
-        coVerify { ImageUtils.deleteImageFiles(context, "img_1.jpg", "thumb_1.jpg") }
+        coVerify { conditionRepository.deletePhotoFiles("img_1.jpg", "thumb_1.jpg") }
     }
 
     // endregion

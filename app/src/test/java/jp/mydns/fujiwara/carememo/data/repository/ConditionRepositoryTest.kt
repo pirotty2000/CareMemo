@@ -17,6 +17,7 @@ import java.time.Instant
  */
 class ConditionRepositoryTest {
 
+    private val context = mockk<android.content.Context>(relaxed = true)
     private val conditionAtVisitDao = mockk<ConditionAtVisitDao>(relaxed = true)
     private val conditionPhotoDao = mockk<ConditionPhotoDao>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
@@ -25,7 +26,7 @@ class ConditionRepositoryTest {
 
     @Before
     fun setup() {
-        repository = ConditionRepository(conditionAtVisitDao, conditionPhotoDao, auditLogRepository)
+        repository = ConditionRepository(context, conditionAtVisitDao, conditionPhotoDao, auditLogRepository)
     }
 
     // region 2. 所見メモ操作テスト (ConditionAtVisit)

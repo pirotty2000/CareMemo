@@ -265,12 +265,11 @@ class AppMaintenanceRepository(
     /**
      * アプリ全体のデータを ZIP 形式で外部ストレージへエクスポートします。
      *
-     * @param context コンテキスト
      * @param uri 保存先の Uri
      * @param password ZIP 圧縮用のパスワード（null の場合はパスワードなし）
      * @param onProgress 進捗状況を通知するコールバック (0-100)
      */
-    suspend fun exportData(context: Context, uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
+    suspend fun exportData(uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
         val backup = getBackupData()
         val jsonString = json.encodeToString(CareMemoBackup.serializer(), backup)
         
@@ -309,7 +308,6 @@ class AppMaintenanceRepository(
     /**
      * 外部の ZIP バックアップからデータをインポートし、現在のアプリ状態を復元します。
      *
-     * @param context コンテキスト
      * @param uri 読み込み元の Uri
      * @param password ZIP 解凍用のパスワード
      * @param isDeveloperMode 開発者モードが有効か（バージョン不一致時の強制復元に関係）
@@ -317,7 +315,6 @@ class AppMaintenanceRepository(
      * @throws IOException ファイル読み込み失敗、解析失敗、またはバージョン非互換時にスロー
      */
     suspend fun importData(
-        context: Context,
         uri: Uri,
         password: String?,
         isDeveloperMode: Boolean = false,

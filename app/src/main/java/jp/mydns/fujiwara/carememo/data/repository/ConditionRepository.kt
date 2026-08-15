@@ -1,7 +1,11 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
+import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 import java.time.Instant
 
 /**
@@ -15,6 +19,7 @@ import java.time.Instant
  * 2. 依存方向の遵守：下位レイヤーとして、上位の Logic レイヤーに依存しない構成を維持します。
  */
 class ConditionRepository(
+    private val context: Context,
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
     private val auditLogRepository: AuditLogRepository? = null
@@ -259,4 +264,62 @@ class ConditionRepository(
     suspend fun getAllConditionPhotosRaw(): List<ConditionPhoto> = conditionPhotoDao.getAllRaw()
     /** 保存されているすべての所見メモのIDセットを取得します。 */
     suspend fun getAllConditionAtVisitIds(): Set<String> = conditionAtVisitDao.getAllIds().toSet()
+
+    // --- 物理ファイル操作 (ViewModel からの委譲) ---
+
+    /**
+     * 所見に関連する写真を処理して保存します（物理ファイル保存）。
+     * 保存後、元の一時ファイル（Uri）を削除します。
+     *
+     * @param uri 入力画像のUri
+     * @return 保存されたメイン画像とサムネイルのファイル名のペア
+     */
+    suspend fun processAndSavePhoto(uri: Uri): Pair<String, String> {
+        val result = ImageUtils.processAndSaveImage(context, uri)
+        
+        // 元の一時ファイルを削除
+        if (uri.scheme == "file" || uri.scheme == "content") {
+            try {
+                context.contentResolver.delete(uri, null, null)
+            } catch (_: Exception) {
+                // 削除失敗は致命的ではないため無視
+            }
+        }
+        return result
+    }
+
+    /**
+     * 写真の物理ファイルを削除します。
+     *
+     * @param photoFileName メイン画像ファイル名
+     * @param thumbnailFileName サムネイル画像ファイル名
+     */
+    suspend fun deletePhotoFiles(photoFileName: String?, thumbnailFileName: String?) {
+        ImageUtils.deleteImageFiles(context, photoFileName, thumbnailFileName)
+    }
+
+    /**
+     * 未割り当て写真のスキャンのために、物理ファイル一覧を取得します。
+     *
+     * @return 写真ディレクトリ内のファイルリスト
+     */
+    fun getPhotoPhysicalFiles(): List<File> {
+        return ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
+    }
+
+    /**
+     * 全ての写真ファイルを物理削除します（システムメンテナンス用）。
+     */
+    suspend fun clearAllPhotoFiles() {
+        ImageUtils.clearPhotosDir(context)
+    }
+
+    /**
+     * カメラ撮影用の一時URIを取得します。
+     *
+     * @return FileProvider 経由の Uri
+     */
+    fun getTempPhotoUri(): Uri {
+        return ImageUtils.getTempPhotoUri(context)
+    }
 }

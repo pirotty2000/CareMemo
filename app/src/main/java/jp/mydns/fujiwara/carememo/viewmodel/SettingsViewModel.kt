@@ -1,10 +1,6 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.content.Context
 import android.net.Uri
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
-import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -33,8 +29,7 @@ import kotlinx.coroutines.launch
  *
  * 【設計指針：レイヤー責務と課題】
  * 1. 統括制御：複数のリポジトリを横断して、アプリ全体の動作設定や整合性修復などの「副作用を伴う操作」を安全に実行します。
- * 2. プラットフォーム依存の混入（注意）: 現状、生体認証判定 (`BiometricManager`) や `Context` への依存が ViewModel 内に含まれています。
- *    これはテスタビリティを低下させる要因であり、将来的に Activity への委譲や専用のプラットフォーム・ヘルパーへの抽出が推奨されます。
+ * 2. 疎結合：リポジトリを介して設定やメンテナンス操作を行い、プラットフォーム固有の機能（生体認証等）は UI 層からのフラグ制御により抽象化されています。
  *
  * 【この ViewModel では行わないこと】
  * ・ZIP ファイルの物理的な圧縮・解凍処理（AppMaintenanceRepository または Utils が担当）。
@@ -125,10 +120,9 @@ class SettingsViewModel(
 
     fun setNameMaskingEnabled(enabled: Boolean) { viewModelScope.launch { userSettingsRepository.setNameMaskingEnabled(enabled) } }
 
-    fun setBiometricEnabled(context: Context, enabled: Boolean) {
+    fun setBiometricEnabled(isSupported: Boolean, enabled: Boolean) {
         if (enabled) {
-            val biometricManager = BiometricManager.from(context)
-            if (biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS) {
+            if (isSupported) {
                 viewModelScope.launch { userSettingsRepository.setBiometricEnabled(true) }
             } else {
                 showError("この端末では生体認証を利用できません。")
@@ -167,21 +161,21 @@ class SettingsViewModel(
         actionJob = safeLaunch(OP_DELETE_ENDED) { archivedPersonRepository.deleteAllEndedPersons(featureName, OP_DELETE_ENDED); showSnackbar(R.string.settings_msg_delete_ended_success) }
     }
 
-    fun exportData(context: Context, uri: Uri) {
+    fun exportData(uri: Uri) {
         if (actionJob?.isActive == true) return
         val password = if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
         actionJob = safeLaunch(OP_EXPORT, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
-            maintenanceRepository.exportData(context, uri, password) { updateUiState { s -> s.copy(processingProgress = it) } }
+            maintenanceRepository.exportData(uri, password) { updateUiState { s -> s.copy(processingProgress = it) } }
             sendViewEvent(SettingsViewEvent.ExportSuccess); showSnackbar(R.string.settings_msg_export_success)
         }
     }
 
-    fun importData(context: Context, uri: Uri, inputPassword: String? = null) {
+    fun importData(uri: Uri, inputPassword: String? = null) {
         if (actionJob?.isActive == true) return
         val password = inputPassword ?: if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
         actionJob = safeLaunch(OP_IMPORT, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
             try {
-                maintenanceRepository.importData(context, uri, password, currentState.isForceImportEnabled) { updateUiState { s -> s.copy(processingProgress = it) } }
+                maintenanceRepository.importData(uri, password, currentState.isForceImportEnabled) { updateUiState { s -> s.copy(processingProgress = it) } }
                 sendViewEvent(SettingsViewEvent.ImportSuccess); showSnackbar(R.string.settings_msg_import_success)
             } catch (e: Exception) {
                 if (e.message?.contains("password", ignoreCase = true) == true) sendViewEvent(SettingsViewEvent.RequestImportPassword)
@@ -217,7 +211,6 @@ class SettingsViewModel(
         actionJob = safeLaunch(OP_TEST_INCONSISTENCY) { maintenanceRepository.insertTestInconsistency(); showSnackbar(R.string.settings_msg_test_inconsistency_added) }
     }
     fun setAuditLogRetentionDays(days: Int) { viewModelScope.launch { userSettingsRepository.setAuditLogRetentionDays(days) } }
-    fun canAuthenticate(context: Context): Boolean { val biometricManager = BiometricManager.from(context); return biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS }
     fun navigateToArchiveManagement(mode: DeleteOrRestorePersonViewModel.OperationMode) { sendViewEvent(SettingsViewEvent.NavigateToArchiveManagement(mode)) }
     fun navigateToAuditLog() { sendViewEvent(SettingsViewEvent.NavigateToAuditLog) }
     fun navigateToUnassignedPhotos() { sendViewEvent(SettingsViewEvent.NavigateToUnassignedPhotos) }

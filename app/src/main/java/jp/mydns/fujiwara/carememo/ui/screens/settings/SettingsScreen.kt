@@ -82,6 +82,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     navController: NavHostController,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
+    onCheckBiometricSupport: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -180,7 +181,7 @@ fun SettingsScreen(
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportData(context, it) } }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportData(it) } }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { showImportUri = it } }
 
     if (dialogMessage != null) {
@@ -207,7 +208,7 @@ fun SettingsScreen(
                     text = stringResource(R.string.settings_dialog_restore_confirm_btn),
                     onClick = {
                         pendingImportUri = showImportUri
-                        viewModel.importData(context, showImportUri!!)
+                        viewModel.importData(showImportUri!!)
                         showImportUri = null
                     }
                 )
@@ -353,7 +354,7 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     if ((minutes == -1) && (uiState.lockTimeoutMinutes != -1)) {
-                                        if (viewModel.canAuthenticate(context)) {
+                                        if (onCheckBiometricSupport()) {
                                             onRequireAuthentication(
                                                 R.string.security_auth_title,
                                                 R.string.security_auth_reason_change_settings
@@ -495,7 +496,7 @@ fun SettingsScreen(
                 AppDialogConfirmButton(
                     text = stringResource(R.string.decision),
                     onClick = {
-                        pendingImportUri?.let { viewModel.importData(context, it, inputPasswordForImport) }
+                        pendingImportUri?.let { viewModel.importData(it, inputPasswordForImport) }
                         showPasswordInputDialog = false
                         inputPasswordForImport = ""
                     },
@@ -538,7 +539,7 @@ fun SettingsScreen(
                 viewModel.setBackupPasswordEnabled(true)
                 isPasswordVisible = false
             } else {
-                if (viewModel.canAuthenticate(context)) {
+                if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_change_settings
@@ -559,7 +560,7 @@ fun SettingsScreen(
             if (isPasswordVisible) {
                 isPasswordVisible = false
             } else {
-                if (viewModel.canAuthenticate(context)) {
+                if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_show_password
@@ -584,17 +585,17 @@ fun SettingsScreen(
         lockTimeoutMinutes = uiState.lockTimeoutMinutes,
         onBiometricEnabledChange = { enabled ->
             if (enabled) {
-                viewModel.setBiometricEnabled(context, true)
+                viewModel.setBiometricEnabled(onCheckBiometricSupport(), true)
             } else {
-                if (viewModel.canAuthenticate(context)) {
+                if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_change_settings
                     ) {
-                        viewModel.setBiometricEnabled(context, false)
+                        viewModel.setBiometricEnabled(true, false)
                     }
                 } else {
-                    viewModel.setBiometricEnabled(context, false)
+                    viewModel.setBiometricEnabled(false, false)
                 }
             }
             isChangedByMe = true
@@ -607,7 +608,7 @@ fun SettingsScreen(
             showVersionDialog = true
         },
         onClearAllClick = {
-            if (viewModel.canAuthenticate(context)) {
+            if (onCheckBiometricSupport()) {
                 onRequireAuthentication(
                     R.string.security_auth_title,
                     R.string.security_auth_reason_change_settings
@@ -627,7 +628,7 @@ fun SettingsScreen(
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
         onImportSampleDataClick = {
-            if (viewModel.canAuthenticate(context)) {
+            if (onCheckBiometricSupport()) {
                 onRequireAuthentication(
                     R.string.security_auth_title,
                     R.string.security_auth_reason_change_settings

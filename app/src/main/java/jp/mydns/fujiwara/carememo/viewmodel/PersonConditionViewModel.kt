@@ -1,7 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -28,7 +26,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
@@ -56,9 +53,6 @@ class PersonConditionViewModel(
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
-    @param:SuppressLint("StaticFieldLeak")
-    @field:SuppressLint("StaticFieldLeak")
-    private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
     personRepository,
@@ -199,7 +193,7 @@ class PersonConditionViewModel(
         ) { photos ->
             val dbPhotos = conditionRepository.getAllConditionPhotosRaw()
             val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
-            val physicalFiles = ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
+            val physicalFiles = conditionRepository.getPhotoPhysicalFiles()
 
             val allUnassigned = jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic.identifyUnassignedPhotos(
                 dbPhotos = dbPhotos,
@@ -454,7 +448,7 @@ class PersonConditionViewModel(
         }
     }
 
-    fun processAndSavePhoto(context: Context, uri: Uri, conditionId: String, caption: String) {
+    fun processAndSavePhoto(uri: Uri, conditionId: String, caption: String) {
         // 二重実行防止
         if (photoActionJob?.isActive == true) return
 
@@ -467,7 +461,7 @@ class PersonConditionViewModel(
                 errorMessageRes = R.string.p_cond_err_photo_process_failure
             }
         ) {
-            val (photoName, thumbName) = ImageUtils.processAndSaveImage(context, uri)
+            val (photoName, thumbName) = conditionRepository.processAndSavePhoto(uri)
             
             val photo = ConditionPhoto(
                 conditionId = conditionId,
@@ -478,15 +472,11 @@ class PersonConditionViewModel(
                 caption = caption
             )
             conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
-            
-            if ((uri.scheme == "file") || (uri.scheme == "content")) {
-                try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
-            }
             showSnackbar(R.string.p_cond_msg_photo_save_success)
         }
     }
 
-    fun deletePhoto(context: Context, photo: ConditionPhoto) {
+    fun deletePhoto(photo: ConditionPhoto) {
         // 二重実行防止
         if (photoActionJob?.isActive == true) return
 
@@ -499,7 +489,7 @@ class PersonConditionViewModel(
             }
         ) {
             conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, featureName, OP_DELETE_PHOTO)
-            ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+            conditionRepository.deletePhotoFiles(photo.photoFileName, photo.thumbnailFileName)
             showSnackbar(R.string.p_cond_msg_photo_delete_success)
         }
     }
@@ -533,8 +523,7 @@ class PersonConditionViewModel(
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository,
-        private val auditLogRepository: AuditLogRepository,
-        private val context: Context
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -545,7 +534,6 @@ class PersonConditionViewModel(
                 summaryRepository,
                 userSettingsRepository,
                 auditLogRepository,
-                context,
                 savedStateHandle
             ) as T
         }

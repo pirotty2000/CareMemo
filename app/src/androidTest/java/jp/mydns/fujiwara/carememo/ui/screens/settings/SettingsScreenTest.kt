@@ -47,7 +47,6 @@ class SettingsScreenTest {
         every { viewModel.viewEvent } returns viewEventFlow
         every { viewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
         every { viewModel.defaultRecorderName } returns MutableStateFlow("")
-        every { viewModel.canAuthenticate(any()) } returns true
     }
 
     private fun setContent() {
@@ -56,7 +55,8 @@ class SettingsScreenTest {
                 SettingsScreen(
                     viewModel = viewModel,
                     navController = navController,
-                    onRequireAuthentication = { _, _, _ -> }
+                    onRequireAuthentication = { _, _, _ -> },
+                    onCheckBiometricSupport = { true }
                 )
             }
         }

@@ -61,7 +61,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="CMP_DT_01_IncrementalTyping_Day()">
+      <SelectionState runConfigName="DSP_02_initialPhoto_isCorrect()">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-25T05:06:31.188207800Z">
           <Target type="DEFAULT_BOOT">
@@ -72,7 +72,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="DSP_02_initialPhoto_isCorrect()">
+      <SelectionState runConfigName="MainScreenTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-25T05:06:31.188207800Z">
           <Target type="DEFAULT_BOOT">

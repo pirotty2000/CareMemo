@@ -3,6 +3,8 @@
 ## 1. ユニットテスト (Unit Test)
 
 - **[MUST] Logic層の全網羅**: ビジネスルールや計算を担う Logic クラス（Pure Kotlin）は、すべての条件分岐をユニットテストで検証してください。
+- **[MUST] ViewModel の Pure Kotlin テスト**: 
+    - ViewModel は Context への依存を排除し、Robolectric を使用せずに JUnit のみで高速にテストしてください。
 - **[MUST] 変更検知 (isChanged) の検証**: 
     - 値を変更した際に `true` になること、および値を初期値に書き戻した際に正確に `false` に戻ることを検証してください。
 - **[MUST] スナップショット比較の正当性**: `initialSnapshot` が正しく保持され、入力変更時の比較基準として機能していることを確認してください。

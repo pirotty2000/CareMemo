@@ -48,6 +48,9 @@
 
 - **[MUST] Logic レイヤーに Android API を持ち込まない**
     - 理由: `Context`, `R.string`, `Uri` 等への依存を排除し、JUnit による高速な単体テストを維持するため。
+- **[MUST] ViewModel に Android API (Context 等) を持ち込まない**
+    - 理由: ViewModel を Pure Kotlin 領域として保ち、Robolectric なしでの高速なユニットテストを可能にするため。
+    - 物理操作は Repository に、ハードウェア判定は Activity に委譲してください。
 
 ---
 最終更新日: 2026/08/14

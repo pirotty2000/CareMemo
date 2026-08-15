@@ -228,7 +228,7 @@ fun PersonConditionScreen(
             onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
             onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
             onCancelEdit = { conditionViewModel.cancelEditSession() },
-            onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onDeletePhoto = { conditionViewModel.deletePhoto(it) },
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
                 conditionViewModel.reattachUnassignedPhoto(cid, info)
@@ -284,7 +284,7 @@ fun PersonConditionScreen(
             onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
             onCancelEdit = { conditionViewModel.cancelEditSession() },
             // サムネイルのごみ箱アイコン
-            onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onDeletePhoto = { conditionViewModel.deletePhoto(it) },
             // 未割り当て写真の再アタッチ処理
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
@@ -377,7 +377,7 @@ fun PersonConditionScreen(
             ) {
                 jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane(
                     uiState = conditionState,
-                    onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+                    onDeletePhoto = { conditionViewModel.deletePhoto(it) },
                     onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
                     onCancel = { conditionViewModel.setSelectedConditionId(null) },
                     onEditClick = { conditionViewModel.startEditSession() },

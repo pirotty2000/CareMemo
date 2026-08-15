@@ -21,13 +21,14 @@
 | レイヤー                        | 依存可能な対象                            | 依存してはならない対象                        |
 |:----------------------------|:-----------------------------------|:-----------------------------------|
 | **UI (Screens/Components)** | ViewModel, Mapping, Theme          | Repository, Database, Logic (原則)   |
-| **ViewModel**               | Logic, Repository, Mapping, Entity | Activity, Context, Composable      |
+| **ViewModel**               | Logic, Repository, Mapping, Entity | Activity, Context, Composable, Android Framework クラス (Uri, BiometricManager 等) |
 | **Logic (Common/Feature)**  | AppSpecifications, Entity          | ViewModel, Repository, Android API |
 | **Repository**              | Database (DAO), AuditLog, Entity   | ViewModel, Logic, UI               |
 | **Mapping / Theme**         | AppSpecifications                  | ViewModel, Repository, Logic       |
 
 - **[MUST] 依存の単方向性**: 依存は常に「上位 (UI)」から「下位 (Data/Spec)」に向かって流れるようにし、下位レイヤーが上位レイヤー（例：Logic が ViewModel）を直接参照することは厳禁とします。
 - **[MUST] UI からの飛び越し禁止**: UI コンポーネントが ViewModel を介さずに Repository や Database に直接アクセスすることを禁止します。
+- **[MUST] ViewModel の純粋化 (Pure Kotlin)**: ViewModel はユニットテスト容易性を最大化するため、Android フレームワーク（Context, Application, Uri 等）に依存してはなりません。物理操作（ファイル、リソース）は Repository へ、システム状態判定（生体認証可否等）は Activity へ委譲してください。
 
 ## 3. 詳細画面の設計原則 (A/B/C共通)
 
@@ -48,7 +49,11 @@
 
 - **Activity へ委譲すべきもの**:
     - **生体認証 (BiometricPrompt)**
+    - **システム状態の判定 (BiometricManager.canAuthenticate 等)**
     - **ランタイム権限要求**
+- **Repository へ委譲すべきもの**:
+    - **物理ファイル操作 (ImageUtils 呼び出し等)**
+    - **ContentResolver を用いた副作用の実行**
 - **Composable で起動を許可するもの**:
     - **ActivityResult API**（カメラ、ファイル選択）
     - ※ただし、結果の処理（保存・ロジック）は ViewModel へ委譲すること。

@@ -156,6 +156,7 @@ class CareMemoApplication : Application() {
     /** (B系統) 経過記録（所見メモ）および添付写真の管理リポジトリ */
     val conditionRepository: ConditionRepository by lazy {
         ConditionRepository(
+            this,
             database.conditionAtVisitDao(),
             database.conditionPhotoDao(),
             auditLogRepository

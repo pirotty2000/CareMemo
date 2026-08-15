@@ -144,7 +144,7 @@ fun ConditionPhotoPreviewScreen(
                     }
                     Button(
                         onClick = {
-                            conditionViewModel.processAndSavePhoto(context, uri, conditionId, caption)
+                            conditionViewModel.processAndSavePhoto(uri, conditionId, caption)
                             navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")

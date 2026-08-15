@@ -267,8 +267,7 @@ class MainActivity : FragmentActivity() {
                                     personSummaryRepository,
                                     conditionRepository,
                                     userSettingsRepository,
-                                    auditLogRepository,
-                                    applicationContext))
+                                    auditLogRepository))
                             PersonConditionScreen(
                                 detailViewModel = detailViewModel,
                                 conditionViewModel = conditionViewModel,
@@ -291,8 +290,7 @@ class MainActivity : FragmentActivity() {
                                     personSummaryRepository,
                                     conditionRepository,
                                     userSettingsRepository,
-                                    auditLogRepository,
-                                    applicationContext))
+                                    auditLogRepository))
                             ConditionPhotoPreviewScreen(
                                 detailViewModel = detailViewModel,
                                 conditionViewModel = conditionViewModel,
@@ -308,8 +306,7 @@ class MainActivity : FragmentActivity() {
                                     personSummaryRepository,
                                     conditionRepository,
                                     userSettingsRepository,
-                                    auditLogRepository,
-                                    applicationContext))
+                                    auditLogRepository))
                             ConditionPhotoFullScreen(viewModel = conditionViewModel, navController = navController)
                         }
 
@@ -347,7 +344,8 @@ class MainActivity : FragmentActivity() {
                             SettingsScreen(
                                 viewModel = settingsViewModel,
                                 navController = navController,
-                                onRequireAuthentication = requestAuthentication)
+                                onRequireAuthentication = requestAuthentication,
+                                onCheckBiometricSupport = { isBiometricSupported() })
                         }
 
                         // SCR-S-002 設定・監査ログ
@@ -374,14 +372,21 @@ class MainActivity : FragmentActivity() {
                             val unassignedViewModel: UnassignedPhotoViewModel =
                                 viewModel(factory = UnassignedPhotoViewModel.Factory(
                                     userSettingsRepository,
-                                    conditionRepository,
-                                    applicationContext))
+                                    conditionRepository))
                             UnassignedPhotoManagementScreen(viewModel = unassignedViewModel, navController = navController)
                         }
                     }
                 }
             }
         }
+    }
+
+    /**
+     * 生体認証がサポートされているか確認します。
+     */
+    private fun isBiometricSupported(): Boolean {
+        val biometricManager = androidx.biometric.BiometricManager.from(this)
+        return biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL) == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
     }
 
     /**
