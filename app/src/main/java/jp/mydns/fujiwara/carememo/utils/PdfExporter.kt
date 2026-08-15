@@ -30,12 +30,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.ZoneOffset
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -347,9 +345,9 @@ object PdfExporter {
             val satBg = Paint().apply { color = colorSpec.SAT_BACKGROUND; style = Paint.Style.FILL }
             for (day in 1..daysInMonth) {
                 val date = yearMonth.atDay(day)
-                if (date.dayOfWeek == DayOfWeek.SUNDAY || date.dayOfWeek == DayOfWeek.SATURDAY) {
+                if (date.dayOfWeek == java.time.DayOfWeek.SUNDAY || date.dayOfWeek == java.time.DayOfWeek.SATURDAY) {
                     val x = startX + labelWidth + (day - 1) * colWidth
-                    pageContext.canvas.drawRect(RectF(x, tableTop, x + colWidth, tableTop + rowHeight * totalRows), if (date.dayOfWeek == DayOfWeek.SUNDAY) sunBg else satBg)
+                    pageContext.canvas.drawRect(RectF(x, tableTop, x + colWidth, tableTop + rowHeight * totalRows), if (date.dayOfWeek == java.time.DayOfWeek.SUNDAY) sunBg else satBg)
                 }
             }
 
@@ -368,8 +366,8 @@ object PdfExporter {
                 pageContext.canvas.drawText(day.toString(), x, tableTop + rowHeight * 0.65f, headerPaint)
                 val date = yearMonth.atDay(day)
                 val color = when(date.dayOfWeek) {
-                    DayOfWeek.SUNDAY -> colorSpec.SUN_TEXT
-                    DayOfWeek.SATURDAY -> colorSpec.SAT_TEXT
+                    java.time.DayOfWeek.SUNDAY -> colorSpec.SUN_TEXT
+                    java.time.DayOfWeek.SATURDAY -> colorSpec.SAT_TEXT
                     else -> Color.BLACK
                 }
                 pageContext.canvas.drawText(formatShortDayOfWeek(date), x, tableTop + rowHeight * 1.65f, Paint(headerPaint).apply { this.color = color })
@@ -564,7 +562,7 @@ object PdfExporter {
             val t = yEnd.coerceIn(graphArea.top, graphArea.bottom); val b = yStart.coerceIn(graphArea.top, graphArea.bottom)
             if (b > t) { paint.color = color; canvas.drawRect(graphArea.left, t, graphArea.right, b, paint) }
         }
-        val dashPaint: Paint
+        val dashPaint = Paint().apply { color = Color.GRAY; style = Paint.Style.STROKE; strokeWidth = 0.8f; pathEffect = DashPathEffect(floatArrayOf(5f, 5f), 0f); isAntiAlias = true }
         limitLines.forEach { (valPos, effect, label) ->
             if (valPos > minYVal && valPos < maxYVal) {
                 val py = graphArea.bottom - ((valPos - minYVal) / yRange).toFloat() * graphArea.height()
@@ -671,8 +669,8 @@ object PdfExporter {
         }
         val startInclusive: Instant?; val endInclusive: Instant?
         if (range == ExportRange.CUSTOM) {
-            startInclusive = customStart?.atZone(ZoneOffset.UTC)?.toLocalDate()?.atStartOfDay(zone)?.toInstant()
-            endInclusive = customEnd?.atZone(ZoneOffset.UTC)?.toLocalDate()?.atTime(23, 59, 59, 999_999_999)?.atZone(zone)?.toInstant()
+            startInclusive = customStart?.atZone(java.time.ZoneOffset.UTC)?.toLocalDate()?.atStartOfDay(zone)?.toInstant()
+            endInclusive = customEnd?.atZone(java.time.ZoneOffset.UTC)?.toLocalDate()?.atTime(23, 59, 59, 999_999_999)?.atZone(zone)?.toInstant()
         } else {
             // カレンダーベース（月初から）の範囲計算
             val today = LocalDate.now(zone)
