@@ -23,11 +23,12 @@
 | **UI (Screens/Components)** | ViewModel, Mapping, Theme          | Repository, Database, Logic (原則)   |
 | **ViewModel**               | Logic, Repository, Mapping, Entity | Activity, Context, Composable, Android Framework クラス (Uri, BiometricManager 等) |
 | **Logic (Common/Feature)**  | AppSpecifications, Entity          | ViewModel, Repository, Android API |
-| **Repository**              | Database (DAO), AuditLog, Entity   | ViewModel, Logic, UI               |
+| **Repository**              | Database (DAO), AuditLog, Entity   | ViewModel, Logic, UI, Android Logic (原則) |
 | **Mapping / Theme**         | AppSpecifications                  | ViewModel, Repository, Logic       |
 
 - **[MUST] 依存の単方向性**: 依存は常に「上位 (UI)」から「下位 (Data/Spec)」に向かって流れるようにし、下位レイヤーが上位レイヤー（例：Logic が ViewModel）を直接参照することは厳禁とします。
 - **[MUST] UI からの飛び越し禁止**: UI コンポーネントが ViewModel を介さずに Repository や Database に直接アクセスすることを禁止します。
+- **[MUST] Repository の純粋化**: Repository はデータの永続化に専念し、ビジネスルールやデータのクレンジング（正規化・重複回避等）を行ってはなりません。これらのロジックは必ず Logic レイヤーへ集約し、Repository は加工済みのデータを受け取るか、コールバックを介して外部からロジックを注入する設計としてください。
 - **[MUST] ViewModel の純粋化 (Pure Kotlin)**: ViewModel はユニットテスト容易性を最大化するため、Android フレームワーク（Context, Application, Uri 等）に依存してはなりません。物理操作（ファイル、リソース）は Repository へ、システム状態判定（生体認証可否等）は Activity へ委譲してください。
 
 ## 3. 詳細画面の設計原則 (A/B/C共通)
@@ -64,4 +65,4 @@
 - ViewModel からカテゴリ固有の Repo メソッドを直接呼ぶことを制限し、プロセッサに委譲します。
 
 ---
-最終更新日: 2026/08/14
+最終更新日: 2026/08/15

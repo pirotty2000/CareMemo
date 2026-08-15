@@ -6,7 +6,6 @@ import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
-import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +13,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
-import java.time.ZoneOffset
 import java.util.UUID
 
 /**
@@ -65,11 +63,9 @@ class AppMaintenanceRepository(
      * バックアップデータをデータベースへ復元します。
      * 既存のすべての臨床データ（監査ログ以外）を消去した上で、バックアップの内容を登録します。
      *
-     * 処理ステップ：
-     * 1. 既存臨床データの全消去。
-     * 2. 利用者データのクレンジング（生年月日の正規化と、名前の重複に対する自動救済）。
-     * 3. 各健康記録および写真情報のバルクインサート。
-     * 4. 服薬記録のバリデーションフィルタリングと保存。
+     * 【設計指針】
+     * 本メソッドは純粋なデータ永続化のみを担当します。バリデーションやクレンジング等の
+     * 業務ロジックは、呼び出し側（ViewModel/Logic層）で事前に行う必要があります。
      *
      * @param backup 復元対象のバックアップデータ
      */
@@ -88,21 +84,15 @@ class AppMaintenanceRepository(
             val medicationRecords = backup.medicationRecords.map { it.toEntity() }
             val emergencyContacts = backup.emergencyContacts.map { it.toEntity() }
 
-            // 3. 利用者データのクレンジング
-            val cleansedPersons = cleansePersonData(persons)
-            personDao.insertAll(cleansedPersons)
-
-            // 4. 各データの保存
+            // 3. データの保存
+            personDao.insertAll(persons)
             heightAndWeightDao.insertAll(heightAndWeights)
             bpAndPulseDao.insertAll(bpAndPulses)
             glucoseAndHbA1cDao.insertAll(glucoseAndHbA1cs)
             conditionAtVisitDao.insertAll(conditionAtVisits)
             conditionPhotoDao.insertAll(conditionPhotos)
             emergencyContactDao.insertAll(emergencyContacts)
-
-            // 5. 服薬記録のインポート（クレンジングを Logic へ委譲）
-            val validMedicationRecords = MedicationLogic.filterValidRecords(medicationRecords)
-            medicationRecordDao.insertAll(validMedicationRecords)
+            medicationRecordDao.insertAll(medicationRecords)
         }
     }
 
@@ -130,48 +120,6 @@ class AppMaintenanceRepository(
         bpAndPulseDao.deleteAll()
         heightAndWeightDao.deleteAll()
         personDao.deleteAll()
-    }
-
-    /**
-     * 利用者データのクレンジングを行います。
-     * 
-     * 【処理内容】
-     * 1. 生年月日の時分秒を 00:00:00 (UTC) に正規化します。
-     * 2. 正規化の結果、SQLite の一意制約（姓, 名, 生年月日, メモ）に違反するデータが発生した場合、
-     *    識別用メモ（[識別子:xxxx]）を自動設定してインポートの失敗を防ぎます。
-     *
-     * @param persons 処理対象の利用者リスト
-     * @return クレンジング後の利用者リスト
-     */
-    private fun cleansePersonData(persons: List<Person>): List<Person> {
-        val seen = mutableSetOf<String>()
-        return persons.map { p ->
-            // 1. 生年月日の正規化 (UTC 00:00:00)
-            val normalizedBirthday = p.birthday.atZone(ZoneOffset.UTC)
-                .toLocalDate()
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-
-            // 2. ユニーク制約 (姓, 名, 生年月日, メモ) の重複チェック
-            var finalNote = p.note
-            var key = "${p.lastName}|${p.firstName}|${normalizedBirthday.toEpochMilli()}|$finalNote"
-
-            if (seen.contains(key)) {
-                // 重複が発生した場合、救済措置としてメモに短い UUID を付記
-                val identifier = UUID.randomUUID().toString().take(4)
-                val suffix = context.getString(R.string.common_identifier_suffix, identifier)
-                finalNote = if (finalNote.length + suffix.length <= 255) {
-                    finalNote + suffix
-                } else {
-                    // 万が一メモが長すぎる場合は末尾を削って付記
-                    finalNote.take(255 - suffix.length) + suffix
-                }
-                key = "${p.lastName}|${p.firstName}|${normalizedBirthday.toEpochMilli()}|$finalNote"
-            }
-
-            seen.add(key)
-            p.copy(birthday = normalizedBirthday, note = finalNote)
-        }
     }
 
     /**
@@ -306,19 +254,25 @@ class AppMaintenanceRepository(
     }
 
     /**
-     * 外部の ZIP バックアップからデータをインポートし、現在のアプリ状態を復元します。
+     * 外部の ZIP バックアップからデータを読み込み、内容を検証した上で復元を実行します。
+     *
+     * 【設計指針】
+     * 物理的なファイル操作（解凍、読み込み、写真配置）は本メソッドが担当しますが、
+     * バージョン互換性チェックやデータのクレンジングといった業務ロジックは、
+     * 引数として渡される `onValidateAndProcess` コールバックを介して外部（ViewModel/Logic層）へ委譲します。
      *
      * @param uri 読み込み元の Uri
      * @param password ZIP 解凍用のパスワード
-     * @param isDeveloperMode 開発者モードが有効か（バージョン不一致時の強制復元に関係）
      * @param onProgress 進捗状況を通知するコールバック (0-100)
-     * @throws IOException ファイル読み込み失敗、解析失敗、またはバージョン非互換時にスロー
+     * @param onValidateAndProcess バックアップデータ読み込み直後に実行されるバリデーション・加工処理。
+     *                             null を返した場合はインポート処理を中断します。
+     * @throws IOException ファイル読み込み失敗、解析失敗、またはバリデーションエラー時にスロー
      */
     suspend fun importData(
         uri: Uri,
         password: String?,
-        isDeveloperMode: Boolean = false,
-        onProgress: (Int) -> Unit = {}
+        onProgress: (Int) -> Unit = {},
+        onValidateAndProcess: (CareMemoBackup) -> CareMemoBackup?
     ) = withContext(Dispatchers.IO) {
         // 1. Uri から一時ファイルへ ZIP をコピー
         val tempZipFile = File(context.cacheDir, "import.zip")
@@ -335,7 +289,7 @@ class AppMaintenanceRepository(
             // 2. ZIP の解凍
             ZipUtils.unzip(tempZipFile, tempDir, password, onProgress)
             
-            // 3. データの探索（解凍後のディレクトリ構造に対応）
+            // 3. データの探索
             val searchDirs = mutableListOf(tempDir)
             tempDir.listFiles()?.filter { it.isDirectory }?.let { searchDirs.addAll(it) }
 
@@ -351,28 +305,22 @@ class AppMaintenanceRepository(
             
             if (dataFile == null) throw IOException(context.getString(R.string.maintenance_err_no_json))
             
-            // 4. JSON のパースとバージョンチェック
+            // 4. JSON のパース
             val jsonString = dataFile.readText()
-            val backup = try {
+            val rawBackup = try {
                 json.decodeFromString(CareMemoBackup.serializer(), jsonString)
             } catch (e: Exception) {
                 throw IOException(context.getString(R.string.maintenance_err_json_parse), e)
             }
             
-            val versionResult = jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic.validateVersion(
-                backupVersionCode = backup.appVersionCode,
-                currentVersionCode = BuildConfig.VERSION_CODE,
-                isDeveloperMode = isDeveloperMode
-            )
-            
-            if (versionResult == jp.mydns.fujiwara.carememo.logic.feature.ImportValidationResult.INCOMPATIBLE) {
-                throw IOException(context.getString(R.string.maintenance_err_newer_version, backup.appVersionCode, BuildConfig.VERSION_CODE))
-            }
+            // 5. バリデーションとクレンジングの委譲（Logic レイヤーの呼び出し）
+            val processedBackup = onValidateAndProcess(rawBackup) 
+                ?: return@withContext // バリデーション失敗時は中断
 
-            // 5. DB データの全置換実行
-            replaceAllData(backup)
+            // 6. DB データの全置換実行
+            replaceAllData(processedBackup)
             
-            // 6. 写真ファイルの差し替え
+            // 7. 写真ファイルの差し替え
             val photosDir = ImageUtils.getPhotosDirPublic(context)
             val importedPhotosDir = File(dataFile.parentFile, AppSpecifications.Condition.Photo.DIR_NAME)
             

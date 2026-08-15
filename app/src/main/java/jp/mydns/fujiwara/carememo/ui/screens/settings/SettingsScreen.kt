@@ -122,6 +122,7 @@ fun SettingsScreen(
     var showImportSampleConfirm by rememberSaveable { mutableStateOf(false) }
     var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
+    val identifierSuffix = stringResource(R.string.common_identifier_suffix)
 
     var dialogTitle by rememberSaveable { mutableStateOf<String?>(null) }
     var dialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -212,7 +213,7 @@ fun SettingsScreen(
                     text = stringResource(R.string.settings_dialog_restore_confirm_btn),
                     onClick = {
                         pendingImportUri = showImportUri
-                        viewModel.importData(showImportUri!!)
+                        viewModel.importData(showImportUri!!, identifierSuffix)
                         showImportUri = null
                     }
                 )
@@ -500,7 +501,7 @@ fun SettingsScreen(
                 AppDialogConfirmButton(
                     text = stringResource(R.string.decision),
                     onClick = {
-                        pendingImportUri?.let { viewModel.importData(it, inputPasswordForImport) }
+                        pendingImportUri?.let { viewModel.importData(it, identifierSuffix, inputPasswordForImport) }
                         showPasswordInputDialog = false
                         inputPasswordForImport = ""
                     },

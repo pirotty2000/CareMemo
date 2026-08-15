@@ -146,7 +146,7 @@ class SettingsViewModelTest {
         coEvery { maintenanceRepository.importData(any(), any(), any(), any()) } throws IOException("Wrong password")
 
         viewModel.viewEvent.test {
-            viewModel.importData(uri)
+            viewModel.importData(uri, "suffix")
             advanceUntilIdle()
             assertEquals(SettingsViewEvent.RequestImportPassword, awaitItem())
         }

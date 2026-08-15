@@ -5,13 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
+import jp.mydns.fujiwara.carememo.logic.common.PersonLogic
+import jp.mydns.fujiwara.carememo.logic.feature.ImportValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
@@ -20,6 +23,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 /**
  * ViewModel：SettingsViewModel
@@ -170,16 +174,53 @@ class SettingsViewModel(
         }
     }
 
-    fun importData(uri: Uri, inputPassword: String? = null) {
+    fun importData(uri: Uri, identifierSuffix: String, inputPassword: String? = null) {
         if (actionJob?.isActive == true) return
         val password = inputPassword ?: if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
         actionJob = safeLaunch(OP_IMPORT, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
             try {
-                maintenanceRepository.importData(uri, password, currentState.isForceImportEnabled) { updateUiState { s -> s.copy(processingProgress = it) } }
+                maintenanceRepository.importData(
+                    uri = uri,
+                    password = password,
+                    onProgress = { updateUiState { s -> s.copy(processingProgress = it) } }
+                ) { backup ->
+                    // 1. バージョンチェック (SettingsLogic)
+                    val versionResult = SettingsLogic.validateVersion(
+                        backupVersionCode = backup.appVersionCode,
+                        currentVersionCode = BuildConfig.VERSION_CODE,
+                        isDeveloperMode = currentState.isForceImportEnabled
+                    )
+                    
+                    if (versionResult == ImportValidationResult.INCOMPATIBLE) {
+                        // 本来は文字列リソースを返したいが、ViewModel は Context 非依存のため例外を投げる。
+                        // エラーメッセージの構築は Repository 側で従来行っていたものを踏襲。
+                        throw IOException("BACKUP_NEWER_THAN_APP") 
+                    }
+
+                    // 2. データのクレンジングとフィルタリング
+                    val validMedication = MedicationLogic.filterValidRecords(
+                        backup.medicationRecords.map { it.toEntity() }
+                    ).map { it.toBackupDto() }
+                    
+                    val cleansedPersons = PersonLogic.cleansePersonData(
+                        persons = backup.persons.map { it.toEntity() },
+                        identifierSuffixGenerator = { id -> identifierSuffix.format(id) }
+                    ).map { it.toBackupDto() }
+
+                    backup.copy(
+                        persons = cleansedPersons,
+                        medicationRecords = validMedication
+                    )
+                }
                 sendViewEvent(SettingsViewEvent.ImportSuccess); showSnackbar(R.string.settings_msg_import_success)
             } catch (e: Exception) {
-                if (e.message?.contains("password", ignoreCase = true) == true) sendViewEvent(SettingsViewEvent.RequestImportPassword)
-                else throw e
+                if (e.message?.contains("password", ignoreCase = true) == true) {
+                    sendViewEvent(SettingsViewEvent.RequestImportPassword)
+                } else if (e.message == "BACKUP_NEWER_THAN_APP") {
+                    showError(R.string.common_error_title_save, R.string.maintenance_err_newer_version, 0, BuildConfig.VERSION_CODE)
+                } else {
+                    throw e
+                }
             }
         }
     }

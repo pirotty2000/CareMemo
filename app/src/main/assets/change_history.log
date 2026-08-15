@@ -1,4 +1,6 @@
 # Ver.3.2.8 (2026/08/xx)
+- プラットフォーム依存の排除 (Context)
+- AppMaintenanceRepository の整理
 
 # Ver.3.2.7 (2026/08/15)
 - KDoc精査

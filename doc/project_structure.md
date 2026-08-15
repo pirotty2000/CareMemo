@@ -179,9 +179,8 @@ ViewModel (androidx.lifecycle.ViewModel)
 | 健康一括入力                      | `BatchInputScreen`                                                        | `BatchInputViewModel` **(PB)**                                                    | `BatchInputLogic`<br>`HealthLogic`                            | `HealthRepository`<br>`PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                |
 | 利用者管理                       | `DeleteOrRestorePerson`                                                   | `DeleteOrRestorePersonViewModel` **(B)**                                          | `DeleteOrRestorePersonLogic`                                  | `DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                    |
 | アプリ設定                       | `SettingsScreen`                                                          | `SettingsViewModel` **(B)**                                                       | `SettingsLogic`                                               | `AppMaintenanceRepository` (C)<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                  |
-| 操作ログ                        | `AuditLogScreen`                                                          | `AuditLogViewModel` **(B)**                                                       | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                         |
-| 未割り当て写真確認                   | `UnassignedPhotoManagementScreen`                                         | `UnassignedPhotoViewModel` **(B)**                                                |
-            | `ConditionMaintenanceLogic` | `ConditionRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository` |
+| 操作ログ                        | `AuditLogScreen`                                                         | `AuditLogLogic`                                               | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                         |
+| 未割り当て写真確認                   | `UnassignedPhotoManagementScreen`                                         | `UnassignedPhotoViewModel` **(B)**                                                | `ConditionMaintenanceLogic` | `ConditionRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository` |
 | 共通基盤                        | (詳細画面全体)                                                                  | `PersonDetailUiStateViewModel` **(PB)**                                           | -                                                             | `PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                      |
 
 <br>
@@ -208,6 +207,7 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `BirthEra.kt`          | 元号（昭和・平成・令和・西暦）の Enum 定義とリソース紐付け。                     |
 | `IdLogic.kt`           | システム共通の ID 判定（新規レコード ID 等）ロジック。                       |
 | `JapaneseDateLogic.kt` | 西暦 ↔ 和暦の相互変換、和暦の妥当性チェック、日付文字列の正規化。                    |
+| `PersonLogic.kt`       | 利用者情報のクレンジング（生年月日正規化、重複回避用識別子付与）ロジック。 |
 | `HealthLogic.kt`       | BMI 計算、バイタル・血糖値・HbA1c の異常判定ルール、入力妥当性チェック。             |
 | `MedicationLogic.kt`   | カレンダーの日付リスト生成（空セル挿入）、同期アクション（保存・削除）の判定、およびデータのクレンジング。 |
 | `ConditionLogic.kt`    | 所見メモの検索フィルタリング、重複判定ロジック。                              |
@@ -363,4 +363,4 @@ ViewModel (androidx.lifecycle.ViewModel)
 
 ---
 
-最終更新日: 2026/08/12 (健康記録プロセッサ基盤の追加)
+最終更新日: 2026/08/15 (A-1, A-2 対応に伴う構造適正化)

@@ -51,6 +51,9 @@
 - **[MUST] ViewModel に Android API (Context 等) を持ち込まない**
     - 理由: ViewModel を Pure Kotlin 領域として保ち、Robolectric なしでの高速なユニットテストを可能にするため。
     - 物理操作は Repository に、ハードウェア判定は Activity に委譲してください。
+- **[MUST] データの「正しさ」は Logic レイヤーが決定する**
+    - 理由: Repository にビジネスルール（クレンジング、正規化等）を混ぜないため。
+    - Repository は「渡されたデータを忠実に保存する」ことに専念し、加工が必要な場合は必ず Logic を経由させてください。
 
 ---
-最終更新日: 2026/08/14
+最終更新日: 2026/08/15
