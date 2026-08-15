@@ -34,7 +34,7 @@ import java.util.UUID
  *   ├─ [ medication_record_db ] 服薬状況（FK: person_id）
  *   └─ [ emergency_contact_db ] 緊急連絡先（FK: person_id）
  *
- * [audit_log_db] 操作・エラーログ（独立テーブル）
+ * [ audit_log_db ] 操作・エラーログ（独立テーブル）
  **********************************************************************/
 
 /**
