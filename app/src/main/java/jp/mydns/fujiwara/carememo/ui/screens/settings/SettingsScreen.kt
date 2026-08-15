@@ -541,7 +541,7 @@ fun SettingsScreen(
         isPasswordVisible = isPasswordVisible,
         onBackupPasswordEnabledChange = { enabled ->
             if (enabled) {
-                viewModel.setBackupPasswordEnabled(true)
+                viewModel.setBackupPasswordEnabled(enabled = true)
                 isPasswordVisible = false
             } else {
                 if (onCheckBiometricSupport()) {
@@ -549,10 +549,10 @@ fun SettingsScreen(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_change_settings
                     ) {
-                        viewModel.setBackupPasswordEnabled(false)
+                        viewModel.setBackupPasswordEnabled(enabled = false)
                     }
                 } else {
-                    viewModel.setBackupPasswordEnabled(false)
+                    viewModel.setBackupPasswordEnabled(enabled = false)
                 }
             }
             isChangedByMe = true
@@ -578,11 +578,11 @@ fun SettingsScreen(
             }
         },
         onExportClick = {
-            viewModel.setLockBypassEnabled(true)
+            viewModel.setLockBypassEnabled(enabled = true)
             exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
         },
         onImportClick = {
-            viewModel.setLockBypassEnabled(true)
+            viewModel.setLockBypassEnabled(enabled = true)
             importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
         },
         onUnassignedPhotosClick = { viewModel.navigateToUnassignedPhotos() },
@@ -590,17 +590,17 @@ fun SettingsScreen(
         lockTimeoutMinutes = uiState.lockTimeoutMinutes,
         onBiometricEnabledChange = { enabled ->
             if (enabled) {
-                viewModel.setBiometricEnabled(onCheckBiometricSupport(), true)
+                viewModel.setBiometricEnabled(isSupported = onCheckBiometricSupport(), enabled = true)
             } else {
                 if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_change_settings
                     ) {
-                        viewModel.setBiometricEnabled(true, false)
+                        viewModel.setBiometricEnabled(isSupported = true, enabled = false)
                     }
                 } else {
-                    viewModel.setBiometricEnabled(false, false)
+                    viewModel.setBiometricEnabled(isSupported = false, enabled = false)
                 }
             }
             isChangedByMe = true

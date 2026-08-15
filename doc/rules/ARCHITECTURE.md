@@ -18,13 +18,13 @@
 
 レイヤー間の依存関係を単方向に保ち、循環参照や責務の混入を防ぐため、以下の依存許可マトリックスを遵守してください。
 
-| レイヤー                        | 依存可能な対象                            | 依存してはならない対象                        |
-|:----------------------------|:-----------------------------------|:-----------------------------------|
-| **UI (Screens/Components)** | ViewModel, Mapping, Theme          | Repository, Database, Logic (原則)   |
+| レイヤー                        | 依存可能な対象                            | 依存してはならない対象                                                                    |
+|:----------------------------|:-----------------------------------|:-------------------------------------------------------------------------------|
+| **UI (Screens/Components)** | ViewModel, Mapping, Theme          | Repository, Database, Logic (原則)                                               |
 | **ViewModel**               | Logic, Repository, Mapping, Entity | Activity, Context, Composable, Android Framework クラス (Uri, BiometricManager 等) |
-| **Logic (Common/Feature)**  | AppSpecifications, Entity          | ViewModel, Repository, Android API |
-| **Repository**              | Database (DAO), AuditLog, Entity   | ViewModel, Logic, UI, Android Logic (原則) |
-| **Mapping / Theme**         | AppSpecifications                  | ViewModel, Repository, Logic       |
+| **Logic (Common/Feature)**  | AppSpecifications, Entity          | ViewModel, Repository, Android API                                             |
+| **Repository**              | Database (DAO), AuditLog, Entity   | ViewModel, Logic, UI, Android Logic (原則)                                       |
+| **Mapping / Theme**         | AppSpecifications                  | ViewModel, Repository, Logic                                                   |
 
 - **[MUST] 依存の単方向性**: 依存は常に「上位 (UI)」から「下位 (Data/Spec)」に向かって流れるようにし、下位レイヤーが上位レイヤー（例：Logic が ViewModel）を直接参照することは厳禁とします。
 - **[MUST] UI からの飛び越し禁止**: UI コンポーネントが ViewModel を介さずに Repository や Database に直接アクセスすることを禁止します。
