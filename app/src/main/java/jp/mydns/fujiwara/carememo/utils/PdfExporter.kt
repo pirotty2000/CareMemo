@@ -13,6 +13,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications.Export
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.*
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
@@ -66,10 +67,10 @@ import kotlin.math.floor
  * 実際のデータの永続化（一時的なキャッシュ保存のみ）。
  */
 object PdfExporter {
-    private val layoutSpec = AppSpecifications.Export.Pdf.Layout
-    private val styleSpec = AppSpecifications.Export.Pdf.Style
-    private val colorSpec = AppSpecifications.Export.Pdf.Colors
-    private val tableSpec = AppSpecifications.Export.Pdf.TableConfig
+    private val layoutSpec = Export.Pdf.Layout
+    private val styleSpec = Export.Pdf.Style
+    private val colorSpec = Export.Pdf.Colors
+    private val tableSpec = Export.Pdf.TableConfig
 
     /**
      * PDF作成時の描画コンテキストを保持する内部クラス。
@@ -303,7 +304,7 @@ object PdfExporter {
         val linePaint = Paint().apply { color = colorSpec.TABLE_LINE; strokeWidth = 0.5f; style = Paint.Style.STROKE }
 
         // ステータス記号
-        val medColors = AppSpecifications.Export.Pdf.Colors.Medication
+        val medColors = Export.Pdf.Colors.Medication
         val statusPaints = mapOf(
             AppSpecifications.Medication.Status.CODE_TAKEN to Paint().apply { color = medColors.STATUS_TAKEN; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
             AppSpecifications.Medication.Status.CODE_ASSIST to Paint().apply { color = medColors.STATUS_ASSIST; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
@@ -321,9 +322,9 @@ object PdfExporter {
             pageContext.context.getString(R.string.slot_dinner),
             pageContext.context.getString(R.string.slot_bedtime)
         )
-        val labelWidth = AppSpecifications.Export.Pdf.TableConfig.Medication.LABEL_WIDTH
+        val labelWidth = Export.Pdf.TableConfig.Medication.LABEL_WIDTH
         val colWidth = (layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN * 2 - labelWidth) / 31f
-        val rowHeight = AppSpecifications.Export.Pdf.TableConfig.Medication.ROW_HEIGHT
+        val rowHeight = Export.Pdf.TableConfig.Medication.ROW_HEIGHT
         val slotCount = AppSpecifications.Medication.TimeSlot.COUNT
         val totalRows = 2 + slotCount
         val tableHeight = rowHeight * totalRows + 40f
@@ -399,7 +400,7 @@ object PdfExporter {
 
     // 「身長・体重」
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
-        val hwSpec = AppSpecifications.Export.Pdf.TableConfig.HeightWeight
+        val hwSpec = Export.Pdf.TableConfig.HeightWeight
         val columns = listOf(
             TableColumn<HeightAndWeight>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
@@ -429,7 +430,7 @@ object PdfExporter {
 
     // 「バイタル」
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
-        val bpSpec = AppSpecifications.Export.Pdf.TableConfig.BpPulse
+        val bpSpec = Export.Pdf.TableConfig.BpPulse
         val columns = listOf(
             TableColumn<BpAndPulse>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
@@ -454,7 +455,7 @@ object PdfExporter {
 
     // 「血糖値・HbA1c」
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
-        val glSpec = AppSpecifications.Export.Pdf.TableConfig.Glucose
+        val glSpec = Export.Pdf.TableConfig.Glucose
         val columns = listOf(
             TableColumn<GlucoseAndHbA1c>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
