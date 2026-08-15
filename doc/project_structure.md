@@ -226,6 +226,7 @@ ViewModel (androidx.lifecycle.ViewModel)
 | `PersonMedicationLogic.kt`      | 服薬管理画面における履歴の日付別グルーピング、UiStateへの変換。                            |
 | `BatchInputLogic.kt`            | 一括入力画面における保存データの仕分け、複数カテゴリ横断のバリデーション。                          |
 | `DeleteOrRestorePersonLogic.kt` | 利用者管理（復帰・抹消）画面の表示状態定義。                                         |
+| `SecurityLogic.kt`              | アプリ起動時および復帰時のセキュリティステータス判定（ロック要否、デバイス設定チェック等）。           |
 | `SettingsLogic.kt`              | ZIP検証、バージョン互換性、空き容量チェック、開発者モード有効化判定。                           |
 | `AuditLogLogic.kt`              | 監査ログのフィルタリング、並び替え、選択肢の抽出。                                      |
 | `ConditionMaintenanceLogic.kt`  | データベースと物理ファイルの照合、未割り当て写真の分類（リソースIDによる理由保持）。                    |

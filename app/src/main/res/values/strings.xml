@@ -78,6 +78,10 @@
     <string name="health_badge_desc_condition">所見メモの記録あり</string>
     <string name="health_badge_desc_medication">服薬管理の記録あり</string>
 
+    <!-- セキュリティ警告 -->
+    <string name="security_warning_title">セキュリティ設定が必要です</string>
+    <string name="security_warning_message">このアプリは機密性の高い介護情報を扱うため、端末のセキュリティ設定（PIN、パターン、または生体認証）が必須です。\n\n端末の設定画面からセキュリティ設定を有効にした後、アプリを再起動してください。</string>
+
     <!-- 日付・単位関連 -->
     <string name="common_era_ad">西暦</string>
     <string name="common_era_showa">昭和</string>
