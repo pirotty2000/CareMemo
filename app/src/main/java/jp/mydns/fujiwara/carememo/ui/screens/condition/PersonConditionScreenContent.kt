@@ -41,11 +41,11 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  *
  * ■ PersonConditionScreenContent (★本コンポーネント)
  * │
- * ├─ [Phone版] (Column 構成)
+ * ├─ [ Phone版 ] (Column 構成)
  * │    ├─ SearchBox (検索バー)
  * │    └─ ConditionList (リスト：タップで詳細ダイアログへ)
  * │
- * └─ [Tablet版] (Row 構成：2ペイン固定)
+ * └─ [ Tablet版 ] (Row 構成：2ペイン固定)
  *      ├─ 左側 (weight 1)：SearchBox + ConditionList (リスト)
  *      └─ 右側 (weight 2)：ConditionDetailPane (詳細・編集パネル)
  */

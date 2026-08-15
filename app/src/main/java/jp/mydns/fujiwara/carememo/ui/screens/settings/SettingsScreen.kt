@@ -61,12 +61,12 @@ import kotlinx.coroutines.launch
  * │
  * ├─ [1] SettingsScreenContent (表示層：各セクションの配置)
  * │    ├─ DisplayAndRecordingSection (表示・記録設定)
- * │    ├─ UserManagementSection (利用者管理) ➔ [子画面] DeleteOrRestorePerson
- * │    ├─ DataManagementSection (データ管理) ➔ [子画面] UnassignedPhotoManagement
+ * │    ├─ UserManagementSection (利用者管理) ➔ [ 子画面 ] DeleteOrRestorePerson
+ * │    ├─ DataManagementSection (データ管理) ➔ [ 子画面 ] UnassignedPhotoManagement
  * │    ├─ SecuritySection (セキュリティ)
  * │    ├─ ThemeSection (テーマ設定)
  * │    ├─ OtherSection (その他) ➔ バージョン情報
- * │    └─ ResetSection (開発者用：条件付き表示) ➔ [子画面] AuditLogScreen
+ * │    └─ ResetSection (開発者用：条件付き表示) ➔ [ 子画面 ] AuditLogScreen
  * │
  * └─ [2] 各種設定ダイアログ群 (制御層内で完結)
  *      ├─ ThemeDialog, TimeoutDialog, RetentionDialog (選択肢系)

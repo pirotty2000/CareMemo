@@ -45,12 +45,12 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  *
  * ■ PersonHealthScreenContent (★本コンポーネント)
  * │
- * ├─ [Phone版] (Column 構成：トグル制御)
+ * ├─ [ Phone版 ] (Column 構成：トグル制御)
  * │    ├─ SegmentedButton (履歴 ↔ グラフ 切り替え)
  * │    └─ Box (コンテンツ：HistoryList または HealthGraphView)
  * │         └─ 編集時は HealthRecordDetailPane が最前面へ
  * │
- * └─ [Tablet版] (Row 構成：2ペイン固定)
+ * └─ [ Tablet版 ] (Row 構成：2ペイン固定)
  *      ├─ 左側 (weight 1)：HistoryList (履歴リスト)
  *      └─ 右側 (weight 1.5)：HealthGraphView (グラフ) または HealthRecordDetailPane (詳細)
  */

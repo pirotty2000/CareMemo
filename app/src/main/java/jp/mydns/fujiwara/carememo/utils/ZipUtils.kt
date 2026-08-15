@@ -28,13 +28,13 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * 【全体像：Zip 処理フロー】
  *
- * [圧縮時]
+ * [ 圧縮時 ]
  * 1. Dispatchers.IO への切り替え
  * 2. ZipParameters (AES) の設定
  * 3. 非同期モード起動 (isRunInThread = true)
  * 4. ファイル/フォルダの追加 ➔ 完了待機 (ProgressMonitor 監視)
  *
- * [解凍時]
+ * [ 解凍時 ]
  * 1. Dispatchers.IO への切り替え
  * 2. パスワード設定（必要な場合）
  * 3. 全ファイル抽出 ➔ 完了待機 (ProgressMonitor 監視)

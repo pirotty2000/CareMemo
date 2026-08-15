@@ -48,12 +48,12 @@ import java.time.YearMonth
  *
  * ■ PersonMedicationScreenContent (★本コンポーネント)
  * │
- * ├─ [Phone版] (Column 構成：トグル制御)
+ * ├─ [ Phone版 ] (Column 構成：トグル制御)
  * │    ├─ MonthSelector (年月セレクタ：共通)
  * │    ├─ SegmentedButton (カレンダー ↔ 履歴 切り替え)
  * │    └─ Box (コンテンツ：CalendarGrid または MedicationHistoryTable)
  * │
- * └─ [Tablet版] (Row 構成：2カラム固定)
+ * └─ [ Tablet版 ] (Row 構成：2カラム固定)
  *      ├─ 左側 (weight 1)：CalendarGrid (カレンダー)
  *      └─ 右側 (weight 1.2)：MonthSelector + MedicationHistoryTable (履歴)
  */

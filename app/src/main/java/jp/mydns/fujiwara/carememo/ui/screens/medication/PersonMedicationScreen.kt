@@ -41,15 +41,15 @@ import java.time.LocalDate
  *
  * ■ PersonMedicationScreen (★本コンポーネント：全体制御)
  * │
- * ├─ [A] PersonMedicationScreenPhone (Phone版：シングルペイン)
+ * ├─ [ A ] PersonMedicationScreenPhone (Phone版：シングルペイン)
  * │    └─ PersonMedicationScreenContent (カレンダー・履歴トグル)
  * │         ├─ CalendarGrid (ui/components/medication/)
  * │         └─ MedicationHistoryTable (ui/components/medication/)
  * │
- * ├─ [B] PersonMedicationScreenTablet (Tablet版：2ペイン固定)
+ * ├─ [ B ] PersonMedicationScreenTablet (Tablet版：2ペイン固定)
  * │    └─ PersonMedicationScreenContent (カレンダー ＋ 履歴並列表示)
  * │
- * └─ [共通ダイアログ]
+ * └─ [ 共通ダイアログ ]
  *      ├─ MedicationInputDialog (服薬状況入力：ui/components/medication/)
  *      ├─ PdfExportActionHandler (PDF出力：ui/components/common/)
  *      └─ AppInfoDialog (通知・エラー)

@@ -54,7 +54,7 @@ import kotlinx.coroutines.launch
  * │         ├─ SearchBox (検索バー)
  * │         ├─ KanaIndexBar (五十音バー)
  * │         └─ UserList (LazyColumn)
- * │              └─ UserListItem (カード ＋ クイックメニュー [QuickActionMenu])
+ * │              └─ UserListItem (カード ＋ クイックメニュー [ QuickActionMenu ])
  * │
  * └─ [2] 副作用・シート群 (制御層内で完結)
  *      ├─ CategorySelectionSheet (機能選択ボトムシート)

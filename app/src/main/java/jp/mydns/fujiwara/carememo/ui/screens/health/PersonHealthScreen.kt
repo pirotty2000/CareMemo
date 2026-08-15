@@ -33,14 +33,14 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
  *
  * ■ PersonHealthScreen (★本コンポーネント：全体制御)
  * │
- * ├─ [A] PersonHealthScreenPhone (Phone版：シングルペイン)
+ * ├─ [ A ] PersonHealthScreenPhone (Phone版：シングルペイン)
  * │    └─ PersonHealthScreenContent (履歴・グラフ切り替え)
  * │         └─ HealthRecordDetailPane (詳細・編集：ui/components/health/)
  * │
- * ├─ [B] PersonHealthScreenTablet (Tablet版：2ペイン固定)
+ * ├─ [ B ] PersonHealthScreenTablet (Tablet版：2ペイン固定)
  * │    └─ PersonHealthScreenContent (履歴リスト ＋ 詳細/グラフ並列)
  * │
- * └─ [共通パーツ]
+ * └─ [ 共通パーツ ]
  *      ├─ PdfExportActionHandler (PDF出力制御)
  *      ├─ AppDeleteConfirmDialog (削除確認)
  *      └─ AppInfoDialog (通知・エラー)

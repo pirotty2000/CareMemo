@@ -198,8 +198,8 @@ abstract class BaseUiStateViewModel<S, E>(
         block: suspend CoroutineScope.() -> Unit
     ): Job {
         // featureName が未初期化(null)の場合は安全なデフォルト値を使用する
-        val safeFeatureName = try { featureName } catch (e: Exception) { "Unknown" }
-        val context = ErrorContextBuilder(safeFeatureName ?: "Unknown", operation)
+        val safeFeatureName = try { featureName } catch (_: Exception) { "Unknown" }
+        val context = ErrorContextBuilder(safeFeatureName, operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
 
@@ -245,8 +245,8 @@ abstract class BaseUiStateViewModel<S, E>(
         flowProvider: () -> Flow<T>,
         action: suspend (T) -> Unit
     ): Job {
-        val safeFeatureName = try { featureName } catch (e: Exception) { "Unknown" }
-        val context = ErrorContextBuilder(safeFeatureName ?: "Unknown", operation)
+        val safeFeatureName = try { featureName } catch (_: Exception) { "Unknown" }
+        val context = ErrorContextBuilder(safeFeatureName, operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
 

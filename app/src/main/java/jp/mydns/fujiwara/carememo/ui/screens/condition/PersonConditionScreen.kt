@@ -49,14 +49,14 @@ import kotlinx.coroutines.launch
  *
  * ■ PersonConditionScreen (★本コンポーネント：全体制御)
  * │
- * ├─ [A] PersonConditionScreenPhone (Phone版：シングルペイン)
+ * ├─ [ A ] PersonConditionScreenPhone (Phone版：シングルペイン)
  * │    └─ PersonConditionScreenContent (リスト・詳細トグル)
  * │         └─ ConditionDetailPane (ダイアログ表示)
  * │
- * ├─ [B] PersonConditionScreenTablet (Tablet版：2ペイン固定)
+ * ├─ [ B ] PersonConditionScreenTablet (Tablet版：2ペイン固定)
  * │    └─ PersonConditionScreenContent (リスト・詳細並列表示)
  * │
- * └─ [共通パーツ]
+ * └─ [ 共通パーツ ]
  *      ├─ PdfExportActionHandler (PDF出力制御)
  *      ├─ AppDeleteConfirmDialog (削除確認)
  *      └─ AppInfoDialog (通知・エラー)

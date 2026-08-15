@@ -57,29 +57,29 @@ import jp.mydns.fujiwara.carememo.viewmodel.*
  *
  * 【全体像：アプリ画面ルーティング (Routing Table)】
  *
- * [エントリ] MainActivity
- *  └─ [ロック] LockScreen (認証待機)
- *  └─ [遷移基盤] NavHost (jp.mydns.fujiwara.carememo.ui.navigation.Destination)
+ * [ エントリ ] MainActivity
+ *  └─ [ ロック ] LockScreen (認証待機)
+ *  └─ [ 遷移基盤 ] NavHost (jp.mydns.fujiwara.carememo.ui.navigation.Destination)
  *       │
- *       ├─ [Main] 利用者一覧 ➔ MainScreen (SCR-M-001)
- *       │    ├─ [Edit] 登録・編集 ➔ PersonEditScreen (SCR-M-002)
- *       │    └─ [Contacts] 連絡先 ➔ EmergencyContactList (SCR-M-003)
- *       │         └─ [Edit] ➔ EmergencyContactEdit (SCR-M-004)
+ *       ├─ [ Main ] 利用者一覧 ➔ MainScreen (SCR-M-001)
+ *       │    ├─ [ Edit ] 登録・編集 ➔ PersonEditScreen (SCR-M-002)
+ *       │    └─ [ Contacts ] 連絡先 ➔ EmergencyContactList (SCR-M-003)
+ *       │         └─ [ Edit ] ➔ EmergencyContactEdit (SCR-M-004)
  *       │
- *       ├─ [Health] 健康記録 ➔ PersonHealthScreen (SCR-PH-001)
- *       │    ├─ [Batch] 一括入力 ➔ BatchInputScreen (SCR-PH-002)
- *       │    └─ [Chart] グラフ拡大 ➔ GraphExpansionScreen (SCR-PH-003)
+ *       ├─ [ Health ] 健康記録 ➔ PersonHealthScreen (SCR-PH-001)
+ *       │    ├─ [ Batch ] 一括入力 ➔ BatchInputScreen (SCR-PH-002)
+ *       │    └─ [ Chart ] グラフ拡大 ➔ GraphExpansionScreen (SCR-PH-003)
  *       │
- *       ├─ [Condition] 所見メモ ➔ PersonConditionScreen (SCR-PC-001)
- *       │    ├─ [Preview] 写真確認 ➔ ConditionPhotoPreview (SCR-PC-002)
- *       │    └─ [Full] 写真全画面 ➔ ConditionPhotoFull (SCR-PC-003)
+ *       ├─ [ Condition ] 所見メモ ➔ PersonConditionScreen (SCR-PC-001)
+ *       │    ├─ [ Preview ] 写真確認 ➔ ConditionPhotoPreview (SCR-PC-002)
+ *       │    └─ [ Full ] 写真全画面 ➔ ConditionPhotoFull (SCR-PC-003)
  *       │
- *       ├─ [Medication] 服薬管理 ➔ PersonMedicationScreen (SCR-PM-001)
+ *       ├─ [ Medication ] 服薬管理 ➔ PersonMedicationScreen (SCR-PM-001)
  *       │
- *       └─ [Settings] 設定・保守 ➔ SettingsScreen (SCR-S-001)
- *            ├─ [Logs] 監査ログ ➔ AuditLogScreen (SCR-S-002)
- *            ├─ [Archive] 終了利用者 ➔ DeleteOrRestorePerson (SCR-S-003)
- *            └─ [Photos] 孤立写真 ➔ UnassignedPhotoManagement (SCR-S-004)
+ *       └─ [ Settings ] 設定・保守 ➔ SettingsScreen (SCR-S-001)
+ *            ├─ [ Logs ] 監査ログ ➔ AuditLogScreen (SCR-S-002)
+ *            ├─ [ Archive ] 終了利用者 ➔ DeleteOrRestorePerson (SCR-S-003)
+ *            └─ [ Photos ] 孤立写真 ➔ UnassignedPhotoManagement (SCR-S-004)
  */
 class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)

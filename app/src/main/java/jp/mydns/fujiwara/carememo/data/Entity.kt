@@ -25,14 +25,14 @@ import java.util.UUID
  * <care_memo_database>
  * データベースのテーブル階層構造（Table Hierarchy）
  *
- * [person_db] 利用者の基本情報（姓名、生年月日、論理削除フラグ）
- *   ├─ [height_and_weight_db] 身長・体重記録（FK: person_id）
- *   ├─ [bp_and_pulse_db] バイタル記録（FK: person_id）
- *   ├─ [glucose_and_hba1c_db] 血糖値・HbA1c記録（FK: person_id）
- *   ├─ [condition_at_visit_db] 所見メモ（FK: person_id）
- *   │    └─ [condition_photo_db] 所見添付写真メタデータ（FK: condition_id）
- *   ├─ [medication_record_db] 服薬状況（FK: person_id）
- *   └─ [emergency_contact_db] 緊急連絡先（FK: person_id）
+ * [ person_db ] 利用者の基本情報（姓名、生年月日、論理削除フラグ）
+ *   ├─ [ height_and_weight_db ] 身長・体重記録（FK: person_id）
+ *   ├─ [ bp_and_pulse_db ] バイタル記録（FK: person_id）
+ *   ├─ [ glucose_and_hba1c_db ] 血糖値・HbA1c記録（FK: person_id）
+ *   ├─ [ condition_at_visit_db ] 所見メモ（FK: person_id）
+ *   │    └─ [ condition_photo_db ] 所見添付写真メタデータ（FK: condition_id）
+ *   ├─ [ medication_record_db ] 服薬状況（FK: person_id）
+ *   └─ [ emergency_contact_db ] 緊急連絡先（FK: person_id）
  *
  * [audit_log_db] 操作・エラーログ（独立テーブル）
  **********************************************************************/
