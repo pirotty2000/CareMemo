@@ -46,22 +46,22 @@ class ConditionRepositoryTest {
 
     @Test
     fun MEM_02_insertConditionAtVisit_update() = runTest {
-        val record = createSampleRecord("100")
+        val record = createSampleRecord("200")
         repository.insertConditionAtVisit(record, "Feature", "Op", isUpdate = true)
 
         coVerify { 
-            auditLogRepository.log(any(), any(), any(), "UPDATE", "100", any(), "SUCCESS") 
+            auditLogRepository.log(any(), any(), any(), "UPDATE", "200", any(), "SUCCESS") 
         }
     }
 
     @Test
     fun MEM_03_deleteConditionAtVisit() = runTest {
-        val record = createSampleRecord("100")
+        val record = createSampleRecord("300")
         repository.deleteConditionAtVisit(record, "F", "O")
 
         coVerify { conditionAtVisitDao.delete(any()) }
         coVerify { 
-            auditLogRepository.log(any(), any(), any(), "DELETE", "100", any(), "SUCCESS") 
+            auditLogRepository.log(any(), any(), any(), "DELETE", "300", any(), "SUCCESS") 
         }
     }
 
@@ -71,7 +71,7 @@ class ConditionRepositoryTest {
 
     @Test
     fun PHT_01_insertConditionPhoto() = runTest {
-        val photo = createSamplePhoto("p1", "c1")
+        val photo = createSamplePhoto()
         repository.insertConditionPhoto(photo, "F", "O")
 
         coVerify { conditionPhotoDao.insert(any()) }
@@ -100,7 +100,7 @@ class ConditionRepositoryTest {
 
     // endregion
 
-    private fun createSampleRecord(id: String) = ConditionAtVisit(
+    private fun createSampleRecord(id: String = "100") = ConditionAtVisit(
         id = id,
         personId = "u1",
         title = "Title",
@@ -109,9 +109,9 @@ class ConditionRepositoryTest {
         recordTime = Instant.now()
     )
 
-    private fun createSamplePhoto(id: String, conditionId: String) = ConditionPhoto(
-        id = id,
-        conditionId = conditionId,
+    private fun createSamplePhoto() = ConditionPhoto(
+        id = "p1",
+        conditionId = "c1",
         personId = "u1",
         photoFileName = "img.jpg",
         thumbnailFileName = "thumb.jpg",

@@ -22,7 +22,7 @@ class ConditionRepository(
     private val context: Context,
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
-    private val auditLogRepository: AuditLogRepository? = null
+    private val auditLogRepository: AuditLogRepository? = null,
 ) {
     /**
      * 特定の利用者の所見メモ一覧を Flow で取得します。
@@ -278,7 +278,7 @@ class ConditionRepository(
         val result = ImageUtils.processAndSaveImage(context, uri)
         
         // 元の一時ファイルを削除
-        if (uri.scheme == "file" || uri.scheme == "content") {
+        if ((uri.scheme == "file") || (uri.scheme == "content")) {
             try {
                 context.contentResolver.delete(uri, null, null)
             } catch (_: Exception) {
@@ -305,13 +305,6 @@ class ConditionRepository(
      */
     fun getPhotoPhysicalFiles(): List<File> {
         return ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
-    }
-
-    /**
-     * 全ての写真ファイルを物理削除します（システムメンテナンス用）。
-     */
-    suspend fun clearAllPhotoFiles() {
-        ImageUtils.clearPhotosDir(context)
     }
 
     /**

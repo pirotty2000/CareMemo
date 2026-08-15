@@ -22,7 +22,6 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
@@ -201,7 +200,7 @@ fun PersonConditionScreen(
             onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onAddPhotoClick = {
                 try {
-                    val uri = ImageUtils.getTempPhotoUri(context)
+                    val uri = conditionViewModel.getTempPhotoUri()
                     tempPhotoUri = uri
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
@@ -252,7 +251,7 @@ fun PersonConditionScreen(
             // カメラ
             onAddPhotoClick = {
                 try {
-                    val uri = ImageUtils.getTempPhotoUri(context)
+                    val uri = conditionViewModel.getTempPhotoUri()
                     tempPhotoUri = uri
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
@@ -386,7 +385,7 @@ fun PersonConditionScreen(
                     onCancelEdit = { conditionViewModel.cancelEditSession() },
                     onAddPhotoClick = {
                         try {
-                            val uri = ImageUtils.getTempPhotoUri(context)
+                            val uri = conditionViewModel.getTempPhotoUri()
                             tempPhotoUri = uri
                             conditionViewModel.setLockBypassEnabled(true)
                             cameraLauncher.launch(uri)

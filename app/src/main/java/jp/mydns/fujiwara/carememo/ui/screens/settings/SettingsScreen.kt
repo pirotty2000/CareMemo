@@ -153,7 +153,12 @@ fun SettingsScreen(
                     is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
                         performBack()
                     }
-                    else -> {}
+                    is BaseUiStateViewModel.UiEvent.ShowSnackbar -> {
+                        snackbarHostState.showSnackbar(event.message)
+                    }
+                    is BaseUiStateViewModel.UiEvent.ShowOverwriteConfirm -> {
+                        // 設定画面では上書き確認は使用しない
+                    }
                 }
             }
         }
@@ -175,7 +180,6 @@ fun SettingsScreen(
                     SettingsViewEvent.NavigateBack -> {
                         performBack()
                     }
-                    else -> {}
                 }
             }
         }

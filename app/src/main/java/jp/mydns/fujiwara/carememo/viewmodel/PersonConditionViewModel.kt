@@ -499,6 +499,13 @@ class PersonConditionViewModel(
         showError(message)
     }
 
+    /**
+     * カメラ撮影用の一時URIを取得します。
+     */
+    fun getTempPhotoUri(): Uri {
+        return conditionRepository.getTempPhotoUri()
+    }
+
     suspend fun getAllPhotosForPerson(): List<ConditionPhoto> {
         return conditionRepository.getAllPhotosByPersonId(requiredPersonId)
     }

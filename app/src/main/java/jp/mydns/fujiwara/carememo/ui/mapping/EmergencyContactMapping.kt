@@ -50,7 +50,7 @@ object EmergencyContactMapping {
 
         val digits = number.filter { it.isDigit() }
 
-        return when (val len = digits.length) {
+        return when (digits.length) {
             11 ->  // 携帯・IP電話等 (3-4-4)
                 "${digits.take(3)}-${digits.substring(3, 7)}-${digits.takeLast(4)}"
             10 ->
