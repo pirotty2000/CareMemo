@@ -1,41 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
-/**
- * Screen : PersonHealthScreenContent
- *
- * 【画面名】：
- * 利用者健康記録画面（共通コンテンツレイアウト）
- *
- * 【役割】：
- * 健康記録（身長・体重、バイタル、血糖値・HbA1c）において、Phone版とTablet版で共通して使用される表示・入力ロジックの基盤を提供する。
- * デバイスの形状（1カラム/2カラム）に応じた動的なレイアウト切り替えを担当する。
- *
- * 【主な機能】：
- * ・マルチレイアウト制御（Phone版のタブ切り替え型とTablet版の2カラム固定型を1つのコンポーネントで管理）
- * ・履歴リスト表示（PersonHistoryListを用いた時系列データの描画とスワイプ削除の統合）
- * ・詳細入力・編集（HealthRecordDetailPaneによるカテゴリ別の入力フォーム表示）
- * ・統計グラフ表示（HealthGraphViewによるデータの可視化と拡大表示連携）
- *
- * 【遷移】：
- * なし（親画面である PersonHealthScreenPhone/Tablet が制御）
- *
- * 【使用するViewModel】：
- * なし（Stateless化済み。親からラムダ経由で操作を実行）
- *
- * 【使用するComponents】：
- * ・health/HealthGraphView.kt
- * ・health/HealthRecordDetailPane (PersonHealthComponents.kt)
- * ・health/PersonHistoryList (PersonHealthComponents.kt)
- * ・base/LoadingScreen.kt
- * ・base/VerticalScrollIndicator.kt
- *
- * 【備考】：
- * このコンポーネントをStatelessに保つことで、Phone/Tabletの両レイアウトでのプレビュー表示とロジックの共通化を両立している。
- *
- * ---
- * 最終更新日: 2026/07/20 (UUID対応)
- */
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -65,25 +29,31 @@ import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
 /**
- * 全体像
- *   ★ PersonHealthScreenContent
- *    ├─【左側 / 上部】
- *    │   └─ ui/components/common/HistoryComponents.kt の PersonHistoryList
- *    │     └─ [1] ui/components/health/PersonHealthComponents.kt の HealthHistoryItemBody (履歴1行分の要約)
- *    │          ├─ [1-1] HeightWeightRecordItemContent (身長・体重の要約)
- *    │          ├─ [1-2] VitalRecordItemContent (バイタルの要約)
- *    │          │    └─ [1-2-1] VitalStatusIndicator
- *    │          └─ [1-3] GlucoseRecordItemContent (血糖値の要約)
- *    └─【右側 / 詳細】
- *         └─ [2] ui/components/health/PersonHealthComponents.kt の HealthRecordDetailPane (詳細・編集パネル)
- *              ├─ [2-1] HealthRecordEditForm (入力フォーム)
- *              └─ [2-2] HealthRecordDisplayCard (閲覧用カード)
- *                   └─ [2-2-1] HealthDetailContent (カテゴリ分岐)
- *                       ├── [2-2-1-1] HeightWeightDetailContent x DetailRow
- *                       ├── [2-2-1-2] VitalDetailContent x DetailRow
- *                       └── [2-2-1-3] GlucoseDetailContent x DetailRow
- **/
-
+ * Screen：PersonHealthScreenContent
+ *
+ * 【役割】
+ * 健康記録ドメインにおいて、Phone 版と Tablet 版で共通して使用される「履歴リスト」と「詳細・グラフペイン」のレイアウト基盤を提供します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト対応：画面幅（isExpanded）に応じた 1 カラム / 2 カラム構成の動的な切り替え。
+ * ・履歴・グラフ切り替え：Phone版における SegmentedButton を使用した表示モード制御。
+ * ・履歴リスト表示：`PersonHistoryList` を用いた時系列データの描画とスワイプ削除。
+ * ・詳細表示・編集：`HealthRecordDetailPane` による各指標（バイタル、血糖等）の入力・閲覧。
+ * ・統計グラフ表示：`HealthGraphView` によるデータの可視化。
+ *
+ * 【全体像：レイアウト構成（Health Layout）】
+ *
+ * ■ PersonHealthScreenContent (★本コンポーネント)
+ * │
+ * ├─ [ Phone版 ] (Column 構成：トグル制御)
+ * │    ├─ SegmentedButton (履歴 ↔ グラフ 切り替え)
+ * │    └─ Box (コンテンツ：HistoryList または HealthGraphView)
+ * │         └─ 編集時は HealthRecordDetailPane が最前面へ
+ * │
+ * └─ [ Tablet版 ] (Row 構成：2ペイン固定)
+ *      ├─ 左側 (weight 1)：HistoryList (履歴リスト)
+ *      └─ 右側 (weight 1.5)：HealthGraphView (グラフ) または HealthRecordDetailPane (詳細)
+ */
 @Composable
 fun PersonHealthScreenContent(
     isExpanded: Boolean,

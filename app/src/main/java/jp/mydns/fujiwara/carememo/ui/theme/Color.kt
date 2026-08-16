@@ -2,6 +2,14 @@ package jp.mydns.fujiwara.carememo.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Component：Colors
+ *
+ * 【役割】
+ * アプリケーションで使用する基本的なカラーリソース（16進数定義）を集約するファイルです。
+ * `Theme.kt` における `ColorScheme` 構築のソースとして使用されます。
+ */
+
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)

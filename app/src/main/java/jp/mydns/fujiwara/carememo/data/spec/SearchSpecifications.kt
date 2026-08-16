@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.data.spec
 
 /**
- * 検索・インデックスに関する仕様定義
+ * Spec：SearchSpecifications
+ *
+ * 【役割】
+ * 利用者一覧の五十音インデックスバーで使用する各行（あ、か、さ...）の定義を管理します。
  */
 object SearchSpecifications {
     /** 利用者一覧の五十音インデックス定義 */

@@ -38,6 +38,19 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 
 /**
+ * 全体像：カテゴリ記録状況バッジ（Category Badges）
+ *
+ * ■ UserListItem (利用者カード)
+ * │
+ * └─ [1] CategoryBadges (★本コンポーネント：2x2+1 グリッド)
+ *      ├─ BadgeChar (身：身長体重)
+ *      ├─ BadgeChar (バ：バイタル)
+ *      ├─ BadgeChar (糖：血糖・HbA1c)
+ *      ├─ BadgeChar (メ：所見メモ)
+ *      └─ BadgeChar (薬：服薬管理)
+ */
+
+/**
  * カテゴリバッジ一覧を表示するコンポーネント。
  *
  * @param summary 各カテゴリの記録有無を保持するサマリーデータ

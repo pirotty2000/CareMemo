@@ -26,23 +26,34 @@ import kotlin.time.Duration.Companion.milliseconds
  * CareMemo アプリ全体の ViewModel における「状態管理」と「実行制御」の共通基盤を提供します。
  * MVI (Model-View-Intent) アーキテクチャの思想を取り入れ、単一の UiState と型安全なイベント通知を実現します。
  *
- * 【主要な機能】
- * ・UiState (S): 画面のすべての状態を一つのデータクラスで一元管理し、原子的な更新を保証。
- * ・ViewEvent (E): ナビゲーションやアニメーション開始等の「一過性のイベント」を画面固有の型で通知。
- * ・UiEvent: ダイアログ表示やスナックバー等の「全画面共通の通知」を標準化。
- * ・safeLaunch / safeCollect: 例外ハンドリング、監査ログ記録、ローディング表示を自動化するコルーチン制御。
- * ・共通設定の自動提供: 氏名のマスキング設定やデフォルト記録者名など、全画面で必要となる設定を保持。
+ * 【設計指針：レイヤー責務】
+ * 1. 状態の一元管理：`updateUiState` (MutableStateFlow.update) を通じてのみ状態を変更し、
+ *    スレッドセーフかつ原子的な更新を保証します。
+ * 2. 非同期制御の標準化：`safeLaunch` および `safeCollect` により、例外ハンドリング、監査ログ、
+ *    ローディング表示のボイラープレートを排除し、堅牢な非同期処理を強制します。
+ * 3. UI/プラットフォーム非依存：本クラスは Compose UI や Android Context に依存せず、
+ *    純粋な状態管理と制御ロジックに専念します。
+ */
+
+/**
+ * 全体像：ViewModel 階層構造（Inheritance）
  *
- * 【依存している Repository】
- * ・UserSettingsRepository: ユーザー設定（マスキング、ロック設定、デフォルト記録者等）の取得と管理。
- *
- * 【設計指針】
- * 1. 原子性の確保：`updateUiState` (update + copy) を通じてのみ状態を変更し、一時的な矛盾した状態の露出を防ぐ。
- * 2. 堅牢性：`safeLaunch` 内での例外は `CoroutineErrorHandler` に集約し、適切なダイアログ通知と監査ログ記録を完遂する。
- * 3. 責任の分離：計算ロジックは Logic クラスへ、データの出し入れは Repository へ委譲し、本クラスはそれらの「制御と通知」に専念する。
- *
- * @param S UI状態を表すデータクラス (Data Class)
- * @param E 画面固有の一過性イベントの型 (Sealed Interface 推奨)
+ * ViewModel (androidx.lifecycle.ViewModel)
+ * └─ [1] BaseUiStateViewModel<S, E> (★本クラス：共通基盤)
+ *      ├─ PersonListViewModel (利用者一覧)
+ *      ├─ PersonEditViewModel (利用者登録・編集)
+ *      ├─ EmergencyContactEditViewModel (緊急連絡先管理)
+ *      ├─ SettingsViewModel (設定・保守)
+ *      ├─ AuditLogViewModel (操作ログ参照)
+ *      ├─ DeleteOrRestorePersonViewModel (利用修了者管理)
+ *      ├─ UnassignedPhotoViewModel (未割り当て写真確認)
+ *      │
+ *      └─ [2] PersonBaseUiStateViewModel<S, E> (利用者コンテキスト同期基盤)
+ *           ├─ PersonDetailUiStateViewModel (詳細画面共通：ヘッダー、カテゴリ管理)
+ *           ├─ PersonHealthViewModel (専門：健康記録)
+ *           ├─ PersonConditionViewModel (専門：所見メモ)
+ *           ├─ PersonMedicationViewModel (専門：服薬管理)
+ *           └─ BatchInputViewModel (専門：一括入力)
  */
 abstract class BaseUiStateViewModel<S, E>(
     protected val userSettingsRepository: UserSettingsRepository,
@@ -187,8 +198,8 @@ abstract class BaseUiStateViewModel<S, E>(
         block: suspend CoroutineScope.() -> Unit
     ): Job {
         // featureName が未初期化(null)の場合は安全なデフォルト値を使用する
-        val safeFeatureName = try { featureName } catch (e: Exception) { "Unknown" }
-        val context = ErrorContextBuilder(safeFeatureName ?: "Unknown", operation)
+        val safeFeatureName = try { featureName } catch (_: Exception) { "Unknown" }
+        val context = ErrorContextBuilder(safeFeatureName, operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
 
@@ -234,8 +245,8 @@ abstract class BaseUiStateViewModel<S, E>(
         flowProvider: () -> Flow<T>,
         action: suspend (T) -> Unit
     ): Job {
-        val safeFeatureName = try { featureName } catch (e: Exception) { "Unknown" }
-        val context = ErrorContextBuilder(safeFeatureName ?: "Unknown", operation)
+        val safeFeatureName = try { featureName } catch (_: Exception) { "Unknown" }
+        val context = ErrorContextBuilder(safeFeatureName, operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
 

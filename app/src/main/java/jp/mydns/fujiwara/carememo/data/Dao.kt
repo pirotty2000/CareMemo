@@ -155,7 +155,7 @@ interface HeightAndWeightDao {
         LEFT JOIN person_db p ON h.person_id = p.id
         WHERE p.id IS NULL
     """)
-    suspend fun getOrphanedRecords(): List<HeightAndWeight>
+    suspend fun getUnassignedRecords(): List<HeightAndWeight>
 
     /** 特定の利用者に有効なデータが存在するか判定 */
     @Query("SELECT EXISTS(SELECT 1 FROM height_and_weight_db WHERE person_id = :personId AND deleted_at IS NULL)")
@@ -205,7 +205,7 @@ interface BpAndPulseDao {
         LEFT JOIN person_db p ON b.person_id = p.id
         WHERE p.id IS NULL
     """)
-    suspend fun getOrphanedRecords(): List<BpAndPulse>
+    suspend fun getUnassignedRecords(): List<BpAndPulse>
 
     @Query("SELECT EXISTS(SELECT 1 FROM bp_and_pulse_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: String): Flow<Boolean>
@@ -253,7 +253,7 @@ interface GlucoseAndHbA1cDao {
         LEFT JOIN person_db p ON g.person_id = p.id
         WHERE p.id IS NULL
     """)
-    suspend fun getOrphanedRecords(): List<GlucoseAndHbA1c>
+    suspend fun getUnassignedRecords(): List<GlucoseAndHbA1c>
 
     @Query("SELECT EXISTS(SELECT 1 FROM glucose_and_hba1c_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: String): Flow<Boolean>
@@ -301,7 +301,7 @@ interface ConditionAtVisitDao {
         LEFT JOIN person_db p ON c.person_id = p.id
         WHERE p.id IS NULL
     """)
-    suspend fun getOrphanedRecords(): List<ConditionAtVisit>
+    suspend fun getUnassignedRecords(): List<ConditionAtVisit>
 
     /** タイトルまたは本文のキーワードによる利用者IDの検索（利用者一覧の絞り込みに使用） */
     @Query("""
@@ -375,7 +375,7 @@ interface ConditionPhotoDao {
         LEFT JOIN condition_at_visit_db c ON cp.condition_id = c.id
         WHERE c.id IS NULL
     """)
-    suspend fun getOrphanedPhotos(): List<ConditionPhoto>
+    suspend fun getUnassignedPhotos(): List<ConditionPhoto>
 }
 
 /**
@@ -418,7 +418,7 @@ interface MedicationRecordDao {
         LEFT JOIN person_db p ON m.person_id = p.id
         WHERE p.id IS NULL
     """)
-    suspend fun getOrphanedRecords(): List<MedicationRecord>
+    suspend fun getUnassignedRecords(): List<MedicationRecord>
 
     @Query("SELECT EXISTS(SELECT 1 FROM medication_record_db WHERE person_id = :personId AND deleted_at IS NULL)")
     fun hasDataForPerson(personId: String): Flow<Boolean>
@@ -515,7 +515,7 @@ interface EmergencyContactDao {
         LEFT JOIN person_db p ON e.person_id = p.id
         WHERE p.id IS NULL
     """)
-    suspend fun getOrphanedRecords(): List<EmergencyContact>
+    suspend fun getUnassignedRecords(): List<EmergencyContact>
 
     @Query("DELETE FROM emergency_contact_db WHERE id = :id")
     suspend fun deleteById(id: String)

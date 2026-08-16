@@ -1,15 +1,17 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import java.time.Instant
 
 /**
  * 健康記録の各カテゴリ（身長体重、バイタル、血糖値等）固有の処理を抽象化するインターフェース。
  * 
- * バリデーション、Entity生成、重複チェック、および表示用名称の解決をカプセル化し、
- * ViewModel や Logic 層における条件分岐の排除を実現します。
+ * 【設計指針：レイヤー責務と課題】
+ * 1. 条件分岐の排除：バリデーション、Entity生成、表示用名称の解決をカプセル化し、上位レイヤーでの if/else を抑制します。
+ * 2. アーキテクチャ境界の違反（注意）: 現状、本インターフェースおよび実装クラスが `HealthRepository` 
+ *    に直接依存し、保存・削除（副作用）を実行しています。これは Dependency Matrix 違反（Logic -> Repository）
+ *    であり、将来的に副作用を ViewModel へ押し出すリファクタリングが推奨されます。
  */
 interface HealthCategoryProcessor {
     /** 処理対象の一括入力用カテゴリ */
@@ -41,13 +43,4 @@ interface HealthCategoryProcessor {
 
     /** Entity オブジェクトの数値範囲バリデーションを実行します。 */
     fun validateEntity(entity: Any): Boolean
-
-    /** 指定された日時における既存データを検索します（重複チェック用）。 */
-    suspend fun findExisting(repository: HealthRepository, personId: String, time: Instant): Any?
-
-    /** エンティティを保存します。 */
-    suspend fun save(repository: HealthRepository, record: Any, featureName: String, operation: String, isUpdate: Boolean): String
-
-    /** エンティティを削除します。 */
-    suspend fun delete(repository: HealthRepository, record: Any, featureName: String, operation: String)
 }

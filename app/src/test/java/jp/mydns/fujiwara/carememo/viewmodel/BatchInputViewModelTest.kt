@@ -9,6 +9,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Logic Test: BatchInputViewModel
@@ -58,6 +60,7 @@ class BatchInputViewModelTest {
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
         coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
         coEvery { healthRepository.findGlucoseAndHbA1cAtTime(any(), any()) } returns null
+        coEvery { healthRepository.findHistoryRecordAtTime(any(), any(), any()) } returns null
     }
 
     @After
@@ -134,10 +137,15 @@ class BatchInputViewModelTest {
         val nextYear = (currentYear.toInt() + 1).toString()
         viewModel.updateYear(nextYear)
         
-        assertTrue(viewModel.uiState.value.isChanged)
-        assertEquals(nextYear, viewModel.uiState.value.year)
-        // Verify recordTime also updated (and is non-null because the rest of the fields are valid)
-        assertNotNull(viewModel.uiState.value.recordTime)
+        val state = viewModel.uiState.value
+        assertTrue("State should be marked as changed after year update", state.isChanged)
+        assertEquals(nextYear, state.year)
+        // B-2: Verify recordTime is calculated and held as a val property
+        assertNotNull("recordTime should be non-null after valid year update", state.recordTime)
+        
+        // Invalid date test
+        viewModel.updateDay("32")
+        assertNull("recordTime should be null for invalid date", viewModel.uiState.value.recordTime)
     }
 
     // endregion
@@ -181,7 +189,7 @@ class BatchInputViewModelTest {
 
         viewModel.updateWeight("60")
         // Simulate duplicate
-        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns mockk<HeightAndWeight>()
+        coEvery { healthRepository.findHistoryRecordAtTime(any(), any(), any()) } returns mockk<HeightAndWeight>()
 
         viewModel.saveBatch()
         advanceUntilIdle()
@@ -207,6 +215,49 @@ class BatchInputViewModelTest {
         coVerify {
             auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("DB Error") }, "OTHER_ERROR")
         }
+    }
+
+    @Test
+    fun SAV_06_saveBatch_doubleClickPrevention() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("60")
+
+        // Mock repository with delay
+        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } coAnswers {
+            delay(1000.milliseconds)
+        }
+
+        // Call saveBatch twice
+        viewModel.saveBatch()
+        viewModel.saveBatch()
+
+        advanceUntilIdle()
+
+        // Verify repository was called ONLY once
+        coVerify(exactly = 1) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+    }
+
+    @Test
+    fun SAV_07_saveBatch_failure_dataRetention() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateWeight("60")
+        val originalState = viewModel.uiState.value
+
+        // Mock repository with exception
+        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
+
+        viewModel.saveBatch()
+        advanceUntilIdle()
+
+        // Verify that data is STILL there
+        assertEquals("60", viewModel.uiState.value.weight)
+        assertTrue(viewModel.uiState.value.isChanged)
+        // Check that initial values (which determine isChanged) were NOT updated to current
+        assertEquals(originalState.initialYear, viewModel.uiState.value.initialYear)
     }
 
     // endregion

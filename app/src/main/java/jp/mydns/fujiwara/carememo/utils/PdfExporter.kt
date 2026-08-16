@@ -13,6 +13,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.AppSpecifications.Export
 import jp.mydns.fujiwara.carememo.logic.common.HealthAlertLevel.*
 import jp.mydns.fujiwara.carememo.ui.components.common.ExportOrder
 import jp.mydns.fujiwara.carememo.ui.mapping.HealthDisplayMapper
@@ -37,13 +38,39 @@ import kotlin.math.ceil
 import kotlin.math.floor
 
 /**
- * アプリ内の各種データをA4サイズのPDFとして出力・共有するためのユーティリティ。
+ * Utility：PdfExporter
+ *
+ * 【役割】
+ * アプリ内の健康記録、所見メモ、服薬状況を A4 サイズの PDF 帳票として生成・共有するためのユーティリティです。
+ * Canvas 描画を用いた精密なレイアウト制御と、PDFBox によるセキュアな暗号化（パスワード保護）を提供します。
+ *
+ * 【主な機能】
+ * ・帳票生成：カテゴリに応じたグラフ（推移図）および一覧テーブルの自動レイアウト描画。
+ * ・改ページ制御：`ensureSpace` によるコンテンツの途切れ防止と動的なページ追加。
+ * ・パスワード保護：標準保護ポリシーに基づく、閲覧制限付き PDF の作成。
+ * ・共有連携：FileProvider を介した、メールや SNS 等への外部アプリ共有インテントの起動。
+ * ・フィルタリング：指定された期間・順序に基づく出力対象データの絞り込み。
+ *
+ * 【全体像：PDF 出力フロー】
+ *
+ * [ 前処理 ] データのフィルタリング・ソート ➔ キャッシュ掃除
+ * ↓
+ * [ページ管理：PdfPageContext]
+ *  ├─ ヘッダー描画 (利用者名、出力日等)
+ *  ├─ コンテンツ描画 (DrawHealth / Condition / Medication)
+ *  │    └─ 改ページ判定 (currentY + neededHeight > 限界値)
+ *  └─ フッター描画 (ページ番号)
+ * ↓
+ * [ 後処理 ] 一時ファイル書き出し ➔ パスワード暗号化 ➔ 共有開始
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際のデータの永続化（一時的なキャッシュ保存のみ）。
  */
 object PdfExporter {
-    private val layoutSpec = AppSpecifications.Export.Pdf.Layout
-    private val styleSpec = AppSpecifications.Export.Pdf.Style
-    private val colorSpec = AppSpecifications.Export.Pdf.Colors
-    private val tableSpec = AppSpecifications.Export.Pdf.TableConfig
+    private val layoutSpec = Export.Pdf.Layout
+    private val styleSpec = Export.Pdf.Style
+    private val colorSpec = Export.Pdf.Colors
+    private val tableSpec = Export.Pdf.TableConfig
 
     /**
      * PDF作成時の描画コンテキストを保持する内部クラス。
@@ -277,7 +304,7 @@ object PdfExporter {
         val linePaint = Paint().apply { color = colorSpec.TABLE_LINE; strokeWidth = 0.5f; style = Paint.Style.STROKE }
 
         // ステータス記号
-        val medColors = AppSpecifications.Export.Pdf.Colors.Medication
+        val medColors = Export.Pdf.Colors.Medication
         val statusPaints = mapOf(
             AppSpecifications.Medication.Status.CODE_TAKEN to Paint().apply { color = medColors.STATUS_TAKEN; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
             AppSpecifications.Medication.Status.CODE_ASSIST to Paint().apply { color = medColors.STATUS_ASSIST; textSize = styleSpec.FONT_SIZE_MED_STATUS; isFakeBoldText = true; isAntiAlias = true; textAlign = Paint.Align.CENTER },
@@ -295,9 +322,9 @@ object PdfExporter {
             pageContext.context.getString(R.string.slot_dinner),
             pageContext.context.getString(R.string.slot_bedtime)
         )
-        val labelWidth = AppSpecifications.Export.Pdf.TableConfig.Medication.LABEL_WIDTH
+        val labelWidth = Export.Pdf.TableConfig.Medication.LABEL_WIDTH
         val colWidth = (layoutSpec.PAGE_WIDTH - layoutSpec.MARGIN * 2 - labelWidth) / 31f
-        val rowHeight = AppSpecifications.Export.Pdf.TableConfig.Medication.ROW_HEIGHT
+        val rowHeight = Export.Pdf.TableConfig.Medication.ROW_HEIGHT
         val slotCount = AppSpecifications.Medication.TimeSlot.COUNT
         val totalRows = 2 + slotCount
         val tableHeight = rowHeight * totalRows + 40f
@@ -373,7 +400,7 @@ object PdfExporter {
 
     // 「身長・体重」
     private fun drawHeightAndWeightTable(ctx: PdfPageContext, records: List<HeightAndWeight>) {
-        val hwSpec = AppSpecifications.Export.Pdf.TableConfig.HeightWeight
+        val hwSpec = Export.Pdf.TableConfig.HeightWeight
         val columns = listOf(
             TableColumn<HeightAndWeight>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
@@ -403,7 +430,7 @@ object PdfExporter {
 
     // 「バイタル」
     private fun drawBpAndPulseTable(ctx: PdfPageContext, records: List<BpAndPulse>) {
-        val bpSpec = AppSpecifications.Export.Pdf.TableConfig.BpPulse
+        val bpSpec = Export.Pdf.TableConfig.BpPulse
         val columns = listOf(
             TableColumn<BpAndPulse>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"
@@ -428,7 +455,7 @@ object PdfExporter {
 
     // 「血糖値・HbA1c」
     private fun drawGlucoseAndHbA1cTable(ctx: PdfPageContext, records: List<GlucoseAndHbA1c>) {
-        val glSpec = AppSpecifications.Export.Pdf.TableConfig.Glucose
+        val glSpec = Export.Pdf.TableConfig.Glucose
         val columns = listOf(
             TableColumn<GlucoseAndHbA1c>(ctx.context.getString(R.string.common_date_label), tableSpec.DATE_COL_WIDTH) { rec, _ ->
                 "${formatDateShort(rec.recordTime)} ${formatTime(rec.recordTime)}"

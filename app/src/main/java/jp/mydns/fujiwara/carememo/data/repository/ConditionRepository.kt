@@ -1,7 +1,11 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
+import android.net.Uri
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 import java.time.Instant
 
 /**
@@ -9,23 +13,16 @@ import java.time.Instant
  *
  * 【役割】
  * 利用者の「所見メモ（カテゴリB）」およびそれに紐付く「写真データ」の永続化管理を担当します。
- * データベースへのアクセス（DAO）と操作履歴の記録（AuditLogRepository）を統合したインターフェースを提供します。
  *
- * 【主な機能】
- * ・所見メモの CRUD 操作、および同一日時レコードの検索。
- * ・写真メタデータの管理（一時保存写真の紐付け、迷子写真の救済登録を含む）。
- * ・キーワードによる所見内容の検索と、該当する利用者IDの抽出。
- * ・データ操作に応じた監査ログの自動生成。
- *
- * 【設計指針】
- * 1. 透明性：すべてのデータ変更操作（挿入・更新・削除）に対して、監査ログの詳細出力を試行する。
- * 2. 整合性：写真の追加時には親レコードとの紐付け状態を適切に管理し、孤立データの発生を最小限に抑える。
- * 3. 同期対応：保存時には `updatedAt` の自動更新と `isSynced = false` の設定を行い、外部同期に備える。
+ * 【設計指針：レイヤー責務】
+ * 1. データアクセス専念：DB 操作に特化し、写真の未割り当て判定や救済ロジックなどの複雑な判断は Logic レイヤーへ委譲します。
+ * 2. 依存方向の遵守：下位レイヤーとして、上位の Logic レイヤーに依存しない構成を維持します。
  */
 class ConditionRepository(
+    private val context: Context,
     private val conditionAtVisitDao: ConditionAtVisitDao,
     private val conditionPhotoDao: ConditionPhotoDao,
-    private val auditLogRepository: AuditLogRepository? = null
+    private val auditLogRepository: AuditLogRepository? = null,
 ) {
     /**
      * 特定の利用者の所見メモ一覧を Flow で取得します。
@@ -153,7 +150,7 @@ class ConditionRepository(
     }
 
     /**
-     * 特定の写真を既存の所見メモに紐付け直します（迷子写真の再登録用）。
+     * 特定の写真を既存の所見メモに紐付け直します（未割り当て写真の再登録用）。
      *
      * @param photoId 対象の写真ID
      * @param conditionId 紐付け先の所見メモID
@@ -174,7 +171,7 @@ class ConditionRepository(
     }
 
     /**
-     * 物理ファイルのみ存在していた写真を、特定の利用者の記録として登録します（迷子写真の救済）。
+     * 物理ファイルのみ存在していた写真を、特定の利用者の記録として登録します（未割り当て写真の救済）。
      *
      * @param personId 利用者ID
      * @param conditionId 所見メモID
@@ -208,7 +205,7 @@ class ConditionRepository(
             tableName = "condition_photo_db",
             actionType = "INSERT",
             affectedId = photo.id,
-            details = "Adopted orphaned file: $photoFileName into person: $personId",
+            details = "Adopted unassigned file: $photoFileName into person: $personId",
             resultType = "SUCCESS"
         )
     }
@@ -267,4 +264,55 @@ class ConditionRepository(
     suspend fun getAllConditionPhotosRaw(): List<ConditionPhoto> = conditionPhotoDao.getAllRaw()
     /** 保存されているすべての所見メモのIDセットを取得します。 */
     suspend fun getAllConditionAtVisitIds(): Set<String> = conditionAtVisitDao.getAllIds().toSet()
+
+    // --- 物理ファイル操作 (ViewModel からの委譲) ---
+
+    /**
+     * 所見に関連する写真を処理して保存します（物理ファイル保存）。
+     * 保存後、元の一時ファイル（Uri）を削除します。
+     *
+     * @param uri 入力画像のUri
+     * @return 保存されたメイン画像とサムネイルのファイル名のペア
+     */
+    suspend fun processAndSavePhoto(uri: Uri): Pair<String, String> {
+        val result = ImageUtils.processAndSaveImage(context, uri)
+        
+        // 元の一時ファイルを削除
+        if ((uri.scheme == "file") || (uri.scheme == "content")) {
+            try {
+                context.contentResolver.delete(uri, null, null)
+            } catch (_: Exception) {
+                // 削除失敗は致命的ではないため無視
+            }
+        }
+        return result
+    }
+
+    /**
+     * 写真の物理ファイルを削除します。
+     *
+     * @param photoFileName メイン画像ファイル名
+     * @param thumbnailFileName サムネイル画像ファイル名
+     */
+    suspend fun deletePhotoFiles(photoFileName: String?, thumbnailFileName: String?) {
+        ImageUtils.deleteImageFiles(context, photoFileName, thumbnailFileName)
+    }
+
+    /**
+     * 未割り当て写真のスキャンのために、物理ファイル一覧を取得します。
+     *
+     * @return 写真ディレクトリ内のファイルリスト
+     */
+    fun getPhotoPhysicalFiles(): List<File> {
+        return ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
+    }
+
+    /**
+     * カメラ撮影用の一時URIを取得します。
+     *
+     * @return FileProvider 経由の Uri
+     */
+    fun getTempPhotoUri(): Uri {
+        return ImageUtils.getTempPhotoUri(context)
+    }
 }

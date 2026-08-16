@@ -19,7 +19,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
-import jp.mydns.fujiwara.carememo.logic.feature.PhoneNumberVisualTransformation
+import jp.mydns.fujiwara.carememo.ui.utils.PhoneNumberVisualTransformation
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -28,8 +28,17 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 
 /**
- * 緊急連絡先の登録・編集画面 (SCR-M-003 内のサブ機能)
- * ViewModel との接続を担当する Stateful な Composable。
+ * Screen：EmergencyContactEditScreen
+ *
+ * 【役割】
+ * 緊急連絡先（SCR-M-004）の新規登録および既存情報の修正を行うための独立した画面です。
+ * 施設種別（医師・家族等）、名称、電話番号、および優先順位の入力を担当します。
+ *
+ * 【主な機能】
+ * ・入力フォーム：`AppTextField` およびドロップダウンを用いた連絡先情報の編集。
+ * ・バリデーション連携：ViewModel からの `isValid` 状態に基づいた保存ボタンの制御。
+ * ・書式整形：`PhoneNumberVisualTransformation` を用いた電話番号の読みやすい表示。
+ * ・破棄保護：未保存での離脱時に `AppDialog` による変更破棄の確認。
  */
 @Composable
 fun EmergencyContactEditScreen(
@@ -149,7 +158,7 @@ fun EmergencyContactEditContent(
                     label = { Text(stringResource(R.string.medical_contact_person_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PERSON_NAME,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PersonField")
                 )
 
                 // 電話番号
@@ -183,7 +192,7 @@ fun EmergencyContactEditContent(
                     type = AppTextFieldType.INTEGER,
                     label = { Text(stringResource(R.string.medical_contact_priority_label)) },
                     maxLength = 2,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PriorityField")
                 )
 
                 Spacer(modifier = Modifier.weight(1f))

@@ -24,7 +24,38 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
- * 利用者服薬記録画面
+ * Screen：PersonMedicationScreen
+ *
+ * 【役割】
+ * 利用者の服薬記録（カテゴリC）画面のエントリポイントとなる最上位 Screen コンポーネントです。
+ * デバイスの形状（Phone/Tablet）に応じたレイアウトの振り分け、共通ダイアログの制御、
+ * および ViewModel からのイベント（通知、遷移等）の購読を担当します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト制御：WindowWidthSizeClass に基づく Phone/Tablet 版の出し分け。
+ * ・イベントハンドリング：ViewModel からの通知（Snackbar, ErrorDialog 等）の UI への反映。
+ * ・入力制御：`MedicationInputDialog` を起動し、特定の日付に対する服薬状況（朝/昼/夕/寝る前）の一括保存を仲介。
+ * ・同期：詳細 ViewModel とカテゴリ別 ViewModel 間のデータ整合性維持。
+ *
+ * 【全体像：服薬管理画面階層（Medication Hierarchy）】
+ *
+ * ■ PersonMedicationScreen (★本コンポーネント：全体制御)
+ * │
+ * ├─ [ A ] PersonMedicationScreenPhone (Phone版：シングルペイン)
+ * │    └─ PersonMedicationScreenContent (カレンダー・履歴トグル)
+ * │         ├─ CalendarGrid (ui/components/medication/)
+ * │         └─ MedicationHistoryTable (ui/components/medication/)
+ * │
+ * ├─ [ B ] PersonMedicationScreenTablet (Tablet版：2ペイン固定)
+ * │    └─ PersonMedicationScreenContent (カレンダー ＋ 履歴並列表示)
+ * │
+ * └─ [ 共通ダイアログ ]
+ *      ├─ MedicationInputDialog (服薬状況入力：ui/components/medication/)
+ *      ├─ PdfExportActionHandler (PDF出力：ui/components/common/)
+ *      └─ AppInfoDialog (通知・エラー)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際の UI 描画（下位の ScreenPhone/Tablet または Content が担当）。
  */
 @Composable
 fun PersonMedicationScreen(

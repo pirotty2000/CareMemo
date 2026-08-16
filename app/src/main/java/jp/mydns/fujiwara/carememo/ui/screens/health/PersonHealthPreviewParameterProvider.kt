@@ -6,6 +6,15 @@ import jp.mydns.fujiwara.carememo.ui.preview.MockData
 import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import kotlinx.collections.immutable.persistentListOf
 
+/**
+ * Component：PersonHealthPreviewParameterProvider
+ *
+ * 【役割】
+ * Compose プレビューにおいて、健康記録画面（PersonHealthScreenContent 等）のテストデータを供給するためのプロバイダーです。
+ *
+ * 【主な機能】
+ * ・カテゴリ別（バイタル、血糖）、ローディング中、空状態等の主要な表示バリエーションを網羅。
+ */
 class PersonHealthPreviewParameterProvider : PreviewParameterProvider<PersonHealthPreviewState> {
     override val values: Sequence<PersonHealthPreviewState> = sequenceOf(
         PersonHealthPreviewState(

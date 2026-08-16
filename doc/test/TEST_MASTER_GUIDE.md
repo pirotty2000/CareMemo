@@ -15,15 +15,20 @@
 
 ### 2.2. 機能別ロジックテスト (Local Unit Test)
 各実装クラスと 1:1 で対応し、計算ルールやデータ変換の正確性を検証します。
-- **[Logic層](./logic/)**: 判定・計算、入力正規化等の純粋ロジック。
-- **[Mapping層](./mapping/)**: Entity ↔ UiState 間の相互変換。
-- **[Repository層](./repository/)**: DB 操作と監査ログ（AuditLog）の自動記録。
-- **[ViewModel層](./viewmodel/)**: 画面状態管理と UI Intent 処理。
-- **[Utils層](./utils/)**: 日時・画像・PDF 等の共通ユーティリティ。
+- **Logic層 (共通)**: `JapaneseDateLogic`, `PersonLogic` 等の計算・変換ロジック。
+- **Logic層 (機能)**: `SecurityLogic`, `SettingsLogic` 等の画面固有ロジック。
+- **Mapping層**: Entity ↔ UiState 間の相互変換。
+- **Repository層**: DB 操作と監査ログ（AuditLog）の自動記録。
+- **ViewModel層**: 画面状態管理と UI Intent 処理。
+- **Utils層**: 日時・画像・PDF 等の共通ユーティリティ。
 
-### 2.3. UI 表示・挙動テスト (Component & Screen Test)
+### 2.3. シナリオ・結合テスト (Scenario & Integration)
+複数の画面や機能を跨ぐ一連のユーザーフローを検証します。
+- **シナリオテスト**:[利用者詳細フロー (A/B/C 跨ぎ) 等。
+
+### 2.4. UI 表示・挙動テスト (Component & Screen Test)
 画面（Composable）が状態を正しく描画し、操作が ViewModel に伝達されるかを検証します。
-- **[Screen層](./screen/)**: Phone/Tablet 別の Adaptive レイアウト、ナビゲーション、ダイアログ制御。
+- **Screen層**: Phone/Tablet 別の Adaptive レイアウト、ナビゲーション、ダイアログ制御。
 
 ---
 
@@ -46,7 +51,7 @@
 - **親画面の責任**: 子画面への「遷移開始」操作と、正しい引数が渡されたかの検証を担当。
 - **子画面の責任**: その画面自体の「表示・操作」と、「戻る」操作による終了（PopBackStack）の検証を担当。
 
-[詳細な遷移対応表はこちら](./TEST_MASTER_GUIDE.md#付録画面遷移の親子関係)
+[詳細な遷移対応表はこちら](#付録画面遷移の親子関係テスト分担の基準)
 
 ---
 
@@ -65,4 +70,4 @@
 |                          | **ArchiveManagement**      | 利用終了者の管理         |
 
 ---
-最終更新日: 2026/08/11
+最終更新日: 2026/08/15

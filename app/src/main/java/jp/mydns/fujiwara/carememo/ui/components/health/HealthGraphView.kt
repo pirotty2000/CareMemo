@@ -21,6 +21,19 @@ package jp.mydns.fujiwara.carememo.ui.components.health
  * ・データのフィルタリングや集計（ViewModel および HealthLogic が担当）。
  */
 
+/**
+ * 全体像：健康記録グラフ表示（Health Graph View）
+ *
+ * ■ ui/screens/health/PersonHealthScreenContent.kt
+ * │
+ * └─ [1] HealthGraphView (★本コンポーネント：コンテナ)
+ *      ├─ HealthChartHelper.getChartConfig (設定と座標データの生成)
+ *      ├─ [2] GraphTitleWithHelp (タイトル・ヘルプ・拡大ボタン)
+ *      │    └─ AppDialog (目安情報の表示)
+ *      └─ [3] LineChart (グラフエンジン：ui/components/health/LineChart.kt)
+ *           └─ Canvas (折れ線、目盛り、ハイライトの描画)
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.Icons

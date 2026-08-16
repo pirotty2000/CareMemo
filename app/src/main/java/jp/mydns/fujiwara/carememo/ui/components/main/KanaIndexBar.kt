@@ -36,7 +36,20 @@ import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 
 /**
- * 五十音（カナ）インデックス選択バー
+ * 全体像：五十音インデックスバー（Kana Index Bar）
+ *
+ * ■ ui/screens/main/MainScreenContent.kt
+ * │
+ * └─ [1] KanaIndexBar (★本コンポーネント：コンテナ)
+ *      └─ LazyRow (水平スクロールリスト)
+ *           └─ items (AppSpecifications.Search.KANA_GROUPS)
+ *                └─ Box (個別のインデックスボタン)
+ *                     ├─ Text (「あ」「か」等の文字)
+ *                     └─ Box (選択中インジケータ：下線)
+ */
+
+/**
+ * 五十音（カナ）インデックス選択バーを表示します。
  *
  * @param selectedSection 現在選択されているセクション名（「全」または各行の頭文字）
  * @param onSectionSelect セクションが選択（タップ）された際のコールバック

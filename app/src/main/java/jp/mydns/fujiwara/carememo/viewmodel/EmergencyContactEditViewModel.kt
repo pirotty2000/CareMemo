@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -32,11 +33,10 @@ data class EmergencyContactUiState(
     val initialContact: EmergencyContact? = null,
     val isEditing: Boolean = false,
     val personName: String = "",
-    val isNameMaskingEnabled: Boolean = true
-) {
-    val isChanged: Boolean get() = EmergencyContactLogic.isChanged(editingContact, initialContact)
-    val isValid: Boolean get() = EmergencyContactLogic.isValid(editingContact)
-}
+    val isNameMaskingEnabled: Boolean = true,
+    val isChanged: Boolean = false,
+    val isValid: Boolean = false
+)
 
 /**
  * View Event：EmergencyContactViewEvent
@@ -49,6 +49,19 @@ sealed interface EmergencyContactViewEvent {
 
 /**
  * ViewModel：EmergencyContactEditViewModel
+ *
+ * 【役割】
+ * 特定の利用者に紐付く緊急連絡先の一覧表示、および新規追加・編集画面の状態管理と保存を制御します。
+ * 
+ * 【設計指針：レイヤー責務と課題】
+ * 1. 複数モードの統合：一覧表示と個別の編集セッションを単一の ViewModel でシームレスに切り替えます。
+ * 2. 状態管理ルールの逸脱（注意）: 現状、`EmergencyContactUiState` の `get()` プロパティ内で
+ *    `isChanged`, `isValid` を動的に計算しています。これは計算ロジックが State に混入している状態であり、
+ *    将来的に ViewModel 側で算出し、データクラスのプロパティとして保持する構造への修正が推奨されます。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・緊急連絡先の保存用 Entity の詳細な構築ロジック（EmergencyContactLogic が担当）。
+ * ・電話番号の書式整形（Logic または UI 側の VisualTransformation が担当）。
  */
 class EmergencyContactEditViewModel(
     private val savedStateHandle: SavedStateHandle,
@@ -71,6 +84,12 @@ class EmergencyContactEditViewModel(
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 保存処理用の Job */
+    private var saveJob: Job? = null
+
+    /** 削除処理用の Job */
+    private var deleteJob: Job? = null
 
     init {
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
@@ -147,7 +166,7 @@ class EmergencyContactEditViewModel(
 
     fun startAdd() {
         val initial = EmergencyContactLogic.createInitialEntity(currentState.personId)
-        updateUiState {
+        updateState {
             it.copy(
                 editingContact = initial,
                 initialContact = initial,
@@ -157,7 +176,7 @@ class EmergencyContactEditViewModel(
     }
 
     fun startEdit(contact: EmergencyContact) {
-        updateUiState {
+        updateState {
             it.copy(
                 editingContact = contact,
                 initialContact = contact,
@@ -167,7 +186,7 @@ class EmergencyContactEditViewModel(
     }
 
     fun updateEditingContact(reducer: (EmergencyContact) -> EmergencyContact) {
-        updateUiState { current ->
+        updateState { current ->
             current.editingContact?.let {
                 current.copy(editingContact = reducer(it))
             } ?: current
@@ -175,13 +194,29 @@ class EmergencyContactEditViewModel(
     }
 
     fun dismissEdit() {
-        updateUiState { it.copy(isEditing = false, editingContact = null, initialContact = null) }
+        updateState { it.copy(isEditing = false, editingContact = null, initialContact = null) }
+    }
+
+    /**
+     * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
+     */
+    private fun updateState(reducer: (EmergencyContactUiState) -> EmergencyContactUiState) {
+        updateUiState { current ->
+            val next = reducer(current)
+            next.copy(
+                isChanged = EmergencyContactLogic.isChanged(next.editingContact, next.initialContact),
+                isValid = EmergencyContactLogic.isValid(next.editingContact)
+            )
+        }
     }
 
     fun saveContact() {
+        // 二重保存防止
+        if (saveJob?.isActive == true) return
+
         val contact = currentState.editingContact ?: return
         
-        safeLaunch(
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -203,7 +238,10 @@ class EmergencyContactEditViewModel(
     }
 
     fun deleteContact(contact: EmergencyContact) {
-        safeLaunch(
+        // 二重実行防止
+        if (deleteJob?.isActive == true) return
+
+        deleteJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {

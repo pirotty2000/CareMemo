@@ -123,6 +123,9 @@ object PersonListLogic {
     /**
      * 各種条件に基づき、利用者リストをフィルタリングします。
      *
+     * 【設計意図】
+     * Logic レイヤーの純粋性を保つため、戻り値には標準の [List] を使用します。
+     *
      * @param allPersons 全利用者リスト
      * @param section 選択された五十音セクション
      * @param matchedIds キーワード検索に合致した利用者IDのリスト（null なら全件対象）

@@ -11,19 +11,9 @@ import java.time.Instant
  * 【役割】
  * 利用者の「健康記録」に関連する3つのデータ系統（身長体重、バイタル、血糖値・HbA1c）の永続化管理を担当します。
  *
- * 【主な機能】
- * ・身長・体重 (HeightAndWeight) の CRUD 操作。
- * ・血圧・脈拍・体温 (BpAndPulse) の CRUD 操作。
- * ・血糖値・HbA1c (GlucoseAndHbA1c) の CRUD 操作。
- * ・健康記録の一括保存（トランザクション対応）。
- * ・各記録系統における、同一日時レコードの特定（重複チェック用）。
- * ・データ操作に応じた監査ログの自動生成。
- *
- * 【設計指針】
- * 1. 独立性：3つの記録系統はそれぞれ独立した DAO で管理するが、一貫したリポジトリインターフェースを介して操作する。
- * 2. 透明性：すべてのデータ変更操作に対して、監査ログの詳細出力を試行する。
- * 3. 同期対応：保存時には `updatedAt` の自動更新と `isSynced = false` の設定を行い、外部同期に備える。
- * 4. 原子性の保証：複数カテゴリの同時保存時はデータベーストランザクションを使用し、データの整合性を守る。
+ * 【設計指針：レイヤー責務】
+ * 1. データアクセス専念：本クラスは DB (DAO) との入出力に専念し、ビジネスロジックや業務判断を含みません。
+ * 2. 依存方向の遵守：UI レイヤーや Logic レイヤーへの依存を排除し、データ層の独立性を保ちます。
  */
 class HealthRepository(
     private val database: AppDatabase,
@@ -180,6 +170,18 @@ class HealthRepository(
             is BpAndPulse -> deleteBpAndPulse(item, featureName, operation)
             is GlucoseAndHbA1c -> deleteGlucoseAndHbA1c(item, featureName, operation)
             else -> throw IllegalArgumentException("Unsupported health record type: ${item::class.java.simpleName}")
+        }
+    }
+
+    /**
+     * 指定されたカテゴリと日時の既存レコードを検索します。
+     */
+    suspend fun findHistoryRecordAtTime(category: Category, personId: String, time: Instant): HistoryRecord? {
+        return when (category) {
+            Category.HEIGHT_AND_WEIGHT -> findHeightAndWeightAtTime(personId, time)
+            Category.BP_AND_PULSE -> findBpAndPulseAtTime(personId, time)
+            Category.GLUCOSE_AND_HBA1C -> findGlucoseAndHbA1cAtTime(personId, time)
+            else -> null
         }
     }
 

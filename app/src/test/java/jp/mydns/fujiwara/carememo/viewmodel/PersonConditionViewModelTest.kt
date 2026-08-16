@@ -1,13 +1,11 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
@@ -30,7 +28,6 @@ class PersonConditionViewModelTest {
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
-    private val context = mockk<Context>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
 
@@ -49,7 +46,6 @@ class PersonConditionViewModelTest {
     @Before
     fun setup() {
         mockkStatic(Log::class)
-        mockkObject(ImageUtils)
         every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
 
@@ -62,23 +58,20 @@ class PersonConditionViewModelTest {
         // Setup for duplicate check to pass by default
         coEvery { conditionRepository.findConditionAtTime(any(), any()) } returns null
         
-        // ImageUtils mock
-        coEvery { ImageUtils.getPhotosDirPublic(any()) } returns mockk {
-            every { listFiles() } returns emptyArray()
-        }
+        // Repository physical file mock
+        every { conditionRepository.getPhotoPhysicalFiles() } returns emptyList()
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
         unmockkStatic(Log::class)
-        unmockkObject(ImageUtils)
     }
 
     private fun createViewModel(handleParams: Map<String, Any> = mapOf("personId" to personId)): PersonConditionViewModel {
         return PersonConditionViewModel(
             conditionRepository, personRepository, summaryRepository, 
-            userSettingsRepository, auditLogRepository, context, 
+            userSettingsRepository, auditLogRepository, 
             SavedStateHandle(handleParams)
         )
     }

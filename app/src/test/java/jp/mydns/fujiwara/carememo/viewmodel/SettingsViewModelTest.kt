@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.content.Context
 import android.net.Uri
 import android.util.Log
 import app.cash.turbine.test
@@ -11,7 +10,6 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
@@ -39,7 +37,6 @@ class SettingsViewModelTest {
     @Before
     fun setup() {
         mockkStatic(Log::class)
-        mockkObject(ImageUtils)
         every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
         
@@ -61,7 +58,6 @@ class SettingsViewModelTest {
     fun tearDown() {
         Dispatchers.resetMain()
         unmockkStatic(Log::class)
-        unmockkObject(ImageUtils)
     }
 
     private fun createViewModel() = SettingsViewModel(
@@ -130,29 +126,27 @@ class SettingsViewModelTest {
     @Test
     fun MNT_01_exportData_success() = runTest {
         val viewModel = createViewModel()
-        val context = mockk<Context>(relaxed = true)
         val uri = mockk<Uri>(relaxed = true)
         advanceUntilIdle()
 
         viewModel.viewEvent.test {
-            viewModel.exportData(context, uri)
+            viewModel.exportData(uri)
             advanceUntilIdle()
             assertEquals(SettingsViewEvent.ExportSuccess, awaitItem())
         }
-        coVerify { maintenanceRepository.exportData(context, uri, any(), any()) }
+        coVerify { maintenanceRepository.exportData(uri, any(), any()) }
     }
 
     @Test
     fun MNT_03_importData_passwordError_emitsRequestEvent() = runTest {
         val viewModel = createViewModel()
-        val context = mockk<Context>(relaxed = true)
         val uri = mockk<Uri>(relaxed = true)
         advanceUntilIdle()
 
-        coEvery { maintenanceRepository.importData(any(), any(), any(), any(), any()) } throws IOException("Wrong password")
+        coEvery { maintenanceRepository.importData(any(), any(), any(), any()) } throws IOException("Wrong password")
 
         viewModel.viewEvent.test {
-            viewModel.importData(context, uri)
+            viewModel.importData(uri, "suffix")
             advanceUntilIdle()
             assertEquals(SettingsViewEvent.RequestImportPassword, awaitItem())
         }
@@ -179,13 +173,12 @@ class SettingsViewModelTest {
     @Test
     fun ERR_01_exportFailure_safety() = runTest {
         val viewModel = createViewModel()
-        val context = mockk<Context>(relaxed = true)
         val uri = mockk<Uri>(relaxed = true)
         advanceUntilIdle()
 
-        coEvery { maintenanceRepository.exportData(any(), any(), any(), any()) } throws RuntimeException("Export Error")
+        coEvery { maintenanceRepository.exportData(any(), any(), any()) } throws RuntimeException("Export Error")
 
-        viewModel.exportData(context, uri)
+        viewModel.exportData(uri)
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isProcessing)

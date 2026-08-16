@@ -17,6 +17,7 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -28,6 +29,16 @@ import java.time.ZoneOffset
  * 【役割】
  * 利用者の新規登録および既存情報の編集画面における状態管理と実行制御を担当します。
  * 入力バリデーション、和暦変換、重複チェック、およびデータの永続化処理を統合します。
+ *
+ * 【設計指針：UI 境界の責務】
+ * 1. リアルタイム・バリデーション：ユーザーの入力ごとに、保存の妥当性 (`isValid`) および
+ *    初期状態からの変更の有無 (`isChanged`) を ViewModel 側で即座に判定し、UI のボタン活性制御や
+ *    「変更破棄警告」の表示判定に反映します。
+ * 2. データの正規化：UI 上での和暦入力等を、保存に適した標準的なデータ型（Instant 等）に変換する責務を負います。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・和暦・西暦の相互変換ロジック（JapaneseDateLogic が担当）。
+ * ・氏名のマスキング計算（Person 共通拡張メソッドまたは Logic が担当）。
  */
 class PersonEditViewModel(
     savedStateHandle: SavedStateHandle,
@@ -59,6 +70,9 @@ class PersonEditViewModel(
 
     /** コンストラクタで取得した personId（新規なら null） */
     private val personId: String?
+
+    /** 保存処理の実行状態を管理する Job */
+    private var saveJob: Job? = null
 
     init {
         // 標準のエラーハンドラをセットアップ
@@ -144,6 +158,13 @@ class PersonEditViewModel(
     fun updateMonth(value: String) = updateState { it.copy(month = value) }
     fun updateDay(value: String) = updateState { it.copy(day = value) }
 
+    /**
+     * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
+     *
+     * 【設計指針：UI 境界の責務】
+     * 以前は Composable 内で行っていた変更検知ロジックを ViewModel へ集約し、
+     * UI に対しては判定済みのフラグとして提供することで、表示ロジックを簡素化しています。
+     */
     private fun updateState(reducer: (PersonEditUiState) -> PersonEditUiState) {
         updateUiState { current ->
             val next = reducer(current)
@@ -158,7 +179,10 @@ class PersonEditViewModel(
      * 入力内容をバリデーションし、DB へ保存（新規登録または更新）します。
      */
     fun save() {
-        safeLaunch(
+        // 二重保存防止：既に保存処理が実行中の場合は何もしない
+        if (saveJob?.isActive == true) return
+
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -183,6 +207,7 @@ class PersonEditViewModel(
             }
 
             val person = PersonEditLogic.createPerson(state, initialPerson)
+            val maskedName = person.getMaskedName(state.isNameMaskingEnabled)
             val existing = repository.findExistingPerson(person)
             if (existing != null && (personId == null || existing.id != personId)) {
                 handleDuplicateError(existing, person, isUpdate = personId != null)
@@ -191,11 +216,11 @@ class PersonEditViewModel(
             if (personId == null) {
                 repository.insertPerson(person, featureName, OP_SAVE)
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
-                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED))
+                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED, maskedName))
             } else {
                 repository.updatePerson(person, featureName, OP_SAVE)
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
-                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.UPDATED))
+                sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.UPDATED, maskedName))
             }
         }
     }

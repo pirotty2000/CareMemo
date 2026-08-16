@@ -3,7 +3,10 @@ package jp.mydns.fujiwara.carememo.ui.mapping
 import jp.mydns.fujiwara.carememo.R
 
 /**
- * 操作種別識別子 (actionType) を表示用の名称（リソースID）に変換する拡張プロパティ
+ * Component：ActionTypeMapper
+ *
+ * 【役割】
+ * 監査ログにおける操作種別（actionType）を、表示用の日本語名称（リソースID）に変換します。
  */
 val String.toActionLabelRes: Int
     get() = when (this) {

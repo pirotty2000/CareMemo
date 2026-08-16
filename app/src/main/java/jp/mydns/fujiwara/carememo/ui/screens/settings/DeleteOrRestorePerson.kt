@@ -44,11 +44,19 @@ import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import kotlinx.coroutines.launch
 
 /**
- * 利用者の復帰・抹消画面のメイン Composable
+ * Screen：DeleteOrRestorePersonScreen
  *
- * @param viewModel 操作と状態を管理する ViewModel
- * @param navController 画面遷移制御用の NavHostController
- * @param modifier 修飾子
+ * 【役割】
+ * アーカイブ済み（論理削除済み）の利用者を、一覧（MainScreen）へ「復帰」させるか、
+ * あるいは DB から「完全抹消」するための管理画面（SCR-S-003）です。
+ *
+ * 【主な機能】
+ * ・一括操作：チェックボックスによる複数選択と、復帰・抹消の一括実行。
+ * ・モード別 UI：
+ *     - RESTORE モード：通常の配色で復帰操作を提供。
+ *     - DELETE モード：警告色（赤）と注意喚起バナーによる、破壊的操作への警告。
+ * ・安全性：完全抹消前には多段階の確認ダイアログを表示し、誤操作を防止。
+ * ・情報提示：生年月日や識別メモを表示し、同姓同名の利用者等の取り違えを防止。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

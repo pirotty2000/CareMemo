@@ -10,10 +10,10 @@ import java.time.Instant
  *
  * 【役割】
  * 所見メモに関連するデータの整合性維持（メンテナンス）に関するドメインロジックを提供します。
- * 主に、DBレコードと物理ストレージ上のファイルの不整合（迷子写真）を検出し、分類する役割を担います。
+ * 主に、DBレコードと物理ストレージ上のファイルの不整合（未割り当て写真）を検出し、分類する役割を担います。
  *
  * 【主な機能】
- * ・DBレコードと物理ファイルの突き合わせによる「迷子写真」の特定。
+ * ・DBレコードと物理ファイルの突き合わせによる「未割り当て写真」の特定。
  * ・不整合の原因に応じた分類（一時保存の放置、親記録の消失、未登録ファイル）。
  * ・UI表示用のメタデータ（説明文、撮影日時）の構築。
  *
@@ -24,37 +24,40 @@ import java.time.Instant
 object ConditionMaintenanceLogic {
 
     /**
-     * DBレコードと物理ファイルを突き合わせ、迷子写真を特定・分類します。
+     * DBレコードと物理ファイルを突き合わせ、未割り当て写真を特定・分類します。
+     *
+     * 【設計意図】
+     * Logic レイヤーの純粋性を保つため、戻り値には標準の [List] を使用します。
      *
      * 分類ルール：
-     * 1. [OrphanedPhotoType.TEMPORARY]: DBにあるが、親の所見記録IDが空。
-     * 2. [OrphanedPhotoType.ORPHANED_RECORD]: DBにあるが、紐付け先の所見記録が既に削除されている。
-     * 3. [OrphanedPhotoType.FILE_ONLY]: ストレージにファイルはあるが、DBにレコードが存在しない。
+     * 1. [UnassignedPhotoType.TEMPORARY]: DBにあるが、親の所見記録IDが空。
+     * 2. [UnassignedPhotoType.UNASSIGNED_RECORD]: DBにあるが、紐付け先の所見記録が既に削除されている。
+     * 3. [UnassignedPhotoType.FILE_ONLY]: ストレージにファイルはあるが、DBにレコードが存在しない。
      *
      * @param dbPhotos DBから取得された全写真レコードのリスト
      * @param existingConditionIds 現在DBに存在する全所見記録のIDセット
      * @param physicalFiles アプリの内部ストレージ（写真ディレクトリ）内の全ファイルリスト
-     * @return 検出された迷子写真情報のリスト（撮影日時の降順）
+     * @return 検出された未割り当て写真情報のリスト（撮影日時の降順）
      */
-    fun identifyOrphanedPhotos(
+    fun identifyUnassignedPhotos(
         dbPhotos: List<ConditionPhoto>,
         existingConditionIds: Set<String>,
         physicalFiles: List<File>
-    ): List<OrphanedPhotoInfo> {
-        val results = mutableListOf<OrphanedPhotoInfo>()
+    ): List<UnassignedPhotoInfo> {
+        val results = mutableListOf<UnassignedPhotoInfo>()
         val dbPhotoNames = dbPhotos.map { it.photoFileName }.toSet()
 
-        // 1. DBレコードベースの分類 (TEMPORARY, ORPHANED_RECORD)
+        // 1. DBレコードベースの分類 (TEMPORARY, UNASSIGNED_RECORD)
         dbPhotos.forEach { dbPhoto ->
             val type = when {
-                dbPhoto.conditionId.isEmpty() -> OrphanedPhotoType.TEMPORARY
-                dbPhoto.conditionId !in existingConditionIds -> OrphanedPhotoType.ORPHANED_RECORD
+                dbPhoto.conditionId.isEmpty() -> UnassignedPhotoType.TEMPORARY
+                dbPhoto.conditionId !in existingConditionIds -> UnassignedPhotoType.UNASSIGNED_RECORD
                 else -> null // 正常な紐付け
             }
 
             if (type != null) {
                 results.add(
-                    OrphanedPhotoInfo(
+                    UnassignedPhotoInfo(
                         type = type,
                         photoId = dbPhoto.id,
                         personId = dbPhoto.personId,
@@ -62,8 +65,8 @@ object ConditionMaintenanceLogic {
                         thumbnailFileName = dbPhoto.thumbnailFileName,
                         capturedAt = dbPhoto.capturedAt,
                         descriptionResId = when (type) {
-                            OrphanedPhotoType.TEMPORARY -> R.string.orphaned_photo_type_temporary
-                            OrphanedPhotoType.ORPHANED_RECORD -> R.string.orphaned_photo_type_orphaned
+                            UnassignedPhotoType.TEMPORARY -> R.string.unassigned_photo_type_temporary
+                            UnassignedPhotoType.UNASSIGNED_RECORD -> R.string.unassigned_photo_type_unassigned
                             else -> 0
                         }
                     )
@@ -76,14 +79,14 @@ object ConditionMaintenanceLogic {
         physicalFiles.filter { it.name.startsWith("img_") }.forEach { file ->
             if (file.name !in dbPhotoNames) {
                 results.add(
-                    OrphanedPhotoInfo(
-                        type = OrphanedPhotoType.FILE_ONLY,
+                    UnassignedPhotoInfo(
+                        type = UnassignedPhotoType.FILE_ONLY,
                         photoId = null,
                         personId = null,
                         photoFileName = file.name,
                         thumbnailFileName = "thumb_" + file.name.removePrefix("img_"),
                         capturedAt = Instant.ofEpochMilli(file.lastModified()),
-                        descriptionResId = R.string.orphaned_photo_db_unregistered
+                        descriptionResId = R.string.unassigned_photo_db_unregistered
                     )
                 )
             }

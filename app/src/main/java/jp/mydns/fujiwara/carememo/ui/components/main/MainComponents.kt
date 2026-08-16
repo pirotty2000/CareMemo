@@ -9,8 +9,9 @@ package jp.mydns.fujiwara.carememo.ui.components.main
  *
  * 【主な機能】
  * ・利用者カード（UserListItem）：氏名、年齢、誕生日通知、および各カテゴリの入力済みバッジの表示。
- * ・クイックメニュー（CategorySelectionSheet）：特定の利用者に対する機能選択（一括入力含む）ボトムシート。
- * ・操作メニュー（DropdownMenu）：情報の編集、緊急連絡先管理、利用終了の操作分岐。
+ * ・クイックメニュー（QuickActionMenu）：バッジタップ時に表示される、頻度の高い操作（緊急連絡先等）へのランチャー。
+ * ・機能選択シート（CategorySelectionSheet）：特定の利用者に対する機能カテゴリ（健康・服薬・所見）および一括入力への遷移。
+ * ・操作メニュー（DropdownMenu）：情報の編集、緊急連絡先管理、利用終了（論理削除）の操作分岐。
  *
  * 【想定する利用場所】
  * ・MainScreenContent（利用者一覧画面のメインリスト部分）
@@ -56,6 +57,7 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
  * │    └─ [3] LazyColumn (メインリスト)
  * │         └─ [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
  * │              ├─ [3-1-1] CategoryBadges (入力済み情報のバッジ：ui/components/main/CategoryBadges.kt)
+ * │              ├─ [3-1-2] QuickActionMenu (バッジタップ時のメニュー：ui/components/main/QuickActionMenu.kt)
  * │              ├─ CakeIcon (本日/近日誕生日の通知アイコン)
  * │              ├─ <表示情報> フリガナ、氏名(マスク対応)、識別メモ、生年月日、年齢
  * │              └─ <操作メニュー> DropdownMenu (情報編集 ➔ [5] 画面へ、利用終了)
@@ -71,14 +73,14 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
  * 利用者一覧における、1名分の情報を表示するカード型コンポーネント。
  *
  * @param person 利用者情報
+ * @param modifier 修飾子
  * @param summary カテゴリごとのデータ存在有無サマリー
  * @param isNameMaskingEnabled 氏名・ふりがなを伏せ字にするかどうか
  * @param onClick カード全体（名前エリア）がタップされた際のコールバック（機能選択シートの表示を想定）
- * @param onQuickMenuClick バッジ部分がタップされた際のコールバック
+ * @param onQuickMenuClick バッジ部分がタップされた際のコールバック（クイックアクションメニュー [3-1-2] の表示を想定）
  * @param onEmergencyContactManageClick 緊急連絡先管理が選択された際のコールバック
  * @param onEditClick 利用者情報の編集が選択された際のコールバック
  * @param onDeleteClick 利用終了（論理削除）が選択された際のコールバック
- * @param modifier 修飾子
  */
 @Composable
 fun UserListItem(

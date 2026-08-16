@@ -13,7 +13,7 @@ package jp.mydns.fujiwara.carememo.ui.components.condition
  * ・閲覧表示（ConditionRecordDisplayCard）：テキストと写真のレスポンシブな詳細レイアウト。
  * ・編集フォーム（ConditionRecordEditForm）：音声入力対応のテキスト入力と写真撮影の統合。
  * ・写真管理（PhotoGrid）：3列グリッド表示、キャプション表示、および削除・フルスクリーン遷移。
- * ・迷子写真救済（OrphanedPhotoSelectionDialog）：DBとの不整合で残った写真を記録に再紐付けする機能。
+ * ・未割り当て写真救済（UnassignedPhotoSelectionDialog）：DBとの不整合で残った写真を記録に再紐付けする機能。
  *
  * 【想定する利用場所】
  * ・PersonConditionScreenContent（所見記録画面のメイン領域）
@@ -76,16 +76,25 @@ import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
 
 /**
- * コンポーネント構造ツリー：
- * ├─ [1] ConditionList (履歴リスト)
- * │    └─ [1-1] ConditionMemoContent (1行分の要約：タイトル・本文・写真アイコン)
- * └─ [2] ConditionDetailPane (詳細ペイン：閲覧/編集の器)
- *      ├─ [2-1] ConditionRecordEditForm (【編集モード】入力フォーム)
- *      │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
- *      │    └─ 音声入力ランチャー
- *      ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示)
- *      │    └─ [2-2-1] PhotoGrid (写真一覧：フルスクリーン遷移)
- *      └─ [2-3] OrphanedPhotoSelectionDialog (迷子写真の再紐付け用)
+ * 全体像：利用者所見記録（Condition）
+ *
+ * ■ ui/screens/condition/PersonConditionScreenContent.kt の PersonConditionScreenContent (画面全体の器)
+ * │
+ * ├─【一覧セクション】
+ * │  └─ [1] ConditionList (所見記録リスト：PersonConditionComponents.kt)
+ * │       └─ ■ ui/components/common/HistoryComponents.kt の PersonHistoryList (共通履歴リストの枠)
+ * │            └─ [1-1] ConditionMemoContent (履歴1行分の要約：タイトル・本文・写真アイコン)
+ * │
+ * └─【詳細セクション】
+ *      └─ [2] ConditionDetailPane (詳細・編集パネル：PersonConditionComponents.kt)
+ *           ├─ [2-1] ConditionRecordEditForm (【編集モード】入力フォーム)
+ *           │    ├─ DateTimeInputFields (日時入力：ui/components/common/DateTimeInputFields.kt)
+ *           │    ├─ AppTextField (各種入力：ui/components/base/AppTextField.kt)
+ *           │    ├─ [2-1-1] PhotoGrid (写真一覧：削除ボタンあり)
+ *           │    └─ 音声入力ランチャー
+ *           ├─ [2-2] ConditionRecordDisplayCard (【閲覧モード】詳細表示)
+ *           │    └─ [2-2-1] PhotoGrid (写真一覧：閲覧・フルスクリーン遷移)
+ *           └─ [2-3] UnassignedPhotoSelectionDialog (未割り当て写真の再紐付け用)
  */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,6 +109,7 @@ import java.time.Instant
  * @param isAnyDialogOpen スワイプ削除状態の制御用フラグ
  * @param onSelect アイテム選択時のコールバック
  * @param onDelete アイテム削除（スワイプ）時のコールバック
+ * @param modifier 修飾子
  * @param lazyListState スクロール状態
  */
 @Composable
@@ -191,6 +201,7 @@ private fun ConditionMemoContent(
  * 所見メモの詳細・編集ペイン。
  *
  * @param uiState UI 状態
+ * @param modifier 修飾子
  * @param onDeletePhoto 写真削除処理のコールバック
  * @param onSelectedIdChange 選択ID変更（新規作成中止時など）のコールバック
  * @param onCancel 閲覧モードの終了コールバック
@@ -200,7 +211,7 @@ private fun ConditionMemoContent(
  * @param onCancelEdit 編集キャンセルのコールバック
  * @param onAddPhotoClick カメラ起動のコールバック
  * @param onPickPhotoClick ギャラリー起動のコールバック
- * @param onReattachPhoto 迷子写真の再紐付けコールバック
+ * @param onReattachPhoto 未割り当て写真の再紐付けコールバック
  * @param onNavigateToFullScreen 写真フルスクリーン表示への遷移コールバック
  * @param onMicClick 音声入力開始時のコールバック（効果音再生等に使用）
  */
@@ -217,7 +228,7 @@ fun ConditionDetailPane(
     onCancelEdit: () -> Unit,
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit = {},
+    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit = {},
     onNavigateToFullScreen: (String, String) -> Unit,
     onMicClick: () -> Unit,
 ) {
@@ -233,7 +244,7 @@ fun ConditionDetailPane(
     }
 
     var showDiscardDialog by remember { mutableStateOf(false) }
-    var showOrphanedSelectDialog by remember { mutableStateOf(false) }
+    var showUnassignedSelectDialog by remember { mutableStateOf(false) }
 
     // システム戻るボタンによる破棄保護
     androidx.activity.compose.BackHandler(enabled = uiState.isEditing && uiState.isChanged) {
@@ -307,8 +318,8 @@ fun ConditionDetailPane(
             },
             onAddPhotoClick = onAddPhotoClick,
             onPickPhotoClick = onPickPhotoClick,
-            onReattachClick = { showOrphanedSelectDialog = true },
-            orphanedPhotoCount = uiState.availableOrphanedPhotos.size,
+            onReattachClick = { showUnassignedSelectDialog = true },
+            unassignedPhotoCount = uiState.unassignedPhotoCount,
             onDeletePhoto = { photoToDelete = it },
             onMicClick = onMicClick
         )
@@ -324,19 +335,19 @@ fun ConditionDetailPane(
             onPhotoClick = { onNavigateToFullScreen(it.id, it.conditionId) },
             onAddPhotoClick = onAddPhotoClick,
             onPickPhotoClick = onPickPhotoClick,
-            onReattachClick = { showOrphanedSelectDialog = true },
-            orphanedPhotoCount = uiState.availableOrphanedPhotos.size
+            onReattachClick = { showUnassignedSelectDialog = true },
+            unassignedPhotoCount = uiState.unassignedPhotoCount
         )
     }
 
-    // 迷子写真の再登録用ダイアログ
-    if (showOrphanedSelectDialog) {
-        OrphanedPhotoSelectionDialog(
-            orphanedPhotos = uiState.availableOrphanedPhotos,
-            onDismiss = { showOrphanedSelectDialog = false },
+    // 未割り当て写真の再登録用ダイアログ
+    if (showUnassignedSelectDialog) {
+        UnassignedPhotoSelectionDialog(
+            unassignedPhotos = uiState.availableUnassignedPhotos,
+            onDismiss = { showUnassignedSelectDialog = false },
             onSelect = { info ->
                 onReattachPhoto(info)
-                showOrphanedSelectDialog = false
+                showUnassignedSelectDialog = false
             }
         )
     }
@@ -374,7 +385,7 @@ private fun ConditionRecordEditForm(
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
     onReattachClick: () -> Unit = {},
-    orphanedPhotoCount: Int = 0,
+    unassignedPhotoCount: Int = 0,
     onDeletePhoto: (ConditionPhoto) -> Unit,
     onMicClick: () -> Unit,
 ) {
@@ -439,14 +450,14 @@ private fun ConditionRecordEditForm(
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("Condition_TitleInput")
                     )
                     AppTextField(
                         value = editInput.author,
                         onValueChange = { v -> onEditInputUpdate { it.copy(author = v) } },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_author)) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("Condition_AuthorInput")
                     )
                     AppTextField(
                         value = editInput.condition,
@@ -492,12 +503,12 @@ private fun ConditionRecordEditForm(
                 Text(text = stringResource(R.string.common_photo_count_format, photos.size, AppSpecifications.Condition.Photo.MAX_COUNT), style = MaterialTheme.typography.titleMedium)
 
                 Row {
-                    // 迷子写真の再登録ボタン (既存レコードかつ迷子がある場合のみ表示)
-                    if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
+                    // 未割り当て写真の再登録ボタン (既存レコードかつ未割り当てがある場合のみ表示)
+                    if (unassignedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                         IconButton(onClick = onReattachClick, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.CloudDownload,
-                                contentDescription = stringResource(R.string.common_orphaned_photo_reattach_title),
+                                contentDescription = stringResource(R.string.common_unassigned_photo_reattach_title),
                                 tint = MaterialTheme.colorScheme.tertiary
                             )
                         }
@@ -514,7 +525,11 @@ private fun ConditionRecordEditForm(
                     }
                     // カメラで撮影
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
-                        IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
+                        IconButton(
+                            onClick = onAddPhotoClick,
+                            enabled = !isProcessing,
+                            modifier = Modifier.testTag("Condition_AddPhotoButton")
+                        ) {
                             Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = stringResource(R.string.condition_btn_camera_desc), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -557,6 +572,7 @@ private fun ConditionRecordEditForm(
  *
  * @param photos 表示対象の写真リスト
  * @param isEditable 削除ボタンを表示するかどうか
+ * @param modifier 修飾子
  * @param onPhotoClick 写真タップ時のコールバック
  * @param onDeletePhoto 削除ボタンタップ時のコールバック
  */
@@ -585,7 +601,10 @@ private fun PhotoGrid(
                             AsyncImage(
                                 model = ImageUtils.getPhotoFile(context, photo.thumbnailFileName),
                                 contentDescription = photo.caption,
-                                modifier = Modifier.fillMaxSize().clickable { onPhotoClick(photo) },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable { onPhotoClick(photo) }
+                                    .testTag("ConditionPhoto_${photo.id}"),
                                 contentScale = ContentScale.Crop
                             )
                             // 編集モード時のみ削除アイコンを表示
@@ -627,7 +646,7 @@ private fun ConditionRecordDisplayCard(
     onAddPhotoClick: () -> Unit,
     onPickPhotoClick: () -> Unit = {},
     onReattachClick: () -> Unit = {},
-    orphanedPhotoCount: Int = 0,
+    unassignedPhotoCount: Int = 0,
 ) {
     val scrollState = rememberScrollState()
     Box(
@@ -707,9 +726,9 @@ private fun ConditionRecordDisplayCard(
                     style = MaterialTheme.typography.titleMedium)
 
                 Row {
-                    if (orphanedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
+                    if (unassignedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
                         IconButton(onClick = onReattachClick, enabled = !isProcessing) {
-                            Icon(imageVector = Icons.Rounded.CloudDownload, contentDescription = stringResource(R.string.common_orphaned_photo_reattach_title), tint = MaterialTheme.colorScheme.tertiary)
+                            Icon(imageVector = Icons.Rounded.CloudDownload, contentDescription = stringResource(R.string.common_unassigned_photo_reattach_title), tint = MaterialTheme.colorScheme.tertiary)
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
@@ -718,7 +737,11 @@ private fun ConditionRecordDisplayCard(
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
-                        IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
+                        IconButton(
+                            onClick = onAddPhotoClick,
+                            enabled = !isProcessing,
+                            modifier = Modifier.testTag("Condition_AddPhotoButton")
+                        ) {
                             Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = stringResource(R.string.condition_btn_camera_desc), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -736,32 +759,33 @@ private fun ConditionRecordDisplayCard(
 }
 
 /**
- * [2-3] OrphanedPhotoSelectionDialog
- * データベースの不整合により、親となる記録IDが失われた「迷子写真」を
+ * [2-3] UnassignedPhotoSelectionDialog
+ * データベースの不整合により、親となる記録IDが失われた「未割り当て写真」を
  * 現在の記録に再紐付けするための選択ダイアログです。
  *
- * @param orphanedPhotos 迷子写真情報のリスト
+ * @param unassignedPhotos 未割り当て写真情報のリスト
+ * @param modifier 修飾子
  * @param onDismiss キャンセル時のコールバック
  * @param onSelect 写真選択時のコールバック
  */
 @Composable
-private fun OrphanedPhotoSelectionDialog(
-    orphanedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo>,
+private fun UnassignedPhotoSelectionDialog(
+    unassignedPhotos: ImmutableList<jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo>,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
-    onSelect: (jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) -> Unit
+    onSelect: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit
 ) {
     val context = LocalContext.current
     AppDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        title = { Text(stringResource(R.string.common_orphaned_photo_reattach_title)) },
+        title = { Text(stringResource(R.string.common_unassigned_photo_reattach_title)) },
         text = {
             AppDialogContent {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.common_orphaned_photo_reattach_msg), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.common_unassigned_photo_reattach_msg), style = MaterialTheme.typography.bodySmall)
 
-                    // 迷子写真を2列グリッドで提示
+                    // 未割り当て写真を2列グリッドで提示
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
                         modifier = Modifier.heightIn(max = 400.dp),
@@ -769,8 +793,8 @@ private fun OrphanedPhotoSelectionDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(orphanedPhotos.size) { index ->
-                            val info = orphanedPhotos[index]
+                        items(unassignedPhotos.size) { index ->
+                            val info = unassignedPhotos[index]
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()

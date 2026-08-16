@@ -4,7 +4,10 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
 
 /**
- * テーマ設定の表示用マッピングロジック
+ * Component：ThemeDisplayMapper
+ *
+ * 【役割】
+ * テーマ設定（ThemeSetting）に対応する、ユーザー向けの表示名称および説明文のリソースIDを解決します。
  */
 object ThemeDisplayMapper {
 

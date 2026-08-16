@@ -3,7 +3,10 @@ package jp.mydns.fujiwara.carememo.ui.mapping
 import jp.mydns.fujiwara.carememo.R
 
 /**
- * 操作結果識別子 (resultType) を表示用の日本語名称（リソースID）に変換する拡張プロパティ
+ * Component：ResultTypeMapper
+ *
+ * 【役割】
+ * 監査ログにおける操作結果（resultType）を、表示用の日本語名称（リソースID）に変換します。
  */
 val String.toResultLabelRes: Int
     get() = when (this) {

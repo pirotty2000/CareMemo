@@ -4,7 +4,6 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import java.time.Instant
@@ -61,11 +60,11 @@ object VitalProcessor : HealthCategoryProcessor {
         return BpAndPulse(
             id = id,
             personId = personId,
-            bpSystolic = values["bpSystolic"] as? Int,
-            bpDiastolic = values["bpDiastolic"] as? Int,
-            sat = values["sat"] as? Int,
-            pulse = values["pulse"] as? Int,
-            bodyTemperature = values["bodyTemperature"] as? Double,
+            bpSystolic = values.getInt("bpSystolic"),
+            bpDiastolic = values.getInt("bpDiastolic"),
+            sat = values.getInt("sat"),
+            pulse = values.getInt("pulse"),
+            bodyTemperature = values.getDouble("bodyTemperature"),
             recordTime = time
         )
     }
@@ -81,28 +80,5 @@ object VitalProcessor : HealthCategoryProcessor {
                 (record.pulse == null || record.pulse.toDouble() in pulseSpec.MIN_VALUE..pulseSpec.MAX_VALUE) &&
                 (record.sat == null || record.sat.toDouble() in satSpec.MIN_VALUE..satSpec.MAX_VALUE) &&
                 (record.bodyTemperature == null || record.bodyTemperature in tempSpec.MIN_VALUE..tempSpec.MAX_VALUE)
-    }
-
-    override suspend fun save(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String,
-        isUpdate: Boolean
-    ): String {
-        return repository.insertHistoryRecord(record as BpAndPulse, featureName, operation, isUpdate)
-    }
-
-    override suspend fun delete(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String
-    ) {
-        repository.deleteHistoryRecord(record as BpAndPulse, featureName, operation)
-    }
-
-    override suspend fun findExisting(repository: HealthRepository, personId: String, time: Instant): Any? {
-        return repository.findBpAndPulseAtTime(personId, time)
     }
 }

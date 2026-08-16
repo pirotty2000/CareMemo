@@ -6,6 +6,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Logic Test: PersonListViewModel
@@ -128,6 +130,41 @@ class PersonListViewModelTest {
         
         assertEquals("全", viewModel.uiState.value.selectedSection)
         assertEquals("test", viewModel.uiState.value.searchQuery)
+    }
+
+    @Test
+    fun FLT_03_searchQueryIntegrity_slowSearchCancelled() = runTest {
+        // Prepare data
+        val person1 = testPerson.copy(id = "u1")
+        val person2 = testPerson.copy(id = "u2")
+        every { personRepository.getAllPersons() } returns flowOf(listOf(person1, person2))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.userList.size)
+
+        // Mock conditionRepository: "term1" is slow, "term2" is fast
+        coEvery { conditionRepository.getPersonIdsByConditionKeyword("term1") } returns flow {
+            delay(2000.milliseconds)
+            emit(listOf("u1"))
+        }
+        coEvery { conditionRepository.getPersonIdsByConditionKeyword("term2") } returns flow {
+            delay(500.milliseconds)
+            emit(listOf("u2"))
+        }
+
+        // Start search for term1
+        viewModel.setSearchQuery("term1")
+        advanceTimeBy(1000.milliseconds) // "term1" is still running
+        
+        // Change search to term2
+        viewModel.setSearchQuery("term2")
+        advanceUntilIdle() // term2 should complete, term1 should be canceled
+        
+        // Result should be u2 only
+        val result = viewModel.uiState.value.userList
+        assertEquals(1, result.size)
+        assertEquals("u2", result[0].person.id)
     }
 
     // endregion

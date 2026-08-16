@@ -22,7 +22,6 @@ import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
-import jp.mydns.fujiwara.carememo.logic.feature.HealthProcessorRegistry
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
@@ -40,6 +39,19 @@ import java.time.Instant
 
 /**
  * ViewModel：PersonHealthViewModel
+ *
+ * 【役割】
+ * 健康記録（身長体重、バイタル、血糖値等）の表示、入力、保存、削除のライフサイクルを管理します。
+ *
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の不変化：Repository や Logic から渡される標準の List を、UI での安定したレンダリングのために 
+ *    `toImmutableList()` を用いて ImmutableList へ変換し、UiState として公開します。
+ * 2. 業務ロジックの集約：変更検知 (`isChanged`) や保存の妥当性判定 (`isSaveEnabled`) を 
+ *    Composable から ViewModel へ移行し、純粋な業務判断として集中管理します。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・個別の異常値判定の具体的閾値計算（HealthLogic が担当）。
+ * ・グラフ描画用の設定生成（HealthChartHelper が担当）。
  */
 class PersonHealthViewModel(
     private val healthRepository: HealthRepository,
@@ -67,7 +79,14 @@ class PersonHealthViewModel(
 
     override val featureName: String = FEATURE_NAME
 
+    /** 履歴ロード用の Job */
     private var recordsJob: Job? = null
+
+    /** 保存処理用の Job */
+    private var saveJob: Job? = null
+
+    /** 削除処理用の Job */
+    private var deleteJob: Job? = null
 
     init {
         // 引数（categoryName）の変更を購読
@@ -218,6 +237,12 @@ class PersonHealthViewModel(
 
     /**
      * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
+     *
+     * 【設計指針：UI 境界の責務】
+     * 以前は Composable 内の derivedStateOf で行っていた変更検知 (`isChanged`) および
+     * 保存ボタンの活性制御 (`isSaveEnabled`) を ViewModel へ集約しました。
+     * これにより、画面遷移時や編集破棄の判断ロジックを ViewModel 側で一貫して管理し、
+     * 単体テストによる検証を可能にしています。
      */
     fun updateEditInput(update: (HealthEditInput) -> HealthEditInput) {
         updateUiState { state ->
@@ -287,6 +312,7 @@ class PersonHealthViewModel(
                 }
             }
         ) { records ->
+            // UI 層に公開する直前に ImmutableList へ変換し、不変性と描画の安定性を保証する
             updateUiState { it.copy(records = records.toImmutableList()) }
         }
     }
@@ -303,7 +329,10 @@ class PersonHealthViewModel(
     }
 
     fun saveRecord(category: Category, recordId: String, recordTime: Instant, values: Map<String, Any?>) {
-        safeLaunch(
+        // 二重実行防止
+        if (saveJob?.isActive == true) return
+
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -317,16 +346,13 @@ class PersonHealthViewModel(
 
             val isUpdate = !IdLogic.isNew(recordId)
             
-            // プロセッサを使用した重複チェック
-            val processor = HealthProcessorRegistry.getByGeneralCategory(category)
-            val existing = processor?.findExisting(healthRepository, record.personId, record.recordTime) as? HistoryRecord
+            // リポジトリを使用した重複チェック
+            val existing = healthRepository.findHistoryRecordAtTime(category, record.personId, record.recordTime)
 
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            if (processor != null) {
-                processor.save(healthRepository, record, featureName, OP_SAVE, isUpdate)
-            }
+            healthRepository.insertHistoryRecord(record, featureName, OP_SAVE, isUpdate)
 
             sendUiEvent(UiEvent.SaveSuccess(record.personId))
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
@@ -348,7 +374,10 @@ class PersonHealthViewModel(
     }
 
     fun deleteRecord(record: Any) {
-        safeLaunch(
+        // 二重実行防止
+        if (deleteJob?.isActive == true) return
+
+        deleteJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -356,20 +385,8 @@ class PersonHealthViewModel(
                 affectedId = (record as? HistoryRecord)?.id
             }
         ) {
-            val historyRecord = record as? HistoryRecord
-            val processor = historyRecord?.let {
-                val cat = when (it) {
-                    is HeightAndWeight -> Category.HEIGHT_AND_WEIGHT
-                    is BpAndPulse -> Category.BP_AND_PULSE
-                    is GlucoseAndHbA1c -> Category.GLUCOSE_AND_HBA1C
-                    else -> null
-                }
-                cat?.let { c -> HealthProcessorRegistry.getByGeneralCategory(c) }
-            }
-
-            if (processor != null) {
-                processor.delete(healthRepository, record, featureName, OP_DELETE)
-            }
+            val historyRecord = record as? HistoryRecord ?: return@safeLaunch
+            healthRepository.deleteHistoryRecord(historyRecord, featureName, OP_DELETE)
             showSnackbar(R.string.p_health_msg_delete_success)
         }
     }

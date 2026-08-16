@@ -9,14 +9,31 @@ import jp.mydns.fujiwara.carememo.data.spec.*
  * CareMemo アプリの「仕様定義（辞書）」の統一窓口オブジェクトです。
  * 閾値、文字数制限、配色、暦、バリデーションルール等、アプリ全体の振る舞いを決定する定数群を集約します。
  *
- * 【構造】
- * 本オブジェクトはファサード（窓口）として機能し、実際の実装（値の定義）は
- * [jp.mydns.fujiwara.carememo.data.spec] パッケージ配下の各カテゴリ別ファイルに委譲しています。
+ * 【全体像：仕様参照構造 (Facade Pattern)】
+ *
+ * ■ AppSpecifications (★本オブジェクト：窓口)
+ * │
+ * ├─ [Health] 健康データ仕様 ➔ [data/spec/HealthSpecifications.kt]
+ * │    ├─ BloodPressure, Pulse, Glucose 等の閾値
+ * │    └─ Graph (グラフ描画範囲、刻み幅)
+ * │
+ * ├─ [Medication] 服薬管理仕様 ➔ [data/spec/MedicationSpecifications.kt]
+ * │
+ * ├─ [Condition] 所見メモ仕様 ➔ [data/spec/ConstraintSpecifications.kt]
+ * │
+ * ├─ [MedicalContact] 緊急連絡先仕様 ➔ [data/spec/EmergencyContactSpecifications.kt]
+ * │
+ * ├─ [Constraints] 利用者/システム制約 ➔ [data/spec/ConstraintSpecifications.kt]
+ * │
+ * ├─ [JapaneseCalendar] 和暦仕様 ➔ [data/spec/CalendarSpecifications.kt]
+ * │
+ * ├─ [Export] PDF出力仕様 ➔ [data/spec/ExportSpecifications.kt]
+ * │
+ * └─ [Search/Settings/Id] ➔ 各カテゴリ別 spec ファイル
  *
  * 【設計指針】
  * 1. マジックナンバーの排除：コード内で直接数値を記述せず、必ず本オブジェクトの定数を参照する。
- * 2. 仕様の一元管理：仕様変更（例：血圧の閾値変更、文字数制限の緩和等）が発生した際、
- *    本パッケージ配下の定義を修正するだけでアプリ全体に反映されることを保証する。
+ * 2. 仕様の一元管理：仕様変更が発生した際、本パッケージ配下の定義を修正するだけでアプリ全体に反映されることを保証する。
  */
 object AppSpecifications {
     

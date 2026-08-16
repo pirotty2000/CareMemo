@@ -1,5 +1,3 @@
-@file:Suppress("NonAsciiCharacters")
-
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
 import androidx.activity.ComponentActivity

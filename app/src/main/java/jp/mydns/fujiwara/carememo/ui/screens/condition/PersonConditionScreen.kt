@@ -22,7 +22,6 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
@@ -32,7 +31,37 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 /**
- * 利用者所見記録画面
+ * Screen：PersonConditionScreen
+ *
+ * 【役割】
+ * 利用者の所見記録（カテゴリB）画面のエントリポイントとなる最上位 Screen コンポーネントです。
+ * デバイスの形状（Phone/Tablet）に応じたレイアウトの振り分け、共通ダイアログの制御、
+ * および ViewModel からのイベント（通知、遷移等）の購読を担当します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト制御：WindowWidthSizeClass に基づく Phone/Tablet 版の出し分け。
+ * ・イベントハンドリング：ViewModel からの通知（Snackbar, ErrorDialog 等）の UI への反映。
+ * ・共通ダイアログ管理：削除確認、上書き確認、PDF 設定、詳細編集（Phone版用ダイアログ）の表示制御。
+ * ・外部連携：OS のカメラおよびギャラリー起動の仲介。
+ *
+ * 【全体像：所見記録画面階層（Condition Hierarchy）】
+ *
+ * ■ PersonConditionScreen (★本コンポーネント：全体制御)
+ * │
+ * ├─ [ A ] PersonConditionScreenPhone (Phone版：シングルペイン)
+ * │    └─ PersonConditionScreenContent (リスト・詳細トグル)
+ * │         └─ ConditionDetailPane (ダイアログ表示)
+ * │
+ * ├─ [ B ] PersonConditionScreenTablet (Tablet版：2ペイン固定)
+ * │    └─ PersonConditionScreenContent (リスト・詳細並列表示)
+ * │
+ * └─ [ 共通パーツ ]
+ *      ├─ PdfExportActionHandler (PDF出力制御)
+ *      ├─ AppDeleteConfirmDialog (削除確認)
+ *      └─ AppInfoDialog (通知・エラー)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際の UI 描画（下位の ScreenPhone/Tablet または Content が担当）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,10 +137,16 @@ fun PersonConditionScreen(
     LaunchedEffect(Unit) {
         conditionViewModel.viewEvent.collect { event ->
             when (event) {
+                is PersonConditionViewEvent.LaunchCamera -> {
+                    // ViewModel から直接 Camera 起動を要求する場合に備える (現在は Screen 側で制御)
+                }
+                is PersonConditionViewEvent.OpenPhotoPicker -> {
+                    // ViewModel から直接 Picker 起動を要求する場合に備える (現在は Screen 側で制御)
+                }
                 is PersonConditionViewEvent.NavigateToPhotoPreview -> {
                     detailState.personId?.let { personId ->
                         navController.navigate(
-                            Destination.PhotoPreview(event.uri.toString(), personId, event.conditionId)
+                            Destination.PhotoPreview(event.uri, personId, event.conditionId)
                         )
                     }
                 }
@@ -122,11 +157,6 @@ fun PersonConditionScreen(
                         )
                     }
                 }
-                /*
-                is PersonConditionViewEvent.NavigateBackToMain -> {
-                    detailViewModel.navigateBackToMain()
-                }
-                */
             }
         }
     }
@@ -170,7 +200,7 @@ fun PersonConditionScreen(
             onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
             onAddPhotoClick = {
                 try {
-                    val uri = ImageUtils.getTempPhotoUri(context)
+                    val uri = conditionViewModel.getTempPhotoUri()
                     tempPhotoUri = uri
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
@@ -197,10 +227,10 @@ fun PersonConditionScreen(
             onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
             onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
             onCancelEdit = { conditionViewModel.cancelEditSession() },
-            onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+            onDeletePhoto = { conditionViewModel.deletePhoto(it) },
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
-                conditionViewModel.reattachOrphanedPhoto(cid, info)
+                conditionViewModel.reattachUnassignedPhoto(cid, info)
             },
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
             snackbarHostState = snackbarHostState
@@ -221,7 +251,7 @@ fun PersonConditionScreen(
             // カメラ
             onAddPhotoClick = {
                 try {
-                    val uri = ImageUtils.getTempPhotoUri(context)
+                    val uri = conditionViewModel.getTempPhotoUri()
                     tempPhotoUri = uri
                     conditionViewModel.setLockBypassEnabled(true)
                     cameraLauncher.launch(uri)
@@ -253,11 +283,11 @@ fun PersonConditionScreen(
             onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
             onCancelEdit = { conditionViewModel.cancelEditSession() },
             // サムネイルのごみ箱アイコン
-            onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
-            // 迷子写真の再アタッチ処理
+            onDeletePhoto = { conditionViewModel.deletePhoto(it) },
+            // 未割り当て写真の再アタッチ処理
             onReattachPhoto = { info ->
                 val cid = conditionState.selectedConditionId ?: ""
-                conditionViewModel.reattachOrphanedPhoto(cid, info)
+                conditionViewModel.reattachUnassignedPhoto(cid, info)
             },
             // マイク
             onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
@@ -346,7 +376,7 @@ fun PersonConditionScreen(
             ) {
                 jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane(
                     uiState = conditionState,
-                    onDeletePhoto = { conditionViewModel.deletePhoto(context, it) },
+                    onDeletePhoto = { conditionViewModel.deletePhoto(it) },
                     onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
                     onCancel = { conditionViewModel.setSelectedConditionId(null) },
                     onEditClick = { conditionViewModel.startEditSession() },
@@ -355,7 +385,7 @@ fun PersonConditionScreen(
                     onCancelEdit = { conditionViewModel.cancelEditSession() },
                     onAddPhotoClick = {
                         try {
-                            val uri = ImageUtils.getTempPhotoUri(context)
+                            val uri = conditionViewModel.getTempPhotoUri()
                             tempPhotoUri = uri
                             conditionViewModel.setLockBypassEnabled(true)
                             cameraLauncher.launch(uri)
@@ -369,7 +399,7 @@ fun PersonConditionScreen(
                     },
                     onReattachPhoto = { info ->
                         val cid = conditionState.selectedConditionId ?: ""
-                        conditionViewModel.reattachOrphanedPhoto(cid, info)
+                        conditionViewModel.reattachUnassignedPhoto(cid, info)
                     },
                     onNavigateToFullScreen = { photoId, condId ->
                         conditionViewModel.navigateToPhotoFullScreen(photoId, condId)

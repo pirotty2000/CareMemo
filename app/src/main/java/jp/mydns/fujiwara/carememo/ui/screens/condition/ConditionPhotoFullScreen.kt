@@ -1,12 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
-/**
- * Screen : ConditionPhotoFullScreen
- *
- * 【画面名】
- * 写真フル画面表示画面
- */
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
@@ -37,6 +30,33 @@ import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import kotlin.math.abs
 
+/**
+ * Screen：ConditionPhotoFullScreen
+ *
+ * 【役割】
+ * 所見メモに添付された写真を全画面で閲覧するための画面です。
+ * 複数の写真をスワイプで切り替えたり、ピンチ操作による拡大・縮小表示（ズーム）を提供します。
+ *
+ * 【主な機能】
+ * ・写真カルーセル：`HorizontalPager` による左右スワイプでの写真切り替え。
+ * ・ズーム機能：ピンチズーム、ダブルタップによる拡大・縮小、および拡大時のパン操作。
+ * ・キャプション表示：写真に付随する説明文のオーバーレイ表示。
+ * ・ナビゲーション：戻るボタンによる詳細画面への復帰。
+ *
+ * 【全体像：写真閲覧構造（Photo Viewer）】
+ *
+ * ■ ConditionPhotoFullScreen (★本コンポーネント)
+ * │
+ * ├─ HorizontalPager (カルーセル)
+ * │    └─ [1] ZoomableImage (個別の写真：ズーム・パン制御)
+ * │         └─ AsyncImage (画像描画：Coil)
+ * │
+ * ├─ IconButton (戻るボタン)
+ * └─ Surface (キャプション：下部オーバーレイ)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * データの保存や削除操作（閲覧専用）。
+ */
 @Composable
 fun ConditionPhotoFullScreen(
     viewModel: PersonConditionViewModel,
@@ -131,6 +151,9 @@ fun ConditionPhotoFullScreen(
     }
 }
 
+/**
+ * ズーム・パン操作が可能な画像表示コンポーネント。
+ */
 @Composable
 fun ZoomableImage(
     photo: ConditionPhoto,

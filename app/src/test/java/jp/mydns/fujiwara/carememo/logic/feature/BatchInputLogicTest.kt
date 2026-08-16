@@ -80,7 +80,7 @@ class BatchInputLogicTest {
     @Test
     fun CP_01_createEntities_multiple() {
         val state = validDateState.copy(weight = "60.0", bpSystolic = "120")
-        val time = state.recordTime!!
+        val time = BatchInputLogic.calculateRecordTime(state)!!
         val entities = BatchInputLogic.createEntities("1", time, state)
         
         assertEquals(2, entities.size)

@@ -1,7 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -28,7 +26,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
-import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
@@ -37,6 +34,18 @@ import java.time.Instant
 
 /**
  * ViewModel：PersonConditionViewModel
+ *
+ * 【役割】
+ * 所見メモ（訪問時の状態記録）の表示、検索、入力、および写真の管理を担当します。
+ *
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の不変化：UI に公開するリストデータはすべて ImmutableList に変換し、Compose の再描画効率を最適化します。
+ * 2. 変更検知の集約：編集中の入力内容と初期状態の比較ロジックを ViewModel に持たせ、
+ *    「変更破棄ダイアログ」の表示判定などの業務判断を UI から分離しています。
+ *
+ * 【この ViewModel では行わないこと】
+ * ・写真の物理的なリサイズや保存処理（ImageUtils が担当）。
+ * ・未割り当て写真の具体的な判定アルゴリズム（ConditionMaintenanceLogic が担当）。
  */
 class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
@@ -44,9 +53,6 @@ class PersonConditionViewModel(
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
     auditLogRepository: AuditLogRepository,
-    @param:SuppressLint("StaticFieldLeak")
-    @field:SuppressLint("StaticFieldLeak")
-    private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
     personRepository,
@@ -70,6 +76,20 @@ class PersonConditionViewModel(
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 各種ロード用の Job */
+    private var recordsJob: Job? = null
+    private var photoJob: Job? = null
+    private var photoMapJob: Job? = null
+
+    /** 保存処理用の Job */
+    private var saveJob: Job? = null
+
+    /** 削除処理用の Job */
+    private var deleteJob: Job? = null
+
+    /** 写真操作（追加・削除・再紐付け）用の Job */
+    private var photoActionJob: Job? = null
 
     init {
         // 初期化
@@ -115,10 +135,6 @@ class PersonConditionViewModel(
         } catch (_: Exception) {}
     }
 
-    private var recordsJob: Job? = null
-    private var photoJob: Job? = null
-    private var photoMapJob: Job? = null
-
     override fun copyWithLoadingState(state: PersonConditionUiState, isLoading: Boolean): PersonConditionUiState {
         return state.copy(isLoading = isLoading)
     }
@@ -156,6 +172,7 @@ class PersonConditionViewModel(
             flowProvider = { conditionRepository.getConditionAtVisitByPersonId(personId) }
         ) { records ->
             updateUiState { current ->
+                // UI 境界で ImmutableList に変換し、表示の安定性を確保
                 val immutableRecords = records.toImmutableList()
                 current.copy(
                     records = immutableRecords,
@@ -176,16 +193,16 @@ class PersonConditionViewModel(
         ) { photos ->
             val dbPhotos = conditionRepository.getAllConditionPhotosRaw()
             val existingConditionIds = conditionRepository.getAllConditionAtVisitIds()
-            val physicalFiles = ImageUtils.getPhotosDirPublic(context).listFiles()?.toList() ?: emptyList()
+            val physicalFiles = conditionRepository.getPhotoPhysicalFiles()
 
-            val allOrphaned = jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic.identifyOrphanedPhotos(
+            val allUnassigned = jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic.identifyUnassignedPhotos(
                 dbPhotos = dbPhotos,
                 existingConditionIds = existingConditionIds,
                 physicalFiles = physicalFiles
             )
 
-            val adoptableOrphans = allOrphaned.filter { 
-                (it.personId == personId) || (it.type == jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoType.FILE_ONLY) 
+            val adoptableUnassigned = allUnassigned.filter { 
+                (it.personId == personId) || (it.type == jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoType.FILE_ONLY) 
             }
 
             updateUiState { current ->
@@ -194,8 +211,8 @@ class PersonConditionViewModel(
                 }
                 current.copy(
                     conditionPhotoMap = map, 
-                    orphanedPhotoCount = adoptableOrphans.size,
-                    availableOrphanedPhotos = adoptableOrphans.toImmutableList()
+                    unassignedPhotoCount = adoptableUnassigned.size,
+                    availableUnassignedPhotos = adoptableUnassigned.toImmutableList()
                 )
             }
         }
@@ -299,6 +316,10 @@ class PersonConditionViewModel(
 
     /**
      * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
+     *
+     * 【設計指針：UI 境界の責務】
+     * 入力変更に伴う「変更あり」フラグの判定は、業務ロジックの重要な一部であるため 
+     * ViewModel で行います。
      */
     fun updateEditInput(update: (ConditionEditInput) -> ConditionEditInput) {
         updateUiState { state ->
@@ -318,10 +339,13 @@ class PersonConditionViewModel(
      * 現在の入力内容で保存を実行します。
      */
     fun saveCurrentEdit(onSuccess: (String) -> Unit = {}) {
+        // 二重実行防止
+        if (saveJob?.isActive == true) return
+
         val input = currentState.editInput
         val conditionId = currentState.selectedConditionId ?: ""
         
-        safeLaunch(
+        saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -374,7 +398,10 @@ class PersonConditionViewModel(
     }
 
     fun deleteRecord(record: ConditionAtVisit) {
-        safeLaunch(
+        // 二重実行防止
+        if (deleteJob?.isActive == true) return
+
+        deleteJob = safeLaunch(
             operation = OP_DELETE,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -388,14 +415,42 @@ class PersonConditionViewModel(
     }
 
     fun onPhotoCaptured(uri: Uri, conditionId: String) {
-        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri, requiredPersonId, conditionId))
+        // プレビュー画面に渡すために URI を保持
+        updateUiState { it.copy(previewUri = uri.toString()) }
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri.toString(), conditionId))
     }
 
-    fun reattachOrphanedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.OrphanedPhotoInfo) {
-        if (IdLogic.isNew(conditionId)) return
+    /**
+     * ナビゲーション引数から取得したコンテキストを ViewModel の状態に反映します。
+     * Shared ViewModel 構成において、個別の Destination から渡された引数を同期するために使用します。
+     */
+    fun setNavContext(personId: String, conditionId: String? = null, previewUri: String? = null) {
+        updateUiState { current ->
+            current.copy(
+                personId = personId,
+                selectedConditionId = conditionId ?: current.selectedConditionId,
+                previewUri = previewUri ?: current.previewUri
+            )
+        }
+        
+        // 利用者情報のロードを開始（まだ開始されていない場合）
+        if (personId != currentState.personId) {
+            startObservePersonId()
+        }
 
-        safeLaunch(
-            operation = "reattachOrphanedPhoto",
+        // レコードIDが指定されている場合はデータのロードを誘発
+        if (conditionId != null && conditionId != currentState.selectedConditionId) {
+            setSelectedConditionId(conditionId)
+        }
+    }
+
+    fun reattachUnassignedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) {
+        if (IdLogic.isNew(conditionId)) return
+        // 二重実行防止
+        if (photoActionJob?.isActive == true) return
+
+        photoActionJob = safeLaunch(
+            operation = "reattachUnassignedPhoto",
             loadingState = loadingStateProxy,
             contextBuilder = {
                 tableName = TABLE_CONDITION
@@ -403,7 +458,7 @@ class PersonConditionViewModel(
             }
         ) {
             if (photoInfo.photoId != null) {
-                conditionRepository.reattachPhotoToRecord(photoInfo.photoId, conditionId, featureName, "reattachOrphanedPhoto")
+                conditionRepository.reattachPhotoToRecord(photoInfo.photoId, conditionId, featureName, "reattachUnassignedPhoto")
             } else {
                 conditionRepository.adoptFileAsPhoto(
                     personId = requiredPersonId,
@@ -419,8 +474,11 @@ class PersonConditionViewModel(
         }
     }
 
-    fun processAndSavePhoto(context: Context, uri: Uri, conditionId: String, caption: String) {
-        safeLaunch(
+    fun processAndSavePhoto(uri: Uri, conditionId: String, caption: String) {
+        // 二重実行防止
+        if (photoActionJob?.isActive == true) return
+
+        photoActionJob = safeLaunch(
             operation = OP_SAVE_PHOTO,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -429,7 +487,7 @@ class PersonConditionViewModel(
                 errorMessageRes = R.string.p_cond_err_photo_process_failure
             }
         ) {
-            val (photoName, thumbName) = ImageUtils.processAndSaveImage(context, uri)
+            val (photoName, thumbName) = conditionRepository.processAndSavePhoto(uri)
             
             val photo = ConditionPhoto(
                 conditionId = conditionId,
@@ -440,16 +498,15 @@ class PersonConditionViewModel(
                 caption = caption
             )
             conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
-            
-            if ((uri.scheme == "file") || (uri.scheme == "content")) {
-                try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) {}
-            }
             showSnackbar(R.string.p_cond_msg_photo_save_success)
         }
     }
 
-    fun deletePhoto(context: Context, photo: ConditionPhoto) {
-        safeLaunch(
+    fun deletePhoto(photo: ConditionPhoto) {
+        // 二重実行防止
+        if (photoActionJob?.isActive == true) return
+
+        photoActionJob = safeLaunch(
             operation = OP_DELETE_PHOTO,
             loadingState = loadingStateProxy,
             contextBuilder = {
@@ -458,7 +515,7 @@ class PersonConditionViewModel(
             }
         ) {
             conditionRepository.deleteConditionPhotoById(photo.id, photo.personId, featureName, OP_DELETE_PHOTO)
-            ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+            conditionRepository.deletePhotoFiles(photo.photoFileName, photo.thumbnailFileName)
             showSnackbar(R.string.p_cond_msg_photo_delete_success)
         }
     }
@@ -468,12 +525,19 @@ class PersonConditionViewModel(
         showError(message)
     }
 
+    /**
+     * カメラ撮影用の一時URIを取得します。
+     */
+    fun getTempPhotoUri(): Uri {
+        return conditionRepository.getTempPhotoUri()
+    }
+
     suspend fun getAllPhotosForPerson(): List<ConditionPhoto> {
         return conditionRepository.getAllPhotosByPersonId(requiredPersonId)
     }
 
     fun navigateToPhotoFullScreen(photoId: String, conditionId: String) {
-        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(photoId, conditionId))
+        sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(conditionId, photoId))
     }
 
     /*
@@ -492,8 +556,7 @@ class PersonConditionViewModel(
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository,
-        private val auditLogRepository: AuditLogRepository,
-        private val context: Context
+        private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -504,7 +567,6 @@ class PersonConditionViewModel(
                 summaryRepository,
                 userSettingsRepository,
                 auditLogRepository,
-                context,
                 savedStateHandle
             ) as T
         }

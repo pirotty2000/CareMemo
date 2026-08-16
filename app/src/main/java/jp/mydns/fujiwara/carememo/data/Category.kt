@@ -4,9 +4,11 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 
 /**
- * 記録カテゴリの定義（アプリの設計原則）
- * 
- * 原則：ある利用者のある日時のひとつのデータであること
+ * Data：Category
+ *
+ * 【役割】
+ * CareMemo における業務カテゴリ（身長・体重、バイタル等）の種別を定義する Enum です。
+ * 各カテゴリに対応する表示名、アイコン、および遷移先の目的地（Destination）を紐付けます。
  */
 enum class Category(
     val displayNameRes: Int,

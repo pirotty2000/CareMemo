@@ -57,6 +57,18 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 
+/**
+ * Screen：PersonMedicationScreenTablet
+ *
+ * 【役割】
+ * タブレット等の広い画面（WindowWidthSizeClass.Expanded）向けに最適化された服薬記録画面です。
+ * 月間カレンダーと詳細な履歴テーブルを同時に表示し、情報の俯瞰性を高めます。
+ *
+ * 【主な機能】
+ * ・2カラムレイアウト：左側にカレンダー、右側に履歴テーブルを常時固定配置。
+ * ・マルチタスク：カレンダーでの状況確認と履歴の精査を同一画面内で並列に実行可能。
+ * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、および PDF 出力ボタンの配置。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonMedicationScreenTablet(

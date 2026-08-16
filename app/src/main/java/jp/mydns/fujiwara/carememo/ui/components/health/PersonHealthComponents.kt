@@ -70,8 +70,8 @@ import java.time.Instant
  *      └─ [2] HealthRecordDetailPane (詳細・編集パネル：PersonHealthComponents.kt)
  *           │
  *           ├─ [2-1] HealthRecordEditForm (【編集モード】入力フォーム)
- *           │    ├─ DateTimeInputFields (日時入力)
- *           │    ├─ <カテゴリ別入力> AppCompactTextField (各項目：数値入力)
+ *           │    ├─ DateTimeInputFields (日時入力：ui/components/common/DateTimeInputFields.kt)
+ *           │    ├─ <カテゴリ別入力> AppCompactTextField (各項目：ui/components/base/AppCompactTextField.kt)
  *           │    └─ <アクション> キャンセルボタン、保存ボタン
  *           │
  *           └─ [2-2] HealthRecordDisplayCard (【閲覧モード】詳細表示用)
@@ -90,6 +90,7 @@ import java.time.Instant
  *
  * @param category 表示対象のカテゴリ
  * @param record 履歴レコード
+ * @param modifier 修飾子
  */
 @Composable
 fun HealthHistoryItemBody(
@@ -465,7 +466,7 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_height)) },
                                     suffix = { Text(AppSpecifications.Health.Height.UNIT) },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).testTag("HealthField_Height")
                                 )
                                 AppCompactTextField(
                                     value = editInput.weightText,
@@ -473,7 +474,7 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_weight)) },
                                     suffix = { Text(AppSpecifications.Health.Weight.UNIT) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).testTag("HealthField_Weight"),
                                     imeAction = ImeAction.Done
                                 )
                             }
@@ -532,7 +533,7 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(R.string.health_label_glucose)) },
                                 suffix = { Text(AppSpecifications.Health.BloodGlucose.UNIT) },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth().testTag("HealthField_Glucose")
                             )
                             AppCompactTextField(
                                 value = editInput.hba1cText,
@@ -540,7 +541,7 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(R.string.health_label_hba1c)) },
                                 suffix = { Text(AppSpecifications.Health.HbA1c.UNIT) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().testTag("HealthField_HbA1c"),
                                 imeAction = ImeAction.Done
                             )
                         }

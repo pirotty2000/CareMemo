@@ -55,6 +55,7 @@ class PersonHealthViewModelTest {
         every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
         
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
+        coEvery { healthRepository.findHistoryRecordAtTime(any(), any(), any()) } returns null
     }
 
     @After
@@ -114,7 +115,7 @@ class PersonHealthViewModelTest {
     // region 3. カテゴリ・状態管理テスト (Category & State)
 
     @Test
-    @Suppress("UNUSED_EXPRESSION")
+    @Suppress("CheckResult", "UNUSED_EXPRESSION")
     fun CAT_01_setCategory_triggersFlowSubscription() = runTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -212,9 +213,9 @@ class PersonHealthViewModelTest {
             it.copy(heightText = "170.0", weightText = "60.0", recordTime = fixedTime) 
         }
         
-        // Simulate duplicate with a different ID
+        // Simulate duplicate
         val existing = HeightAndWeight(id = "existing-1", personId = personId, height = 170.0, weight = 60.0, recordTime = fixedTime)
-        coEvery { healthRepository.findHeightAndWeightAtTime(personId, any()) } returns existing
+        coEvery { healthRepository.findHistoryRecordAtTime(any(), any(), any()) } returns existing
 
         viewModel.uiEventFlow.test {
             viewModel.saveCurrentEdit()
@@ -223,6 +224,18 @@ class PersonHealthViewModelTest {
             // Expecting duplicate error
             assertEquals("Should show duplicate error message", R.string.common_err_duplicate_blocked_simple, (event as BaseUiStateViewModel.UiEvent.ShowErrorDialogRes).messageResId)
         }
+    }
+
+    @Test
+    fun EXE_03_deleteRecord_success() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val record = HeightAndWeight(id = "h1", personId = personId, height = 170.0, weight = 60.0, recordTime = Instant.now())
+        viewModel.deleteRecord(record)
+        advanceUntilIdle()
+
+        coVerify { healthRepository.deleteHistoryRecord(record, any(), any()) }
     }
 
     // endregion

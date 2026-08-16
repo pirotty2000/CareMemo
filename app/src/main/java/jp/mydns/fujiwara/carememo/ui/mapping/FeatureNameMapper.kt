@@ -3,7 +3,22 @@ package jp.mydns.fujiwara.carememo.ui.mapping
 import jp.mydns.fujiwara.carememo.R
 
 /**
- * 機能識別子 (featureName) を表示用の日本語名称（リソースID）に変換する拡張プロパティ
+ * Component：FeatureNameMapper
+ *
+ * 【役割】
+ * 監査ログに出力される内部的な機能識別子（featureName）を、
+ * ユーザーが理解可能な日本語名称（リソースID）に変換するマッパーです。
+ *
+ * 【全体像：機能名マッピング】
+ *
+ * "PersonList"            ➔ 利用者一覧
+ * "PersonEdit"            ➔ 利用者登録・編集
+ * "DeleteOrRestorePerson" ➔ 利用者アーカイブ管理
+ * "PersonHealth"          ➔ 健康記録
+ * "BatchInput"            ➔ 一括入力
+ * "PersonCondition"       ➔ 所見メモ
+ * "PersonMedication"      ➔ 服薬管理
+ * "Settings"              ➔ 設定
  */
 val String.toFeatureLabelRes: Int
     get() = when (this) {

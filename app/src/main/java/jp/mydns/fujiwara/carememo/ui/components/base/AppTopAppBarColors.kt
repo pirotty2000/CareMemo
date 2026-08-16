@@ -19,6 +19,9 @@ import androidx.compose.runtime.Composable
  * 【デザイン指針】
  * 背景に primaryContainer を使用し、コンテンツ（文字・アイコン）に onPrimaryContainer を使用することで、
  * アプリの上部エリアとしての視認性と階層構造を明確にします。
+ *
+ * 【このコンポーネントでは行わないこと】
+ * TopAppBar 自体のレイアウト構築。
  */
 
 /**

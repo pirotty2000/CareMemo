@@ -140,4 +140,45 @@ class PersonHealthLogicTest {
     }
 
     // endregion
+
+    // region 6. 安全な型変換テスト (Safe Type Conversion)
+
+    @Test
+    fun SAF_01_getDouble_intInput() {
+        val map = mapOf("val" to 100)
+        assertEquals(100.0, map.getDouble("val")!!, 0.0)
+    }
+
+    @Test
+    fun SAF_02_getDouble_doubleInput() {
+        val map = mapOf("val" to 100.5)
+        assertEquals(100.5, map.getDouble("val")!!, 0.0)
+    }
+
+    @Test
+    fun SAF_03_getDouble_invalidInput() {
+        val map = mapOf("val" to "abc")
+        assertNull(map.getDouble("val"))
+    }
+
+    @Test
+    fun SAF_04_getInt_intInput() {
+        val map = mapOf("val" to 120)
+        assertEquals(120, map.getInt("val"))
+    }
+
+    @Test
+    fun SAF_05_getInt_doubleInput() {
+        // Double が渡されても Number.toInt() により整数として取得できること
+        val map = mapOf("val" to 36.5)
+        assertEquals(36, map.getInt("val"))
+    }
+
+    @Test
+    fun SAF_06_getInt_nullInput() {
+        val map = mapOf("val" to null)
+        assertNull(map.getInt("val"))
+    }
+
+    // endregion
 }

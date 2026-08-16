@@ -3,7 +3,11 @@ package jp.mydns.fujiwara.carememo.data.spec
 import java.time.LocalDate
 
 /**
- * 日本の暦（和暦）に関する仕様定義
+ * Spec：CalendarSpecifications
+ *
+ * 【役割】
+ * 日本の暦（和暦）に関連する改元日、西暦オフセット、およびアプリがサポートする
+ * 生年月日の下限値（明治期以前を切り捨てる等）を定義します。
  */
 object CalendarSpecifications {
     /** アプリがサポートする生年月日の下限 (1900年1月1日) */

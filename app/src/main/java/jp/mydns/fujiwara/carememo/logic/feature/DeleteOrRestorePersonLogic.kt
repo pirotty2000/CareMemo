@@ -78,6 +78,9 @@ object DeleteOrRestorePersonLogic {
     /**
      * 現在の選択状態に基づき、処理（復帰・抹消）の対象となる利用者を抽出します。
      *
+     * 【設計意図】
+     * UI 境界の外側である Logic クラスの戻り値には、標準の [List] を使用します。
+     *
      * @param persons 全利用者リスト
      * @param selectedIds 選択されている ID のセット
      * @return 処理対象 Paige 利用者リスト

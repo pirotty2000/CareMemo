@@ -34,26 +34,15 @@ import java.time.YearMonth
  * 利用者の服薬管理画面における状態管理と実行制御を担当します。
  * 日々の服薬状況（朝・昼・夕・寝る前など）をカレンダー形式またはリスト形式で管理する機能を提供します。
  *
- * 【主要な機能】
- * ・月次および全期間の服薬記録の購読と UI 状態への反映。
- * ・表示対象月（前月・次月）の切り替え制御。
- * ・特定の日付における服薬スロットごとの一括同期（保存・削除）処理。
- * ・未来日の入力制限等のバリデーションとエラー通知。
+ * 【設計指針：UI 境界の責務】
+ * 1. 状態の不変化：UI に公開する服薬記録リスト (`monthlyRecords`) およびグルーピング済みマップ (`recordsByDate`) は、
+ *    UI 境界において ImmutableList / ImmutableMap へ変換し、不変性を保証します。
+ * 2. グルーピングロジックの提供：カレンダー表示を効率化するため、日付ごとのグルーピング処理を行い、
+ *    UI 層が O(1) で特定日のデータを取得できる構造を提供します。
  *
- * 【依存している Repository】
- * ・MedicationRepository: 服薬記録の取得、保存、削除。
- * ・PersonRepository / PersonSummaryRepository: 利用者情報およびサマリーの管理（基底クラスで使用）。
- * ・AuditLogRepository: 重要な操作（同期処理等）の証跡を記録。
- * ・UserSettingsRepository: 共通設定の参照。
- *
- * 【依存している Logic】
- * ・MedicationLogic: 同期アクション（Insert/Delete）の判定やバリデーションの純粋ロジック。
- * ・PersonMedicationLogic: 表示用のグルーピング等の UI 補助ロジック。
- *
- * 【設計指針】
- * 1. リアクティブな月次更新：表示月が変更されるたびに、該当月の Flow を再購読することで、DB の変更を常に最新の状態で反映する。
- * 2. 効率的な一括同期：UI 上のチェック状態の変化を `SyncAction` に変換し、必要な差分のみをリポジトリへ適用する。
- * 3. 整合性の維持：服薬データの操作には `safeLaunch` を使用し、例外時のログ記録とユーザーへの適切なフィードバックを保証する。
+ * 【この ViewModel では行わないこと】
+ * ・カレンダーの表示用日付リスト生成（MedicationLogic が担当）。
+ * ・DB レコードと入力値の差分に基づく同期アクションの判定（MedicationLogic が担当）。
  */
 class PersonMedicationViewModel(
     private val medicationRepository: MedicationRepository,
@@ -86,6 +75,9 @@ class PersonMedicationViewModel(
     private var monthlyRecordsJob: Job? = null
     /** 全レコード購読用 Job */
     private var allRecordsJob: Job? = null
+
+    /** 同期処理（保存・削除）用の Job */
+    private var syncJob: Job? = null
 
     init {
         // 引数（categoryName）の変更を購読
@@ -150,6 +142,7 @@ class PersonMedicationViewModel(
             flowProvider = { medicationRepository.getMedicationRecordsByMonth(personId, month.toString()) }
         ) { records ->
             updateUiState { current ->
+                // UI 境界において ImmutableList / ImmutableMap へ変換し、不変性と描画安定性を確保する
                 current.copy(
                     monthlyRecords = records.toImmutableList(),
                     // 日付ごとにグループ化したマップを作成し、カレンダー表示を効率化する
@@ -203,7 +196,10 @@ class PersonMedicationViewModel(
      * @param slotRecords 各スロットの服薬記録オブジェクトのリスト（未チェック時は null）
      */
     fun syncMedicationDay(date: String, slotRecords: List<MedicationRecord?>) {
-        safeLaunch(
+        // 二重実行防止
+        if (syncJob?.isActive == true) return
+
+        syncJob = safeLaunch(
             operation = OP_SYNC,
             loadingState = loadingStateProxy,
             contextBuilder = {

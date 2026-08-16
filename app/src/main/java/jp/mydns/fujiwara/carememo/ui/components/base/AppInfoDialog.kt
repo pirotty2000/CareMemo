@@ -21,11 +21,8 @@ import jp.mydns.fujiwara.carememo.R
  * 保存完了の報告、入力チェックエラーの通知、システムエラーの表示など、
  * ユーザーの選択（Yes/No）を必要としない通知全般。
  *
- * @param title ダイアログのタイトル（不要な場合は null）
- * @param message 表示する本文メッセージ
- * @param onDismiss ダイアログを閉じる際のコールバック
- * @param modifier 修飾子
- * @param confirmButtonText ボタンのラベル（デフォルトは「閉じる」）
+ * 【このコンポーネントでは行わないこと】
+ * 複雑な業務フォームの表示（AppDialog を直接使用するか、専用の入力ダイアログを作成する）。
  */
 @Composable
 fun AppInfoDialog(

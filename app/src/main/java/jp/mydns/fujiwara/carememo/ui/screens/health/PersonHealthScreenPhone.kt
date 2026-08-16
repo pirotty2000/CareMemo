@@ -68,6 +68,19 @@ import jp.mydns.fujiwara.carememo.ui.preview.PersonHealthPreviewState
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 
+/**
+ * Screen：PersonHealthScreenPhone
+ *
+ * 【役割】
+ * スマートフォン等の狭い画面（WindowWidthSizeClass.Compact/Medium）向けに最適化された健康記録画面です。
+ * 履歴リストと統計グラフ、詳細入力を柔軟に切り替えて表示します。
+ *
+ * 【主な機能】
+ * ・シングルペイン制御：履歴リストと詳細入力を排他的に表示し、限られた画面領域を活用。
+ * ・モード切り替え：履歴 ↔ グラフ の表示モード選択（SegmentedButton）。
+ * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、および PDF 出力ボタンの配置。
+ * ・フローティングアクションボタン（FAB）：新規レコード作成のショートカット提供。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonHealthScreenPhone(

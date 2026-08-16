@@ -4,7 +4,6 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import java.time.Instant
@@ -52,8 +51,8 @@ object HeightWeightProcessor : HealthCategoryProcessor {
         return HeightAndWeight(
             id = id,
             personId = personId,
-            height = values["height"] as? Double,
-            weight = values["weight"] as? Double,
+            height = values.getDouble("height"),
+            weight = values.getDouble("weight"),
             recordTime = time
         )
     }
@@ -64,28 +63,5 @@ object HeightWeightProcessor : HealthCategoryProcessor {
         val wSpec = AppSpecifications.Health.Weight
         return (record.height == null || record.height in hSpec.MIN_VALUE..hSpec.MAX_VALUE) &&
                 (record.weight == null || record.weight in wSpec.MIN_VALUE..wSpec.MAX_VALUE)
-    }
-
-    override suspend fun save(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String,
-        isUpdate: Boolean
-    ): String {
-        return repository.insertHistoryRecord(record as HeightAndWeight, featureName, operation, isUpdate)
-    }
-
-    override suspend fun delete(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String
-    ) {
-        repository.deleteHistoryRecord(record as HeightAndWeight, featureName, operation)
-    }
-
-    override suspend fun findExisting(repository: HealthRepository, personId: String, time: Instant): Any? {
-        return repository.findHeightAndWeightAtTime(personId, time)
     }
 }

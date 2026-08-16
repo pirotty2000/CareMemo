@@ -6,7 +6,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles to start with
+/**
+ * Component：Typography
+ *
+ * 【役割】
+ * アプリケーション全体で使用するテキストスタイル（フォント、サイズ、行間等）を定義します。
+ * Material 3 の Typography スロットに基づき、視認性と一貫性を保証します。
+ */
 val Typography = Typography(
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,

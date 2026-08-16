@@ -4,7 +4,6 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import java.time.Instant
@@ -52,8 +51,8 @@ object GlucoseProcessor : HealthCategoryProcessor {
         return GlucoseAndHbA1c(
             id = id,
             personId = personId,
-            glucose = values["glucose"] as? Int,
-            hba1c = values["hba1c"] as? Double,
+            glucose = values.getInt("glucose"),
+            hba1c = values.getDouble("hba1c"),
             recordTime = time
         )
     }
@@ -64,28 +63,5 @@ object GlucoseProcessor : HealthCategoryProcessor {
         val hSpec = AppSpecifications.Health.HbA1c
         return (record.glucose == null || record.glucose.toDouble() in gSpec.MIN_VALUE..gSpec.MAX_VALUE) &&
                 (record.hba1c == null || record.hba1c in hSpec.MIN_VALUE..hSpec.MAX_VALUE)
-    }
-
-    override suspend fun save(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String,
-        isUpdate: Boolean
-    ): String {
-        return repository.insertHistoryRecord(record as GlucoseAndHbA1c, featureName, operation, isUpdate)
-    }
-
-    override suspend fun delete(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String
-    ) {
-        repository.deleteHistoryRecord(record as GlucoseAndHbA1c, featureName, operation)
-    }
-
-    override suspend fun findExisting(repository: HealthRepository, personId: String, time: Instant): Any? {
-        return repository.findGlucoseAndHbA1cAtTime(personId, time)
     }
 }

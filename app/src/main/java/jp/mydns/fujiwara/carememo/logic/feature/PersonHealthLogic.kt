@@ -97,16 +97,9 @@ enum class HealthValidationResult {
  * 【役割】
  * 健康記録画面（カテゴリA, C, D）における、バリデーション判定および Entity 構築のドメインロジックを提供します。
  *
- * 【主な機能】
- * ・各記録型（身長体重、バイタル、血糖）に応じた数値範囲の妥当性判定。
- * ・同一日時における重複レコードの検出。
- * ・UI側での保存ボタン制御用のリアルタイムバリデーション。
- * ・入力値からの適切な Entity（HeightAndWeight等）の生成と ID 管理。
- *
- * 【設計指針】
- * 1. 数値の妥当性判定は、AppSpecifications に定義された各項目の MIN/MAX 値を基準とする。
- * 2. 重複チェックでは、編集中の自分自身（ID一致）を除外することで、日時の変わらない更新を許容する。
- * 3. createEntity メソッドにおいて、新規レコードに対する UUID 発行の責任を一元管理する。
+ * 【設計指針：UI 境界の責務】
+ * Logic レイヤーの純粋性を保つため、戻り値には特定の UI ライブラリに依存しない標準の型（Any, Map, Enum 等）を使用します。
+ * UI で必要な ImmutableList への変換等は ViewModel の責務とします。
  */
 object PersonHealthLogic {
 
@@ -181,5 +174,28 @@ object PersonHealthLogic {
         val processor = HealthProcessorRegistry.getByGeneralCategory(category)
         return processor?.createEntityFromValues(personId, finalId, recordTime, values)
             ?: throw IllegalArgumentException("Unsupported category: $category")
+    }
+}
+
+/**
+ * Map 内の値を Double として安全に取得します。
+ * 入力値が Int 型（"100" などドットなし入力時）であっても正しく Double へ変換します。
+ */
+internal fun Map<String, Any?>.getDouble(key: String): Double? {
+    return when (val value = this[key]) {
+        is Double -> value
+        is Number -> value.toDouble()
+        else -> null
+    }
+}
+
+/**
+ * Map 内の値を Int として安全に取得します。
+ */
+internal fun Map<String, Any?>.getInt(key: String): Int? {
+    return when (val value = this[key]) {
+        is Int -> value
+        is Number -> value.toInt()
+        else -> null
     }
 }

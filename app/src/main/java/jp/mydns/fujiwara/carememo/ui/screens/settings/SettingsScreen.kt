@@ -1,16 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.settings
 
-/**
- * Screen : SettingsScreen
- *
- * 【画面名】
- * 設定・管理画面
- *
- * 【遷移】：
- * ViewModel から発行される ViewEvent (SettingsViewEvent) に基づき、
- * Composable 側で NavHostController を操作して遷移を行う。
- */
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -53,12 +42,47 @@ import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.launch
 
+/**
+ * Screen：SettingsScreen
+ *
+ * 【役割】
+ * アプリケーションの設定・管理機能を統括する最上位 Screen コンポーネントです。
+ * 表示設定、セキュリティ、データ管理、および開発者向けツールに至るまで、アプリの振る舞いをカスタマイズする全設定項目を集約します。
+ *
+ * 【主な機能】
+ * ・設定管理：氏名伏せ字、自動ロック、バックアップパスワード、テーマ等の永続設定の変更。
+ * ・データ操作：DB バックアップ（エクスポート）および復元（インポート）の仲介。
+ * ・保守ツール：整合性チェック、サンプルデータ投入、監査ログ消去等の管理用機能。
+ * ・OS 連携：SAF（Storage Access Framework）によるファイル入出力、および生体認証の要求。
+ *
+ * 【全体像：設定画面階層（Settings Hierarchy）】
+ *
+ * ■ SettingsScreen (★本コンポーネント：全体制御・ダイアログ管理)
+ * │
+ * ├─ [1] SettingsScreenContent (表示層：各セクションの配置)
+ * │    ├─ DisplayAndRecordingSection (表示・記録設定)
+ * │    ├─ UserManagementSection (利用者管理) ➔ [ 子画面 ] DeleteOrRestorePerson
+ * │    ├─ DataManagementSection (データ管理) ➔ [ 子画面 ] UnassignedPhotoManagement
+ * │    ├─ SecuritySection (セキュリティ)
+ * │    ├─ ThemeSection (テーマ設定)
+ * │    ├─ OtherSection (その他) ➔ バージョン情報
+ * │    └─ ResetSection (開発者用：条件付き表示) ➔ [ 子画面 ] AuditLogScreen
+ * │
+ * └─ [2] 各種設定ダイアログ群 (制御層内で完結)
+ *      ├─ ThemeDialog, TimeoutDialog, RetentionDialog (選択肢系)
+ *      ├─ ImportConfirm, EraseConfirm, ClearLogsConfirm (確認系)
+ *      └─ InconsistencyReportDialog (データ不整合報告)
+ *
+ * 【このコンポーネントでは行わないこと】
+ * 実際のデータ永続化処理（SettingsViewModel および Repository 層が担当）。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     navController: NavHostController,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit,
+    onCheckBiometricSupport: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,6 +122,7 @@ fun SettingsScreen(
     var showImportSampleConfirm by rememberSaveable { mutableStateOf(false) }
     var showPasswordInputDialog by rememberSaveable { mutableStateOf(false) }
     var inputPasswordForImport by remember { mutableStateOf("") }
+    val identifierSuffix = stringResource(R.string.common_identifier_suffix)
 
     var dialogTitle by rememberSaveable { mutableStateOf<String?>(null) }
     var dialogMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -129,7 +154,12 @@ fun SettingsScreen(
                     is BaseUiStateViewModel.UiEvent.SaveSuccess -> {
                         performBack()
                     }
-                    else -> {}
+                    is BaseUiStateViewModel.UiEvent.ShowSnackbar -> {
+                        snackbarHostState.showSnackbar(event.message)
+                    }
+                    is BaseUiStateViewModel.UiEvent.ShowOverwriteConfirm -> {
+                        // 設定画面では上書き確認は使用しない
+                    }
                 }
             }
         }
@@ -145,8 +175,8 @@ fun SettingsScreen(
                     SettingsViewEvent.NavigateToAuditLog -> {
                         navController.navigate(Destination.AuditLog)
                     }
-                    SettingsViewEvent.NavigateToOrphanedPhotos -> {
-                        navController.navigate(Destination.OrphanedPhotos)
+                    SettingsViewEvent.NavigateToUnassignedPhotos -> {
+                        navController.navigate(Destination.UnassignedPhotos)
                     }
                     SettingsViewEvent.NavigateBack -> {
                         performBack()
@@ -156,7 +186,7 @@ fun SettingsScreen(
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportData(context, it) } }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportData(it) } }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { showImportUri = it } }
 
     if (dialogMessage != null) {
@@ -183,7 +213,7 @@ fun SettingsScreen(
                     text = stringResource(R.string.settings_dialog_restore_confirm_btn),
                     onClick = {
                         pendingImportUri = showImportUri
-                        viewModel.importData(context, showImportUri!!)
+                        viewModel.importData(showImportUri!!, identifierSuffix)
                         showImportUri = null
                     }
                 )
@@ -329,7 +359,7 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     if ((minutes == -1) && (uiState.lockTimeoutMinutes != -1)) {
-                                        if (viewModel.canAuthenticate(context)) {
+                                        if (onCheckBiometricSupport()) {
                                             onRequireAuthentication(
                                                 R.string.security_auth_title,
                                                 R.string.security_auth_reason_change_settings
@@ -471,7 +501,7 @@ fun SettingsScreen(
                 AppDialogConfirmButton(
                     text = stringResource(R.string.decision),
                     onClick = {
-                        pendingImportUri?.let { viewModel.importData(context, it, inputPasswordForImport) }
+                        pendingImportUri?.let { viewModel.importData(it, identifierSuffix, inputPasswordForImport) }
                         showPasswordInputDialog = false
                         inputPasswordForImport = ""
                     },
@@ -511,18 +541,18 @@ fun SettingsScreen(
         isPasswordVisible = isPasswordVisible,
         onBackupPasswordEnabledChange = { enabled ->
             if (enabled) {
-                viewModel.setBackupPasswordEnabled(true)
+                viewModel.setBackupPasswordEnabled(enabled = true)
                 isPasswordVisible = false
             } else {
-                if (viewModel.canAuthenticate(context)) {
+                if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_change_settings
                     ) {
-                        viewModel.setBackupPasswordEnabled(false)
+                        viewModel.setBackupPasswordEnabled(enabled = false)
                     }
                 } else {
-                    viewModel.setBackupPasswordEnabled(false)
+                    viewModel.setBackupPasswordEnabled(enabled = false)
                 }
             }
             isChangedByMe = true
@@ -535,7 +565,7 @@ fun SettingsScreen(
             if (isPasswordVisible) {
                 isPasswordVisible = false
             } else {
-                if (viewModel.canAuthenticate(context)) {
+                if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_show_password
@@ -548,28 +578,29 @@ fun SettingsScreen(
             }
         },
         onExportClick = {
-            viewModel.setLockBypassEnabled(true)
+            viewModel.setLockBypassEnabled(enabled = true)
             exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
         },
         onImportClick = {
-            viewModel.setLockBypassEnabled(true)
+            viewModel.setLockBypassEnabled(enabled = true)
             importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
         },
+        onUnassignedPhotosClick = { viewModel.navigateToUnassignedPhotos() },
         isBiometricEnabled = uiState.isBiometricEnabled,
         lockTimeoutMinutes = uiState.lockTimeoutMinutes,
         onBiometricEnabledChange = { enabled ->
             if (enabled) {
-                viewModel.setBiometricEnabled(context, true)
+                viewModel.setBiometricEnabled(isSupported = onCheckBiometricSupport(), enabled = true)
             } else {
-                if (viewModel.canAuthenticate(context)) {
+                if (onCheckBiometricSupport()) {
                     onRequireAuthentication(
                         R.string.security_auth_title,
                         R.string.security_auth_reason_change_settings
                     ) {
-                        viewModel.setBiometricEnabled(context, false)
+                        viewModel.setBiometricEnabled(isSupported = true, enabled = false)
                     }
                 } else {
-                    viewModel.setBiometricEnabled(context, false)
+                    viewModel.setBiometricEnabled(isSupported = false, enabled = false)
                 }
             }
             isChangedByMe = true
@@ -582,7 +613,7 @@ fun SettingsScreen(
             showVersionDialog = true
         },
         onClearAllClick = {
-            if (viewModel.canAuthenticate(context)) {
+            if (onCheckBiometricSupport()) {
                 onRequireAuthentication(
                     R.string.security_auth_title,
                     R.string.security_auth_reason_change_settings
@@ -599,11 +630,10 @@ fun SettingsScreen(
         auditLogCount = uiState.auditLogCount,
         onRetentionClick = { showRetentionDialog = true },
         onViewLogsClick = { viewModel.navigateToAuditLog() },
-        onOrphanedPhotosClick = { viewModel.navigateToOrphanedPhotos() },
         onRotateLogsClick = { viewModel.rotateLogsManually() },
         onClearLogsClick = { showLogClearConfirm = true },
         onImportSampleDataClick = {
-            if (viewModel.canAuthenticate(context)) {
+            if (onCheckBiometricSupport()) {
                 onRequireAuthentication(
                     R.string.security_auth_title,
                     R.string.security_auth_reason_change_settings
@@ -625,7 +655,11 @@ fun SettingsScreen(
 }
 
 /**
- * 設定画面のUIレイアウト本体。
+ * Component：SettingsScreenContent
+ *
+ * 【役割】
+ * 設定画面の UI レイアウト本体を構築します。
+ * 各設定項目（表示、ユーザー、データ、セキュリティ、テーマ等）をセクションごとに整理して表示します。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -647,6 +681,7 @@ fun SettingsScreenContent(
     onPasswordVisibilityToggle: () -> Unit,
     onExportClick: () -> Unit,
     onImportClick: () -> Unit,
+    onUnassignedPhotosClick: () -> Unit,
     isBiometricEnabled: Boolean,
     lockTimeoutMinutes: Int,
     onBiometricEnabledChange: (Boolean) -> Unit,
@@ -661,7 +696,6 @@ fun SettingsScreenContent(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
-    onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
@@ -703,7 +737,8 @@ fun SettingsScreenContent(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .navigationBarsPadding()
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .testTag("Settings_ScrollColumn"),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 DisplayAndRecordingSection(
@@ -728,7 +763,8 @@ fun SettingsScreenContent(
                     onBackupPasswordChange = onBackupPasswordChange,
                     onPasswordVisibilityToggle = onPasswordVisibilityToggle,
                     onExportClick = onExportClick,
-                    onImportClick = onImportClick
+                    onImportClick = onImportClick,
+                    onUnassignedPhotosClick = onUnassignedPhotosClick
                 )
 
                 SecuritySection(
@@ -756,7 +792,6 @@ fun SettingsScreenContent(
                         auditLogCount = auditLogCount,
                         onRetentionClick = onRetentionClick,
                         onViewLogsClick = onViewLogsClick,
-                        onOrphanedPhotosClick = onOrphanedPhotosClick,
                         onRotateLogsClick = onRotateLogsClick,
                         onClearLogsClick = onClearLogsClick,
                         onImportSampleDataClick = onImportSampleDataClick,
@@ -852,7 +887,7 @@ private fun UserManagementSection(
             headlineContent = { Text(stringResource(R.string.settings_item_restore_archived_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_restore_archived_desc, endedUserCount)) },
             trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
-            modifier = Modifier.clickable { onNavigateToRestore() }
+            modifier = Modifier.clickable { onNavigateToRestore() }.testTag("Settings_RestoreUserButton")
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_permanent_delete_archived_title), color = MaterialTheme.colorScheme.error) },
@@ -866,7 +901,7 @@ private fun UserManagementSection(
                     ) 
                 } 
             },
-            modifier = Modifier.clickable(enabled = endedUserCount > 0) { onEraseClick() }
+            modifier = Modifier.clickable(enabled = endedUserCount > 0) { onEraseClick() }.testTag("Settings_PermanentDeleteButton")
         )
     }
 }
@@ -882,6 +917,7 @@ private fun DataManagementSection(
     onPasswordVisibilityToggle: () -> Unit,
     onExportClick: () -> Unit,
     onImportClick: () -> Unit,
+    onUnassignedPhotosClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_data_management), modifier = modifier) {
@@ -952,6 +988,12 @@ private fun DataManagementSection(
             supportingContent = { Text(stringResource(R.string.settings_item_import_desc)) },
             trailingContent = { IconButton(onClick = onImportClick, modifier = Modifier.testTag("Settings_ImportButton")) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } },
             modifier = Modifier.clickable { onImportClick() }
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_item_unassigned_photos_title)) },
+            supportingContent = { Text(stringResource(R.string.settings_item_unassigned_photos_desc)) },
+            leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
+            modifier = Modifier.clickable { onUnassignedPhotosClick() }.testTag("Settings_UnassignedPhotosButton")
         )
     }
 }
@@ -1047,7 +1089,6 @@ private fun ResetSection(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
-    onOrphanedPhotosClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
@@ -1106,13 +1147,6 @@ private fun ResetSection(
             supportingContent = { Text(stringResource(R.string.settings_dev_import_sample_desc)) },
             leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
             modifier = Modifier.clickable { onImportSampleDataClick() }.testTag("Settings_ImportSampleButton")
-        )
-        
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_item_orphaned_photos_title)) },
-            supportingContent = { Text(stringResource(R.string.settings_item_orphaned_photos_desc)) },
-            leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
-            modifier = Modifier.clickable { onOrphanedPhotosClick() }.testTag("Settings_OrphanedPhotosButton")
         )
 
         ListItem(
@@ -1188,6 +1222,7 @@ fun SettingsScreenPreview() {
             onPasswordVisibilityToggle = {},
             onExportClick = {},
             onImportClick = {},
+            onUnassignedPhotosClick = {},
             isBiometricEnabled = true,
             lockTimeoutMinutes = 5,
             onBiometricEnabledChange = {},
@@ -1202,7 +1237,6 @@ fun SettingsScreenPreview() {
             auditLogCount = 120,
             onRetentionClick = {},
             onViewLogsClick = {},
-            onOrphanedPhotosClick = {},
             onRotateLogsClick = {},
             onClearLogsClick = {},
             onImportSampleDataClick = {},

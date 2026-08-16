@@ -41,20 +41,16 @@ import kotlinx.coroutines.launch
  *
  * 【想定する利用場所】
  * 生年月日入力、記録日時入力、および各種数値入力フィールド。
+ */
+
+/**
+ * 全体像：小型入力フィールド（AppCompactTextField）
  *
- * @param value 入力されている文字列
- * @param onValueChange 文字列が変更された際のコールバック
- * @param modifier 修飾子
- * @param type 入力制限のタイプ（INTEGER, DECIMAL, TEXT）
- * @param label ラベル要素
- * @param isError エラー状態かどうか
- * @param readOnly 読み取り専用かどうか
- * @param suffix 単位などの接尾辞要素
- * @param maxLength 最大入力可能文字数
- * @param imeAction IME アクション（Next, Done 等）
- * @param autoMoveFocus maxLength 到達時に自動で次の要素へフォーカスを移すか
- * @param keyboardActions カスタムのキーボードアクション（null の場合はデフォルト動作）
- * @param onFocusChanged フォーカス状態が変化した際のコールバック
+ * ■ AppCompactTextField (最外位：BasicTextField + DecorationBox)
+ * │
+ * ├─ [1] TextFieldValue (内部状態：カーソル位置管理)
+ * ├─ [2] DecorationBox (OutlinedTextField スタイルの外装適用)
+ * └─ [3] TextAlign.Center (中央揃え：数値入力への最適化)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

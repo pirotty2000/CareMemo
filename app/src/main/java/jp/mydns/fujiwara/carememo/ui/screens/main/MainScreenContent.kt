@@ -60,9 +60,31 @@ import java.time.ZoneId
 
 
 /**
- * ■  MainScreenContent (画面全体の器)
- * 利用者一覧画面のUIレイアウト本体。
- * Scaffoldによる基本構造、検索ボックス、インデックスバー、利用者リストを表示する。
+ * Screen：MainScreenContent
+ *
+ * 【役割】
+ * 利用者一覧画面（MainScreen）の主要な UI レイアウト本体を構築します。
+ * 検索、五十音インデックス、およびスクロール可能な利用者リストの表示を担当します。
+ *
+ * 【主な機能】
+ * ・検索ボックス：氏名や経過記録キーワードによる動的フィルタリング UI の提供。
+ * ・五十音バー：カナ行（あ、か、さ...）によるリストの絞り込み制御。
+ * ・利用者リスト：`UserListItem` を用いたカード形式の時系列リスト表示。
+ * ・空状態管理：検索結果が 0 件の場合や未登録時のプレースホルダー表示。
+ * ・バージョンダイアログ：アプリ情報の表示および更新履歴（change_history.log）の閲覧機能。
+ *
+ * 【全体像：メインレイアウト構成（Main Layout）】
+ *
+ * ■ MainScreenContent (★本コンポーネント：表示層)
+ * │
+ * ├─ [1] Scaffold (基本構造：AppBar, FAB, SnackbarHost)
+ * │    └─ TopAppBar (ハンバーガーメニュー) ➔ [2] VersionDialog (内部定義：更新履歴表示)
+ * │
+ * └─【コンテンツエリア：Column】
+ *      ├─ SearchBox (検索バー：ui/components/base/)
+ *      ├─ KanaIndexBar (五十音バー：ui/components/main/)
+ *      └─ LazyColumn (利用者リスト)
+ *           └─ UserListItem (カード：ui/components/main/)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

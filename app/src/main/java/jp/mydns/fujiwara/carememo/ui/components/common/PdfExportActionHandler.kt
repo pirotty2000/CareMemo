@@ -32,6 +32,22 @@ import kotlinx.collections.immutable.persistentListOf
  * 【注意点】
  * PDF生成は重い処理であるため、ViewModel の safeLaunch を通じて実行され、
  * 進捗状況は ViewModel の共通エラーハンドリング機構によって管理されます。
+ */
+
+/**
+ * 全体像：PDF出力フロー（PDF Export Flow）
+ *
+ * ■ 各 Screen (PersonHealthScreen 等) の TopAppBar アクション
+ * │
+ * └─ [1] PdfExportActionHandler (★本コンポーネント：制御ロジックの集約)
+ *      ├─ [2] PdfSettingsDialog (設定 UI：期間、並び順、パスワード)
+ *      │    └─ [3] PdfSettingsContent (DatePicker, TextField 等)
+ *      └─ [4] PdfExporter.exportAndShare (出力実行 ➔ システム共有シート)
+ *           └─ ViewModel.safeLaunch (非同期実行と例外捕捉)
+ */
+
+/**
+ * PDF出力アクションをハンドリングします。
  *
  * @param showDialog ダイアログを表示するかどうか
  * @param onDismiss ダイアログを閉じる際のコールバック

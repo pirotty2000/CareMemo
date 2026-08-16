@@ -32,25 +32,31 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 /**
- * 全体像：服薬管理（Medication）
+ * Screen：PersonMedicationScreenContent
  *
- * ■ ui/screens/medication/PersonMedicationScreenContent.kt の PersonMedicationScreenContent (画面全体の器)
- * ├── [レイアウト制御：Phone版 (カレンダー/履歴 切り替え) ・ Tablet版 (2カラム固定)]
- * ├──【カレンダー表示】
- * │  └─ [1] CalendarGrid (月間グリッド：PersonMedicationComponents.kt)
- * │       └─ [1-1] DayCell (1日分のセル：タップで入力ダイアログ起動)
- * │            └─ [1-1-1] MedicationStatusIcon (朝/昼/夕/寝る前 4スロットの状況アイコン)
- * ├──【履歴テーブル表示】
- * │  └─ [2] MedicationHistoryTable (月間一覧テーブル：PersonMedicationComponents.kt)
- * │       └─ <テーブル行> 日付ごとの服薬状況を記号（○/△/×/－）で一覧表示
- * └──【入力・編集セクション】
- *      └─ [3] MedicationInputDialog (登録・編集用ダイアログ：PersonMedicationComponents.kt)
- *           ├─ [3-1] MedicationRow (時間枠ごとの入力行：朝・昼・夕・寝る前)
- *           │    └─ StatusChip (服薬状況選択：未・介助・服用)
- *           └─ [3-2] DateTimeInputFields (特定の時間枠の「記録時刻」を詳細編集)
- *                └─ <アクション> キャンセル、保存ボタン
+ * 【役割】
+ * 服薬管理ドメインにおいて、Phone 版と Tablet 版で共通して使用される「カレンダー」と「履歴テーブル」のレイアウト基盤を提供します。
+ *
+ * 【主な機能】
+ * ・マルチレイアウト対応：画面幅（isExpanded）に応じた 1 カラム / 2 カラム構成の動的な切り替え。
+ * ・表示モード切り替え：Phone版におけるカレンダー表示と履歴テーブル表示のトグル制御。
+ * ・月間ナビゲーション：表示対象月の前月・次月切り替え用 UI の提供。
+ * ・カレンダー表示：`CalendarGrid` を用いた月間の服薬状況の俯瞰。
+ * ・履歴表示：`MedicationHistoryTable` を用いた詳細な服薬状況のリスト表示。
+ *
+ * 【全体像：レイアウト構成（Medication Layout）】
+ *
+ * ■ PersonMedicationScreenContent (★本コンポーネント)
+ * │
+ * ├─ [ Phone版 ] (Column 構成：トグル制御)
+ * │    ├─ MonthSelector (年月セレクタ：共通)
+ * │    ├─ SegmentedButton (カレンダー ↔ 履歴 切り替え)
+ * │    └─ Box (コンテンツ：CalendarGrid または MedicationHistoryTable)
+ * │
+ * └─ [ Tablet版 ] (Row 構成：2カラム固定)
+ *      ├─ 左側 (weight 1)：CalendarGrid (カレンダー)
+ *      └─ 右側 (weight 1.2)：MonthSelector + MedicationHistoryTable (履歴)
  */
-
 @Composable
 fun PersonMedicationScreenContent(
     isExpanded: Boolean,

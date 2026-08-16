@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import io.mockk.every
@@ -122,7 +121,6 @@ class PersonLifecycleTest {
             summaryRepository, 
             userSettingsRepository, 
             auditLogRepository,
-            mockk<Context>(relaxed = true),
             SavedStateHandle()
         )
         
