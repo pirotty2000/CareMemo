@@ -86,7 +86,7 @@ fun PdfSettingsDialog(
     category: Category,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
+    onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, onSuccess -> onSuccess() },
     onExport: (ExportRange, ExportOrder, Instant?, Instant?, Boolean, String?) -> Unit,
 ) {
     var selectedRange by remember { mutableStateOf(ExportRange.ALL) }

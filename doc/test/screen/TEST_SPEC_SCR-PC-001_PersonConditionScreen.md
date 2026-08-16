@@ -45,7 +45,14 @@
 | NAV-03 | 戻る操作の実行   | 戻るボタンタップ                    | `navController.popBackStack()` が実行されること |
 | EVT-01 | 保存成功通知    | `UiEvent.SaveSuccess`       | スナックバー等が表示され、入力状態が閲覧モードへ戻ること            |
 
-## 6. テスト用タグ (testTag)
+## 6. セキュリティ検証 (Security)
+**目的:** 重要操作時に適切な保護がかかることを検証する。
+
+| ID     | テスト項目         | 操作                         | 期待結果                                      |
+|:-------|:--------------|:---------------------------|:------------------------------------------|
+| SEC-01 | PDF出力時の再認証 | PDF設定ダイアログで「PDFを作成」をタップ | `onRequireAuthentication` が適切なメッセージで呼ばれること |
+
+## 7. テスト用タグ (testTag)
 - `ConditionScreen_PhoneContent`: Phone用レイアウトコンテナ
 - `ConditionScreen_TabletContent`: Tablet用レイアウトコンテナ
 - `Condition_MemoInput`: 本文入力フィールド

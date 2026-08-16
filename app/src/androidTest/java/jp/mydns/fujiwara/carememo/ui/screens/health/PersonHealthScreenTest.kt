@@ -160,6 +160,64 @@ class PersonHealthScreenTest {
 
     //endregion
 
+    //region 6. セキュリティ検証 (Security)
+
+    @Test
+    fun SEC_01_pdfExport_requiresAuthentication() {
+        val detailViewModel = createMockDetailViewModel()
+        val healthViewModel = createMockHealthViewModel()
+        val person = jp.mydns.fujiwara.carememo.data.Person(
+            id = "p1",
+            lastName = "Test",
+            firstName = "User",
+            lastNameFurigana = "てすと",
+            firstNameFurigana = "ゆーざー",
+            birthday = Instant.EPOCH
+        )
+        val onRequireAuthentication = mockk<(Int?, Int?, () -> Unit) -> Unit>(relaxed = true)
+
+        // PDFダイアログが表示される状態にする
+        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(person = person))
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(records = persistentListOf()))
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                // state variable showPdfSettingsDialog is internal to PersonHealthScreen, 
+                // but we can trigger it by clicking the PDF button if we provide a mock that handles it.
+                // However, the simplest way is to test PdfExportActionHandler directly if it's exported,
+                // but here we test via Screen.
+                
+                PersonHealthScreen(
+                    detailViewModel = detailViewModel,
+                    healthViewModel = healthViewModel,
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact,
+                    onRequireAuthentication = onRequireAuthentication
+                )
+            }
+        }
+
+        // 1. PDFボタンをタップしてダイアログを表示
+        composeTestRule.onNodeWithTag("HealthScreen_PdfButton").performClick()
+
+        // 2. パスワードを入力
+        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("PDF閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
+
+        // 3. ダイアログ内の「PDFを作成」ボタンをタップ
+        composeTestRule.onNodeWithText("PDFを作成").performClick()
+
+        // 4. 認証要求が正しいパラメータで呼ばれたか検証
+        verify(timeout = 5000) {
+            onRequireAuthentication(
+                jp.mydns.fujiwara.carememo.R.string.security_auth_title,
+                jp.mydns.fujiwara.carememo.R.string.security_auth_reason_pdf_export,
+                any()
+            )
+        }
+    }
+
+    //endregion
+
     // --- Helpers ---
 
     private fun createMockDetailViewModel(): PersonDetailUiStateViewModel {

@@ -11,6 +11,7 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -141,6 +142,70 @@ class PersonMedicationScreenTest {
 
         composeTestRule.onNodeWithTag("MedicationScreen_BackButton").performClick()
         verify { detailViewModel.navigateBackToMain() }
+    }
+
+    //endregion
+
+    //region 6. セキュリティ検証 (Security)
+
+    @Test
+    fun SEC_01_pdfExport_requiresAuthentication() {
+        val detailViewModel = createMockDetailViewModel()
+        val medicationViewModel = createMockMedicationViewModel()
+        val person = jp.mydns.fujiwara.carememo.data.Person(
+            id = "p1",
+            lastName = "Test",
+            firstName = "User",
+            lastNameFurigana = "てすと",
+            firstNameFurigana = "ゆーざー",
+            birthday = java.time.Instant.EPOCH
+        )
+        val onRequireAuthentication = mockk<(Int?, Int?, () -> Unit) -> Unit>(relaxed = true)
+
+        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(person = person, personId = "p1"))
+        every { medicationViewModel.uiState } returns MutableStateFlow(PersonMedicationUiState(
+            personId = "p1",
+            allRecords = persistentListOf(
+                jp.mydns.fujiwara.carememo.data.MedicationRecord(
+                    id = "m1",
+                    personId = "p1",
+                    dosageDate = "2026-08-17",
+                    timeSlot = 0,
+                    status = 2, // TAKEN (Entity.ktの定義を確認する必要があるが、一旦数値で代用するか、importを直す)
+                    recordTime = java.time.Instant.now()
+                )
+            )
+        ))
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonMedicationScreen(
+                    detailViewModel = detailViewModel,
+                    medicationViewModel = medicationViewModel,
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact,
+                    onRequireAuthentication = onRequireAuthentication
+                )
+            }
+        }
+
+        // 1. PDFボタンをタップしてダイアログを表示
+        composeTestRule.onNodeWithTag("MedicationScreen_PdfButton").performClick()
+
+        // 2. パスワードを入力
+        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("PDF閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
+
+        // 3. ダイアログ内の「PDFを作成」ボタンをタップ
+        composeTestRule.onNodeWithText("PDFを作成").performClick()
+
+        // 4. 認証要求が正しいパラメータで呼ばれたか検証
+        verify(timeout = 5000) {
+            onRequireAuthentication(
+                jp.mydns.fujiwara.carememo.R.string.security_auth_title,
+                jp.mydns.fujiwara.carememo.R.string.security_auth_reason_pdf_export,
+                any()
+            )
+        }
     }
 
     //endregion

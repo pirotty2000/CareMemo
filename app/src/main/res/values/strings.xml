@@ -426,6 +426,7 @@
     <string name="security_auth_reason_change_settings">セキュリティ設定を変更するために認証を行ってください</string>
     <string name="security_auth_reason_show_password">パスワードを表示するために認証を行ってください</string>
     <string name="security_auth_reason_unlock">アプリをアンロックするために認証を行ってください</string>
+    <string name="security_auth_reason_pdf_export">PDFを出力するために認証を行ってください</string>
     <string name="settings_msg_delete_ended_success">利用終了者のデータを一括で完全に抹消しました。</string>
     <string name="settings_msg_export_success">データと写真のエクスポートが完了しました。</string>
     <string name="settings_msg_import_success">データと写真の復元が完了しました。</string>
