@@ -15,20 +15,20 @@
 
 ### 2.2. 機能別ロジックテスト (Local Unit Test)
 各実装クラスと 1:1 で対応し、計算ルールやデータ変換の正確性を検証します。
-- **[Logic層 (共通)](./logic/common/)**: `JapaneseDateLogic`, `PersonLogic` 等の計算・変換ロジック。
-- **[Logic層 (機能)](./logic/feature/)**: `SecurityLogic`, `SettingsLogic` 等の画面固有ロジック。
-- **[Mapping層](./mapping/)**: Entity ↔ UiState 間の相互変換。
-- **[Repository層](./repository/)**: DB 操作と監査ログ（AuditLog）の自動記録。
-- **[ViewModel層](./viewmodel/)**: 画面状態管理と UI Intent 処理。
-- **[Utils層](./utils/)**: 日時・画像・PDF 等の共通ユーティリティ。
+- **Logic層 (共通)**: `JapaneseDateLogic`, `PersonLogic` 等の計算・変換ロジック。
+- **Logic層 (機能)**: `SecurityLogic`, `SettingsLogic` 等の画面固有ロジック。
+- **Mapping層**: Entity ↔ UiState 間の相互変換。
+- **Repository層**: DB 操作と監査ログ（AuditLog）の自動記録。
+- **ViewModel層**: 画面状態管理と UI Intent 処理。
+- **Utils層**: 日時・画像・PDF 等の共通ユーティリティ。
 
 ### 2.3. シナリオ・結合テスト (Scenario & Integration)
 複数の画面や機能を跨ぐ一連のユーザーフローを検証します。
-- **[シナリオテスト](./scenario/)**: [利用者詳細フロー (A/B/C 跨ぎ)](./scenario/TEST_SCENARIO_PersonDetailFlow.md) 等。
+- **シナリオテスト**:[利用者詳細フロー (A/B/C 跨ぎ) 等。
 
 ### 2.4. UI 表示・挙動テスト (Component & Screen Test)
 画面（Composable）が状態を正しく描画し、操作が ViewModel に伝達されるかを検証します。
-- **[Screen層](./screen/)**: Phone/Tablet 別の Adaptive レイアウト、ナビゲーション、ダイアログ制御。
+- **Screen層**: Phone/Tablet 別の Adaptive レイアウト、ナビゲーション、ダイアログ制御。
 
 ---
 

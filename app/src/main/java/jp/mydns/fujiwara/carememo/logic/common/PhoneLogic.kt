@@ -20,23 +20,23 @@ object PhoneLogic {
 
         val digits = number.filter { it.isDigit() }
 
-        return when {
-            digits.length == 11 ->  // 携帯・IP電話等 (3-4-4)
+        return when (digits.length) {
+            11 ->  // 携帯・IP電話等 (3-4-4)
                 "${digits.take(3)}-${digits.substring(3, 7)}-${digits.takeLast(4)}"
-            
-            digits.length == 10 -> {
+
+            10 -> {
                 when {
                     digits.startsWith("03") || digits.startsWith("06") -> // 東京・大阪 (2-4-4)
                         "${digits.take(2)}-${digits.substring(2, 6)}-${digits.takeLast(4)}"
-                    
+
                     digits.startsWith("0120") || digits.startsWith("0800") || digits.startsWith("0570") -> // フリーダイヤル・ナビダイヤル等 (4-3-3)
                         "${digits.take(4)}-${digits.substring(4, 7)}-${digits.takeLast(3)}"
-                    
+
                     else -> // その他固定電話 (3-3-4)
                         "${digits.take(3)}-${digits.substring(3, 6)}-${digits.takeLast(4)}"
                 }
             }
-            
+
             else -> number // それ以外は整形せずそのまま返す
         }
     }

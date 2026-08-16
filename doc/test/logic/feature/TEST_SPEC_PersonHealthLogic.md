@@ -52,11 +52,11 @@
 ## 6. 安全な型変換テスト (Safe Type Conversion)
 **目的:** `Map<String, Any?>` から値を抽出する際、入力された数値型（Int, Double）に関わらず、期待する型（Double, Int）へ安全に変換・抽出できることを検証する。
 
-| ID     | テスト項目         | 条件 (入力)                      | 期待結果 (戻り値)      |
-|:-------|:---------------|:-------------------------------|:-----------------|
-| SAF-01 | getDouble: 整数   | `100` (Int)                    | `100.0` (Double) |
-| SAF-02 | getDouble: 小数   | `100.5` (Double)               | `100.5` (Double) |
-| SAF-03 | getDouble: 非数値  | `"abc"` (String)               | `null`           |
-| SAF-04 | getInt: 整数      | `120` (Int)                    | `120` (Int)      |
-| SAF-05 | getInt: 小数(参考) | `36.5` (Double)                | `36` (Int)       |
-| SAF-06 | getInt: 非数値     | `null`                         | `null`           |
+| ID     | テスト項目          | 条件 (入力)          | 期待結果 (戻り値)       |
+|:-------|:---------------|:-----------------|:-----------------|
+| SAF-01 | getDouble: 整数  | `100` (Int)      | `100.0` (Double) |
+| SAF-02 | getDouble: 小数  | `100.5` (Double) | `100.5` (Double) |
+| SAF-03 | getDouble: 非数値 | `"abc"` (String) | `null`           |
+| SAF-04 | getInt: 整数     | `120` (Int)      | `120` (Int)      |
+| SAF-05 | getInt: 小数(参考) | `36.5` (Double)  | `36` (Int)       |
+| SAF-06 | getInt: 非数値    | `null`           | `null`           |

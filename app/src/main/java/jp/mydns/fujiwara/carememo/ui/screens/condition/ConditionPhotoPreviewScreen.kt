@@ -150,7 +150,7 @@ fun ConditionPhotoPreviewScreen(
                             navController.popBackStack()
                         },
                         modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton"),
-                        enabled = !isProcessing
+                        enabled = true
                     ) {
                         Text(stringResource(R.string.common_save))
                     }
