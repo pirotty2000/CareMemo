@@ -174,6 +174,18 @@ class HealthRepository(
     }
 
     /**
+     * 指定されたカテゴリと日時の既存レコードを検索します。
+     */
+    suspend fun findHistoryRecordAtTime(category: Category, personId: String, time: Instant): HistoryRecord? {
+        return when (category) {
+            Category.HEIGHT_AND_WEIGHT -> findHeightAndWeightAtTime(personId, time)
+            Category.BP_AND_PULSE -> findBpAndPulseAtTime(personId, time)
+            Category.GLUCOSE_AND_HBA1C -> findGlucoseAndHbA1cAtTime(personId, time)
+            else -> null
+        }
+    }
+
+    /**
      * 複数の健康記録データを一括で保存します（トランザクション対応）。
      *
      * ブロック内のすべての保存処理は一つのトランザクションとして実行され、

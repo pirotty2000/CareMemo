@@ -5,6 +5,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.AppDatabase
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.BpAndPulseDao
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1cDao
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
@@ -113,7 +114,19 @@ class HealthRepositoryTest {
 
     // endregion
 
-    // region 5. 一括保存テスト (Batch)
+    // region 5. 共通・一括操作テスト (Common & Batch)
+
+    @Test
+    fun COM_01_findHistoryRecordAtTime() = runTest {
+        val time = Instant.now()
+        val record = HeightAndWeight(id = "100", personId = "u1", height = 170.0, recordTime = time)
+        coEvery { heightAndWeightDao.findAtTime("u1", time) } returns record
+
+        val result = repository.findHistoryRecordAtTime(Category.HEIGHT_AND_WEIGHT, "u1", time)
+        assertEquals(record, result)
+
+        coVerify { heightAndWeightDao.findAtTime("u1", time) }
+    }
 
     @Test
     fun BAT_01_insertHealthDataBatch() = runTest {

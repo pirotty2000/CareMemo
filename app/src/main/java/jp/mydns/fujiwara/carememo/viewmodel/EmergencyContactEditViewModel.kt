@@ -33,11 +33,10 @@ data class EmergencyContactUiState(
     val initialContact: EmergencyContact? = null,
     val isEditing: Boolean = false,
     val personName: String = "",
-    val isNameMaskingEnabled: Boolean = true
-) {
-    val isChanged: Boolean get() = EmergencyContactLogic.isChanged(editingContact, initialContact)
-    val isValid: Boolean get() = EmergencyContactLogic.isValid(editingContact)
-}
+    val isNameMaskingEnabled: Boolean = true,
+    val isChanged: Boolean = false,
+    val isValid: Boolean = false
+)
 
 /**
  * View Event：EmergencyContactViewEvent
@@ -167,7 +166,7 @@ class EmergencyContactEditViewModel(
 
     fun startAdd() {
         val initial = EmergencyContactLogic.createInitialEntity(currentState.personId)
-        updateUiState {
+        updateState {
             it.copy(
                 editingContact = initial,
                 initialContact = initial,
@@ -177,7 +176,7 @@ class EmergencyContactEditViewModel(
     }
 
     fun startEdit(contact: EmergencyContact) {
-        updateUiState {
+        updateState {
             it.copy(
                 editingContact = contact,
                 initialContact = contact,
@@ -187,7 +186,7 @@ class EmergencyContactEditViewModel(
     }
 
     fun updateEditingContact(reducer: (EmergencyContact) -> EmergencyContact) {
-        updateUiState { current ->
+        updateState { current ->
             current.editingContact?.let {
                 current.copy(editingContact = reducer(it))
             } ?: current
@@ -195,7 +194,20 @@ class EmergencyContactEditViewModel(
     }
 
     fun dismissEdit() {
-        updateUiState { it.copy(isEditing = false, editingContact = null, initialContact = null) }
+        updateState { it.copy(isEditing = false, editingContact = null, initialContact = null) }
+    }
+
+    /**
+     * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
+     */
+    private fun updateState(reducer: (EmergencyContactUiState) -> EmergencyContactUiState) {
+        updateUiState { current ->
+            val next = reducer(current)
+            next.copy(
+                isChanged = EmergencyContactLogic.isChanged(next.editingContact, next.initialContact),
+                isValid = EmergencyContactLogic.isValid(next.editingContact)
+            )
+        }
     }
 
     fun saveContact() {

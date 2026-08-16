@@ -22,7 +22,6 @@ import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
-import jp.mydns.fujiwara.carememo.logic.feature.HealthProcessorRegistry
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
@@ -347,18 +346,13 @@ class PersonHealthViewModel(
 
             val isUpdate = !IdLogic.isNew(recordId)
             
-            // プロセッサを使用した重複チェック
-            val processor = HealthProcessorRegistry.getByGeneralCategory(category)
-            val existing = processor?.findExisting(healthRepository, record.personId, record.recordTime) as? HistoryRecord
+            // リポジトリを使用した重複チェック
+            val existing = healthRepository.findHistoryRecordAtTime(category, record.personId, record.recordTime)
 
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            when {
-                processor != null -> {
-                    processor.save(healthRepository, record, featureName, OP_SAVE, isUpdate)
-                }
-            }
+            healthRepository.insertHistoryRecord(record, featureName, OP_SAVE, isUpdate)
 
             sendUiEvent(UiEvent.SaveSuccess(record.personId))
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
@@ -391,18 +385,8 @@ class PersonHealthViewModel(
                 affectedId = (record as? HistoryRecord)?.id
             }
         ) {
-            val historyRecord = record as? HistoryRecord
-            val processor = historyRecord?.let {
-                val cat = when (it) {
-                    is HeightAndWeight -> Category.HEIGHT_AND_WEIGHT
-                    is BpAndPulse -> Category.BP_AND_PULSE
-                    is GlucoseAndHbA1c -> Category.GLUCOSE_AND_HBA1C
-                    else -> null
-                }
-                cat?.let { c -> HealthProcessorRegistry.getByGeneralCategory(c) }
-            }
-
-            processor?.delete(healthRepository, record, featureName, OP_DELETE)
+            val historyRecord = record as? HistoryRecord ?: return@safeLaunch
+            healthRepository.deleteHistoryRecord(historyRecord, featureName, OP_DELETE)
             showSnackbar(R.string.p_health_msg_delete_success)
         }
     }

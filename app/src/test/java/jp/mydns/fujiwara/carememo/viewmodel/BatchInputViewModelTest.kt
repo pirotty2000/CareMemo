@@ -60,6 +60,7 @@ class BatchInputViewModelTest {
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
         coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
         coEvery { healthRepository.findGlucoseAndHbA1cAtTime(any(), any()) } returns null
+        coEvery { healthRepository.findHistoryRecordAtTime(any(), any(), any()) } returns null
     }
 
     @After
@@ -136,10 +137,15 @@ class BatchInputViewModelTest {
         val nextYear = (currentYear.toInt() + 1).toString()
         viewModel.updateYear(nextYear)
         
-        assertTrue(viewModel.uiState.value.isChanged)
-        assertEquals(nextYear, viewModel.uiState.value.year)
-        // Verify recordTime also updated (and is non-null because the rest of the fields are valid)
-        assertNotNull(viewModel.uiState.value.recordTime)
+        val state = viewModel.uiState.value
+        assertTrue("State should be marked as changed after year update", state.isChanged)
+        assertEquals(nextYear, state.year)
+        // B-2: Verify recordTime is calculated and held as a val property
+        assertNotNull("recordTime should be non-null after valid year update", state.recordTime)
+        
+        // Invalid date test
+        viewModel.updateDay("32")
+        assertNull("recordTime should be null for invalid date", viewModel.uiState.value.recordTime)
     }
 
     // endregion
@@ -183,7 +189,7 @@ class BatchInputViewModelTest {
 
         viewModel.updateWeight("60")
         // Simulate duplicate
-        coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns mockk<HeightAndWeight>()
+        coEvery { healthRepository.findHistoryRecordAtTime(any(), any(), any()) } returns mockk<HeightAndWeight>()
 
         viewModel.saveBatch()
         advanceUntilIdle()

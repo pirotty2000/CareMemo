@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import java.time.Instant
 
@@ -44,13 +43,4 @@ interface HealthCategoryProcessor {
 
     /** Entity オブジェクトの数値範囲バリデーションを実行します。 */
     fun validateEntity(entity: Any): Boolean
-
-    /** 指定された日時における既存データを検索します（重複チェック用）。 */
-    suspend fun findExisting(repository: HealthRepository, personId: String, time: Instant): Any?
-
-    /** エンティティを保存します。 */
-    suspend fun save(repository: HealthRepository, record: Any, featureName: String, operation: String, isUpdate: Boolean): String
-
-    /** エンティティを削除します。 */
-    suspend fun delete(repository: HealthRepository, record: Any, featureName: String, operation: String)
 }

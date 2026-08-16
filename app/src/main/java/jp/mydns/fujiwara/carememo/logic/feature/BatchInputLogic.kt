@@ -77,23 +77,9 @@ data class BatchInputUiState(
     override val isLoading: Boolean = false,
     val isValid: Boolean = false,
     val isChanged: Boolean = false,
-    val isNameMaskingEnabled: Boolean = true
-) : PersonAwareState {
-    /** 記録日時（分精度まで）を取得します。 */
-    val recordTime: Instant? get() = toInstant()
-
-    private fun toInstant(): Instant? {
-        val y = year.toIntOrNull() ?: return null
-        val m = month.toIntOrNull() ?: return null
-        val d = day.toIntOrNull() ?: return null
-        val h = hour.toIntOrNull() ?: 0
-        val min = minute.toIntOrNull() ?: 0
-
-        return try {
-            ZonedDateTime.of(y, m, d, h, min, 0, 0, ZoneId.systemDefault()).toInstant()
-        } catch (_: Exception) { null }
-    }
-}
+    val isNameMaskingEnabled: Boolean = true,
+    val recordTime: Instant? = null
+) : PersonAwareState
 
 /**
  * 一括入力画面固有のイベント定義。
@@ -147,6 +133,26 @@ enum class BatchInputCategory {
  * 3. 変更検知は、入力値の有無だけでなく、記録時刻の変更も考慮する。
  */
 object BatchInputLogic {
+
+    /**
+     * UI 状態から記録日時（分精度まで）を算出します。
+     *
+     * @param state 現在のUI状態
+     * @return 算出された [Instant]、変換不能な場合は null
+     */
+    fun calculateRecordTime(state: BatchInputUiState): Instant? {
+        val y = state.year.toIntOrNull() ?: return null
+        val m = state.month.toIntOrNull() ?: return null
+        val d = state.day.toIntOrNull() ?: return null
+        val h = state.hour.toIntOrNull() ?: 0
+        val min = state.minute.toIntOrNull() ?: 0
+
+        return try {
+            ZonedDateTime.of(y, m, d, h, min, 0, 0, ZoneId.systemDefault()).toInstant()
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     /**
      * 入力内容の妥当性を一括判定し、詳細なバリデーション結果を返します。

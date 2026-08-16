@@ -132,6 +132,9 @@ class EmergencyContactEditViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(newId, state.editingContact?.id)
         assertTrue(state.isEditing)
+        // B-2: Check that val properties are calculated
+        assertFalse("New contact without input should not be changed", state.isChanged)
+        assertFalse("New contact without input should be invalid", state.isValid)
     }
 
     @Test
@@ -140,10 +143,15 @@ class EmergencyContactEditViewModelTest {
         advanceUntilIdle()
 
         viewModel.startEdit(testContact)
+        // Initially not changed
+        assertFalse(viewModel.uiState.value.isChanged)
+
         viewModel.updateEditingContact { it.copy(facilityName = "Updated") }
         
-        assertTrue(viewModel.uiState.value.isChanged)
-        assertEquals("Updated", viewModel.uiState.value.editingContact?.facilityName)
+        val state = viewModel.uiState.value
+        assertTrue("State should be marked as changed after update", state.isChanged)
+        assertTrue("Valid contact should be marked as valid", state.isValid)
+        assertEquals("Updated", state.editingContact?.facilityName)
     }
 
     @Test
@@ -152,10 +160,16 @@ class EmergencyContactEditViewModelTest {
         advanceUntilIdle()
 
         viewModel.startAdd()
+        viewModel.updateEditingContact { it.copy(facilityName = "Some Clinic") }
+        assertTrue(viewModel.uiState.value.isChanged)
+
         viewModel.dismissEdit()
         
-        assertFalse(viewModel.uiState.value.isEditing)
-        assertNull(viewModel.uiState.value.editingContact)
+        val state = viewModel.uiState.value
+        assertFalse(state.isEditing)
+        assertNull(state.editingContact)
+        assertFalse("State should be reset after dismiss", state.isChanged)
+        assertFalse("State should be reset after dismiss", state.isValid)
     }
 
     // endregion

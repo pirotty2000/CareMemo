@@ -41,8 +41,8 @@ class PhoneNumberVisualTransformation : VisualTransformation {
         val offsetMapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
                 var hyphenCount = 0
-                if (offset > firstHyphen + 1) hyphenCount++
-                if (offset > secondHyphen + 1) {
+                if (offset > firstHyphen) hyphenCount++
+                if (offset > secondHyphen) {
                     if (originalText.length > secondHyphen + 2) hyphenCount++
                 }
                 return offset + hyphenCount
@@ -50,8 +50,8 @@ class PhoneNumberVisualTransformation : VisualTransformation {
 
             override fun transformedToOriginal(offset: Int): Int {
                 var hyphenCount = 0
-                if (offset > firstHyphen + 2) hyphenCount++
-                if (offset > secondHyphen + 3) {
+                if (offset > firstHyphen + 1) hyphenCount++
+                if (offset > secondHyphen + 2) {
                     if (originalText.length > secondHyphen + 2) hyphenCount++
                 }
                 val originalOffset = offset - hyphenCount

@@ -4,7 +4,8 @@
     - `app/src/test/java/jp/mydns/fujiwara/carememo/logic/feature/HealthCategoryProcessorsTest.kt`
 
 ## 1. 概要
-健康記録の各カテゴリ（身長体重、バイタル、血糖値）固有の処理を担当するプロセッサ群の単体テスト。各プロセッサがインターフェース `HealthCategoryProcessor` に則り、バリデーション、Entity生成、重複チェックのためのデータ検索を正しく行えることを検証する。
+健康記録の各カテゴリ（身長体重、バイタル、血糖値）固有の処理を担当するプロセッサ群の単体テスト。各プロセッサがインターフェース `HealthCategoryProcessor` に則り、バリデーション、Entity生成、および表示用リソースの解決を正しく行えることを検証する。
+※副作用（Repository を介した検索・保存・削除）は本プロセッサの責務外（ViewModel/Repository が担当）となったため、本テストの対象外とする。
 
 ## 2. 身長・体重プロセッサ (HeightWeightProcessor)
 | ID    | テスト項目         | 条件 (入力)           | 期待結果 (戻り値)                     |
@@ -14,7 +15,6 @@
 | HW-03 | バリデーション       | 正常値 (170cm, 60kg) | `SUCCESS`                      |
 | HW-04 | バリデーション       | 範囲外 (500kg)       | `OUT_OF_RANGE`                 |
 | HW-05 | Entity生成      | 正常入力              | `HeightAndWeight` オブジェクト (値一致) |
-| HW-06 | 既存検索          | リポジトリがデータを返す      | 非 null                         |
 
 ## 3. バイタルプロセッサ (VitalProcessor)
 | ID    | テスト項目         | 条件 (入力)             | 期待結果 (戻り値)                |

@@ -126,10 +126,11 @@ class BatchInputViewModel(
             )
         }
         
-        // 最新の状態に基づき、バリデーションと変更有無を再計算して返す
+        // 最新の状態に基づき、バリデーションと変更有無、記録日時を再計算して返す
         return next.copy(
             isValid = BatchInputLogic.isValid(next),
-            isChanged = BatchInputLogic.isChanged(next)
+            isChanged = BatchInputLogic.isChanged(next),
+            recordTime = BatchInputLogic.calculateRecordTime(next)
         )
     }
 
@@ -162,13 +163,15 @@ class BatchInputViewModel(
     private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
         updateUiState { current ->
             val partialNext = reducer(current)
-            // 論理的なバリデーション結果を算出し、State に同期反映する
+            // 論理的なバリデーション結果、変更検知、記録日時を算出し、State に同期反映する
             val finalIsValid = BatchInputLogic.isValid(partialNext)
             val finalIsChanged = BatchInputLogic.isChanged(partialNext)
+            val finalRecordTime = BatchInputLogic.calculateRecordTime(partialNext)
             
             partialNext.copy(
                 isValid = finalIsValid,
-                isChanged = finalIsChanged
+                isChanged = finalIsChanged,
+                recordTime = finalRecordTime
             )
         }
     }
@@ -209,7 +212,7 @@ class BatchInputViewModel(
             // 3. 重複チェック：同一日時の既存レコードがあるカテゴリを特定する
             val duplicateResIds = HealthProcessorRegistry.getAll()
                 .filter { !it.isEmpty(state) }
-                .filter { it.findExisting(healthRepository, requiredPersonId, time) != null }
+                .filter { healthRepository.findHistoryRecordAtTime(it.generalCategory, requiredPersonId, time) != null }
                 .map { it.categoryNameResId }
 
             // 重複がある場合は保存をブロックし、重複カテゴリ名をメッセージに含めて通知する
@@ -234,7 +237,7 @@ class BatchInputViewModel(
             
             // 入力値をクリアし、変更基準点を現在の入力値（保存に成功した日時）に更新して次の入力に備える
             updateUiState { current ->
-                current.copy(
+                val next = current.copy(
                     height = "", weight = "", bpSystolic = "", bpDiastolic = "",
                     sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
                     initialYear = current.year,
@@ -245,6 +248,7 @@ class BatchInputViewModel(
                     isChanged = false,
                     isValid = false
                 )
+                next.copy(recordTime = BatchInputLogic.calculateRecordTime(next))
             }
         }
     }

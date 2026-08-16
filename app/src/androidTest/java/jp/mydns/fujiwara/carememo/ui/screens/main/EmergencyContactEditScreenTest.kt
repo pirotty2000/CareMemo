@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
@@ -162,11 +163,14 @@ class EmergencyContactEditScreenTest {
         isChanged: Boolean = false,
         onUpdateContact: ((EmergencyContact) -> EmergencyContact) -> Unit = {}
     ) {
+        val initialContact = if (isChanged) contact.copy(facilityName = "diff") else contact
         EmergencyContactEditContent(
             uiState = EmergencyContactUiState(
                 editingContact = contact,
-                initialContact = if (isChanged) contact.copy(facilityName = "diff") else contact,
-                isEditing = isEditing
+                initialContact = initialContact,
+                isEditing = isEditing,
+                isChanged = EmergencyContactLogic.isChanged(contact, initialContact),
+                isValid = EmergencyContactLogic.isValid(contact)
             ),
             onNavigateBack = {},
             onUpdateContact = onUpdateContact,

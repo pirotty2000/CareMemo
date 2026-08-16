@@ -4,15 +4,12 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.HealthLogic
 import java.time.Instant
 
 /**
  * バイタル（血圧、脈拍、SAT、体温）カテゴリの処理を担当するプロセッサ。
- *
- * 【注意】現状 `HealthRepository` に依存しており、アーキテクチャ境界のリファクタリング対象です。
  */
 object VitalProcessor : HealthCategoryProcessor {
     override val category: BatchInputCategory = BatchInputCategory.VITAL
@@ -83,28 +80,5 @@ object VitalProcessor : HealthCategoryProcessor {
                 (record.pulse == null || record.pulse.toDouble() in pulseSpec.MIN_VALUE..pulseSpec.MAX_VALUE) &&
                 (record.sat == null || record.sat.toDouble() in satSpec.MIN_VALUE..satSpec.MAX_VALUE) &&
                 (record.bodyTemperature == null || record.bodyTemperature in tempSpec.MIN_VALUE..tempSpec.MAX_VALUE)
-    }
-
-    override suspend fun save(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String,
-        isUpdate: Boolean
-    ): String {
-        return repository.insertHistoryRecord(record as BpAndPulse, featureName, operation, isUpdate)
-    }
-
-    override suspend fun delete(
-        repository: HealthRepository,
-        record: Any,
-        featureName: String,
-        operation: String
-    ) {
-        repository.deleteHistoryRecord(record as BpAndPulse, featureName, operation)
-    }
-
-    override suspend fun findExisting(repository: HealthRepository, personId: String, time: Instant): Any? {
-        return repository.findBpAndPulseAtTime(personId, time)
     }
 }

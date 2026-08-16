@@ -1,11 +1,8 @@
 package jp.mydns.fujiwara.carememo.logic.feature
 
-import io.mockk.coEvery
-import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
-import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -19,7 +16,6 @@ class HealthCategoryProcessorsTest {
 
     private val personId = "u1"
     private val now = Instant.now()
-    private val repository = mockk<HealthRepository>()
 
     // region 2. 身長・体重プロセッサ (HeightWeightProcessor)
 
@@ -55,15 +51,6 @@ class HealthCategoryProcessorsTest {
         assertEquals(60.2, entity.weight!!, 0.0)
         assertEquals(personId, entity.personId)
         assertEquals(now, entity.recordTime)
-    }
-
-    @Test
-    fun HW_06_findExisting_found() = runTest {
-        val mockRecord = mockk<HeightAndWeight>()
-        coEvery { repository.findHeightAndWeightAtTime(personId, now) } returns mockRecord
-        val result = HeightWeightProcessor.findExisting(repository, personId, now)
-        assertNotNull(result)
-        assertEquals(mockRecord, result)
     }
 
     // endregion
