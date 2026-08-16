@@ -138,6 +138,7 @@ class HealthRepositoryTest {
         // Correct way to mock Room's withTransaction extension
         // it.invocation.args[0] is the database receiver, args[1] is the lambda block
         coEvery { database.withTransaction<Unit>(any()) } coAnswers {
+            @Suppress("UNCHECKED_CAST")
             val block = it.invocation.args[1] as suspend () -> Unit
             block()
         }

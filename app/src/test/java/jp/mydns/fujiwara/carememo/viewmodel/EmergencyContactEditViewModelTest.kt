@@ -178,7 +178,6 @@ class EmergencyContactEditViewModelTest {
 
     @Test
     fun SAV_01_saveContact_new() = runTest {
-        val newId = AppSpecifications.Id.NEW_RECORD_ID
         val viewModel = createViewModel()
         advanceUntilIdle()
 
