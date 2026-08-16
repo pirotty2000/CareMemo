@@ -63,11 +63,11 @@ object VitalProcessor : HealthCategoryProcessor {
         return BpAndPulse(
             id = id,
             personId = personId,
-            bpSystolic = values["bpSystolic"] as? Int,
-            bpDiastolic = values["bpDiastolic"] as? Int,
-            sat = values["sat"] as? Int,
-            pulse = values["pulse"] as? Int,
-            bodyTemperature = values["bodyTemperature"] as? Double,
+            bpSystolic = values.getInt("bpSystolic"),
+            bpDiastolic = values.getInt("bpDiastolic"),
+            sat = values.getInt("sat"),
+            pulse = values.getInt("pulse"),
+            bodyTemperature = values.getDouble("bodyTemperature"),
             recordTime = time
         )
     }

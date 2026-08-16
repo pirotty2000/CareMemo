@@ -450,14 +450,14 @@ private fun ConditionRecordEditForm(
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("Condition_TitleInput")
                     )
                     AppTextField(
                         value = editInput.author,
                         onValueChange = { v -> onEditInputUpdate { it.copy(author = v) } },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_author)) },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("Condition_AuthorInput")
                     )
                     AppTextField(
                         value = editInput.condition,
@@ -737,7 +737,11 @@ private fun ConditionRecordDisplayCard(
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
-                        IconButton(onClick = onAddPhotoClick, enabled = !isProcessing) {
+                        IconButton(
+                            onClick = onAddPhotoClick,
+                            enabled = !isProcessing,
+                            modifier = Modifier.testTag("Condition_AddPhotoButton")
+                        ) {
                             Icon(imageVector = Icons.Rounded.AddAPhoto, contentDescription = stringResource(R.string.condition_btn_camera_desc), tint = MaterialTheme.colorScheme.primary)
                         }
                     }

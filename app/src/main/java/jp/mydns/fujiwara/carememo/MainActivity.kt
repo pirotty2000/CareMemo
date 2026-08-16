@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
@@ -80,6 +81,9 @@ class MainActivity : FragmentActivity() {
 
         enableEdgeToEdge()
 
+        // テストモードフラグの取得（UIシナリオテスト用バイパス）
+        val isTestMode = intent.getBooleanExtra("IS_TEST_MODE", false)
+
         setContent {
             val isBiometricEnabledFlow = userSettingsRepository.isBiometricEnabled
             val biometricEnabledState by isBiometricEnabledFlow.collectAsStateWithLifecycle(initialValue = null)
@@ -91,7 +95,8 @@ class MainActivity : FragmentActivity() {
                     isConfigLoaded = biometricEnabledState != null,
                     isBiometricSupported = this@MainActivity.isBiometricSupported(),
                     isBiometricEnabled = biometricEnabledState ?: false,
-                    isAuthenticated = isAuthenticated
+                    isAuthenticated = isAuthenticated,
+                    isTestMode = isTestMode
                 )
             }
 
@@ -243,58 +248,98 @@ class MainActivity : FragmentActivity() {
                                     navController = navController)
                             }
 
-                            composable<Destination.ConditionDetail> {
-                                val detailViewModel: PersonDetailUiStateViewModel =
-                                    viewModel(factory = PersonDetailUiStateViewModel.Factory(
-                                        personRepository,
-                                        personSummaryRepository,
-                                        userSettingsRepository,
-                                        auditLogRepository))
-                                val conditionViewModel: PersonConditionViewModel =
-                                    viewModel(factory = PersonConditionViewModel.Factory(
-                                        personRepository,
-                                        personSummaryRepository,
-                                        conditionRepository,
-                                        userSettingsRepository,
-                                        auditLogRepository))
-                                PersonConditionScreen(
-                                    detailViewModel = detailViewModel,
-                                    conditionViewModel = conditionViewModel,
-                                    navController = navController,
-                                    widthSizeClass = widthSizeClass,
-                                    onRequireAuthentication = requestAuthentication)
-                            }
+                            navigation<Destination.ConditionDetailRoot>(startDestination = Destination.ConditionDetail(personId = "", categoryName = "")) {
+                                composable<Destination.ConditionDetail> { backStackEntry ->
+                                    val args = backStackEntry.toRoute<Destination.ConditionDetail>()
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry<Destination.ConditionDetailRoot>()
+                                    }
+                                    val detailViewModel: PersonDetailUiStateViewModel =
+                                        viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                            personRepository,
+                                            personSummaryRepository,
+                                            userSettingsRepository,
+                                            auditLogRepository))
+                                    val conditionViewModel: PersonConditionViewModel =
+                                        viewModel(parentEntry, factory = PersonConditionViewModel.Factory(
+                                            personRepository,
+                                            personSummaryRepository,
+                                            conditionRepository,
+                                            userSettingsRepository,
+                                            auditLogRepository))
+                                    
+                                    // 引数の同期
+                                    LaunchedEffect(args) {
+                                        conditionViewModel.setNavContext(personId = args.personId, previewUri = null)
+                                        args.query?.let { conditionViewModel.updateSearchQuery(it) }
+                                    }
 
-                            composable<Destination.PhotoPreview> {
-                                val detailViewModel: PersonDetailUiStateViewModel =
-                                    viewModel(factory = PersonDetailUiStateViewModel.Factory(
-                                        personRepository,
-                                        personSummaryRepository,
-                                        userSettingsRepository,
-                                        auditLogRepository))
-                                val conditionViewModel: PersonConditionViewModel =
-                                    viewModel(factory = PersonConditionViewModel.Factory(
-                                        personRepository,
-                                        personSummaryRepository,
-                                        conditionRepository,
-                                        userSettingsRepository,
-                                        auditLogRepository))
-                                ConditionPhotoPreviewScreen(
-                                    detailViewModel = detailViewModel,
-                                    conditionViewModel = conditionViewModel,
-                                    navController = navController)
-                            }
+                                    PersonConditionScreen(
+                                        detailViewModel = detailViewModel,
+                                        conditionViewModel = conditionViewModel,
+                                        navController = navController,
+                                        widthSizeClass = widthSizeClass,
+                                        onRequireAuthentication = requestAuthentication)
+                                }
 
-                            @Suppress("UNUSED_VARIABLE")
-                            composable<Destination.PhotoFull> {
-                                val conditionViewModel: PersonConditionViewModel =
-                                    viewModel(factory = PersonConditionViewModel.Factory(
-                                        personRepository,
-                                        personSummaryRepository,
-                                        conditionRepository,
-                                        userSettingsRepository,
-                                        auditLogRepository))
-                                ConditionPhotoFullScreen(viewModel = conditionViewModel, navController = navController)
+                                composable<Destination.PhotoPreview> { backStackEntry ->
+                                    val args = backStackEntry.toRoute<Destination.PhotoPreview>()
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry<Destination.ConditionDetailRoot>()
+                                    }
+                                    val detailViewModel: PersonDetailUiStateViewModel =
+                                        viewModel(factory = PersonDetailUiStateViewModel.Factory(
+                                            personRepository,
+                                            personSummaryRepository,
+                                            userSettingsRepository,
+                                            auditLogRepository))
+                                    val conditionViewModel: PersonConditionViewModel =
+                                        viewModel(parentEntry, factory = PersonConditionViewModel.Factory(
+                                            personRepository,
+                                            personSummaryRepository,
+                                            conditionRepository,
+                                            userSettingsRepository,
+                                            auditLogRepository))
+
+                                    // 引数の同期
+                                    LaunchedEffect(args) {
+                                        conditionViewModel.setNavContext(
+                                            personId = args.personId,
+                                            conditionId = args.conditionId,
+                                            previewUri = args.uri
+                                        )
+                                    }
+
+                                    ConditionPhotoPreviewScreen(
+                                        detailViewModel = detailViewModel,
+                                        conditionViewModel = conditionViewModel,
+                                        navController = navController)
+                                }
+
+                                @Suppress("UNUSED_VARIABLE")
+                                composable<Destination.PhotoFull> { backStackEntry ->
+                                    val args = backStackEntry.toRoute<Destination.PhotoFull>()
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry<Destination.ConditionDetailRoot>()
+                                    }
+                                    val conditionViewModel: PersonConditionViewModel =
+                                        viewModel(parentEntry, factory = PersonConditionViewModel.Factory(
+                                            personRepository,
+                                            personSummaryRepository,
+                                            conditionRepository,
+                                            userSettingsRepository,
+                                            auditLogRepository))
+
+                                    // 引数の同期
+                                    LaunchedEffect(args) {
+                                        conditionViewModel.setNavContext(
+                                            personId = args.personId,
+                                            conditionId = args.conditionId
+                                        )
+                                    }
+
+                                    ConditionPhotoFullScreen(viewModel = conditionViewModel, navController = navController)
+                                }
                             }
 
                             composable<Destination.MedicationDetail> {

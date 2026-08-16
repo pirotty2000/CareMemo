@@ -54,8 +54,8 @@ object HeightWeightProcessor : HealthCategoryProcessor {
         return HeightAndWeight(
             id = id,
             personId = personId,
-            height = values["height"] as? Double,
-            weight = values["weight"] as? Double,
+            height = values.getDouble("height"),
+            weight = values.getDouble("weight"),
             recordTime = time
         )
     }

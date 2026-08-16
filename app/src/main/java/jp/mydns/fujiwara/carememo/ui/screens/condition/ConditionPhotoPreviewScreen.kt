@@ -145,9 +145,12 @@ fun ConditionPhotoPreviewScreen(
                     Button(
                         onClick = {
                             conditionViewModel.processAndSavePhoto(uri, conditionId, caption)
+                            // 保存処理は非同期だが、ViewModelが同一なので、戻った瞬間に
+                            // 詳細画面側のUIState(currentConditionPhotos)も更新される
                             navController.popBackStack()
                         },
-                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton")
+                        modifier = Modifier.weight(1f).testTag("PhotoPreview_SaveButton"),
+                        enabled = !isProcessing
                     ) {
                         Text(stringResource(R.string.common_save))
                     }

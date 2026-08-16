@@ -54,8 +54,8 @@ object GlucoseProcessor : HealthCategoryProcessor {
         return GlucoseAndHbA1c(
             id = id,
             personId = personId,
-            glucose = values["glucose"] as? Int,
-            hba1c = values["hba1c"] as? Double,
+            glucose = values.getInt("glucose"),
+            hba1c = values.getDouble("hba1c"),
             recordTime = time
         )
     }

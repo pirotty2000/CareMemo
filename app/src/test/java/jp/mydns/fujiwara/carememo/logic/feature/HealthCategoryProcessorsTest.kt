@@ -146,5 +146,26 @@ class HealthCategoryProcessorsTest {
         assertEquals(70, entity.pulse)
     }
 
+    @Test
+    fun CM_03_createEntityFromValues_safeConversion() {
+        // Int 型で値を渡しても、Double を期待するプロパティに正しくセットされること
+        val values = mapOf(
+            "height" to 180,       // Int
+            "weight" to 100,       // Int
+            "bodyTemperature" to 36, // Int
+            "hba1c" to 10           // Int
+        )
+
+        val hwEntity = HeightWeightProcessor.createEntityFromValues(personId, "id1", now, values) as HeightAndWeight
+        assertEquals(180.0, hwEntity.height!!, 0.0)
+        assertEquals(100.0, hwEntity.weight!!, 0.0)
+
+        val vitalEntity = VitalProcessor.createEntityFromValues(personId, "id2", now, values) as BpAndPulse
+        assertEquals(36.0, vitalEntity.bodyTemperature!!, 0.0)
+
+        val glucoseEntity = GlucoseProcessor.createEntityFromValues(personId, "id3", now, values) as GlucoseAndHbA1c
+        assertEquals(10.0, glucoseEntity.hba1c!!, 0.0)
+    }
+
     // endregion
 }

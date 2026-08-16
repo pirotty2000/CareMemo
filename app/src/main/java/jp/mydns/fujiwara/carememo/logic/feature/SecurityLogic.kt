@@ -30,14 +30,21 @@ object SecurityLogic {
      * @param isBiometricSupported 端末が認証（生体またはデバイス認証）をサポートし、かつ有効（登録済み）であるか
      * @param isBiometricEnabled 設定画面で生体認証（ロック）が有効にされているか
      * @param isAuthenticated すでに現在のセッションで認証が成功しているか
+     * @param isTestMode テストモード（UIテスト実行時）であるか
      * @return 決定されたセキュリティステータス
      */
     fun determineStatus(
         isConfigLoaded: Boolean,
         isBiometricSupported: Boolean,
         isBiometricEnabled: Boolean,
-        isAuthenticated: Boolean
+        isAuthenticated: Boolean,
+        isTestMode: Boolean = false
     ): SecurityStatus {
+        // 0. テストモードなら無条件でアンロック状態（UIシナリオテスト用）
+        if (isTestMode) {
+            return SecurityStatus.UNLOCKED
+        }
+
         // 1. 設定がまだロードされていない場合は初期化中
         if (!isConfigLoaded) {
             return SecurityStatus.INITIALIZING

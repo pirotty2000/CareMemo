@@ -19,7 +19,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
-import jp.mydns.fujiwara.carememo.logic.feature.PhoneNumberVisualTransformation
+import jp.mydns.fujiwara.carememo.ui.utils.PhoneNumberVisualTransformation
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -158,7 +158,7 @@ fun EmergencyContactEditContent(
                     label = { Text(stringResource(R.string.medical_contact_person_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PERSON_NAME,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PersonField")
                 )
 
                 // 電話番号
@@ -192,7 +192,7 @@ fun EmergencyContactEditContent(
                     type = AppTextFieldType.INTEGER,
                     label = { Text(stringResource(R.string.medical_contact_priority_label)) },
                     maxLength = 2,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PriorityField")
                 )
 
                 Spacer(modifier = Modifier.weight(1f))

@@ -176,3 +176,26 @@ object PersonHealthLogic {
             ?: throw IllegalArgumentException("Unsupported category: $category")
     }
 }
+
+/**
+ * Map 内の値を Double として安全に取得します。
+ * 入力値が Int 型（"100" などドットなし入力時）であっても正しく Double へ変換します。
+ */
+internal fun Map<String, Any?>.getDouble(key: String): Double? {
+    return when (val value = this[key]) {
+        is Double -> value
+        is Number -> value.toDouble()
+        else -> null
+    }
+}
+
+/**
+ * Map 内の値を Int として安全に取得します。
+ */
+internal fun Map<String, Any?>.getInt(key: String): Int? {
+    return when (val value = this[key]) {
+        is Int -> value
+        is Number -> value.toInt()
+        else -> null
+    }
+}

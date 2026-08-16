@@ -9,6 +9,7 @@
 | **`data/AppSpecifications`** | **数値の源泉**。定数管理。              | ロジック記述禁止。               |
 | **`logic/common`**           | **ドメインルール（脳）**。判定ロジック。       | **[MUST] Android依存禁止**。 |
 | **`logic/feature`**          | **機能ロジック**。UiState/Entity変換。 | 副作用（Repo呼び出し、UI操作）禁止。   |
+| **`ui/utils`**              | **UI固有ユーティリティ**。           | VisualTransformation 等の Compose 依存部品。 |
 | **`viewmodel`**              | **状態管理と調整**。非同期制御。           | 複雑な判定は `logic` へ委譲。     |
 | **`data/repository`**        | **データアクセス**。DB操作。            | 業務判断禁止。                 |
 | **`ui/screens`**             | **エントリポイント**。遷移の実行。          | 詳細なレイアウト構築禁止。           |

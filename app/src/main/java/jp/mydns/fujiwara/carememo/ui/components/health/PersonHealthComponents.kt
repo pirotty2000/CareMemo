@@ -466,7 +466,7 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_height)) },
                                     suffix = { Text(AppSpecifications.Health.Height.UNIT) },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).testTag("HealthField_Height")
                                 )
                                 AppCompactTextField(
                                     value = editInput.weightText,
@@ -474,7 +474,7 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_weight)) },
                                     suffix = { Text(AppSpecifications.Health.Weight.UNIT) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).testTag("HealthField_Weight"),
                                     imeAction = ImeAction.Done
                                 )
                             }
@@ -533,7 +533,7 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(R.string.health_label_glucose)) },
                                 suffix = { Text(AppSpecifications.Health.BloodGlucose.UNIT) },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth().testTag("HealthField_Glucose")
                             )
                             AppCompactTextField(
                                 value = editInput.hba1cText,
@@ -541,7 +541,7 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(R.string.health_label_hba1c)) },
                                 suffix = { Text(AppSpecifications.Health.HbA1c.UNIT) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().testTag("HealthField_HbA1c"),
                                 imeAction = ImeAction.Done
                             )
                         }

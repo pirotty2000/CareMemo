@@ -40,5 +40,7 @@
 - `EmergencyContact_CancelButton`: キャンセルボタン
 - `EmergencyContact_TypeDropdown`: 種別選択プルダウン
 - `EmergencyContact_FacilityField`: 施設名入力欄
+- `EmergencyContact_PersonField`: 担当者名入力欄
 - `EmergencyContact_PhoneField`: 電話番号入力欄
+- `EmergencyContact_PriorityField`: 表示順序入力欄
 - `EmergencyContact_DiscardDialog`: 破棄確認ダイアログ

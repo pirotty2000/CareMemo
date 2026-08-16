@@ -33,7 +33,8 @@
 | GL-03 | Entity生成      | 正常入力                 | `GlucoseAndHbA1c` オブジェクト (値一致) |
 
 ## 5. 共通メソッドテスト (個別編集画面用)
-| ID    | テスト項目                  | 検証内容                  | 期待結果                              |
-|:------|:-----------------------|:----------------------|:----------------------------------|
-| CM-01 | validateFromMap        | 文字列マップからのバリデーション      | `HealthInputValidationResult` が一致 |
-| CM-02 | createEntityFromValues | 型変換済みマップからの Entity 生成 | 指定した ID, 値を持つ Entity が生成されること     |
+| ID    | テスト項目                  | 検証内容                           | 期待結果                              |
+|:------|:-----------------------|:-------------------------------|:----------------------------------|
+| CM-01 | validateFromMap        | 文字列マップからのバリデーション               | `HealthInputValidationResult` が一致 |
+| CM-02 | createEntityFromValues | 型変換済みマップからの Entity 生成          | 指定した ID, 値を持つ Entity が生成されること     |
+| CM-03 | 安全な型変換 (Int→Double)    | Doubleを期待する項目（体重等）に Int を渡して生成 | `Double` 型のプロパティとして正しくセットされていること  |

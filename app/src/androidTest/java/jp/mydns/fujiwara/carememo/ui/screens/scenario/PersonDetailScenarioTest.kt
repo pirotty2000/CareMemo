@@ -1,9 +1,12 @@
 package jp.mydns.fujiwara.carememo.ui.screens.scenario
 
+import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import jp.mydns.fujiwara.carememo.CareMemoApplication
 import jp.mydns.fujiwara.carememo.MainActivity
@@ -16,11 +19,13 @@ import org.junit.Test
 /**
  * UI Scenario Test: 利用者詳細フロー (SCN-DET-01, SCN-DET-02, SCN-PH-01, SCN-PC-01, SCN-PC-02, SCN-SET-01)
  * 実機抽出データ (backup.json) をベースに検証。
+ * テスト実行時はセキュリティロックをバイパスして実行します。
  */
 class PersonDetailScenarioTest {
 
+    // Activity の自動起動を避けるため EmptyComposeRule を使用
     @get:Rule
-    val composeTestRule = createAndroidComposeRule<MainActivity>()
+    val composeTestRule = createEmptyComposeRule()
 
     // 名前（全角スペース）
     private val targetPersonName = "愛\u3000植夫"
@@ -36,6 +41,12 @@ class PersonDetailScenarioTest {
             // 2. テスト用データのリストア
             ScenarioTestDataLoader.restoreFromBackup()
         }
+
+        // 3. セキュリティロックをバイパスするためのフラグを Intent に設定して起動
+        val intent = Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java).apply {
+            putExtra("IS_TEST_MODE", true)
+        }
+        ActivityScenario.launch<MainActivity>(intent)
     }
 
     private fun hasTestTagPrefix(prefix: String): SemanticsMatcher {

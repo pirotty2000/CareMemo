@@ -97,6 +97,10 @@ sealed interface Destination {
     @Serializable
     data class GraphExpansion(val personId: String, val categoryName: String, val initialIndex: Int) : Destination
 
+    /** 所見メモ関連画面のルート（ViewModel共有用） */
+    @Serializable
+    object ConditionDetailRoot : Destination
+
     /** 利用者詳細画面：所見メモ (B) */
     @Serializable
     data class ConditionDetail(val personId: String, val categoryName: String, val query: String? = null) : Destination

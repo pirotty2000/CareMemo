@@ -46,20 +46,6 @@ object EmergencyContactMapping {
 
     /** 電話番号をハイフン付きに整形して表示用に返す */
     fun formatPhoneNumber(number: String?): String? {
-        if (number.isNullOrBlank()) return null
-
-        val digits = number.filter { it.isDigit() }
-
-        return when (digits.length) {
-            11 ->  // 携帯・IP電話等 (3-4-4)
-                "${digits.take(3)}-${digits.substring(3, 7)}-${digits.takeLast(4)}"
-            10 ->
-                if (digits.startsWith("03") || digits.startsWith("06")) { // 東京・大阪 (2-4-4)
-                    "${digits.take(2)}-${digits.substring(2, 6)}-${digits.takeLast(4)}"
-                } else { // その他固定電話 (3-3-4)
-                    "${digits.take(3)}-${digits.substring(3, 6)}-${digits.takeLast(4)}"
-                }
-            else -> number // それ以外は整形せずそのまま返す
-        }
+        return jp.mydns.fujiwara.carememo.logic.common.PhoneLogic.formatPhoneNumber(number)
     }
 }

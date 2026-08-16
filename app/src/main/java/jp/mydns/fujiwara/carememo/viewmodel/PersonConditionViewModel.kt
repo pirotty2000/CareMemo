@@ -415,7 +415,33 @@ class PersonConditionViewModel(
     }
 
     fun onPhotoCaptured(uri: Uri, conditionId: String) {
+        // プレビュー画面に渡すために URI を保持
+        updateUiState { it.copy(previewUri = uri.toString()) }
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri.toString(), conditionId))
+    }
+
+    /**
+     * ナビゲーション引数から取得したコンテキストを ViewModel の状態に反映します。
+     * Shared ViewModel 構成において、個別の Destination から渡された引数を同期するために使用します。
+     */
+    fun setNavContext(personId: String, conditionId: String? = null, previewUri: String? = null) {
+        updateUiState { current ->
+            current.copy(
+                personId = personId,
+                selectedConditionId = conditionId ?: current.selectedConditionId,
+                previewUri = previewUri ?: current.previewUri
+            )
+        }
+        
+        // 利用者情報のロードを開始（まだ開始されていない場合）
+        if (personId != currentState.personId) {
+            startObservePersonId()
+        }
+
+        // レコードIDが指定されている場合はデータのロードを誘発
+        if (conditionId != null && conditionId != currentState.selectedConditionId) {
+            setSelectedConditionId(conditionId)
+        }
     }
 
     fun reattachUnassignedPhoto(conditionId: String, photoInfo: jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) {

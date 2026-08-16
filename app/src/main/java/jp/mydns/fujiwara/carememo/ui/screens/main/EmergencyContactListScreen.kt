@@ -105,7 +105,10 @@ fun EmergencyContactListContent(
                     Text(stringResource(R.string.medical_contacts_manage_title_format, uiState.personName)) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.testTag("MedicalContactList_BackButton")
+                    ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
