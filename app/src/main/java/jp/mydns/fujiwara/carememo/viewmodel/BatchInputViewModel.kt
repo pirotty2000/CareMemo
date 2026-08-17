@@ -228,7 +228,7 @@ class BatchInputViewModel(
             
             // 4. 保存の実行：入力のあるカテゴリの Entity を作成し、一括で保存する（トランザクション対応）
             val entities = BatchInputLogic.createEntities(requiredPersonId, time, state)
-            healthRepository.insertHealthDataBatch(entities, featureName, OP_SAVE_BATCH)
+            healthRepository.saveHealthDataBatch(entities, featureName, OP_SAVE_BATCH)
 
             // 全保存成功時のイベント通知
             sendViewEvent(BatchInputViewEvent.SaveSuccessEffects)

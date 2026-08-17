@@ -43,21 +43,20 @@ class HealthRepositoryTest {
     // region 2. 身長・体重操作テスト (HeightAndWeight)
 
     @Test
-    fun HW_01_insertHeightAndWeight_new() = runTest {
+    fun HW_01_saveHeightAndWeight_insert() = runTest {
         val record = HeightAndWeight(id = "100", personId = "u1", height = 170.0, weight = 60.0, recordTime = Instant.now())
         coEvery { heightAndWeightDao.insert(any()) } returns 1L
 
-        val resultId = repository.insertHeightAndWeight(record, "Feature", "Op", isUpdate = false)
+        repository.saveHeightAndWeight(record, isUpdate = false, "Feature", "Op")
 
-        assertEquals("100", resultId)
         coVerify { heightAndWeightDao.insert(match { it.id == "100" }) }
         coVerify { auditLogRepository.log(any(), any(), "height_and_weight_db", "INSERT", "100", any(), "SUCCESS") }
     }
 
     @Test
-    fun HW_02_insertHeightAndWeight_update() = runTest {
+    fun HW_02_saveHeightAndWeight_update() = runTest {
         val record = HeightAndWeight(id = "100", personId = "u1", height = 171.0, weight = 61.0, recordTime = Instant.now())
-        repository.insertHeightAndWeight(record, "Feature", "Op", isUpdate = true)
+        repository.saveHeightAndWeight(record, isUpdate = true, "Feature", "Op")
 
         coVerify { auditLogRepository.log(any(), any(), "height_and_weight_db", "UPDATE", "100", any(), "SUCCESS") }
     }
@@ -76,13 +75,12 @@ class HealthRepositoryTest {
     // region 3. バイタル操作テスト (BpAndPulse)
 
     @Test
-    fun VT_01_insertBpAndPulse_new() = runTest {
+    fun VT_01_saveBpAndPulse_insert() = runTest {
         val record = BpAndPulse(id = "200", personId = "u1", bpSystolic = 120, bpDiastolic = 80, recordTime = Instant.now())
         coEvery { bpAndPulseDao.insert(any()) } returns 1L
 
-        val resultId = repository.insertBpAndPulse(record, "Feature", "Op", isUpdate = false)
+        repository.saveBpAndPulse(record, isUpdate = false, "Feature", "Op")
 
-        assertEquals("200", resultId)
         coVerify { bpAndPulseDao.insert(match { it.id == "200" }) }
         coVerify { auditLogRepository.log(any(), any(), "bp_and_pulse_db", "INSERT", "200", any(), "SUCCESS") }
     }
@@ -101,13 +99,12 @@ class HealthRepositoryTest {
     // region 4. 血糖値・HbA1c操作テスト (GlucoseAndHbA1c)
 
     @Test
-    fun GL_01_insertGlucoseAndHbA1c_new() = runTest {
+    fun GL_01_saveGlucoseAndHbA1c_insert() = runTest {
         val record = GlucoseAndHbA1c(id = "300", personId = "u1", glucose = 100, recordTime = Instant.now())
         coEvery { glucoseAndHbA1cDao.insert(any()) } returns 1L
 
-        val resultId = repository.insertGlucoseAndHbA1c(record, "Feature", "Op", isUpdate = false)
+        repository.saveGlucoseAndHbA1c(record, isUpdate = false, "Feature", "Op")
 
-        assertEquals("300", resultId)
         coVerify { glucoseAndHbA1cDao.insert(match { it.id == "300" }) }
         coVerify { auditLogRepository.log(any(), any(), "glucose_and_hba1c_db", "INSERT", "300", any(), "SUCCESS") }
     }
@@ -129,7 +126,7 @@ class HealthRepositoryTest {
     }
 
     @Test
-    fun BAT_01_insertHealthDataBatch() = runTest {
+    fun BAT_01_saveHealthDataBatch() = runTest {
         mockkStatic("androidx.room.RoomDatabaseKt")
         val hw = HeightAndWeight(id = "100", personId = "u1", height = 170.0, weight = 60.0, recordTime = Instant.now())
         val vt = BpAndPulse(id = "200", personId = "u1", bpSystolic = 120, bpDiastolic = 80, recordTime = Instant.now())
@@ -143,7 +140,7 @@ class HealthRepositoryTest {
             block()
         }
 
-        repository.insertHealthDataBatch(items, "Feature", "BatchOp")
+        repository.saveHealthDataBatch(items, "Feature", "BatchOp")
 
         coVerify { heightAndWeightDao.insert(any()) }
         coVerify { bpAndPulseDao.insert(any()) }

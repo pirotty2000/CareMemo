@@ -11,6 +11,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.util.UUID
 
 /**
  * 一括入力画面用の UI 状態。
@@ -255,6 +256,7 @@ object BatchInputLogic {
      *
      * 【設計意図】
      * UI 境界の外側である Logic クラスの戻り値には、標準の [List] を使用します。
+     * 新規作成ユースケースであるため、各 Entity には新規 UUID を明示的に割り当てます。
      *
      * @param personId 対象者のID
      * @param time 記録時刻
@@ -269,6 +271,15 @@ object BatchInputLogic {
         }
 
         return HealthProcessorRegistry.getAll()
-            .mapNotNull { it.createEntity(personId, time, state) }
+            .mapNotNull { processor ->
+                val entity = processor.createEntity(personId, time, state)
+                // 各カテゴリの保存データが存在する場合、ID（UUID）を確定させる (ADR #8)
+                when (entity) {
+                    is jp.mydns.fujiwara.carememo.data.HeightAndWeight -> entity.copy(id = UUID.randomUUID().toString())
+                    is jp.mydns.fujiwara.carememo.data.BpAndPulse -> entity.copy(id = UUID.randomUUID().toString())
+                    is jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c -> entity.copy(id = UUID.randomUUID().toString())
+                    else -> entity
+                }
+            }
     }
 }

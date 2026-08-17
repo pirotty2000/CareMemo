@@ -161,7 +161,7 @@ class BatchInputViewModelTest {
         viewModel.saveBatch()
         advanceUntilIdle()
 
-        coVerify { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+        coVerify { healthRepository.saveHealthDataBatch(any(), any(), any()) }
         // Verify input cleared
         assertTrue(viewModel.uiState.value.weight.isEmpty())
         assertFalse(viewModel.uiState.value.isChanged)
@@ -176,7 +176,7 @@ class BatchInputViewModelTest {
         viewModel.saveBatch()
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+        coVerify(exactly = 0) { healthRepository.saveHealthDataBatch(any(), any(), any()) }
         coVerify { 
             auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("INVALID_VALUE") }, "VALIDATION_ERROR")
         }
@@ -194,7 +194,7 @@ class BatchInputViewModelTest {
         viewModel.saveBatch()
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+        coVerify(exactly = 0) { healthRepository.saveHealthDataBatch(any(), any(), any()) }
         coVerify {
             auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Duplicate detected") }, "VALIDATION_ERROR")
         }
@@ -206,7 +206,7 @@ class BatchInputViewModelTest {
         advanceUntilIdle()
 
         viewModel.updateWeight("60")
-        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
+        coEvery { healthRepository.saveHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
 
         viewModel.saveBatch()
         advanceUntilIdle()
@@ -225,7 +225,7 @@ class BatchInputViewModelTest {
         viewModel.updateWeight("60")
 
         // Mock repository with delay
-        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } coAnswers {
+        coEvery { healthRepository.saveHealthDataBatch(any(), any(), any()) } coAnswers {
             delay(1000.milliseconds)
         }
 
@@ -236,7 +236,7 @@ class BatchInputViewModelTest {
         advanceUntilIdle()
 
         // Verify repository was called ONLY once
-        coVerify(exactly = 1) { healthRepository.insertHealthDataBatch(any(), any(), any()) }
+        coVerify(exactly = 1) { healthRepository.saveHealthDataBatch(any(), any(), any()) }
     }
 
     @Test
@@ -248,7 +248,7 @@ class BatchInputViewModelTest {
         val originalState = viewModel.uiState.value
 
         // Mock repository with exception
-        coEvery { healthRepository.insertHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
+        coEvery { healthRepository.saveHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
 
         viewModel.saveBatch()
         advanceUntilIdle()

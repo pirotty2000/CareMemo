@@ -34,8 +34,13 @@ class HealthRepository(
     suspend fun findHeightAndWeightAtTime(personId: String, time: Instant): HeightAndWeight? =
         heightAndWeightDao.findAtTime(personId, time)
     
-    /** 身長・体重を保存または更新します。 */
-    suspend fun insertHeightAndWeight(item: HeightAndWeight, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
+    /** 身長・体重を保存（新規登録または更新）します。 */
+    suspend fun saveHeightAndWeight(
+        item: HeightAndWeight,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
         val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
         heightAndWeightDao.insert(itemToSave)
         auditLogRepository?.log(
@@ -47,7 +52,6 @@ class HealthRepository(
             details = "PersonId: ${itemToSave.personId}",
             resultType = "SUCCESS"
         )
-        return itemToSave.id
     }
     
     /** 身長・体重レコードを物理削除します。 */
@@ -76,8 +80,13 @@ class HealthRepository(
     suspend fun findBpAndPulseAtTime(personId: String, time: Instant): BpAndPulse? =
         bpAndPulseDao.findAtTime(personId, time)
     
-    /** バイタルレコードを保存または更新します。 */
-    suspend fun insertBpAndPulse(item: BpAndPulse, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
+    /** バイタルレコードを保存（新規登録または更新）します。 */
+    suspend fun saveBpAndPulse(
+        item: BpAndPulse,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
         val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
         bpAndPulseDao.insert(itemToSave)
         auditLogRepository?.log(
@@ -89,7 +98,6 @@ class HealthRepository(
             details = "PersonId: ${itemToSave.personId}",
             resultType = "SUCCESS"
         )
-        return itemToSave.id
     }
     
     /** バイタルレコードを物理削除します。 */
@@ -118,8 +126,13 @@ class HealthRepository(
     suspend fun findGlucoseAndHbA1cAtTime(personId: String, time: Instant): GlucoseAndHbA1c? =
         glucoseAndHbA1cDao.findAtTime(personId, time)
     
-    /** 血糖レコードを保存または更新します。 */
-    suspend fun insertGlucoseAndHbA1c(item: GlucoseAndHbA1c, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
+    /** 血糖レコードを保存（新規登録または更新）します。 */
+    suspend fun saveGlucoseAndHbA1c(
+        item: GlucoseAndHbA1c,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
         val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
         glucoseAndHbA1cDao.insert(itemToSave)
         auditLogRepository?.log(
@@ -131,7 +144,6 @@ class HealthRepository(
             details = "PersonId: ${itemToSave.personId}",
             resultType = "SUCCESS"
         )
-        return itemToSave.id
     }
     
     /** 血糖レコードを物理削除します。 */
@@ -149,14 +161,19 @@ class HealthRepository(
     }
 
     /**
-     * 健康記録データを保存または更新します。
+     * 健康記録データを保存（新規登録または更新）します。
      * 型判定を内部で行い、適切な DAO メソッドを呼び出します。
      */
-    suspend fun insertHistoryRecord(item: HistoryRecord, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
-        return when (item) {
-            is HeightAndWeight -> insertHeightAndWeight(item, featureName, operation, isUpdate)
-            is BpAndPulse -> insertBpAndPulse(item, featureName, operation, isUpdate)
-            is GlucoseAndHbA1c -> insertGlucoseAndHbA1c(item, featureName, operation, isUpdate)
+    suspend fun saveHistoryRecord(
+        item: HistoryRecord,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
+        when (item) {
+            is HeightAndWeight -> saveHeightAndWeight(item, isUpdate, featureName, operation)
+            is BpAndPulse -> saveBpAndPulse(item, isUpdate, featureName, operation)
+            is GlucoseAndHbA1c -> saveGlucoseAndHbA1c(item, isUpdate, featureName, operation)
             else -> throw IllegalArgumentException("Unsupported health record type: ${item::class.java.simpleName}")
         }
     }
@@ -190,17 +207,16 @@ class HealthRepository(
      *
      * ブロック内のすべての保存処理は一つのトランザクションとして実行され、
      * いずれかが失敗した場合は全ての変更がロールバックされます。
-     * 監査ログは案Aを採用し、各エンティティの保存ごとに個別に生成されます。
      *
      * @param items 保存対象のエンティティ（HeightAndWeight, BpAndPulse, GlucoseAndHbA1c）のリスト
      * @param featureName 監査ログ用機能名
      * @param operation 監査ログ用操作名
      */
-    suspend fun insertHealthDataBatch(items: List<Any>, featureName: String, operation: String) {
+    suspend fun saveHealthDataBatch(items: List<Any>, featureName: String, operation: String) {
         database.withTransaction {
             for (item in items) {
                 if (item is HistoryRecord) {
-                    insertHistoryRecord(item, featureName, operation)
+                    saveHistoryRecord(item, isUpdate = false, featureName, operation)
                 }
             }
         }

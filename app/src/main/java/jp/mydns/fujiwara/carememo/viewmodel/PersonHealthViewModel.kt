@@ -352,7 +352,7 @@ class PersonHealthViewModel(
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            healthRepository.insertHistoryRecord(record, featureName, OP_SAVE, isUpdate)
+            healthRepository.saveHistoryRecord(record, isUpdate, featureName, OP_SAVE)
 
             sendUiEvent(UiEvent.SaveSuccess(record.personId))
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)

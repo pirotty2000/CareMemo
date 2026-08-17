@@ -198,7 +198,7 @@ class PersonHealthViewModelTest {
         viewModel.saveCurrentEdit()
         advanceUntilIdle()
 
-        coVerify { healthRepository.insertHistoryRecord(any(), any(), any(), false) }
+        coVerify { healthRepository.saveHistoryRecord(any(), false, any(), any()) }
     }
 
     @Test
@@ -259,11 +259,11 @@ class PersonHealthViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        coEvery { healthRepository.insertHistoryRecord(any(), any(), any(), any()) } throws RuntimeException("Save Error")
-        
+        coEvery { healthRepository.saveHistoryRecord(any(), any(), any(), any()) } throws RuntimeException("Save Error")
+
         viewModel.setSelectedRecordId(newId)
         viewModel.updateEditInput { it.copy(weightText = "60.0", recordTime = Instant.now()) }
-        
+
         viewModel.saveCurrentEdit()
         advanceUntilIdle()
 

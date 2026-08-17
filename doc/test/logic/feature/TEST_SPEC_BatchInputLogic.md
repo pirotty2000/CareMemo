@@ -31,7 +31,7 @@
 
 | ID    | テスト項目  | 条件 (入力状況)        | 期待結果 (生成されるクラス)                 |
 |:------|:-------|:-----------------|:--------------------------------|
-| CP-01 | 複数カテゴリ | 体重と血圧を入力         | `[HeightAndWeight, BpAndPulse]` |
+| CP-01 | 複数カテゴリ | 体重と血圧を入力         | `[HeightAndWeight, BpAndPulse]` (各EntityのIDが確定済みであること) |
 | CP-02 | 単一カテゴリ | 血糖値のみ入力          | `[GlucoseAndHbA1c]`             |
 | CP-03 | 不正データ  | 形式不正な値を含む状態で呼び出し | `IllegalArgumentException`      |
 
