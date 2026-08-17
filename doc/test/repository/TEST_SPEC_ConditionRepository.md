@@ -12,8 +12,8 @@
 
 | ID     | テスト項目 | 検証内容                                      | 期待結果                                               |
 |:-------|:------|:------------------------------------------|:---------------------------------------------------|
-| MEM-01 | 新規保存  | `insertConditionAtVisit` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログが残ること |
-| MEM-02 | 更新保存  | `insertConditionAtVisit` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること |
+| MEM-01 | 新規保存  | `saveConditionAtVisit` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログが残ること |
+| MEM-02 | 更新保存  | `saveConditionAtVisit` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること |
 | MEM-03 | 物理削除  | `deleteConditionAtVisit` の実行              | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
 | MEM-04 | 時刻検索  | `findConditionAtTime` の実行                 | 指定された条件で DAO の `findAtTime` が呼ばれること                |
 
@@ -22,10 +22,10 @@
 
 | ID     | テスト項目    | 検証内容                              | 期待結果                                              |
 |:-------|:---------|:----------------------------------|:--------------------------------------------------|
-| PHT-01 | 写真保存     | `insertConditionPhoto` の実行        | DAO の `insert` が呼ばれ、`condition_photo_db` のログが残ること |
+| PHT-01 | 写真保存     | `saveConditionPhoto` の実行        | DAO の `insert` が呼ばれ、`condition_photo_db` のログが残ること |
 | PHT-02 | 一時保存の紐付け | `linkTemporaryPhotosToRecord`     | DAO の一括更新が呼ばれ、紐付け成功のログが残ること                       |
 | PHT-03 | 写真の再紐付け  | `reattachPhotoToRecord` (未割り当て救済) | DAO の `updateConditionId` が呼ばれ、再紐付けのログが残ること       |
-| PHT-04 | ファイル救済登録 | `adoptFileAsPhoto` (未登録ファイル救済)    | 物理情報から `ConditionPhoto` が構築・保存され、ログが残ること          |
+| PHT-04 | ファイル救済登録 | `adoptFileAsPhoto` (未登録ファイル救済)    | 外部から渡された ID と物理情報から `ConditionPhoto` が保存され、ログが残ること |
 | PHT-05 | 写真削除     | `deleteConditionPhotoById`        | DAO の `deleteById` が呼ばれ、削除のログが残ること                |
 
 ## 4. データ取得・検索テスト (Query)

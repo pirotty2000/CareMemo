@@ -31,6 +31,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.util.UUID
 
 /**
  * ViewModel：PersonConditionViewModel
@@ -363,16 +364,16 @@ class PersonConditionViewModel(
             val duplicateResult = ConditionLogic.validateDuplicate(record, existing)
             translateValidationResult(duplicateResult)
 
-            val newId = conditionRepository.insertConditionAtVisit(record, featureName, OP_SAVE, isUpdate)
-            
+            conditionRepository.saveConditionAtVisit(record, isUpdate, featureName, OP_SAVE)
+
             if (!isUpdate) {
-                conditionRepository.linkTemporaryPhotosToRecord(record.personId, newId, featureName, "$OP_SAVE(link)")
+                conditionRepository.linkTemporaryPhotosToRecord(record.personId, record.id, featureName, "$OP_SAVE(link)")
             }
 
             showSnackbar(if (isUpdate) R.string.p_cond_msg_update_success else R.string.p_cond_msg_save_success)
-            sendUiEvent(UiEvent.SaveSuccess(if (isUpdate) record.id else newId))
-            
-            val finalId = if (isUpdate) record.id else newId
+            sendUiEvent(UiEvent.SaveSuccess(record.id))
+
+            val finalId = record.id
             setSelectedConditionId(finalId)
             onSuccess(finalId)
         }
@@ -466,6 +467,7 @@ class PersonConditionViewModel(
                     photoFileName = photoInfo.photoFileName,
                     thumbnailFileName = photoInfo.thumbnailFileName,
                     capturedAt = photoInfo.capturedAt,
+                    id = UUID.randomUUID().toString(),
                     featureName = featureName,
                     operation = "adoptFileAsPhoto"
                 )
@@ -488,8 +490,9 @@ class PersonConditionViewModel(
             }
         ) {
             val (photoName, thumbName) = conditionRepository.processAndSavePhoto(uri)
-            
+
             val photo = ConditionPhoto(
+                id = UUID.randomUUID().toString(),
                 conditionId = conditionId,
                 personId = requiredPersonId,
                 photoFileName = photoName,
@@ -497,7 +500,7 @@ class PersonConditionViewModel(
                 capturedAt = Instant.now(),
                 caption = caption
             )
-            conditionRepository.insertConditionPhoto(photo, featureName, OP_SAVE_PHOTO)
+            conditionRepository.saveConditionPhoto(photo, isUpdate = false, featureName, OP_SAVE_PHOTO)
             showSnackbar(R.string.p_cond_msg_photo_save_success)
         }
     }

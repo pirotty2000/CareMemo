@@ -45,16 +45,20 @@ class ConditionRepository(
         conditionAtVisitDao.findAtTime(personId, time)
     
     /**
-     * 所見メモを保存または更新します。
+     * 所見メモを保存（新規登録または更新）します。
      * 保存時に更新日時をセットし、監査ログを記録します。
      *
      * @param item 保存対象の Entity
+     * @param isUpdate 更新処理の場合は true、新規登録なら false
      * @param featureName ログ出力用の機能名
      * @param operation ログ出力用の操作名
-     * @param isUpdate 更新処理の場合は true
-     * @return 保存されたデータのID
      */
-    suspend fun insertConditionAtVisit(item: ConditionAtVisit, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
+    suspend fun saveConditionAtVisit(
+        item: ConditionAtVisit,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
         val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
         conditionAtVisitDao.insert(itemToSave)
         auditLogRepository?.log(
@@ -66,7 +70,6 @@ class ConditionRepository(
             details = "PersonId: ${itemToSave.personId}, Title: ${itemToSave.title}",
             resultType = "SUCCESS"
         )
-        return itemToSave.id
     }
     
     /**
@@ -101,15 +104,19 @@ class ConditionRepository(
         conditionPhotoDao.getByConditionId(conditionId)
 
     /**
-     * 写真のメタデータを保存します。
+     * 写真のメタデータを保存（新規登録または更新）します。
      *
      * @param item 写真情報
+     * @param isUpdate 更新の場合は true、新規なら false
      * @param featureName ログ出力用の機能名
      * @param operation ログ出力用の操作名
-     * @param isUpdate 更新の場合は true
-     * @return 保存された写真データのID
      */
-    suspend fun insertConditionPhoto(item: ConditionPhoto, featureName: String = "", operation: String = "", isUpdate: Boolean = false): String {
+    suspend fun saveConditionPhoto(
+        item: ConditionPhoto,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
         val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
         conditionPhotoDao.insert(itemToSave)
         auditLogRepository?.log(
@@ -121,7 +128,6 @@ class ConditionRepository(
             details = "PersonId: ${itemToSave.personId}, ConditionId: ${itemToSave.conditionId}",
             resultType = "SUCCESS"
         )
-        return itemToSave.id
     }
 
     /**
@@ -178,6 +184,7 @@ class ConditionRepository(
      * @param photoFileName 物理ファイル名
      * @param thumbnailFileName サムネイルファイル名
      * @param capturedAt 撮影日時
+     * @param id 明示的に割り当てる ID（UUID）
      * @param featureName ログ出力用の機能名
      * @param operation ログ出力用の操作名
      */
@@ -187,10 +194,12 @@ class ConditionRepository(
         photoFileName: String,
         thumbnailFileName: String?,
         capturedAt: Instant,
+        id: String,
         featureName: String = "",
         operation: String = ""
     ) {
         val photo = ConditionPhoto(
+            id = id,
             conditionId = conditionId,
             personId = personId,
             photoFileName = photoFileName,

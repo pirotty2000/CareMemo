@@ -40,8 +40,8 @@
 
 | ID     | テスト項目    | 条件                          | 期待結果                                                |
 |:-------|:---------|:----------------------------|:----------------------------------------------------|
-| EXE-01 | 所見メモ保存成功 | 有効な入力で `saveCurrentEdit()`  | リポジトリの `insertConditionAtVisit` が呼ばれ、成功イベントが発行されること |
-| EXE-02 | 写真保存成功   | `processAndSavePhoto()` を実行 | `ImageUtils` での加工後にリポジトリへ登録され、一時ファイルが削除されること        |
+| EXE-01 | 所見メモ保存成功 | 有効な入力で `saveCurrentEdit()`  | リポジトリの `saveConditionAtVisit` が呼ばれ、成功イベントが発行されること |
+| EXE-02 | 写真保存成功   | `processAndSavePhoto()` を実行 | `ImageUtils` での加工後に ViewModel で ID が割り当てられ、リポジトリへ登録されること |
 | EXE-03 | 写真削除成功   | `deletePhoto()` を実行         | リポジトリの削除と `ImageUtils` による物理ファイル削除が両方呼ばれること         |
 
 ## 6. 安全性・例外テスト (Safety)

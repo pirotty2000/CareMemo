@@ -32,25 +32,25 @@ class ConditionRepositoryTest {
     // region 2. 所見メモ操作テスト (ConditionAtVisit)
 
     @Test
-    fun MEM_01_insertConditionAtVisit_new() = runTest {
+    fun MEM_01_saveConditionAtVisit_insert() = runTest {
         val record = createSampleRecord("100")
         coEvery { conditionAtVisitDao.insert(any()) } returns 1L
 
-        repository.insertConditionAtVisit(record, "Feature", "Op", isUpdate = false)
+        repository.saveConditionAtVisit(record, isUpdate = false, "Feature", "Op")
 
         coVerify { conditionAtVisitDao.insert(match { it.id == "100" }) }
-        coVerify { 
-            auditLogRepository.log(any(), any(), any(), "INSERT", "100", any(), "SUCCESS") 
+        coVerify {
+            auditLogRepository.log(any(), any(), any(), "INSERT", "100", any(), "SUCCESS")
         }
     }
 
     @Test
-    fun MEM_02_insertConditionAtVisit_update() = runTest {
+    fun MEM_02_saveConditionAtVisit_update() = runTest {
         val record = createSampleRecord("200")
-        repository.insertConditionAtVisit(record, "Feature", "Op", isUpdate = true)
+        repository.saveConditionAtVisit(record, isUpdate = true, "Feature", "Op")
 
-        coVerify { 
-            auditLogRepository.log(any(), any(), any(), "UPDATE", "200", any(), "SUCCESS") 
+        coVerify {
+            auditLogRepository.log(any(), any(), any(), "UPDATE", "200", any(), "SUCCESS")
         }
     }
 
@@ -70,12 +70,12 @@ class ConditionRepositoryTest {
     // region 3. 写真メタデータ操作テスト (ConditionPhoto)
 
     @Test
-    fun PHT_01_insertConditionPhoto() = runTest {
+    fun PHT_01_saveConditionPhoto() = runTest {
         val photo = createSamplePhoto()
-        repository.insertConditionPhoto(photo, "F", "O")
+        repository.saveConditionPhoto(photo, isUpdate = false, "F", "O")
 
         coVerify { conditionPhotoDao.insert(any()) }
-        coVerify { auditLogRepository.log(any(), any(), "condition_photo_db", any(), "p1", any(), "SUCCESS") }
+        coVerify { auditLogRepository.log(any(), any(), "condition_photo_db", "INSERT", "p1", any(), "SUCCESS") }
     }
 
     @Test
@@ -89,12 +89,12 @@ class ConditionRepositoryTest {
     @Test
     fun PHT_04_adoptFileAsPhoto() = runTest {
         val capturedAt = Instant.now()
-        repository.adoptFileAsPhoto("u1", "c1", "img.jpg", "thumb.jpg", capturedAt, "F", "O")
+        repository.adoptFileAsPhoto("u1", "c1", "img.jpg", "thumb.jpg", capturedAt, "generated-p1", "F", "O")
 
-        coVerify { 
-            conditionPhotoDao.insert(match { 
-                it.personId == "u1" && it.photoFileName == "img.jpg" && it.capturedAt == capturedAt 
-            }) 
+        coVerify {
+            conditionPhotoDao.insert(match {
+                it.id == "generated-p1" && it.personId == "u1" && it.photoFileName == "img.jpg" && it.capturedAt == capturedAt
+            })
         }
     }
 
