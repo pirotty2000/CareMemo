@@ -10,35 +10,35 @@
 ## 2. 身長・体重操作テスト (HeightAndWeight)
 **目的:** 身長・体重データの保存、削除、検索が DAO を介して正しく行われ、期待される監査ログが記録されることを検証する。
 
-| ID    | テスト項目 | 検証内容                                     | 期待結果                                               |
-|:------|:------|:-----------------------------------------|:---------------------------------------------------|
+| ID    | テスト項目 | 検証内容                                   | 期待結果                                               |
+|:------|:------|:---------------------------------------|:---------------------------------------------------|
 | HW-01 | 新規保存  | `saveHeightAndWeight` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログが残ること |
 | HW-02 | 更新保存  | `saveHeightAndWeight` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること |
-| HW-03 | 物理削除  | `deleteHeightAndWeight` の実行              | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
-| HW-04 | 時刻検索  | `findHeightAndWeightAtTime` の実行          | 指定された条件で DAO の `findAtTime` が呼ばれること                |
+| HW-03 | 物理削除  | `deleteHeightAndWeight` の実行            | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
+| HW-04 | 時刻検索  | `findHeightAndWeightAtTime` の実行        | 指定された条件で DAO の `findAtTime` が呼ばれること                |
 
 ## 3. バイタル操作テスト (BpAndPulse)
 **目的:** バイタルデータの保存、削除、検索が DAO を介して正しく行われ、期待される監査ログが記録されることを検証する。
 
-| ID    | テスト項目 | 検証内容                                | 期待結果                                               |
-|:------|:------|:------------------------------------|:---------------------------------------------------|
+| ID    | テスト項目 | 検証内容                              | 期待結果                                               |
+|:------|:------|:----------------------------------|:---------------------------------------------------|
 | VT-01 | 新規保存  | `saveBpAndPulse` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログが残ること |
 | VT-02 | 更新保存  | `saveBpAndPulse` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること |
-| VT-03 | 物理削除  | `deleteBpAndPulse` の実行              | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
+| VT-03 | 物理削除  | `deleteBpAndPulse` の実行            | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
 
 ## 4. 血糖値・HbA1c操作テスト (GlucoseAndHbA1c)
 **目的:** 血糖値データの保存、削除、検索が DAO を介して正しく行われ、期待される監査ログが記録されることを検証する。
 
-| ID    | テスト項目 | 検証内容                                     | 期待結果                                               |
-|:------|:------|:-----------------------------------------|:---------------------------------------------------|
+| ID    | テスト項目 | 検証内容                                   | 期待結果                                               |
+|:------|:------|:---------------------------------------|:---------------------------------------------------|
 | GL-01 | 新規保存  | `saveGlucoseAndHbA1c` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログが残ること |
 | GL-02 | 更新保存  | `saveGlucoseAndHbA1c` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること |
-| GL-03 | 物理削除  | `deleteGlucoseAndHbA1c` の実行              | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
+| GL-03 | 物理削除  | `deleteGlucoseAndHbA1c` の実行            | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること |
 
 ## 5. 共通・一括操作テスト (Common & Batch)
 **目的:** 複数カテゴリにまたがる操作や、汎用的なデータアクセスが正しく行われることを検証する。
 
-| ID     | テスト項目 | 条件                            | 期待結果                                             |
-|:-------|:------|:------------------------------|:-------------------------------------------------|
-| COM-01 | 汎用検索  | `findHistoryRecordAtTime` の実行 | 指定したカテゴリに応じた DAO の検索メソッドが呼ばれ、HistoryRecord が返ること |
+| ID     | テスト項目 | 条件                            | 期待結果                                                            |
+|:-------|:------|:------------------------------|:----------------------------------------------------------------|
+| COM-01 | 汎用検索  | `findHistoryRecordAtTime` の実行 | 指定したカテゴリに応じた DAO の検索メソッドが呼ばれ、HistoryRecord が返ること                |
 | BAT-01 | 一括保存  | 異なるカテゴリのエンティティリストを渡す          | 各カテゴリの `insert` メソッドが個別に呼ばれ、それぞれのログが残ること(`saveHistoryRecord`経由) |

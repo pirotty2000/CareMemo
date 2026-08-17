@@ -272,9 +272,8 @@ object BatchInputLogic {
 
         return HealthProcessorRegistry.getAll()
             .mapNotNull { processor ->
-                val entity = processor.createEntity(personId, time, state)
                 // 各カテゴリの保存データが存在する場合、ID（UUID）を確定させる (ADR #8)
-                when (entity) {
+                when (val entity = processor.createEntity(personId, time, state)) {
                     is jp.mydns.fujiwara.carememo.data.HeightAndWeight -> entity.copy(id = UUID.randomUUID().toString())
                     is jp.mydns.fujiwara.carememo.data.BpAndPulse -> entity.copy(id = UUID.randomUUID().toString())
                     is jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c -> entity.copy(id = UUID.randomUUID().toString())
