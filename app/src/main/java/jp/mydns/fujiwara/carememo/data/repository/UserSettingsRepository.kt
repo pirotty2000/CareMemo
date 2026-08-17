@@ -29,8 +29,6 @@ class UserSettingsRepository(private val context: Context) {
         private val DEFAULT_RECORDER_NAME = stringPreferencesKey("default_recorder_name")
         /** 生体認証によるロックを有効にするか */
         private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
-        /** 自動ロックまでの分（0は即時） */
-        private val LOCK_TIMEOUT_MINUTES = intPreferencesKey("lock_timeout_minutes")
         /*
         /** 最後にアプリを操作した時刻（ミリ秒） */
         private val LAST_ACTIVE_TIME = longPreferencesKey("last_active_time")
@@ -62,22 +60,6 @@ class UserSettingsRepository(private val context: Context) {
     val isBiometricEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[IS_BIOMETRIC_ENABLED] ?: false
-        }
-
-    /*
-     * 初回起動時の生体認証案内ダイアログの表示制御など、
-     * 「未設定状態」を明示的に判定する必要がある機能を追加する際に使用するため保持。
-    val isBiometricSettingInitialized: Flow<Boolean> = context.dataStore.data
-        .map { preferences ->
-            preferences.contains(IS_BIOMETRIC_ENABLED)
-        }
-    */
-
-    /** ロックタイムアウト（分）を取得する Flow */
-    val lockTimeoutMinutes: Flow<Int> = context.dataStore.data
-        .map { preferences ->
-            // デフォルトは 0分（即時ロック）
-            preferences[LOCK_TIMEOUT_MINUTES] ?: 0
         }
 
     /*
@@ -154,12 +136,6 @@ class UserSettingsRepository(private val context: Context) {
     suspend fun setBiometricEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_BIOMETRIC_ENABLED] = enabled
-        }
-    }
-
-    suspend fun setLockTimeoutMinutes(minutes: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[LOCK_TIMEOUT_MINUTES] = minutes
         }
     }
 

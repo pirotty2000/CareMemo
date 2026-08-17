@@ -104,32 +104,21 @@ class MainActivity : FragmentActivity() {
                 securityStatus == SecurityStatus.INITIALIZING
             }
 
-            val themeSetting by userSettingsRepository.themeSetting.collectAsStateWithLifecycle(initialValue = ThemeSetting.SYSTEM)
+                val themeSetting by userSettingsRepository.themeSetting.collectAsStateWithLifecycle(initialValue = ThemeSetting.SYSTEM)
             CareMemoTheme(themeSetting = themeSetting) {
                 val navController = rememberNavController()
                 val widthSizeClass = calculateWindowSizeClass(this).widthSizeClass
                 
-                val lockTimeoutMinutes by userSettingsRepository.lockTimeoutMinutes.collectAsStateWithLifecycle(initialValue = 5)
-                var lastPausedTime by rememberSaveable { mutableLongStateOf(0L) }
-
                 val requestAuthentication: (Int?, Int?, () -> Unit) -> Unit = { titleResId, subtitleResId, onSuccess ->
                     this@MainActivity.authenticate(titleResId, subtitleResId, onSuccess)
                 }
 
                 DisposableEffect(Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_RESUME) {
                     val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_PAUSE) {
-                            lastPausedTime = System.currentTimeMillis()
-                        } else if (event == Lifecycle.Event.ON_RESUME) {
+                        if (event == Lifecycle.Event.ON_RESUME) {
                             if (isAuthenticated && (biometricEnabledState == true) && !userSettingsRepository.isLockBypassed) {
-                                if (lockTimeoutMinutes == 0) {
-                                    isAuthenticated = false
-                                } else if (lockTimeoutMinutes > 0) {
-                                    val elapsedMillis = System.currentTimeMillis() - lastPausedTime
-                                    if (elapsedMillis > lockTimeoutMinutes * 60 * 1000) {
-                                        isAuthenticated = false
-                                    }
-                                }
+                                // 即時ロック（バックグラウンドから復帰した際に必ずロックする）
+                                isAuthenticated = false
                             }
                             userSettingsRepository.isLockBypassed = false
                         }

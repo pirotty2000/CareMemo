@@ -59,12 +59,6 @@ class UserSettingsRepositoryTest {
         assertEquals(90, repository.auditLogRetentionDays.first())
     }
 
-    @Test
-    fun SET_05_lockTimeoutMinutes_persistence() = runBlocking {
-        repository.setLockTimeoutMinutes(15)
-        assertEquals(15, repository.lockTimeoutMinutes.first())
-    }
-
     // endregion
 
     // region 3. 初期値テスト (Defaults)

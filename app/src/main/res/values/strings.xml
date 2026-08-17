@@ -354,10 +354,6 @@
     <string name="settings_section_security">セキュリティ</string>
     <string name="settings_item_app_lock_title">アプリのロック</string>
     <string name="settings_item_app_lock_desc">起動時・復帰時に認証を求めます</string>
-    <string name="settings_item_lock_timeout_title">再ロックまでの時間</string>
-    <string name="settings_item_lock_timeout_desc">指定時間が経過するとロックがかかります</string>
-    <string name="settings_item_lock_timeout_warning">※画面消灯設定を短くするとより安全です</string>
-
     <string name="settings_section_theme">テーマ</string>
     <string name="settings_item_theme_selection_title">配色とモード</string>
 
@@ -384,7 +380,6 @@
 
     <!-- Settings Dialogs -->
     <string name="settings_dialog_theme_title">配色とモードの選択</string>
-    <string name="settings_dialog_lock_timeout_title">再ロックまでの時間</string>
     <string name="settings_dialog_restore_confirm_title">データの復元</string>
     <string name="settings_dialog_restore_confirm_msg">現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？</string>
     <string name="settings_dialog_restore_confirm_btn">復元を実行</string>
@@ -404,10 +399,6 @@
     <string name="settings_dialog_import_password_msg">このファイルはパスワード保護されています。入力してください。</string>
     <string name="settings_dialog_import_password_label">パスワード</string>
     <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n&#169; 2025&#8211;2026 pirotty.galaxy</string>
-
-    <string name="settings_timeout_immediate">即時</string>
-    <string name="settings_timeout_none">ロックしない</string>
-    <string name="settings_timeout_minutes">%1$d分</string>
 
     <string name="settings_retention_none">残さない</string>
     <string name="settings_retention_one_week">1週間</string>
