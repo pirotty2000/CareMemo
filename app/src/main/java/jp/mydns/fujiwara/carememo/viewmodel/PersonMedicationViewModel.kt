@@ -221,7 +221,10 @@ class PersonMedicationViewModel(
             // 3. 判定されたアクションを順次実行
             actions.forEach { action ->
                 when (action) {
-                    is SyncAction.Insert -> medicationRepository.insertMedicationRecord(action.record, featureName, OP_SYNC)
+                    is SyncAction.Insert -> {
+                        val isUpdate = currentDayRecords.any { it.timeSlot == action.record.timeSlot }
+                        medicationRepository.saveMedicationRecord(action.record, isUpdate, featureName, OP_SYNC)
+                    }
                     is SyncAction.Delete -> medicationRepository.deleteMedicationRecord(action.record, featureName, OP_SYNC)
                     SyncAction.None -> {}
                 }

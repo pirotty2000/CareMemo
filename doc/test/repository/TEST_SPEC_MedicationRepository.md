@@ -12,8 +12,8 @@
 
 | ID     | テスト項目 | 検証内容                                      | 期待結果                                                             |
 |:-------|:------|:------------------------------------------|:-----------------------------------------------------------------|
-| MED-01 | 新規登録  | `insertMedicationRecord` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログ（日付、枠、ステータス含む）が残ること |
-| MED-02 | 内容更新  | `insertMedicationRecord` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること               |
+| MED-01 | 新規登録  | `saveMedicationRecord` (isUpdate=false) | DAO の `insert` が呼ばれ、`actionType="INSERT"` のログ（日付、枠、ステータス含む）が残ること |
+| MED-02 | 内容更新  | `saveMedicationRecord` (isUpdate=true)  | DAO の `insert` が呼ばれ、`actionType="UPDATE"` のログが残ること               |
 | MED-03 | 物理削除  | `deleteMedicationRecord` の実行              | DAO の `delete` が呼ばれ、`actionType="DELETE"` のログが残ること               |
 
 ## 3. データ取得テスト (Query)

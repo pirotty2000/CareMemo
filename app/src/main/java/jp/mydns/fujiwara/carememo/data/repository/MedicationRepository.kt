@@ -39,14 +39,19 @@ class MedicationRepository(
          medicationRecordDao.getByMonth(personId, month)
 
     /**
-     * 服薬記録を保存または更新します。
+     * 服薬記録を保存（新規登録または更新）します。
      *
      * @param item 保存対象の記録 Entity
+     * @param isUpdate 更新処理の場合は true、新規なら false
      * @param featureName ログ出力用の機能名
      * @param operation ログ出力用の操作名
-     * @param isUpdate 更新処理の場合は true
      */
-    suspend fun insertMedicationRecord(item: MedicationRecord, featureName: String = "", operation: String = "", isUpdate: Boolean = false) {
+    suspend fun saveMedicationRecord(
+        item: MedicationRecord,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
         val itemToSave = item.copy(updatedAt = Instant.now(), isSynced = false)
         medicationRecordDao.insert(itemToSave)
         auditLogRepository?.log(
