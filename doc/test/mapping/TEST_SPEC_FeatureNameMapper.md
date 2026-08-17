@@ -26,4 +26,8 @@
 | MAP-13 | 詳細：服薬     | `"PersonDetail/MEDICATION"`        | `R.string.audit_feature_detail_medication`    |
 | MAP-14 | アプリ設定     | `"Settings"`                       | `R.string.audit_feature_settings`             |
 | MAP-15 | 詳細：基本情報   | `"PersonDetail/Base"`              | `R.string.audit_feature_detail_base`          |
-| MAP-16 | 未定義       | `"UNKNOWN"`                        | `0`                                           |
+| MAP-16 | 操作ログ管理     | `"AuditLog"`                       | `R.string.audit_feature_audit_log`            |
+| MAP-17 | 緊急連絡先管理   | `"MedicalContact"`                 | `R.string.audit_feature_medical_contact`      |
+| MAP-18 | 利用者詳細       | `"PersonDetail"`                   | `R.string.audit_feature_person_detail`        |
+| MAP-19 | 未割り当て写真管理 | `"UnassignedPhotoManagement"`      | `R.string.audit_feature_unassigned_photo`     |
+| MAP-20 | 未定義           | `"UNKNOWN"`                        | `0`                                           |

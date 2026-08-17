@@ -85,7 +85,27 @@ class FeatureNameMapperTest {
     }
 
     @Test
-    fun MAP_16_unknown_mapping() {
+    fun MAP_16_auditLog_mapping() {
+        assertEquals(R.string.audit_feature_audit_log, "AuditLog".toFeatureLabelRes)
+    }
+
+    @Test
+    fun MAP_17_medicalContact_mapping() {
+        assertEquals(R.string.audit_feature_medical_contact, "MedicalContact".toFeatureLabelRes)
+    }
+
+    @Test
+    fun MAP_18_personDetail_mapping() {
+        assertEquals(R.string.audit_feature_person_detail, "PersonDetail".toFeatureLabelRes)
+    }
+
+    @Test
+    fun MAP_19_unassignedPhoto_mapping() {
+        assertEquals(R.string.audit_feature_unassigned_photo, "UnassignedPhotoManagement".toFeatureLabelRes)
+    }
+
+    @Test
+    fun MAP_20_unknown_mapping() {
         assertEquals(0, "UNKNOWN".toFeatureLabelRes)
     }
 }

@@ -16,6 +16,9 @@ val String.toResultLabelRes: Int
         "FORMAT_ERROR" -> R.string.audit_result_format_error
         "VALIDATION_ERROR" -> R.string.audit_result_validation_error
         "OTHER_ERROR" -> R.string.audit_result_other_error
+        "SECURITY_ERROR" -> R.string.audit_result_security_error
+        "EXTERNAL_ERROR" -> R.string.audit_result_external_error
+        "GUARD_SKIPPED" -> R.string.audit_result_guard_skipped
         "UNKNOWN" -> R.string.audit_result_unknown
         else -> R.string.audit_result_unknown
     }

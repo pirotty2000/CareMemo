@@ -17,5 +17,7 @@ val String.toActionLabelRes: Int
         "RESTORE" -> R.string.audit_action_restore
         "PERMANENT_DELETE" -> R.string.audit_action_permanent_delete
         "CLEAR_ALL_ARCHIVED" -> R.string.audit_action_clear_all
+        "INFO" -> R.string.audit_action_info
+        "ERROR" -> R.string.audit_action_error
         else -> 0
     }

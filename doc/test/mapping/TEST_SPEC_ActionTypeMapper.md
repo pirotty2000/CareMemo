@@ -18,4 +18,6 @@
 | MAP-05 | 復帰         | `"RESTORE"`            | `R.string.audit_action_restore`          |
 | MAP-06 | 完全抹消       | `"PERMANENT_DELETE"`   | `R.string.audit_action_permanent_delete` |
 | MAP-07 | 一括抹消       | `"CLEAR_ALL_ARCHIVED"` | `R.string.audit_action_clear_all`        |
-| MAP-08 | 未定義        | `"UNKNOWN"`            | `0`                                      |
+| MAP-08 | 情報 (INFO)    | `"INFO"`               | `R.string.audit_action_info`             |
+| MAP-09 | エラー (ERROR)  | `"ERROR"`              | `R.string.audit_action_error`            |
+| MAP-10 | 未定義        | `"UNKNOWN"`            | `0`                                      |

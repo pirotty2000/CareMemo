@@ -97,10 +97,11 @@ fun PersonHealthScreenContent(
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
                             uiState = uiState,
-                            onCancel = onCancelEdit,
+                            onCancel = { onSelectedRecordIdChange(null) },
                             onEditClick = onEditClick,
                             onEditInputUpdate = onEditInputUpdate,
-                            onSaveClick = onSaveClick
+                            onSaveClick = onSaveClick,
+                            onCancelEdit = onCancelEdit
                         )
                     }
                 } else {
@@ -131,10 +132,11 @@ fun PersonHealthScreenContent(
             Box(modifier = modifier.testTag("HealthScreen_InputForm")) {
                 HealthRecordDetailPane(
                     uiState = uiState,
-                    onCancel = onCancelEdit,
+                    onCancel = { onSelectedRecordIdChange(null) },
                     onEditClick = onEditClick,
                     onEditInputUpdate = onEditInputUpdate,
-                    onSaveClick = onSaveClick
+                    onSaveClick = onSaveClick,
+                    onCancelEdit = onCancelEdit
                 )
             }
         } else {

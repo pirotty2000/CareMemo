@@ -36,6 +36,10 @@ val String.toFeatureLabelRes: Int
         "PersonMedication" -> R.string.audit_feature_medication
         "PersonDetail/MEDICATION" -> R.string.audit_feature_detail_medication
         "Settings" -> R.string.audit_feature_settings
+        "AuditLog" -> R.string.audit_feature_audit_log
+        "MedicalContact" -> R.string.audit_feature_medical_contact
+        "PersonDetail" -> R.string.audit_feature_person_detail
+        "UnassignedPhotoManagement" -> R.string.audit_feature_unassigned_photo
         "PersonDetail/Base" -> R.string.audit_feature_detail_base
         else -> 0 // 該当なし
     }

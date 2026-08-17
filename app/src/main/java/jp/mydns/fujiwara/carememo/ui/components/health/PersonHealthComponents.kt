@@ -286,10 +286,11 @@ private fun GlucoseRecordItemContent(
  * 健康記録の詳細表示と編集モードを管理する最上位コンポーネント。
  *
  * @param uiState UI 状態
- * @param onCancel 閲覧モードの終了、または編集のキャンセル（警告付き）
+ * @param onCancel 閲覧モードの終了（詳細ペインを閉じる）のコールバック
  * @param onEditClick 編集モードへの移行
  * @param onEditInputUpdate 入力値の更新
  * @param onSaveClick 保存の実行
+ * @param onCancelEdit 編集のキャンセル（警告付き）のコールバック
  */
 @Composable
 fun HealthRecordDetailPane(
@@ -299,6 +300,7 @@ fun HealthRecordDetailPane(
     onEditClick: () -> Unit,
     onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
     onSaveClick: () -> Unit,
+    onCancelEdit: () -> Unit,
 ) {
     val record = remember(uiState.records, uiState.selectedRecordId) {
         if (uiState.selectedRecordId == null || IdLogic.isNew(uiState.selectedRecordId)) null
@@ -377,7 +379,7 @@ fun HealthRecordDetailPane(
                             if (uiState.isChanged) {
                                 showDiscardDialog = true
                             } else {
-                                onCancel()
+                                onCancelEdit()
                             }
                         },
                         onSave = onSaveClick
