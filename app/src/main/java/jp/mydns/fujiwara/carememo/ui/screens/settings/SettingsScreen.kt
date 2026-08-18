@@ -115,7 +115,6 @@ fun SettingsScreen(
     var showEraseConfirm by rememberSaveable { mutableStateOf(false) }
     var showDevClearConfirm by rememberSaveable { mutableStateOf(false) }
     var showVersionDialog by rememberSaveable { mutableStateOf(false) }
-    var showTimeoutDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     var showRetentionDialog by rememberSaveable { mutableStateOf(false) }
     var showLogClearConfirm by rememberSaveable { mutableStateOf(false) }
@@ -341,60 +340,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showTimeoutDialog) {
-        val options = AppSpecifications.Settings.LOCK_TIMEOUT_OPTIONS
-        AppDialog(
-            onDismissRequest = { showTimeoutDialog = false },
-            title = { Text(stringResource(R.string.settings_dialog_lock_timeout_title)) },
-            text = {
-                AppDialogContent {
-                    options.forEach { (minutes, _) ->
-                        val displayLabel = when (minutes) {
-                            0 -> stringResource(R.string.settings_timeout_immediate)
-                            -1 -> stringResource(R.string.settings_timeout_none)
-                            else -> stringResource(R.string.settings_timeout_minutes, minutes)
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    if ((minutes == -1) && (uiState.lockTimeoutMinutes != -1)) {
-                                        if (onCheckBiometricSupport()) {
-                                            onRequireAuthentication(
-                                                R.string.security_auth_title,
-                                                R.string.security_auth_reason_change_settings
-                                            ) {
-                                                viewModel.setLockTimeoutMinutes(minutes)
-                                                showTimeoutDialog = false
-                                            }
-                                        } else {
-                                            viewModel.setLockTimeoutMinutes(minutes)
-                                            showTimeoutDialog = false
-                                        }
-                                    } else {
-                                        viewModel.setLockTimeoutMinutes(minutes)
-                                        showTimeoutDialog = false
-                                    }
-                                }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = uiState.lockTimeoutMinutes == minutes, onClick = null)
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(displayLabel)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                AppDialogDismissButton(
-                    text = stringResource(R.string.common_cancel),
-                    onClick = { showTimeoutDialog = false }
-                )
-            }
-        )
-    }
-
     if (showThemeDialog) {
         AppDialog(
             onDismissRequest = { showThemeDialog = false },
@@ -587,7 +532,6 @@ fun SettingsScreen(
         },
         onUnassignedPhotosClick = { viewModel.navigateToUnassignedPhotos() },
         isBiometricEnabled = uiState.isBiometricEnabled,
-        lockTimeoutMinutes = uiState.lockTimeoutMinutes,
         onBiometricEnabledChange = { enabled ->
             if (enabled) {
                 viewModel.setBiometricEnabled(isSupported = onCheckBiometricSupport(), enabled = true)
@@ -605,7 +549,6 @@ fun SettingsScreen(
             }
             isChangedByMe = true
         },
-        onTimeoutClick = { showTimeoutDialog = true },
         themeSetting = uiState.themeSetting,
         onThemeClick = { showThemeDialog = true },
         onVersionClick = {
@@ -683,9 +626,7 @@ fun SettingsScreenContent(
     onImportClick: () -> Unit,
     onUnassignedPhotosClick: () -> Unit,
     isBiometricEnabled: Boolean,
-    lockTimeoutMinutes: Int,
     onBiometricEnabledChange: (Boolean) -> Unit,
-    onTimeoutClick: () -> Unit,
     themeSetting: ThemeSetting,
     onThemeClick: () -> Unit,
     onVersionClick: () -> Unit,
@@ -769,9 +710,7 @@ fun SettingsScreenContent(
 
                 SecuritySection(
                     isBiometricEnabled = isBiometricEnabled,
-                    lockTimeoutMinutes = lockTimeoutMinutes,
-                    onBiometricEnabledChange = onBiometricEnabledChange,
-                    onTimeoutClick = onTimeoutClick
+                    onBiometricEnabledChange = onBiometricEnabledChange
                 )
 
                 ThemeSection(
@@ -1001,9 +940,7 @@ private fun DataManagementSection(
 @Composable
 private fun SecuritySection(
     isBiometricEnabled: Boolean,
-    lockTimeoutMinutes: Int,
     onBiometricEnabledChange: (Boolean) -> Unit,
-    onTimeoutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_security), modifier = modifier) {
@@ -1023,18 +960,6 @@ private fun SecuritySection(
                 onValueChange = onBiometricEnabledChange
             )
         )
-        val timeoutLabel = when (lockTimeoutMinutes) {
-            0 -> stringResource(R.string.settings_timeout_immediate)
-            -1 -> stringResource(R.string.settings_timeout_none)
-            else -> stringResource(R.string.settings_timeout_minutes, lockTimeoutMinutes)
-        }
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_item_lock_timeout_title), color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
-            supportingContent = { Text(stringResource(R.string.settings_item_lock_timeout_desc), color = if (isBiometricEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) },
-            trailingContent = { Text(text = timeoutLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = if (isBiometricEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) },
-            modifier = Modifier.clickable(enabled = isBiometricEnabled) { onTimeoutClick() }.testTag("Settings_TimeoutRow")
-        )
-        Text(text = stringResource(R.string.settings_item_lock_timeout_warning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
     }
 }
 
@@ -1224,9 +1149,7 @@ fun SettingsScreenPreview() {
             onImportClick = {},
             onUnassignedPhotosClick = {},
             isBiometricEnabled = true,
-            lockTimeoutMinutes = 5,
             onBiometricEnabledChange = {},
-            onTimeoutClick = {},
             themeSetting = ThemeSetting.SYSTEM,
             onThemeClick = {},
             onVersionClick = {},

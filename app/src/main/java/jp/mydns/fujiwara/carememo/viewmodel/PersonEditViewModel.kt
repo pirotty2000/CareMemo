@@ -11,6 +11,7 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.common.JapaneseDateLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
@@ -82,14 +83,14 @@ class PersonEditViewModel(
 
         // 引数から ID を取得
         val personIdRaw = savedStateHandle.get<String>(KEY_PERSON_ID)
-        personId = if (personIdRaw == "_new") null else personIdRaw
+        personId = if (IdLogic.isNew(personIdRaw) || personIdRaw == "_new") null else personIdRaw
         
         // 初期状態の設定（新規か編集か）
-        updateUiState { it.copy(isNew = personId == null) }
+        updateUiState { it.copy(isNew = IdLogic.isNew(personId)) }
 
         // 編集モードの場合、初期データをロード
-        if (personId != null) {
-            loadPerson(personId)
+        if (!IdLogic.isNew(personId)) {
+            loadPerson(personId!!)
         }
 
         // 共通設定（氏名マスキング）の変更を購読し、UI 状態へ反映
@@ -209,11 +210,11 @@ class PersonEditViewModel(
             val person = PersonEditLogic.createPerson(state, initialPerson)
             val maskedName = person.getMaskedName(state.isNameMaskingEnabled)
             val existing = repository.findExistingPerson(person)
-            if (existing != null && (personId == null || existing.id != personId)) {
-                handleDuplicateError(existing, person, isUpdate = personId != null)
+            if (existing != null && (IdLogic.isNew(personId) || existing.id != personId)) {
+                handleDuplicateError(existing, person, isUpdate = !IdLogic.isNew(personId))
             }
 
-            if (personId == null) {
+            if (IdLogic.isNew(personId)) {
                 repository.insertPerson(person, featureName, OP_SAVE)
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
                 sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED, maskedName))

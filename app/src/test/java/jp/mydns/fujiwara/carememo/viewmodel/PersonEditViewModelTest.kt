@@ -5,11 +5,13 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import kotlinx.coroutines.delay
@@ -68,9 +70,9 @@ class PersonEditViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    private fun createViewModel(personId: String? = "_new"): PersonEditViewModel {
+    private fun createViewModel(personId: String? = AppSpecifications.Id.NEW_RECORD_ID): PersonEditViewModel {
         return PersonEditViewModel(
-            SavedStateHandle(if (personId != null) mapOf("personId" to personId) else emptyMap()),
+            SavedStateHandle(if (!IdLogic.isNew(personId)) mapOf("personId" to personId!!) else emptyMap()),
             repository,
             userSettingsRepository,
             auditLogRepository
@@ -81,7 +83,7 @@ class PersonEditViewModelTest {
 
     @Test
     fun INI_01_initialLoad_newMode() = runTest {
-        val viewModel = createViewModel("_new")
+        val viewModel = createViewModel(AppSpecifications.Id.NEW_RECORD_ID)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value

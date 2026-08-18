@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.ui.components.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
@@ -78,33 +79,39 @@ fun PdfExportActionHandler(
             onDismiss = onDismiss,
             onRequireAuthentication = onRequireAuthentication
         ) { range, order, start, end, includePhotos, password ->
-            onDismiss()
-
-            // 【重要】PDF出力後の共有UI（システムの共有シート）から戻ってきたときに、
-            // アプリが「バックグラウンドから復帰した」と判定されてロックがかからないよう、
-            // 一時的にロックバイパスを有効化する。
-            viewModel.setLockBypassEnabled(true)
-            
-            // ViewModel の安全なコルーチン起動を使用して PDF 出力を実行
-            viewModel.safeLaunch(
-                operation = "exportAndShare",
-                contextBuilder = {
-                    tableName = "pdf_export"
-                }
+            // PDF出力（機微情報の外部持ち出し）の前に再認証を要求する
+            onRequireAuthentication(
+                R.string.security_auth_title,
+                R.string.security_auth_reason_pdf_export
             ) {
-                // PDF 生成およびシステムの共有シート呼び出し
-                PdfExporter.exportAndShare(
-                    context = context,
-                    person = person,
-                    category = category,
-                    records = records,
-                    allPhotos = if (includePhotos) photos else emptyList(),
-                    range = range,
-                    order = order,
-                    customStartDate = start,
-                    customEndDate = end,
-                    password = password
-                )
+                onDismiss()
+
+                // 【重要】PDF出力後の共有UI（システムの共有シート）から戻ってきたときに、
+                // アプリが「バックグラウンドから復帰した」と判定されてロックがかからないよう、
+                // 一時的にロックバイパスを有効化する。
+                viewModel.setLockBypassEnabled(true)
+
+                // ViewModel の安全なコルーチン起動を使用して PDF 出力を実行
+                viewModel.safeLaunch(
+                    operation = "exportAndShare",
+                    contextBuilder = {
+                        tableName = "pdf_export"
+                    }
+                ) {
+                    // PDF 生成およびシステムの共有シート呼び出し
+                    PdfExporter.exportAndShare(
+                        context = context,
+                        person = person,
+                        category = category,
+                        records = records,
+                        allPhotos = if (includePhotos) photos else emptyList(),
+                        range = range,
+                        order = order,
+                        customStartDate = start,
+                        customEndDate = end,
+                        password = password
+                    )
+                }
             }
         }
     }

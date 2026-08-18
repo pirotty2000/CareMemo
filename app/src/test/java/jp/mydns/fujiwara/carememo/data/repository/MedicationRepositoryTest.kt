@@ -26,35 +26,35 @@ class MedicationRepositoryTest {
     // region 2. 服薬記録操作テスト (CRUD)
 
     @Test
-    fun MED_01_insertMedicationRecord_new() = runTest {
+    fun MED_01_saveMedicationRecord_insert() = runTest {
         val record = createSampleRecord("500")
         coEvery { medicationRecordDao.insert(any()) } returns 1L
 
-        repository.insertMedicationRecord(record, "Feature", "Op", isUpdate = false)
+        repository.saveMedicationRecord(record, isUpdate = false, "Feature", "Op")
 
         coVerify { medicationRecordDao.insert(match { it.id == "500" && it.dosageDate == "2023-11-01" }) }
-        coVerify { 
+        coVerify {
             auditLogRepository.log(
                 featureName = "Feature",
                 operation = "Op",
                 tableName = "medication_record_db",
                 actionType = "INSERT",
                 affectedId = "500",
-                details = match { 
+                details = match {
                     it.contains("Date: 2023-11-01") && it.contains("Slot: 0") && it.contains("Status: 2")
                 },
                 resultType = "SUCCESS"
-            ) 
+            )
         }
     }
 
     @Test
-    fun MED_02_insertMedicationRecord_update() = runTest {
+    fun MED_02_saveMedicationRecord_update() = runTest {
         val record = createSampleRecord("500")
-        repository.insertMedicationRecord(record, "Feature", "Op", isUpdate = true)
+        repository.saveMedicationRecord(record, isUpdate = true, "Feature", "Op")
 
-        coVerify { 
-            auditLogRepository.log(any(), any(), any(), "UPDATE", "500", any(), "SUCCESS") 
+        coVerify {
+            auditLogRepository.log(any(), any(), any(), "UPDATE", "500", any(), "SUCCESS")
         }
     }
 

@@ -257,10 +257,11 @@ private fun AuditLogFilterBar(
                     selected = selectedFeature != null,
                     onClick = { showFeatureMenu = true },
                     label = { 
-                        Text(
-                            selectedFeature?.let { stringResource(it.toFeatureLabelRes) } 
-                                ?: stringResource(R.string.audit_log_filter_feature_prefix, stringResource(R.string.audit_log_filter_all))
-                        ) 
+                        val label = selectedFeature?.let {
+                            val resId = it.toFeatureLabelRes
+                            if (resId != 0) stringResource(resId) else it
+                        } ?: stringResource(R.string.audit_log_filter_feature_prefix, stringResource(R.string.audit_log_filter_all))
+                        Text(label)
                     },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedFeature != null) {
@@ -278,7 +279,11 @@ private fun AuditLogFilterBar(
                     )
                     availableFeatures.forEach { feature ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(feature.toFeatureLabelRes)) },
+                            text = {
+                                val resId = feature.toFeatureLabelRes
+                                val label = if (resId != 0) stringResource(resId) else feature
+                                Text(label)
+                            },
                             onClick = {
                                 onFeatureSelect(feature)
                                 showFeatureMenu = false
@@ -394,8 +399,9 @@ fun AuditLogItem(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                val actionResId = log.actionType.toActionLabelRes
                 Text(
-                    text = stringResource(log.actionType.toActionLabelRes),
+                    text = if (actionResId != 0) stringResource(actionResId) else log.actionType,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = getAuditActionColor(log.actionType),

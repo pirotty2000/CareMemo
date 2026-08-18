@@ -88,7 +88,6 @@ class SettingsViewModel(
                 combine(
                     userSettingsRepository.isNameMaskingEnabled,
                     userSettingsRepository.isBiometricEnabled,
-                    userSettingsRepository.lockTimeoutMinutes,
                     userSettingsRepository.defaultRecorderName,
                     userSettingsRepository.isBackupPasswordEnabled,
                     userSettingsRepository.backupPassword,
@@ -98,17 +97,16 @@ class SettingsViewModel(
                     archivedPersonRepository.getArchivedPersons()
                 ) { values ->
                     @Suppress("UNCHECKED_CAST")
-                    val archived = values[9] as List<Person>
+                    val archived = values[8] as List<Person>
                     currentState.copy(
                         isNameMaskingEnabled = values[0] as Boolean,
                         isBiometricEnabled = values[1] as Boolean,
-                        lockTimeoutMinutes = values[2] as Int,
-                        defaultRecorderName = values[3] as String,
-                        isBackupPasswordEnabled = values[4] as Boolean,
-                        backupPassword = values[5] as String,
-                        themeSetting = values[6] as ThemeSetting,
-                        auditLogRetentionDays = values[7] as Int,
-                        auditLogCount = values[8] as Int,
+                        defaultRecorderName = values[2] as String,
+                        isBackupPasswordEnabled = values[3] as Boolean,
+                        backupPassword = values[4] as String,
+                        themeSetting = values[5] as ThemeSetting,
+                        auditLogRetentionDays = values[6] as Int,
+                        auditLogCount = values[7] as Int,
                         endedUserCount = archived.size
                     )
                 }
@@ -136,7 +134,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setLockTimeoutMinutes(minutes: Int) { viewModelScope.launch { userSettingsRepository.setLockTimeoutMinutes(minutes) } }
     fun setDefaultRecorderName(name: String) { viewModelScope.launch { userSettingsRepository.setDefaultRecorderName(name) } }
     fun setBackupPasswordEnabled(enabled: Boolean) { viewModelScope.launch { userSettingsRepository.setBackupPasswordEnabled(enabled) } }
     fun setBackupPassword(password: String) { viewModelScope.launch { userSettingsRepository.setBackupPassword(password) } }

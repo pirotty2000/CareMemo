@@ -2,7 +2,6 @@ package jp.mydns.fujiwara.carememo.data.repository
 
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.EmergencyContactDao
-import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -49,48 +48,34 @@ class EmergencyContactRepository(
         emergencyContactDao.getById(id)
 
     /**
-     * 新しい連絡先を登録します。
+     * 連絡先情報を保存（新規登録または更新）します。
      *
      * @param contact 保存対象の連絡先 Entity
+     * @param isUpdate 新規登録なら false、既存更新なら true
      * @param featureName ログ出力用の機能名
      * @param operation ログ出力用の操作名
      */
-    suspend fun insertContact(contact: EmergencyContact, featureName: String = "", operation: String = "") {
-        // IdLogic を使用して新規レコード判定を行い、ID が必要なら生成する
-        val itemToSave = if (IdLogic.isNew(contact.id)) {
-            contact.copy(id = java.util.UUID.randomUUID().toString(), updatedAt = Instant.now(), isSynced = false)
+    suspend fun saveContact(
+        contact: EmergencyContact,
+        isUpdate: Boolean,
+        featureName: String = "",
+        operation: String = ""
+    ) {
+        val itemToSave = contact.copy(updatedAt = Instant.now(), isSynced = false)
+
+        if (isUpdate) {
+            emergencyContactDao.update(itemToSave)
         } else {
-            contact.copy(updatedAt = Instant.now(), isSynced = false)
+            emergencyContactDao.insert(itemToSave)
         }
-        emergencyContactDao.insert(itemToSave)
+
         auditLogRepository?.log(
             featureName = featureName,
             operation = operation,
             tableName = "emergency_contact_db",
-            actionType = "INSERT",
+            actionType = if (isUpdate) "UPDATE" else "INSERT",
             affectedId = itemToSave.id,
             details = "Facility: ${itemToSave.facilityName}, Type: ${itemToSave.contactType}",
-            resultType = "SUCCESS"
-        )
-    }
-
-    /**
-     * 既存の連絡先情報を更新します。
-     *
-     * @param contact 更新対象の連絡先 Entity
-     * @param featureName ログ出力用の機能名
-     * @param operation ログ出力用の操作名
-     */
-    suspend fun updateContact(contact: EmergencyContact, featureName: String = "", operation: String = "") {
-        val itemToUpdate = contact.copy(updatedAt = Instant.now(), isSynced = false)
-        emergencyContactDao.update(itemToUpdate)
-        auditLogRepository?.log(
-            featureName = featureName,
-            operation = operation,
-            tableName = "emergency_contact_db",
-            actionType = "UPDATE",
-            affectedId = itemToUpdate.id,
-            details = "Facility: ${itemToUpdate.facilityName}, Type: ${itemToUpdate.contactType}",
             resultType = "SUCCESS"
         )
     }

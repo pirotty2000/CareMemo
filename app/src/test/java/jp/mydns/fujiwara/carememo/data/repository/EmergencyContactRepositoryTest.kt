@@ -3,8 +3,6 @@ package jp.mydns.fujiwara.carememo.data.repository
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.EmergencyContactDao
-import jp.mydns.fujiwara.carememo.data.AppSpecifications
-import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -27,39 +25,29 @@ class EmergencyContactRepositoryTest {
     // region 2. 連絡先操作テスト (CRUD)
 
     @Test
-    fun CUR_01_insertContact_newRecord() = runTest {
-        val newId = AppSpecifications.Id.NEW_RECORD_ID
-        val contact = createSampleContact(newId)
+    fun CUR_01_saveContact_insert() = runTest {
+        val contact = createSampleContact("generated-uuid")
         coEvery { emergencyContactDao.insert(any()) } returns 1L
 
-        repository.insertContact(contact, "Feature", "Op")
+        repository.saveContact(contact, isUpdate = false, "Feature", "Op")
 
-        // UUID was generated internally
-        coVerify { 
-            emergencyContactDao.insert(match { 
-                !IdLogic.isNew(it.id) && it.facilityName == "Test Clinic" 
-            }) 
+        coVerify {
+            emergencyContactDao.insert(match {
+                it.id == "generated-uuid" && it.facilityName == "Test Clinic"
+            })
         }
-        coVerify { 
-            auditLogRepository.log(any(), any(), any(), "INSERT", any(), any(), "SUCCESS") 
+        coVerify {
+            auditLogRepository.log(any(), any(), any(), "INSERT", "generated-uuid", any(), "SUCCESS")
         }
     }
 
     @Test
-    fun CUR_02_insertContact_maintainId() = runTest {
-        val contact = createSampleContact("persisted-id")
-        repository.insertContact(contact, "Feature", "Op")
-
-        coVerify { emergencyContactDao.insert(match { it.id == "persisted-id" }) }
-    }
-
-    @Test
-    fun CUR_03_updateContact_logsCorrectly() = runTest {
+    fun CUR_02_saveContact_update() = runTest {
         val contact = createSampleContact("id-1")
-        repository.updateContact(contact, "Feature", "Op")
+        repository.saveContact(contact, isUpdate = true, "Feature", "Op")
 
-        coVerify { emergencyContactDao.update(any()) }
-        coVerify { 
+        coVerify { emergencyContactDao.update(match { it.id == "id-1" }) }
+        coVerify {
             auditLogRepository.log(
                 featureName = "Feature",
                 operation = "Op",

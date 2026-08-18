@@ -92,22 +92,7 @@ class SettingsLogicTest {
 
     // endregion
 
-    // region 6. 表示ラベル生成テスト (getTimeoutLabel / getRetentionLabel)
-
-    @Test
-    fun LBL_01_getTimeoutLabel_zero() {
-        assertEquals("即時", SettingsLogic.getTimeoutLabel(0))
-    }
-
-    @Test
-    fun LBL_02_getTimeoutLabel_minusOne() {
-        assertEquals("ロックしない", SettingsLogic.getTimeoutLabel(-1))
-    }
-
-    @Test
-    fun LBL_03_getTimeoutLabel_value() {
-        assertEquals("5分", SettingsLogic.getTimeoutLabel(5))
-    }
+    // region 6. 表示ラベル生成テスト (getRetentionLabel)
 
     @Test
     fun LBL_04_getRetentionLabel_zero() {

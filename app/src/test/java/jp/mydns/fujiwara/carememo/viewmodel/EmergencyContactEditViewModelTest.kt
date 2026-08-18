@@ -12,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactType
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -118,6 +119,16 @@ class EmergencyContactEditViewModelTest {
         assertEquals(newId, viewModel.uiState.value.editingContact?.id)
     }
 
+    @Test
+    fun INI_05_startAddAtLaunchWithNewConstant() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val viewModel = createViewModel(mapOf("personId" to personId, "contactId" to newId))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isEditing)
+        assertEquals(newId, viewModel.uiState.value.editingContact?.id)
+    }
+
     // endregion
 
     // region 3. 編集・操作テスト (Editing)
@@ -190,7 +201,14 @@ class EmergencyContactEditViewModelTest {
             assertEquals(EmergencyContactViewEvent.SaveSuccess, awaitItem())
         }
 
-        coVerify { emergencyContactRepository.insertContact(match { it.facilityName == "New clinic" }, any(), any()) }
+        coVerify {
+            emergencyContactRepository.saveContact(
+                contact = match { it.facilityName == "New clinic" && !IdLogic.isNew(it.id) },
+                isUpdate = false,
+                featureName = any(),
+                operation = any()
+            )
+        }
     }
 
     @Test
@@ -207,7 +225,14 @@ class EmergencyContactEditViewModelTest {
             assertEquals(EmergencyContactViewEvent.SaveSuccess, awaitItem())
         }
 
-        coVerify { emergencyContactRepository.updateContact(match { it.id == "c1" && it.facilityName == "Modified" }, any(), any()) }
+        coVerify {
+            emergencyContactRepository.saveContact(
+                contact = match { it.id == "c1" && it.facilityName == "Modified" },
+                isUpdate = true,
+                featureName = any(),
+                operation = any()
+            )
+        }
     }
 
     @Test
@@ -232,8 +257,8 @@ class EmergencyContactEditViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        coEvery { emergencyContactRepository.insertContact(any(), any(), any()) } throws RuntimeException("Save failed")
-        
+        coEvery { emergencyContactRepository.saveContact(any(), any(), any(), any()) } throws RuntimeException("Save failed")
+
         viewModel.startAdd()
         viewModel.updateEditingContact { it.copy(facilityName = "Error Trigger") }
         viewModel.saveContact()

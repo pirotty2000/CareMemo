@@ -36,7 +36,6 @@ enum class StorageValidationResult {
  * @param isNameMaskingEnabled 氏名のマスキング設定
  * @param defaultRecorderName デフォルトの記録者名
  * @param isBiometricEnabled 生体認証の利用設定
- * @param lockTimeoutMinutes 自動ロックまでの時間（分）
  * @param isBackupPasswordEnabled バックアップのパスワード保護設定
  * @param backupPassword バックアップ用パスワード
  * @param themeSetting テーマ設定（システム同期、ライト、ダーク）
@@ -57,7 +56,6 @@ data class SettingsUiState(
     val isNameMaskingEnabled: Boolean = true,
     val defaultRecorderName: String = "",
     val isBiometricEnabled: Boolean = false,
-    val lockTimeoutMinutes: Int = 5,
     val isBackupPasswordEnabled: Boolean = false,
     val backupPassword: String = "",
     val themeSetting: ThemeSetting = ThemeSetting.SYSTEM,
@@ -167,17 +165,6 @@ object SettingsLogic {
      */
     fun shouldEnableDeveloperMode(tapCount: Int): Boolean {
         return tapCount >= AppSpecifications.Constraints.System.Security.DEVELOPER_MODE_TAP_COUNT
-    }
-
-    /**
-     * ロックタイムアウト時間の表示用ラベルを取得します。
-     *
-     * @param minutes タイムアウト分
-     * @return 「5分」などのラベル。未定義の場合はデフォルト値を生成。
-     */
-    fun getTimeoutLabel(minutes: Int): String {
-        return AppSpecifications.Settings.LOCK_TIMEOUT_OPTIONS.find { it.first == minutes }?.second
-            ?: "${minutes}分"
     }
 
     /**

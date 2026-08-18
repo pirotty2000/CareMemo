@@ -10,6 +10,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonAwareState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import java.time.Instant
+import java.util.UUID
 
 /**
  * UI State：PersonConditionUiState
@@ -145,24 +146,16 @@ object PersonConditionLogic {
         val condition = input.condition.trim()
         val author = input.author.trim()
 
-        return if (IdLogic.isNew(id)) {
-            ConditionAtVisit(
-                personId = personId,
-                title = title,
-                condition = condition,
-                author = author,
-                recordTime = recordTime
-            )
-        } else {
-            ConditionAtVisit(
-                id = id,
-                personId = personId,
-                title = title,
-                condition = condition,
-                author = author,
-                recordTime = recordTime
-            )
-        }
+        val finalId = if (IdLogic.isNew(id)) UUID.randomUUID().toString() else id
+
+        return ConditionAtVisit(
+            id = finalId,
+            personId = personId,
+            title = title,
+            condition = condition,
+            author = author,
+            recordTime = recordTime
+        )
     }
 }
 

@@ -45,7 +45,17 @@ class ActionTypeMapperTest {
     }
 
     @Test
-    fun MAP_08_unknown_mapping() {
+    fun MAP_08_info_mapping() {
+        assertEquals(R.string.audit_action_info, "INFO".toActionLabelRes)
+    }
+
+    @Test
+    fun MAP_09_error_mapping() {
+        assertEquals(R.string.audit_action_error, "ERROR".toActionLabelRes)
+    }
+
+    @Test
+    fun MAP_10_unknown_mapping() {
         assertEquals(0, "UNKNOWN".toActionLabelRes)
     }
 }

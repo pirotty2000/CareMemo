@@ -115,11 +115,11 @@ class PersonMedicationViewModelTest {
 
         val date = LocalDate.now().toString()
         val record = MedicationRecord(personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
-        
+
         viewModel.syncMedicationDay(date, listOf(record, null, null, null))
         advanceUntilIdle()
 
-        coVerify { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) }
+        coVerify { medicationRepository.saveMedicationRecord(any(), false, any(), any()) }
     }
 
     @Test
@@ -175,8 +175,8 @@ class PersonMedicationViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        coEvery { medicationRepository.insertMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
-        
+        coEvery { medicationRepository.saveMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
+
         val date = LocalDate.now().toString()
         val record = MedicationRecord(personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
 

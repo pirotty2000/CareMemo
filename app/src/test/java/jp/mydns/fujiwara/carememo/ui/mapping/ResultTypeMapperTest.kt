@@ -45,7 +45,22 @@ class ResultTypeMapperTest {
     }
 
     @Test
-    fun MAP_08_undefined_mapping() {
+    fun MAP_08_securityError_mapping() {
+        assertEquals(R.string.audit_result_security_error, "SECURITY_ERROR".toResultLabelRes)
+    }
+
+    @Test
+    fun MAP_09_externalError_mapping() {
+        assertEquals(R.string.audit_result_external_error, "EXTERNAL_ERROR".toResultLabelRes)
+    }
+
+    @Test
+    fun MAP_10_guardSkipped_mapping() {
+        assertEquals(R.string.audit_result_guard_skipped, "GUARD_SKIPPED".toResultLabelRes)
+    }
+
+    @Test
+    fun MAP_11_undefined_mapping() {
         assertEquals(R.string.audit_result_unknown, "UNDEFINED".toResultLabelRes)
     }
 }

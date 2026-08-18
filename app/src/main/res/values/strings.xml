@@ -354,10 +354,6 @@
     <string name="settings_section_security">セキュリティ</string>
     <string name="settings_item_app_lock_title">アプリのロック</string>
     <string name="settings_item_app_lock_desc">起動時・復帰時に認証を求めます</string>
-    <string name="settings_item_lock_timeout_title">再ロックまでの時間</string>
-    <string name="settings_item_lock_timeout_desc">指定時間が経過するとロックがかかります</string>
-    <string name="settings_item_lock_timeout_warning">※画面消灯設定を短くするとより安全です</string>
-
     <string name="settings_section_theme">テーマ</string>
     <string name="settings_item_theme_selection_title">配色とモード</string>
 
@@ -384,7 +380,6 @@
 
     <!-- Settings Dialogs -->
     <string name="settings_dialog_theme_title">配色とモードの選択</string>
-    <string name="settings_dialog_lock_timeout_title">再ロックまでの時間</string>
     <string name="settings_dialog_restore_confirm_title">データの復元</string>
     <string name="settings_dialog_restore_confirm_msg">現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？</string>
     <string name="settings_dialog_restore_confirm_btn">復元を実行</string>
@@ -405,10 +400,6 @@
     <string name="settings_dialog_import_password_label">パスワード</string>
     <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n&#169; 2025&#8211;2026 pirotty.galaxy</string>
 
-    <string name="settings_timeout_immediate">即時</string>
-    <string name="settings_timeout_none">ロックしない</string>
-    <string name="settings_timeout_minutes">%1$d分</string>
-
     <string name="settings_retention_none">残さない</string>
     <string name="settings_retention_one_week">1週間</string>
     <string name="settings_retention_two_weeks">2週間</string>
@@ -426,6 +417,7 @@
     <string name="security_auth_reason_change_settings">セキュリティ設定を変更するために認証を行ってください</string>
     <string name="security_auth_reason_show_password">パスワードを表示するために認証を行ってください</string>
     <string name="security_auth_reason_unlock">アプリをアンロックするために認証を行ってください</string>
+    <string name="security_auth_reason_pdf_export">PDFを出力するために認証を行ってください</string>
     <string name="settings_msg_delete_ended_success">利用終了者のデータを一括で完全に抹消しました。</string>
     <string name="settings_msg_export_success">データと写真のエクスポートが完了しました。</string>
     <string name="settings_msg_import_success">データと写真の復元が完了しました。</string>
@@ -514,6 +506,10 @@
     <string name="audit_feature_medication">服薬管理</string>
     <string name="audit_feature_detail_medication">詳細/服薬管理</string>
     <string name="audit_feature_settings">設定・管理</string>
+    <string name="audit_feature_audit_log">操作ログ管理</string>
+    <string name="audit_feature_medical_contact">緊急連絡先管理</string>
+    <string name="audit_feature_person_detail">利用者詳細</string>
+    <string name="audit_feature_unassigned_photo">未割り当て写真管理</string>
     <string name="audit_feature_detail_base">詳細/基底</string>
 
     <string name="audit_action_insert">追加 (INSERT)</string>
@@ -523,6 +519,8 @@
     <string name="audit_action_restore">利用復帰</string>
     <string name="audit_action_permanent_delete">利用抹消</string>
     <string name="audit_action_clear_all">一括抹消</string>
+    <string name="audit_action_info">情報 (INFO)</string>
+    <string name="audit_action_error">エラー (ERROR)</string>
 
     <string name="audit_result_success">成功</string>
     <string name="audit_result_db_error">DBエラー</string>
@@ -530,6 +528,9 @@
     <string name="audit_result_format_error">形式エラー</string>
     <string name="audit_result_validation_error">検証エラー</string>
     <string name="audit_result_other_error">その他エラー</string>
+    <string name="audit_result_security_error">セキュリティエラー</string>
+    <string name="audit_result_external_error">外部エラー</string>
+    <string name="audit_result_guard_skipped">ガード回避</string>
     <string name="audit_result_unknown">不明</string>
 
     <!-- 緊急連絡先 (MedicalContact) -->

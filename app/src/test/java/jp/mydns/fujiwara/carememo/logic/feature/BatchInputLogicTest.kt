@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -82,10 +83,20 @@ class BatchInputLogicTest {
         val state = validDateState.copy(weight = "60.0", bpSystolic = "120")
         val time = BatchInputLogic.calculateRecordTime(state)!!
         val entities = BatchInputLogic.createEntities("1", time, state)
-        
+
         assertEquals(2, entities.size)
         assertTrue(entities.any { it is HeightAndWeight })
         assertTrue(entities.any { it is BpAndPulse })
+
+        // B-2: ID (UUID) is generated in Logic layer
+        entities.forEach { entity ->
+            val id = when (entity) {
+                is HeightAndWeight -> entity.id
+                is BpAndPulse -> entity.id
+                else -> ""
+            }
+            assertFalse("ID should be generated (not NEW/empty)", IdLogic.isNew(id))
+        }
     }
 
     // endregion

@@ -32,6 +32,7 @@ fun getAuditActionColor(actionType: String): Color {
         "LOGICAL_DELETE" -> if (isDark) Color(0xFFFFB74D) else Color(0xFFE65100)
         
         "RESTORE" -> MaterialTheme.colorScheme.tertiary
+        "INFO" -> MaterialTheme.colorScheme.primaryContainer
         "ERROR" -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -46,6 +47,7 @@ fun getAuditResultMainColor(resultType: String): Color {
     val isDark = isSystemInDarkTheme()
     return when (resultType) {
         "SUCCESS" -> if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
+        "GUARD_SKIPPED" -> MaterialTheme.colorScheme.outline
         "UNKNOWN" -> MaterialTheme.colorScheme.outline
         else -> MaterialTheme.colorScheme.error
     }

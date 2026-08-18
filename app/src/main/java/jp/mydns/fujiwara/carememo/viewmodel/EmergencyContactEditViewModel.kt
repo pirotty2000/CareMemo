@@ -123,10 +123,10 @@ class EmergencyContactEditViewModel(
             savedStateHandle.getStateFlow<String?>(KEY_CONTACT_ID, null).collect { id ->
                 // KEY_CONTACT_ID が存在する場合（MedicalContactEdit 目的地の場合）のみ処理
                 if (savedStateHandle.contains(KEY_CONTACT_ID)) {
-                    if (id == null) {
+                    if (IdLogic.isNew(id)) {
                         startAdd()
                     } else {
-                        val contact = emergencyContactRepository.getContactById(id)
+                        val contact = emergencyContactRepository.getContactById(id!!)
                         if (contact != null) {
                             startEdit(contact)
                         }
@@ -215,7 +215,7 @@ class EmergencyContactEditViewModel(
         if (saveJob?.isActive == true) return
 
         val contact = currentState.editingContact ?: return
-        
+
         saveJob = safeLaunch(
             operation = OP_SAVE,
             loadingState = loadingStateProxy,
@@ -224,14 +224,23 @@ class EmergencyContactEditViewModel(
                 affectedId = contact.id
             }
         ) {
-            val contactToSave = EmergencyContactLogic.createSaveEntity(contact)
-            
-            if (IdLogic.isNew(contactToSave.id)) {
-                emergencyContactRepository.insertContact(contactToSave, featureName, OP_SAVE)
+            val isUpdate = !IdLogic.isNew(contact.id)
+            val normalizedContact = EmergencyContactLogic.createSaveEntity(contact)
+
+            // 新規の場合は ID を確定させる (ADR #8)
+            val contactToSave = if (isUpdate) {
+                normalizedContact
             } else {
-                emergencyContactRepository.updateContact(contactToSave, featureName, OP_SAVE)
+                normalizedContact.copy(id = java.util.UUID.randomUUID().toString())
             }
-            
+
+            emergencyContactRepository.saveContact(
+                contact = contactToSave,
+                isUpdate = isUpdate,
+                featureName = featureName,
+                operation = OP_SAVE
+            )
+
             sendViewEvent(EmergencyContactViewEvent.SaveSuccess)
             dismissEdit()
         }

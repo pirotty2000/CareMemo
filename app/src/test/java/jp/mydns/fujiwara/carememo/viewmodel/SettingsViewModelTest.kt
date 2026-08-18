@@ -43,7 +43,6 @@ class SettingsViewModelTest {
         // Default Flow setup
         every { userSettingsRepository.isNameMaskingEnabled } returns flowOf(false)
         every { userSettingsRepository.isBiometricEnabled } returns flowOf(false)
-        every { userSettingsRepository.lockTimeoutMinutes } returns flowOf(0)
         every { userSettingsRepository.defaultRecorderName } returns flowOf("")
         every { userSettingsRepository.isBackupPasswordEnabled } returns flowOf(true)
         every { userSettingsRepository.backupPassword } returns flowOf("")
