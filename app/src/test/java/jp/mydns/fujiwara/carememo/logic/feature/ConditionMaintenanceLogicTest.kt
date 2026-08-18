@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.logic.feature
 import io.mockk.every
 import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import org.junit.Assert.*
 import org.junit.Test
@@ -43,7 +44,7 @@ class ConditionMaintenanceLogicTest {
         val dbPhotos = listOf(
             ConditionPhoto(
                 id = "p1",
-                conditionId = "",
+                conditionId = AppSpecifications.Id.NEW_RECORD_ID,
                 personId = "u1",
                 photoFileName = "img_1.jpg",
                 thumbnailFileName = "thumb_1.jpg",

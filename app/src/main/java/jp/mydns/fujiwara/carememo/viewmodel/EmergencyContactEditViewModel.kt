@@ -123,10 +123,10 @@ class EmergencyContactEditViewModel(
             savedStateHandle.getStateFlow<String?>(KEY_CONTACT_ID, null).collect { id ->
                 // KEY_CONTACT_ID が存在する場合（MedicalContactEdit 目的地の場合）のみ処理
                 if (savedStateHandle.contains(KEY_CONTACT_ID)) {
-                    if (id == null) {
+                    if (IdLogic.isNew(id)) {
                         startAdd()
                     } else {
-                        val contact = emergencyContactRepository.getContactById(id)
+                        val contact = emergencyContactRepository.getContactById(id!!)
                         if (contact != null) {
                             startEdit(contact)
                         }

@@ -13,7 +13,7 @@
 | ID      | テスト項目   | 条件 (入力データ)                          | 期待結果 (Type / 理由)                                                |
 |:--------|:--------|:------------------------------------|:----------------------------------------------------------------|
 | MAIN-01 | 正常系     | 全てのDBレコードが有効な所見IDを持ち、ファイルも存在する      | 未割り当てリストが空であること                                                 |
-| MAIN-02 | 一時保存放置  | `conditionId` が空のDBレコードが存在する        | `TEMPORARY` (R.string.unassigned_photo_type_temporary)          |
+| MAIN-02 | 一時保存放置  | `conditionId` が「未確定（規約通り）」なレコードが存在する | `TEMPORARY` (R.string.unassigned_photo_type_temporary)          |
 | MAIN-03 | 親記録消失   | DBにある `conditionId` が所見一覧に存在しない     | `UNASSIGNED_RECORD` (R.string.unassigned_photo_type_unassigned) |
 | MAIN-04 | 未登録ファイル | ストレージに `img_` で始まるファイルがあるが、DBに名前がない | `FILE_ONLY` (R.string.unassigned_photo_db_unregistered)         |
 | MAIN-05 | ソート順    | 複数の不整合が混在する                         | `capturedAt` の降順（新しい順）で並んでいること                                  |

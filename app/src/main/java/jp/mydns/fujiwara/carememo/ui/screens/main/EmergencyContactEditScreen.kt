@@ -19,6 +19,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.ui.utils.PhoneNumberVisualTransformation
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
@@ -103,7 +104,7 @@ fun EmergencyContactEditContent(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(stringResource(if (contact.id.isEmpty()) R.string.medical_contact_add_title else R.string.medical_contact_edit_title)) 
+                    Text(stringResource(if (IdLogic.isNew(contact.id)) R.string.medical_contact_add_title else R.string.medical_contact_edit_title)) 
                 },
                 navigationIcon = {
                     IconButton(onClick = handleBack) {

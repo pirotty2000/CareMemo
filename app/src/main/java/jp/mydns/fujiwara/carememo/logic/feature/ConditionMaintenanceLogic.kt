@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.logic.feature
 
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import java.io.File
 import java.time.Instant
 
@@ -50,7 +51,7 @@ object ConditionMaintenanceLogic {
         // 1. DBレコードベースの分類 (TEMPORARY, UNASSIGNED_RECORD)
         dbPhotos.forEach { dbPhoto ->
             val type = when {
-                dbPhoto.conditionId.isEmpty() -> UnassignedPhotoType.TEMPORARY
+                IdLogic.isNew(dbPhoto.conditionId) -> UnassignedPhotoType.TEMPORARY
                 dbPhoto.conditionId !in existingConditionIds -> UnassignedPhotoType.UNASSIGNED_RECORD
                 else -> null // 正常な紐付け
             }

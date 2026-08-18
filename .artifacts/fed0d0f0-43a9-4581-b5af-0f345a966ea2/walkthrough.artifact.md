@@ -1,34 +1,27 @@
-# ロック仕様の単純化 (C-2) 完了報告
+# 規約に基づく「新規判定」の一本化 (IdLogic.isNew への完全委譲) 完了報告
 
-タスク **C-2** に基づき、アプリのロック仕様を「バックグラウンド遷移時に即時ロック」へ一本化し、タイマー設定を廃止しました。
+プロジェクト全体に残っていた生の `null` や `isEmpty()` による新規判定を排除し、`IdLogic.isNew()` を用いた統一的な規約へ一本化しました。
 
 ## 実施内容
 
-### 1. ロックロジックの単純化
-- **MainActivity**: `LifecycleEventObserver` を修正。アプリが `ON_RESUME`（バックグラウンドから復帰）した際、ロックが有効であれば経過時間に関わらず即座に `isAuthenticated = false` とし、認証を要求するようにしました。
-- **不要な変数の削除**: `lockTimeoutMinutes` および `lastPausedTime` を `MainActivity` から削除しました。
+### 1. プログラム本体の修正
+- **EmergencyContactEditScreen**: タイトルの出し分け判定を `contact.id.isEmpty()` から `IdLogic.isNew(contact.id)` へ変更しました。
+- **ConditionMaintenanceLogic**: 一時保存写真の判定ロジックを `IdLogic.isNew()` へ統一しました。
+- **PersonEditViewModel**: `isNew` フラグの初期化および保存時の重複チェック判定を `IdLogic.isNew()` を用いた記述に整理しました。
+- **EmergencyContactEditViewModel**: 初期化時の `contactId` 判定を `IdLogic.isNew()` へ変更し、`null` や `"NEW"` 定数を安全に扱えるようにしました。
 
-### 2. 設定および永続化の整理
-- **UserSettingsRepository**: `LOCK_TIMEOUT_MINUTES` キーと、それに関連する Flow・Setter を削除しました。
-- **SettingsViewModel**: `UiState` から `lockTimeoutMinutes` を削除し、初期化同期ロジックからもタイムアウト設定を除外しました。
-- **SettingsLogic**: `getTimeoutLabel` メソッドを削除しました。
+### 2. テストプログラムの修正
+- **PersonEditViewModelTest**: 規約に合わせ、新規作成時の ID 指定を `AppSpecifications.Id.NEW_RECORD_ID` へ変更しました。
+- **EmergencyContactEditViewModelTest**: `null` 判定に加え、明示的な `"NEW"` 定数による初期化テストケースを追加しました。
+- **ConditionMaintenanceLogicTest**: テストデータ内の `conditionId` を空文字から規約定数へ変更しました。
 
-### 3. UI の更新
-- **SettingsScreen**:
-    - 設定項目「再ロックまでの時間」を UI から削除しました。
-    - タイムアウト選択用のダイアログ関連ロジックをすべて削除しました。
-- **strings.xml**: 使用されなくなったロックタイムアウト関連の文字列リソースを削除しました。
-- **SettingsSpecifications**: `LOCK_TIMEOUT_OPTIONS` 定数を削除しました。
-
-### 4. テストの修正
-- `UserSettingsRepositoryTest`: タイムアウト設定の永続化テストを削除しました。
-- `SettingsViewModelTest`: 初期化同期テストからタイムアウト関連のモックと検証を削除しました。
-- `SettingsLogicTest`: `getTimeoutLabel` のテストケースを削除しました。
+### 3. テスト仕様書の更新
+- **TEST_SPEC_PersonEditViewModel.md**: 条件欄の表現を `IdLogic.isNew` に基づく規約的な表現に修正しました。
+- **TEST_SPEC_ConditionMaintenanceLogic.md**: 「ID が空文字」等の条件を規約に基づいた表現に修正しました。
 
 ## 検証結果
-- `testStableDebugUnitTest` および `testDevDebugUnitTest` を実行し、全 520 テストがパスすることを確認しました。
-- コードの静的解析（`analyze_file`）を実行し、重要なエラーがないことを確認しました。
+- `testStableDebugUnitTest` および `testDevDebugUnitTest` を実行し、全 521 テストがパスすることを確認しました。
+- プロジェクトのクリーンビルド（`app:assembleDebug`）が正常に完了することを確認しました。
 
-## 今後の挙動
-ロック設定が ON の場合、アプリを一時的に離れて（ホーム画面に戻る等）から復帰するたびに、生体認証またはデバイス認証が要求されます。
-これにより、タイマー設定による「一時的な無防備状態」が解消され、セキュリティが強化されました。
+## 成果
+今回の修正により、「何をもって新規とみなすか」というドメイン知識が `IdLogic` に完全に集約されました。これにより、将来的な ID 体系の変更に対する耐性が高まり、コードの意図がより明確になりました。

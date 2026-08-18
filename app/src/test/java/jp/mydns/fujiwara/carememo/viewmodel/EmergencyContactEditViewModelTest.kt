@@ -119,6 +119,16 @@ class EmergencyContactEditViewModelTest {
         assertEquals(newId, viewModel.uiState.value.editingContact?.id)
     }
 
+    @Test
+    fun INI_05_startAddAtLaunchWithNewConstant() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        val viewModel = createViewModel(mapOf("personId" to personId, "contactId" to newId))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isEditing)
+        assertEquals(newId, viewModel.uiState.value.editingContact?.id)
+    }
+
     // endregion
 
     // region 3. 編集・操作テスト (Editing)
