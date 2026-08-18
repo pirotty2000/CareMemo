@@ -18,7 +18,7 @@ android {
         minSdk = 31
         targetSdk = 35
         //noinspection HighAppVersionCode
-        versionCode = 2026081701
+        versionCode = 2026081801
         versionName = "3.2.11"
 
         val buildTime = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN).format(Date())
