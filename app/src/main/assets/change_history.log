@@ -1,4 +1,4 @@
-# Ver.3.2.12 (2026/08/xx)
+# Ver.3.2.12 (2026/08/20)
 - Phase 5 対応
 - AppMaintenanceRepository：主要操作（インポート等）における監査ログの記録漏れ
 - AppMaintenanceRepository：DatabaseInconsistency 生成時における UI リソース（R.string）への直接依存
