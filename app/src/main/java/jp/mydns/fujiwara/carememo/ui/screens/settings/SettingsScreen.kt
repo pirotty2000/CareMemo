@@ -31,6 +31,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.ui.mapping.MaintenanceDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.mapping.ThemeDisplayMapper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -288,7 +289,7 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
                                     Text(
-                                        text = stringResource(inc.descriptionResId),
+                                        text = stringResource(MaintenanceDisplayMapper.getDescriptionResId(inc.type)),
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.labelMedium
                                     )

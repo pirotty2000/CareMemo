@@ -84,7 +84,7 @@ class CareMemoApplication : Application() {
 
     /** ユーザー設定（マスキング、ロック、テーマ等）のリポジトリ */
     val userSettingsRepository: UserSettingsRepository by lazy {
-        UserSettingsRepository(this)
+        UserSettingsRepository(this, auditLogRepository)
     }
 
     /** 利用者基本情報の参照・更新リポジトリ */
@@ -100,6 +100,7 @@ class CareMemoApplication : Application() {
     /** 利用者のアーカイブ（論理削除）および復元、抹消を管理するリポジトリ */
     val deleteOrRestorePersonRepository: DeleteOrRestorePersonRepository by lazy {
         DeleteOrRestorePersonRepository(
+            this,
             database,
             database.personDao(),
             database.heightAndWeightDao(),
@@ -138,7 +139,7 @@ class CareMemoApplication : Application() {
             database.conditionPhotoDao(),
             database.medicationRecordDao(),
             database.emergencyContactDao(),
-            database.auditLogDao()
+            auditLogRepository
         )
     }
 

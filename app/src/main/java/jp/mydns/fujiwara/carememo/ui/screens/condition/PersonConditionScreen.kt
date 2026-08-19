@@ -22,6 +22,7 @@ import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
+import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
@@ -305,11 +306,30 @@ fun PersonConditionScreen(
             showDialog = showPdfSettingsDialog,
             onDismiss = { showPdfSettingsDialog = false },
             category = Category.CONDITION_AT_VISIT,
-            person = detailState.person,
-            records = conditionState.records,
-            viewModel = conditionViewModel,
+            canExport = detailState.person != null,
             onRequireAuthentication = onRequireAuthentication,
-            photos = allPhotos.value.toImmutableList()
+            onExportExecute = { range, order, start, end, includePhotos, password ->
+                conditionViewModel.setLockBypassEnabled(true)
+                conditionViewModel.safeLaunch(
+                    operation = "exportAndShare",
+                    contextBuilder = { tableName = "pdf_export" }
+                ) {
+                    detailState.person?.let { person ->
+                        PdfExporter.exportAndShare(
+                            context = context,
+                            person = person,
+                            category = Category.CONDITION_AT_VISIT,
+                            records = conditionState.records,
+                            allPhotos = if (includePhotos) allPhotos.value else emptyList(),
+                            range = range,
+                            order = order,
+                            customStartDate = start,
+                            customEndDate = end,
+                            password = password
+                        )
+                    }
+                }
+            }
         )
     }
 

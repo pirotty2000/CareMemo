@@ -4,13 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.ConditionPhoto
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.utils.PdfExporter
-import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import java.time.Instant
 
 /**
  * Component：PdfExportActionHandler
@@ -53,26 +47,20 @@ import kotlinx.collections.immutable.persistentListOf
  * @param showDialog ダイアログを表示するかどうか
  * @param onDismiss ダイアログを閉じる際のコールバック
  * @param category 出力対象のカテゴリ（健康記録、所見等）
- * @param person 出力対象の利用者情報
- * @param records 出力対象の履歴データ
- * @param viewModel 非同期処理とバイパス設定を管理するための ViewModel
+ * @param canExport 出力可能な状態（利用者情報が存在する等）かどうか
  * @param onRequireAuthentication 認証が必要な場合に呼び出されるコールバック
- * @param photos 所見メモ等の場合に含まれる写真データのリスト
+ * @param onExportExecute 設定完了後に実際のPDF生成処理（ViewModelの起動等）を実行するためのコールバック
  */
 @Composable
 fun PdfExportActionHandler(
     showDialog: Boolean,
     onDismiss: () -> Unit,
     category: Category,
-    person: Person?,
-    records: ImmutableList<HistoryRecord>,
-    viewModel: BaseUiStateViewModel<*, *>,
+    canExport: Boolean,
     onRequireAuthentication: (titleResId: Int?, subtitleResId: Int?, onSuccess: () -> Unit) -> Unit = { _, _, onSuccess -> onSuccess() },
-    photos: ImmutableList<ConditionPhoto> = persistentListOf()
+    onExportExecute: (ExportRange, ExportOrder, Instant?, Instant?, Boolean, String?) -> Unit
 ) {
-    val context = LocalContext.current
-
-    if (showDialog && person != null) {
+    if (showDialog && canExport) {
         // PDFの出力範囲やパスワードを設定するダイアログを表示
         PdfSettingsDialog(
             category = category,
@@ -86,32 +74,8 @@ fun PdfExportActionHandler(
             ) {
                 onDismiss()
 
-                // 【重要】PDF出力後の共有UI（システムの共有シート）から戻ってきたときに、
-                // アプリが「バックグラウンドから復帰した」と判定されてロックがかからないよう、
-                // 一時的にロックバイパスを有効化する。
-                viewModel.setLockBypassEnabled(true)
-
-                // ViewModel の安全なコルーチン起動を使用して PDF 出力を実行
-                viewModel.safeLaunch(
-                    operation = "exportAndShare",
-                    contextBuilder = {
-                        tableName = "pdf_export"
-                    }
-                ) {
-                    // PDF 生成およびシステムの共有シート呼び出し
-                    PdfExporter.exportAndShare(
-                        context = context,
-                        person = person,
-                        category = category,
-                        records = records,
-                        allPhotos = if (includePhotos) photos else emptyList(),
-                        range = range,
-                        order = order,
-                        customStartDate = start,
-                        customEndDate = end,
-                        password = password
-                    )
-                }
+                // 実際のPDF生成処理（ViewModel.safeLaunch 等）を上位層に委譲
+                onExportExecute(range, order, start, end, includePhotos, password)
             }
         }
     }

@@ -116,6 +116,7 @@ class CareMemoDatabaseTest {
         medicationDao.insert(MedicationRecord(personId = personId, dosageDate = "2023-10-27", timeSlot = 0, status = 2, recordTime = now))
 
         val repo = DeleteOrRestorePersonRepository(
+            ApplicationProvider.getApplicationContext<Context>(),
             db, personDao, hwDao, db.bpAndPulseDao(), db.glucoseAndHbA1cDao(),
             db.conditionAtVisitDao(), db.conditionPhotoDao(), medicationDao,
             db.emergencyContactDao()

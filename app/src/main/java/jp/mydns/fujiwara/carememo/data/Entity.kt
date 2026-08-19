@@ -484,6 +484,19 @@ data class PersonSummaryQueryResult(
 )
 
 /**
+ * データベース不整合の種類
+ */
+enum class InconsistencyType {
+    UNASSIGNED_HEIGHT_WEIGHT,
+    UNASSIGNED_VITAL,
+    UNASSIGNED_GLUCOSE,
+    UNASSIGNED_CONDITION,
+    UNASSIGNED_MEDICATION,
+    UNASSIGNED_CONTACT,
+    UNASSIGNED_PHOTO
+}
+
+/**
  * データベースの不整合（孤立したレコード）を表現するクラス
  */
 data class DatabaseInconsistency(
@@ -491,7 +504,7 @@ data class DatabaseInconsistency(
     val recordId: String,
     val personId: String?,
     val recordTime: Instant?,
-    val descriptionResId: Int
+    val type: InconsistencyType
 )
 
 // --- 計算・判定用拡張関数（HealthLogic を使用） ---

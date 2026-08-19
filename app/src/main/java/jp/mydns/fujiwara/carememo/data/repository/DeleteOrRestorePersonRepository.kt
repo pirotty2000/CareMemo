@@ -1,7 +1,9 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
  * 2. 依存方向の遵守：下位レイヤーとして、上位の Logic レイヤーに依存しない構成を維持します。
  */
 class DeleteOrRestorePersonRepository(
+    private val context: Context,
     private val database: AppDatabase,
     private val personDao: PersonDao,
     private val heightAndWeightDao: HeightAndWeightDao,
@@ -45,7 +48,7 @@ class DeleteOrRestorePersonRepository(
      */
     suspend fun logicalDeletePerson(personId: String, featureName: String = "", operation: String = "") {
         database.withTransaction {
-            val timestamp = System.currentTimeMillis()
+            val timestamp = java.time.Instant.now().toEpochMilli()
             
             // 全テーブルの論理削除フラグを更新
             personDao.logicalDelete(personId, timestamp)
@@ -111,7 +114,19 @@ class DeleteOrRestorePersonRepository(
      * @param operation ログ出力用の操作名
      */
     suspend fun permanentlyDeletePerson(personId: String, featureName: String = "", operation: String = "") {
+        // 1. 物理画像ファイルの削除
+        val photos = conditionPhotoDao.getAllByPersonId(personId)
+        photos.forEach { photo ->
+            try {
+                ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+            } catch (_: Exception) {
+                // ファイル削除の失敗は DB 抹消を妨げないように抑制する（ログ出力のみ検討）
+            }
+        }
+
+        // 2. DB レコードの物理削除
         personDao.deletePersonPhysically(personId)
+
         auditLogRepository?.log(
             featureName = featureName,
             operation = operation,
@@ -130,7 +145,26 @@ class DeleteOrRestorePersonRepository(
      * @param operation ログ出力用の操作名
      */
     suspend fun deleteAllEndedPersons(featureName: String = "", operation: String = "") {
-        personDao.deleteEndedPersons()
+        database.withTransaction {
+            // 1. 論理削除済みの利用者を取得
+            val endedPersons = personDao.getDeletedPersonsRaw()
+
+            // 2. 各利用者に紐付く物理画像ファイルを削除
+            for (person in endedPersons) {
+                val photos = conditionPhotoDao.getAllByPersonId(person.id)
+                for (photo in photos) {
+                    try {
+                        ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
+                    } catch (_: Exception) {
+                        // ignore
+                    }
+                }
+            }
+
+            // 3. DB レコードを一括物理削除
+            personDao.deleteEndedPersons()
+        }
+
         auditLogRepository?.log(
             featureName = featureName,
             operation = operation,

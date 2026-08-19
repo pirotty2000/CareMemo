@@ -39,8 +39,11 @@ class AppMaintenanceRepository(
     private val conditionPhotoDao: ConditionPhotoDao,
     private val medicationRecordDao: MedicationRecordDao,
     private val emergencyContactDao: EmergencyContactDao,
-    private val auditLogDao: AuditLogDao, // 将来的に AuditLogRepository への差し替えを検討
+    private val auditLogRepository: AuditLogRepository,
 ) {
+    companion object {
+        private const val FEATURE_NAME = "AppMaintenance"
+    }
     /**
      * 現在の DB 状態からバックアップ用のデータセット（DTO）を生成します。
      *
@@ -96,6 +99,7 @@ class AppMaintenanceRepository(
             emergencyContactDao.insertAll(emergencyContacts)
             medicationRecordDao.insertAll(medicationRecords)
         }
+        auditLogRepository.log(FEATURE_NAME, "replaceAllData", "all_db", "UPDATE", "0", resultType = "SUCCESS")
     }
 
     /**
@@ -104,9 +108,10 @@ class AppMaintenanceRepository(
      */
     suspend fun clearAllData() {
         database.withTransaction {
-            auditLogDao.deleteAll()
+            auditLogRepository.deleteAllLogs()
             clearClinicalData()
         }
+        auditLogRepository.log(FEATURE_NAME, "clearAllData", "all_db", "DELETE", "0", resultType = "SUCCESS")
     }
 
     /**
@@ -140,25 +145,25 @@ class AppMaintenanceRepository(
 
         // 各テーブルから親のいない（利用者が存在しない）レコードを DAO 経由で取得
         heightAndWeightDao.getUnassignedRecords().forEach {
-            result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_height_weight))
+            result.add(DatabaseInconsistency("height_and_weight_db", it.id, it.personId, it.recordTime, InconsistencyType.UNASSIGNED_HEIGHT_WEIGHT))
         }
         bpAndPulseDao.getUnassignedRecords().forEach {
-            result.add(DatabaseInconsistency("bp_and_pulse_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_vital))
+            result.add(DatabaseInconsistency("bp_and_pulse_db", it.id, it.personId, it.recordTime, InconsistencyType.UNASSIGNED_VITAL))
         }
         glucoseAndHbA1cDao.getUnassignedRecords().forEach {
-            result.add(DatabaseInconsistency("glucose_and_hba1c_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_glucose))
+            result.add(DatabaseInconsistency("glucose_and_hba1c_db", it.id, it.personId, it.recordTime, InconsistencyType.UNASSIGNED_GLUCOSE))
         }
         conditionAtVisitDao.getUnassignedRecords().forEach {
-            result.add(DatabaseInconsistency("condition_at_visit_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_condition))
+            result.add(DatabaseInconsistency("condition_at_visit_db", it.id, it.personId, it.recordTime, InconsistencyType.UNASSIGNED_CONDITION))
         }
         medicationRecordDao.getUnassignedRecords().forEach {
-            result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, R.string.maintenance_err_unassigned_medication))
+            result.add(DatabaseInconsistency("medication_record_db", it.id, it.personId, it.recordTime, InconsistencyType.UNASSIGNED_MEDICATION))
         }
         emergencyContactDao.getUnassignedRecords().forEach {
-            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, R.string.maintenance_err_unassigned_contact))
+            result.add(DatabaseInconsistency("emergency_contact_db", it.id, it.personId, it.updatedAt, InconsistencyType.UNASSIGNED_CONTACT))
         }
         conditionPhotoDao.getUnassignedPhotos().forEach {
-            result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, R.string.maintenance_err_unassigned_photo))
+            result.add(DatabaseInconsistency("condition_photo_db", it.id, null, it.capturedAt, InconsistencyType.UNASSIGNED_PHOTO))
         }
 
         return result
@@ -183,6 +188,7 @@ class AppMaintenanceRepository(
                 }
             }
         }
+        auditLogRepository.log(FEATURE_NAME, "cleanInconsistencies", "all_db", "DELETE", "${inconsistencies.size} records", resultType = "SUCCESS")
     }
 
     /**
@@ -254,6 +260,7 @@ class AppMaintenanceRepository(
                 }
             }
             tempZipFile.delete()
+            auditLogRepository.log(FEATURE_NAME, "exportData", "all_db", "UPDATE", "0", resultType = "SUCCESS")
         } finally {
             // 一時ディレクトリの清掃
             tempDir.deleteRecursively()
@@ -287,7 +294,7 @@ class AppMaintenanceRepository(
             tempZipFile.outputStream().use { output ->
                 input.copyTo(output)
             }
-        } ?: throw IOException(context.getString(R.string.maintenance_err_file_read))
+        } ?: throw IOException("FILE_READ_ERROR")
         
         val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
         tempDir.mkdirs()
@@ -310,14 +317,14 @@ class AppMaintenanceRepository(
                 }
             }
             
-            if (dataFile == null) throw IOException(context.getString(R.string.maintenance_err_no_json))
+            if (dataFile == null) throw IOException("NO_JSON_FILE")
             
             // 4. JSON のパース
             val jsonString = dataFile.readText()
             val rawBackup = try {
                 json.decodeFromString(CareMemoBackup.serializer(), jsonString)
             } catch (e: Exception) {
-                throw IOException(context.getString(R.string.maintenance_err_json_parse), e)
+                throw IOException("JSON_PARSE_ERROR", e)
             }
             
             // 5. バリデーションとクレンジングの委譲（Logic レイヤーの呼び出し）
@@ -339,6 +346,7 @@ class AppMaintenanceRepository(
                     }
                 }
             }
+            auditLogRepository.log(FEATURE_NAME, "importData", "all_db", "UPDATE", "0", resultType = "SUCCESS")
         } finally {
             tempZipFile.delete()
             tempDir.deleteRecursively()

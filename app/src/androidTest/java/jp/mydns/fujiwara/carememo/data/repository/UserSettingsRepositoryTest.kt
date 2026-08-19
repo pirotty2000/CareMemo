@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import io.mockk.coVerify
+import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -19,11 +21,12 @@ class UserSettingsRepositoryTest {
 
     private lateinit var repository: UserSettingsRepository
     private lateinit var context: Context
+    private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        repository = UserSettingsRepository(context)
+        repository = UserSettingsRepository(context, auditLogRepository)
     }
 
     // region 2. 永続化・通知テスト (Persistence & Flow)
@@ -32,6 +35,7 @@ class UserSettingsRepositoryTest {
     fun SET_01_isNameMaskingEnabled_persistence() = runBlocking {
         repository.setNameMaskingEnabled(true)
         assertTrue(repository.isNameMaskingEnabled.first())
+        coVerify { auditLogRepository.log(any(), "setNameMaskingEnabled", any(), any(), any(), any(), any()) }
 
         repository.setNameMaskingEnabled(false)
         assertFalse(repository.isNameMaskingEnabled.first())
@@ -41,6 +45,7 @@ class UserSettingsRepositoryTest {
     fun SET_02_themeSetting_persistence() = runBlocking {
         repository.setThemeSetting(ThemeSetting.DARK)
         assertEquals(ThemeSetting.DARK, repository.themeSetting.first())
+        coVerify { auditLogRepository.log(any(), "setThemeSetting", any(), any(), any(), any(), any()) }
 
         repository.setThemeSetting(ThemeSetting.LIGHT)
         assertEquals(ThemeSetting.LIGHT, repository.themeSetting.first())
@@ -51,12 +56,34 @@ class UserSettingsRepositoryTest {
         val testName = "Test Recorder ${System.currentTimeMillis()}"
         repository.setDefaultRecorderName(testName)
         assertEquals(testName, repository.defaultRecorderName.first())
+        coVerify { auditLogRepository.log(any(), "setDefaultRecorderName", any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun SET_04_auditLogRetentionDays_persistence() = runBlocking {
         repository.setAuditLogRetentionDays(90)
         assertEquals(90, repository.auditLogRetentionDays.first())
+        coVerify { auditLogRepository.log(any(), "setAuditLogRetentionDays", any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun SET_05_backupPassword_persistence_without_logging_password() = runBlocking {
+        val testPass = "new-secure-pass"
+        repository.setBackupPassword(testPass)
+        assertEquals(testPass, repository.backupPassword.first())
+        
+        // Verify that password itself is NOT in the logs (details should be fixed string)
+        coVerify { 
+            auditLogRepository.log(
+                featureName = any(),
+                operation = "setBackupPassword",
+                tableName = any(),
+                actionType = any(),
+                affectedId = any(),
+                details = match { !it.contains(testPass) },
+                resultType = "SUCCESS"
+            ) 
+        }
     }
 
     // endregion

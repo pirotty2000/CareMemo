@@ -16,6 +16,7 @@ import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
+import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
@@ -190,10 +191,29 @@ fun PersonMedicationScreen(
             showDialog = true,
             onDismiss = { showPdfSettingsDialog = false },
             category = Category.MEDICATION,
-            person = detailState.person,
-            records = medicationState.allRecords,
-            viewModel = medicationViewModel,
-            onRequireAuthentication = onRequireAuthentication
+            canExport = detailState.person != null,
+            onRequireAuthentication = onRequireAuthentication,
+            onExportExecute = { range, order, start, end, _, password ->
+                medicationViewModel.setLockBypassEnabled(true)
+                medicationViewModel.safeLaunch(
+                    operation = "exportAndShare",
+                    contextBuilder = { tableName = "pdf_export" }
+                ) {
+                    detailState.person?.let { person ->
+                        PdfExporter.exportAndShare(
+                            context = context,
+                            person = person,
+                            category = Category.MEDICATION,
+                            records = medicationState.allRecords,
+                            range = range,
+                            order = order,
+                            customStartDate = start,
+                            customEndDate = end,
+                            password = password
+                        )
+                    }
+                }
+            }
         )
     }
 

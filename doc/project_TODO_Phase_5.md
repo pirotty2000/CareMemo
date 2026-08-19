@@ -2,20 +2,20 @@
 
 本ドキュメントは、プロジェクト・ルールへの適合状況調査において発見された、改善すべき課題を記録します。
 
-# 第0章：課題一覧
+# 0. 課題一覧
 
 本調査において発見された、修正・改善が必要な課題の一覧です。
 
-| ID      | 対象コンポーネント                       | 課題内容                                                         |  優先度  | 分類        |
-|:--------|:--------------------------------|:-------------------------------------------------------------|:-----:|:----------|
-| ISS-001 | AppMaintenanceRepository        | 主要操作（インポート等）における監査ログの記録漏れ                                    | **高** | ルール違反     |
-| ISS-002 | AppMaintenanceRepository        | `DatabaseInconsistency` 生成時における UI リソース（R.string）への直接依存      |   中   | アーキテクチャ   |
-| ISS-003 | AppMaintenanceRepository        | `safeLaunch` 圏外でのチェックなしの例外スロー                                |   中   | エラーハンドリング |
-| ISS-004 | DeleteOrRestorePersonRepository | 物理削除実行時における紐付く画像ファイルの削除漏れ                                    | **高** | 仕様不備      |
-| ISS-005 | DeleteOrRestorePersonRepository | タイムスタンプ取得処理の不整合（System.currentTimeMillis の使用）                |   低   | 一貫性       |
-| ISS-006 | UserSettingsRepository          | 設定変更（生体認証、パスワード等）時における監査ログの記録漏れ                              |   中   | ルール違反     |
-| ISS-007 | UserSettingsRepository          | メモリ保持用変数（isLockBypassed）の配置場所の検討                             |   低   | 設計議論      |
-| ISS-008 | PdfExportActionHandler          | `BaseUiStateViewModel` への直接依存（コンポーネントの ViewModel 依存禁止規約への抵触） |   中   | アーキテクチャ   |
+| ID      | 対象コンポーネント                       | 課題内容                                                         |  優先度  | 分類        | 進捗 |
+|:--------|:--------------------------------|:-------------------------------------------------------------|:-----:|:----------|:--:|
+| ISS-001 | AppMaintenanceRepository        | 主要操作（インポート等）における監査ログの記録漏れ                                    | **高** | ルール違反     | ✅  |
+| ISS-002 | AppMaintenanceRepository        | `DatabaseInconsistency` 生成時における UI リソース（R.string）への直接依存      |   中   | アーキテクチャ   | ✅  |
+| ISS-003 | AppMaintenanceRepository        | `safeLaunch` 圏外でのチェックなしの例外スロー                                |   中   | エラーハンドリング | ✅  |
+| ISS-004 | DeleteOrRestorePersonRepository | 物理削除実行時における紐付く画像ファイルの削除漏れ                                    | **高** | 仕様不備      | ✅  |
+| ISS-005 | DeleteOrRestorePersonRepository | タイムスタンプ取得処理の不整合（System.currentTimeMillis の使用）                |   低   | 一貫性       | ✅  |
+| ISS-006 | UserSettingsRepository          | 設定変更（生体認証、パスワード等）時における監査ログの記録漏れ                              |   中   | ルール違反     | ✅  |
+| ISS-007 | UserSettingsRepository          | メモリ保持用変数（isLockBypassed）の配置場所の検討                             |   低   | 設計議論      | ⏳  |
+| ISS-008 | PdfExportActionHandler          | `BaseUiStateViewModel` への直接依存（コンポーネントの ViewModel 依存禁止規約への抵触） |   中   | アーキテクチャ   | ✅  |
 
 ---
 
@@ -62,38 +62,23 @@
 
 ### 2.1. 適合しているRepository
 
-| No. | 調査対象                       | 状態 | 評価                        | 備考                                                                     |
-|:---:|:---------------------------|:--:|:--------------------------|:-----------------------------------------------------------------------|
-|  1  | AuditLogRepository         | ✅  | **適合 (Highly Compliant)** | 責務が明確であり、`NonCancellable` を用いた堅牢な例外抑制により業務への非干渉が徹底されている。               |
-|  2  | ConditionRepository        | ✅  | **適合 (Compliant)**        | DB 操作と物理ファイル操作（写真）の双方が適切にカプセル化され、監査ログ記録も徹底されている。                       |
-|  3  | EmergencyContactRepository | ✅  | **適合 (Compliant)**        | `IdLogic` への依存排除が完了しており、子テーブル特有の `isUpdate` フラグ運用も規約通りである。             |
-|  4  | HealthRepository           | ✅  | **適合 (Highly Compliant)** | 3系統のデータを扱うが責務分離が適切。すべての破壊的操作において監査ログが記録されている。                          |
-|  5  | MedicationRepository       | ✅  | **適合 (Highly Compliant)** | プロジェクトの標準的な Repository 構造を忠実に守り、詳細な監査ログ記録が行われている。                      |
-|  6  | PersonRepository           | ✅  | **適合 (Compliant)**        | 基本情報の CRUD と重複チェックを適切に提供。サマリー集計の分離（PersonSummaryRepository への移行）も完了済み。 |
-|  7  | PersonSummaryRepository    | ✅  | **適合 (Highly Compliant)** | 複数テーブルの横断的な集計に特化。`combine` を用いたリアクティブな実装は効率的で、責務分離も完璧。                 |
+| No. | 調査対象                            | 状態 | 評価                        | 備考                                                                                                  |
+|:---:|:--------------------------------|:--:|:--------------------------|:----------------------------------------------------------------------------------------------------|
+|  2  | AppMaintenanceRepository        | ✅  | **適合 (Highly Compliant)** | データのバックアップ、復元、全消去、整合性修復を統括。`AuditLogRepository` 連携による自動ロギング、`InconsistencyType` によるアーキテクチャ適正化が完了済み。 |
+|  3  | AuditLogRepository              | ✅  | **適合 (Highly Compliant)** | 責務が明確であり、`NonCancellable` を用いた堅牢な例外抑制により業務への非干渉が徹底されている。                                            |
+|  4  | ConditionRepository             | ✅  | **適合 (Compliant)**        | DB 操作と物理ファイル操作（写真）の双方が適切にカプセル化され、監査ログ記録も徹底されている。                                                    |
+|  5  | DeleteOrRestorePersonRepository | ✅  | **適合 (Highly Compliant)** | 利用者のアーカイブ・抹消を管理。物理削除時の関連画像ファイル自動消去、および `Instant` への時刻取得統一により、規約遵守とリソースリーク防止を両立。                     |
+|  6  | EmergencyContactRepository      | ✅  | **適合 (Compliant)**        | `IdLogic` への依存排除が完了しており、子テーブル特有の `isUpdate` フラグ運用も規約通りである。                                          |
+|  7  | HealthRepository                | ✅  | **適合 (Highly Compliant)** | 3系統のデータを扱うが責務分離が適切。すべての破壊的操作において監査ログが記録されている。                                                       |
+|  8  | MedicationRepository            | ✅  | **適合 (Highly Compliant)** | プロジェクトの標準的な Repository 構造を忠実に守り、詳細な監査ログ記録が行われている。                                                   |
+|  9  | PersonRepository                | ✅  | **適合 (Compliant)**        | 基本情報の CRUD と重複チェックを適切に提供。サマリー集計の分離も完了済み。                                                            |
+| 10  | PersonSummaryRepository         | ✅  | **適合 (Highly Compliant)** | 複数テーブルの横断的な集計に特化。`combine` を用いたリアクティブな実装は効率的で、責務分離も完璧。                                              |
 
-### 2.2. 課題のあるRepository: AppMaintenanceRepository
+### 2.2. UserSettingsRepository (一部課題あり)
 
-| 課題内容                         |  優先度  | 分類        | 修正の方向性                                                                                                                                                                        |
-|:-----------------------------|:-----:|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **監査ログ（AuditLog）の記録漏れ**      | **高** | ルール違反     | `exportData`, `importData`, `clearAllData` 等の主要操作完了後に、`AuditLogRepository` を使用して成功ログを記録する。現状 `AuditLogDao` を直接受け取っているが、他の Repository と同様に `AuditLogRepository` を介する設計へ変更を検討。  |
-| **Repository 層での UI リソース参照** |   中   | アーキテクチャ   | `scanInconsistencies` において `R.string` を直接使用し `DatabaseInconsistency` を生成している。リソース ID の決定は本来 Logic または ViewModel の責務であるため、Repository はテーブル名とレコード ID 等の純粋なデータのみを返し、翻訳は上位層で行うべき。 |
-| **KDoc の記述不整合**              |   低   | ドキュメント    | クラスヘッダにて「Logic レイヤーへの依存が含まれている」と記述されていた点を修正済み（Callback による委譲は行われている）。                                                                      |
-| **safeLaunch 外での例外スロー**      |   中   | エラーハンドリング | `importData` 等で `IOException` を直接スローしている。呼び出し側の ViewModel の `safeLaunch` で適切にハンドリングされる必要があるが、Repository 内部での例外の粒度とログ出力のタイミングを再定義すべき。                                          |
-
-### 2.3. 課題のあるRepository: DeleteOrRestorePersonRepository
-
-| 課題内容                 |  優先度  | 分類   | 修正の方向性                                                                                                                   |
-|:---------------------|:-----:|:-----|:-------------------------------------------------------------------------------------------------------------------------|
-| **物理削除時の画像ファイル削除漏れ** | **高** | 仕様不備 | `permanentlyDeletePerson` (物理削除) 実行時に、DB レコードだけでなく、`ImageUtils` 等を使用して紐付く物理画像ファイルも削除する処理を追加すべき。現状ではストレージ容量を圧迫し続けるリスクがある。 |
-| **タイムスタンプ取得の不整合**    |   低   | 一貫性  | 論理削除時に `System.currentTimeMillis()` を使用している。他の Repository ととの整合性を考慮し、`Instant.now().toEpochMilli()` への統一を検討。              |
-
-### 2.4. 課題のあるRepository: UserSettingsRepository
-
-| 課題内容                             | 優先度 | 分類    | 修正の方向性                                                                                                  |
-|:---------------------------------|:---:|:------|:--------------------------------------------------------------------------------------------------------|
-| **設定変更時の監査ログ記録漏れ**               |  中  | ルール違反 | 生体認証の ON/OFF、バックアップパスワードの設定、ログ保持期間の変更など、アプリの挙動やセキュリティに影響を与える設定変更について `AuditLogRepository` を用いた記録を追加すべき。 |
-| **メモリ保持変数 `isLockBypassed` の配置** |  低  | 設計議論  | 本来 Repository は永続化層であるため、メモリ上のフラグ保持は ViewModel 等の管理層が適切かもしれない。ただし、横断的な制御として現状の配置も許容範囲内。                 |
+| 調査対象                   | 状態 | 評価            | 備考                                                                                    |
+|:-----------------------|:--:|:--------------|:--------------------------------------------------------------------------------------|
+| UserSettingsRepository | ⚠️ | **適合 (修正済み)** | 設定変更時の自動ロギングを実装済み。ただし、メモリ保持変数（`isLockBypassed`）の配置場所については設計議論の余地があり、ISS-007 として継続検討中。 |
 
 ## 3. ViewModel
 
@@ -169,20 +154,15 @@
 
 #### 5.1.2. ui/components/common
 
-| No. | 調査対象                            | 状態 | 評価       | 備考                                                                                                           |
-|:---:|:--------------------------------|:--:|:---------|:-------------------------------------------------------------------------------------------------------------|
-|  1  | HistoryComponents               | ✅  | **適合**   | 時系列リストの共通基盤。`stickyHeader` による日付区切りや `SwipeToDismissBox` による削除操作をカプセル化。                                      |
-|  2  | PdfSettingsDialog               | ✅  | **適合**   | PDF出力設定用の共通ダイアログ。`AppDialog` をベースとし、期間選択やパスワード設定の UI を提供。                                                    |
-|  3  | PersonHeaderTitle               | ✅  | **適合**   | 利用者の基本情報を TopAppBar 等に表示するためのタイトル部品。伏せ字対応も内包。                                                                |
-|  4  | CategorySelectorBar             | ✅  | **適合**   | 詳細画面のカテゴリ切り替えナビゲーション。データ存在有無のバッジ表示（ボーダー強調）に対応。                                                               |
-|  5  | DateTimeInputFields             | ✅  | **適合**   | 年月日時分の分割入力フィールド。Stateful 版と Stateless 版の両方を提供し、柔軟な利用が可能。                                                     |
-|  6  | PdfExportActionHandler          | ⚠️ | **課題あり** | UI を持たない論理コンポーネントだが、`BaseUiStateViewModel` に直接依存している。規約の「コンポーネントの ViewModel 依存禁止」に抵触するため、本来は Screen 層で制御すべき。 |
-|  7  | HistoryPreviewParameterProvider | ✅  | **適合**   | プレビュー用のモックデータ提供クラス。開発効率の向上に寄与。                                                                               |
-
-##### [課題詳細] PdfExportActionHandler の設計
-- **内容**: 共通コンポーネントでありながら `BaseUiStateViewModel` を引数に取り、内部で `safeLaunch` や `setLockBypassEnabled` を呼び出している。
-- **懸念**: コンポーネントの再利用性が低下し、特定の基盤クラスに強く結合している。
-- **改善案**: ViewModel への依存を排除し、必要な処理（`onExport` 等のコールバック）を外部から注入する純粋な Stateless コンポーネント（または Screen 層の private 関数）への変更を検討。
+| No. | 調査対象                            | 状態 | 評価                        | 備考                                                                                |
+|:---:|:--------------------------------|:--:|:--------------------------|:----------------------------------------------------------------------------------|
+|  1  | HistoryComponents               | ✅  | **適合**                    | 時系列リストの共通基盤。`stickyHeader` による日付区切りや `SwipeToDismissBox` による削除操作をカプセル化。           |
+|  2  | PdfSettingsDialog               | ✅  | **適合**                    | PDF出力設定用の共通ダイアログ。`AppDialog` をベースとし、期間選択やパスワード設定の UI を提供。                         |
+|  3  | PersonHeaderTitle               | ✅  | **適合**                    | 利用者の基本情報を TopAppBar 等に表示するためのタイトル部品。伏せ字対応も内包。                                     |
+|  4  | CategorySelectorBar             | ✅  | **適合**                    | 詳細画面のカテゴリ切り替えナビゲーション。データ存在有無のバッジ表示（ボーダー強調）に対応。                                    |
+|  5  | DateTimeInputFields             | ✅  | **適合**                    | 年月日時分の分割入力フィールド。Stateful 版と Stateless 版の両方を提供し、柔軟な利用が可能。                          |
+|  6  | PdfExportActionHandler          | ✅  | **適合 (Highly Compliant)** | 完全に Stateless な設計へリファクタリング済み。ViewModel への依存を排除し、実行ロジックを Screen 層へ委譲することで規約を高度に遵守。 |
+|  7  | HistoryPreviewParameterProvider | ✅  | **適合**                    | プレビュー用のモックデータ提供クラス。開発効率の向上に寄与。                                                    |
 
 #### 5.1.3. ui/components/condition
 
