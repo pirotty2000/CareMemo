@@ -20,11 +20,13 @@ import java.util.UUID
  *
  * 【役割】
  * アプリケーションのシステムメンテナンス（データのバックアップ、復元、全消去、および整合性修復）を担当します。
+ * データベース全体の操作に加え、ZIP 圧縮・解凍や写真ファイルの物理配置などの副作用を伴う処理をカプセル化します。
  *
  * 【設計指針：レイヤー責務】
- * 1. データアクセス専念：システム全般のデータ永続化操作に特化します。
- * 2. 依存方向の管理：現在は Logic レイヤーへの依存が含まれていますが、本来は Repository 層として独立しているべきであり、
- *    将来的なリファクタリング（Logic 層への処理委譲）が推奨されます。
+ * 1. データアクセスと物理操作の専念：DB 全体の永続化および `ContentResolver` / `cacheDir` を用いたファイル操作に特化します。
+ * 2. ロジックの外部委譲：バリデーションやデータ変換（クレンジング）などの業務ルールは本層で持たず、
+ *    引数やコールバックを介して Logic レイヤーへ委譲する構造を維持します。
+ * 3. 監査ログの記録：(要改善) 現状、主要な操作完了時の成功ログ記録が漏れているため、順次 `AuditLogRepository` による記録を追加する必要があります。
  */
 class AppMaintenanceRepository(
     private val context: Context,
@@ -37,7 +39,7 @@ class AppMaintenanceRepository(
     private val conditionPhotoDao: ConditionPhotoDao,
     private val medicationRecordDao: MedicationRecordDao,
     private val emergencyContactDao: EmergencyContactDao,
-    private val auditLogDao: AuditLogDao,
+    private val auditLogDao: AuditLogDao, // 将来的に AuditLogRepository への差し替えを検討
 ) {
     /**
      * 現在の DB 状態からバックアップ用のデータセット（DTO）を生成します。
@@ -125,6 +127,11 @@ class AppMaintenanceRepository(
     /**
      * データベースの不整合（未割り当てレコード）をスキャンします。
      * 外部キー制約がありながら、論理削除等により親が事実上存在しなくなったレコードを特定します。
+     *
+     * 【制約】
+     * 現状、戻り値の `DatabaseInconsistency` に UI リソース ID (`R.string`) が含まれています。
+     * これは Repository 層が UI 表現に依存している状態であり、将来的に不整合の種類（Enum 等）のみを返し、
+     * 翻訳は上位レイヤーで行う設計への変更が推奨されます。
      *
      * @return 検出された不整合情報のリスト
      */

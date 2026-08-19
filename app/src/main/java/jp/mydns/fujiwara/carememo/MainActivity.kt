@@ -49,7 +49,33 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.*
 
 /**
- * Class：MainActivity
+ * Activity：MainActivity
+ *
+ * 【役割】
+ * CareMemo アプリの唯一の Activity であり、UI の構成、ナビゲーション、およびセキュリティ制御（アプリロック）を統括します。
+ * Composable 群のエントリポイントとして機能し、アプリケーション全体の画面遷移グラフ（NavHost）を定義します。
+ *
+ * 【主要な機能】
+ * ・ナビゲーション管理：`NavHost` と `Destination` (Type-safe) を使用した画面遷移制御。
+ * ・セキュリティ制御：生体認証（BiometricPrompt）によるアプリロックおよび機密情報保護（FLAG_SECURE）。
+ * ・アダプティブ UI：`WindowSizeClass` を計測し、画面幅に応じたレイアウト（Phone/Tablet）の切り替えを支援。
+ * ・依存性の注入：`CareMemoApplication` からリポジトリを取得し、ViewModel Factory 経由で各 ViewModel へ注入。
+ * ・ライフサイクル監視：アプリのフォアグラウンド復帰時にロック状態を適切に更新。
+ *
+ * 【全体像：画面構成 (UI Composition)】
+ *
+ * ■ MainActivity (★本クラス)
+ * │
+ * ├─ [ 認証層 ]
+ * │    ├─ SecurityWarningScreen (セキュリティ警告：設定不備時)
+ * │    └─ LockScreen (アプリロック画面：認証待ち)
+ * │
+ * └─ [コンテンツ層：NavHost]
+ *      ├─ MainScreen (利用者一覧)
+ *      ├─ PersonEditScreen (登録・編集)
+ *      ├─ HealthDetail (健康記録：詳細)
+ *      ├─ ConditionDetail (所見メモ：詳細)
+ *      └─ SettingsScreen (設定)
  */
 class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)

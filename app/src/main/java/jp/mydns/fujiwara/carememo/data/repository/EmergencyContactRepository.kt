@@ -13,7 +13,7 @@ import java.time.Instant
  *
  * 【設計指針：レイヤー責務】
  * 1. データアクセス専念：連絡先情報の CRUD 操作に特化します。
- * 2. 依存方向の管理：現在は一部 Logic (IdLogic) への依存が含まれていますが、本来は独立しているべきレイヤーです。
+ * 2. 依存方向の遵守：下位レイヤーとして、上位の Logic レイヤーや ViewModel に依存しない構成を維持します。
  */
 class EmergencyContactRepository(
     private val emergencyContactDao: EmergencyContactDao,

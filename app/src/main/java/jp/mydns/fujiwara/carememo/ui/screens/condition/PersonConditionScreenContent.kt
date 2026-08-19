@@ -39,15 +39,23 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  *
  * 【全体像：レイアウト構成（Condition Layout）】
  *
- * ■ PersonConditionScreenContent (★本コンポーネント)
- * │
- * ├─ [ Phone版 ] (Column 構成)
- * │    ├─ SearchBox (検索バー)
- * │    └─ ConditionList (リスト：タップで詳細ダイアログへ)
- * │
- * └─ [ Tablet版 ] (Row 構成：2ペイン固定)
- *      ├─ 左側 (weight 1)：SearchBox + ConditionList (リスト)
- *      └─ 右側 (weight 2)：ConditionDetailPane (詳細・編集パネル)
+ * @param isExpanded タブレット版（2カラム）として表示するかどうか
+ * @param uiState UI 状態
+ * @param modifier 修飾子
+ * @param onSearchQueryChange 検索クエリ変更時のコールバック
+ * @param onSelectedIdChange 選択されたレコード ID 変更時のコールバック
+ * @param onDeleteRecord レコード削除（スワイプ）時のコールバック
+ * @param onEditClick 編集モード開始ボタンが押された際のコールバック
+ * @param onEditInputUpdate 入力値が更新された際のコールバック
+ * @param onSaveClick 保存ボタンが押された際のコールバック
+ * @param onCancelEdit 編集キャンセルボタンが押された際のコールバック
+ * @param onDeletePhoto 写真削除ボタンが押された際のコールバック
+ * @param onAddPhotoClick カメラ撮影ボタンが押された際のコールバック
+ * @param onReattachPhoto 未割り当て写真の再紐付けが要求された際のコールバック
+ * @param onNavigateToFullScreen 写真のフルスクリーン表示が要求された際のコールバック
+ * @param onMicClick 音声入力ボタンが押された際のコールバック
+ * @param isAnyDialogOpen 他のダイアログが開いているかどうか。スワイプ状態のリセットに使用。
+ * @param onPickPhotoClick 写真ギャラリー選択ボタンが押された際のコールバック
  */
 @Composable
 fun PersonConditionScreenContent(
