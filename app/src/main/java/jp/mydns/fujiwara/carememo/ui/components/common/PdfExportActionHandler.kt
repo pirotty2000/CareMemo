@@ -1,7 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.components.common
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import java.time.Instant

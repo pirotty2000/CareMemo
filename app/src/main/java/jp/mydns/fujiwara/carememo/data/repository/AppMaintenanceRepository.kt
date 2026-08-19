@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
-import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.utils.ZipUtils

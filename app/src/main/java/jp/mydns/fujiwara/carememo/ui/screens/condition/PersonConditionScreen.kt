@@ -28,7 +28,6 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 /**
