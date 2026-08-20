@@ -96,6 +96,7 @@ class MedicationRepositoryTest {
 
     // endregion
 
+    @Suppress("SameParameterValue")
     private fun createSampleRecord(id: String) = MedicationRecord(
         id = id,
         personId = "u1",
