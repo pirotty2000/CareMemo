@@ -103,7 +103,10 @@ class PersonMedicationViewModelTest {
         advanceUntilIdle()
 
         assertEquals(nextMonth, viewModel.uiState.value.selectedMonth)
-        verify { medicationRepository.getMedicationRecordsByMonth(personId, nextMonth.toString()) }
+        verify { 
+            val flow = medicationRepository.getMedicationRecordsByMonth(personId, nextMonth.toString())
+            assertNotNull(flow)
+        }
     }
 
     // endregion

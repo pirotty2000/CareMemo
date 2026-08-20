@@ -5,6 +5,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonDao
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -102,17 +103,23 @@ class PersonRepositoryTest {
     // region 4. データ取得テスト (Query)
 
     @Test
-    @Suppress("UNUSED_EXPRESSION")
     fun GET_01_getAllPersons() = runTest {
-        repository.getAllPersons()
-        verify { personDao.getAllPersons() }
+        val flow = repository.getAllPersons()
+        verify {
+            val daoFlow = personDao.getAllPersons()
+            assertNotNull(daoFlow)
+        }
+        assertNotNull(flow)
     }
 
     @Test
-    @Suppress("UNUSED_EXPRESSION")
     fun GET_02_getPersonById() = runTest {
-        repository.getPersonById("u1")
-        verify { personDao.getPersonById("u1") }
+        val flow = repository.getPersonById("u1")
+        verify {
+            val daoFlow = personDao.getPersonById("u1")
+            assertNotNull(daoFlow)
+        }
+        assertNotNull(flow)
     }
 
     // endregion

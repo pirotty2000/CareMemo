@@ -13,6 +13,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Unit Test: ViewModel Architectural Foundation (BASE)
@@ -81,7 +82,7 @@ class ViewModelFoundationTest {
             awaitItem() // Initial
             
             viewModel.safeLaunch("Op") {
-                delay(1000)
+                delay(1000.milliseconds)
             }
             
             assertTrue("Should be loading", awaitItem().isLoading)

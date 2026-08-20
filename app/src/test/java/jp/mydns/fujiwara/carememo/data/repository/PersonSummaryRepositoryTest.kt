@@ -6,7 +6,7 @@ import io.mockk.mockk
 import jp.mydns.fujiwara.carememo.data.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
@@ -49,11 +49,11 @@ class PersonSummaryRepositoryTest {
 
         repository.getPersonCategorySummaryById(personId).test {
             val summary = awaitItem()
-            assertEquals(true, summary.hasHeightWeight)
-            assertEquals(false, summary.hasBpAndPulse)
-            assertEquals(true, summary.hasGlucoseAndHbA1c)
-            assertEquals(false, summary.hasCondition)
-            assertEquals(true, summary.hasMedication)
+            assertTrue(summary.hasHeightWeight)
+            assertFalse(summary.hasBpAndPulse)
+            assertTrue(summary.hasGlucoseAndHbA1c)
+            assertFalse(summary.hasCondition)
+            assertTrue(summary.hasMedication)
             awaitComplete()
         }
     }
@@ -65,8 +65,22 @@ class PersonSummaryRepositoryTest {
     @Test
     fun ALL_01_getPersonCategorySummaries_associatesById() = runTest {
         val queryResults = listOf(
-            PersonSummaryQueryResult("u1", true, false, false, true, false),
-            PersonSummaryQueryResult("u2", false, true, true, false, true)
+            PersonSummaryQueryResult(
+                id = "u1",
+                hasHeightWeight = true,
+                hasBpAndPulse = false,
+                hasGlucoseAndHbA1c = false,
+                hasCondition = true,
+                hasMedication = false
+            ),
+            PersonSummaryQueryResult(
+                id = "u2",
+                hasHeightWeight = false,
+                hasBpAndPulse = true,
+                hasGlucoseAndHbA1c = true,
+                hasCondition = false,
+                hasMedication = true
+            )
         )
         every { personDao.getPersonCategorySummaries() } returns flowOf(queryResults)
 
@@ -75,14 +89,14 @@ class PersonSummaryRepositoryTest {
             assertEquals(2, map.size)
             
             val s1 = map["u1"]!!
-            assertEquals(true, s1.hasHeightWeight)
-            assertEquals(true, s1.hasCondition)
-            assertEquals(false, s1.hasBpAndPulse)
+            assertTrue(s1.hasHeightWeight)
+            assertTrue(s1.hasCondition)
+            assertFalse(s1.hasBpAndPulse)
 
             val s2 = map["u2"]!!
-            assertEquals(true, s2.hasBpAndPulse)
-            assertEquals(true, s2.hasMedication)
-            assertEquals(false, s2.hasHeightWeight)
+            assertTrue(s2.hasBpAndPulse)
+            assertTrue(s2.hasMedication)
+            assertFalse(s2.hasHeightWeight)
             
             awaitComplete()
         }

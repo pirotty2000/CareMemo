@@ -117,7 +117,6 @@ class PersonHealthViewModelTest {
     // region 3. カテゴリ・状態管理テスト (Category & State)
 
     @Test
-    @Suppress("CheckResult", "UNUSED_EXPRESSION")
     fun CAT_01_setCategory_triggersFlowSubscription() = runTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -126,7 +125,10 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
         
         assertEquals(Category.GLUCOSE_AND_HBA1C, viewModel.uiState.value.currentCategory)
-        verify { healthRepository.getGlucoseAndHbA1cByPersonId(personId) }
+        verify { 
+            val flow = healthRepository.getGlucoseAndHbA1cByPersonId(personId)
+            assertNotNull(flow)
+        }
     }
 
     @Test

@@ -85,10 +85,10 @@ class MedicationRegistrationScenarioTest {
         composeTestRule.onAllNodesWithTag("Medication_StatusChip_未").onFirst().performClick()
         
         // 昼の行の「介助」をタップ (2番目の「介助」ボタン)
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_介助").get(1).performClick()
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_介助")[1].performClick()
         
         // 夕の行の「服用」をタップ (3番目の「服用」ボタン)
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用").get(2).performClick()
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用")[2].performClick()
 
         // 入力により日時フィールドが表示されるのを待ち、キーボードを閉じる
         composeTestRule.waitForIdle()

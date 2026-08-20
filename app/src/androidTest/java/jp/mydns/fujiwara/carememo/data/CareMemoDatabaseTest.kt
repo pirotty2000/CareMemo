@@ -32,7 +32,7 @@ class CareMemoDatabaseTest {
 
     @Before
     fun createDb() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        val context: Context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
@@ -116,7 +116,7 @@ class CareMemoDatabaseTest {
         medicationDao.insert(MedicationRecord(personId = personId, dosageDate = "2023-10-27", timeSlot = 0, status = 2, recordTime = now))
 
         val repo = DeleteOrRestorePersonRepository(
-            ApplicationProvider.getApplicationContext<Context>(),
+            ApplicationProvider.getApplicationContext(),
             db, personDao, hwDao, db.bpAndPulseDao(), db.glucoseAndHbA1cDao(),
             db.conditionAtVisitDao(), db.conditionPhotoDao(), medicationDao,
             db.emergencyContactDao()
@@ -176,13 +176,12 @@ class CareMemoDatabaseTest {
         )
         personDao.insert(personWithTime)
 
-        val startOfDay = baseDate
         val endOfDay = baseDate.plus(1, ChronoUnit.DAYS)
 
         val found = personDao.findExistingPerson(
             lastName = "山田",
             firstName = "太郎",
-            start = startOfDay,
+            start = baseDate,
             end = endOfDay,
             note = ""
         )
