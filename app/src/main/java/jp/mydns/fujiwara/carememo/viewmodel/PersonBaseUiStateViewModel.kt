@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
@@ -50,10 +51,11 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     protected val personRepository: PersonRepository,
     protected val summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     protected val auditLogRepository: AuditLogRepository,
     initialState: S,
     protected val savedStateHandle: SavedStateHandle? = null
-) : BaseUiStateViewModel<S, E>(userSettingsRepository, initialState) {
+) : BaseUiStateViewModel<S, E>(userSettingsRepository, securitySession, initialState) {
 
     companion object {
         private const val OP_LOAD_PERSON = "loadPerson"

@@ -72,7 +72,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="SCN_05_EDIT_EditVitalFlow()">
+      <SelectionState runConfigName="SCN_01_REG_AddEmergencyContactFlow()">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-07-25T05:06:31.188207800Z">
           <Target type="DEFAULT_BOOT">

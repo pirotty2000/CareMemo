@@ -12,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -53,12 +54,14 @@ class PersonConditionViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository,
     savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<PersonConditionUiState, PersonConditionViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
+    securitySession,
     auditLogRepository,
     PersonConditionUiState(),
     savedStateHandle
@@ -559,6 +562,7 @@ class PersonConditionViewModel(
         private val summaryRepository: PersonSummaryRepository,
         private val conditionRepository: ConditionRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -569,6 +573,7 @@ class PersonConditionViewModel(
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
+                securitySession,
                 auditLogRepository,
                 savedStateHandle
             ) as T

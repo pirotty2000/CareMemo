@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
@@ -43,9 +44,11 @@ class SettingsViewModel(
     private val maintenanceRepository: AppMaintenanceRepository,
     private val archivedPersonRepository: DeleteOrRestorePersonRepository,
     private val auditLogRepository: AuditLogRepository,
-    userSettingsRepository: UserSettingsRepository
+    userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession
 ) : BaseUiStateViewModel<SettingsUiState, SettingsViewEvent>(
     userSettingsRepository,
+    securitySession,
     SettingsUiState()
 ) {
 
@@ -258,11 +261,18 @@ class SettingsViewModel(
         private val maintenanceRepository: AppMaintenanceRepository,
         private val archivedPersonRepository: DeleteOrRestorePersonRepository,
         private val auditLogRepository: AuditLogRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            return SettingsViewModel(maintenanceRepository, archivedPersonRepository, auditLogRepository, userSettingsRepository) as T
+            return SettingsViewModel(
+                maintenanceRepository,
+                archivedPersonRepository,
+                auditLogRepository,
+                userSettingsRepository,
+                securitySession
+            ) as T
         }
     }
 }

@@ -104,6 +104,7 @@ class MainActivity : FragmentActivity() {
         val userSettingsRepository = application.userSettingsRepository
         val auditLogRepository = application.auditLogRepository
         val appMaintenanceRepository = application.appMaintenanceRepository
+        val securitySession = application.securitySession
 
         enableEdgeToEdge()
 
@@ -142,11 +143,11 @@ class MainActivity : FragmentActivity() {
                 DisposableEffect(Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_RESUME) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
-                            if (isAuthenticated && (biometricEnabledState == true) && !userSettingsRepository.isLockBypassed) {
+                            if (isAuthenticated && (biometricEnabledState == true) && !securitySession.isLockBypassed) {
                                 // 即時ロック（バックグラウンドから復帰した際に必ずロックする）
                                 isAuthenticated = false
                             }
-                            userSettingsRepository.isLockBypassed = false
+                            securitySession.isLockBypassed = false
                         }
                     }
                     lifecycle.addObserver(observer)
@@ -175,6 +176,7 @@ class MainActivity : FragmentActivity() {
                                         conditionRepository,
                                         application.emergencyContactRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 MainScreen(viewModel = listViewModel, navController = navController)
                             }
@@ -184,6 +186,7 @@ class MainActivity : FragmentActivity() {
                                     viewModel(factory = PersonEditViewModel.Factory(
                                         personRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 PersonEditScreen(viewModel = editViewModel, navController = navController)
                             }
@@ -194,6 +197,7 @@ class MainActivity : FragmentActivity() {
                                         application.emergencyContactRepository,
                                         personRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 EmergencyContactListScreen(viewModel = medicalViewModel, navController = navController)
                             }
@@ -204,6 +208,7 @@ class MainActivity : FragmentActivity() {
                                         application.emergencyContactRepository,
                                         personRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 EmergencyContactEditScreen(viewModel = medicalViewModel, navController = navController)
                             }
@@ -214,6 +219,7 @@ class MainActivity : FragmentActivity() {
                                         personRepository,
                                         personSummaryRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 val healthViewModel: PersonHealthViewModel =
                                     viewModel(factory = PersonHealthViewModel.Factory(
@@ -221,6 +227,7 @@ class MainActivity : FragmentActivity() {
                                         personSummaryRepository,
                                         healthRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 PersonHealthScreen(
                                     detailViewModel = detailViewModel,
@@ -237,6 +244,7 @@ class MainActivity : FragmentActivity() {
                                         personSummaryRepository,
                                         healthRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 BatchInputScreen(viewModel = batchViewModel, navController = navController)
                             }
@@ -248,6 +256,7 @@ class MainActivity : FragmentActivity() {
                                         personRepository,
                                         personSummaryRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 val healthViewModel: PersonHealthViewModel =
                                     viewModel(factory = PersonHealthViewModel.Factory(
@@ -255,6 +264,7 @@ class MainActivity : FragmentActivity() {
                                         personSummaryRepository,
                                         healthRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 GraphExpansionScreen(
                                     detailViewModel = detailViewModel,
@@ -274,6 +284,7 @@ class MainActivity : FragmentActivity() {
                                             personRepository,
                                             personSummaryRepository,
                                             userSettingsRepository,
+                                            securitySession,
                                             auditLogRepository))
                                     val conditionViewModel: PersonConditionViewModel =
                                         viewModel(parentEntry, factory = PersonConditionViewModel.Factory(
@@ -281,6 +292,7 @@ class MainActivity : FragmentActivity() {
                                             personSummaryRepository,
                                             conditionRepository,
                                             userSettingsRepository,
+                                            securitySession,
                                             auditLogRepository))
                                     
                                     // 引数の同期
@@ -307,6 +319,7 @@ class MainActivity : FragmentActivity() {
                                             personRepository,
                                             personSummaryRepository,
                                             userSettingsRepository,
+                                            securitySession,
                                             auditLogRepository))
                                     val conditionViewModel: PersonConditionViewModel =
                                         viewModel(parentEntry, factory = PersonConditionViewModel.Factory(
@@ -314,6 +327,7 @@ class MainActivity : FragmentActivity() {
                                             personSummaryRepository,
                                             conditionRepository,
                                             userSettingsRepository,
+                                            securitySession,
                                             auditLogRepository))
 
                                     // 引数の同期
@@ -343,6 +357,7 @@ class MainActivity : FragmentActivity() {
                                             personSummaryRepository,
                                             conditionRepository,
                                             userSettingsRepository,
+                                            securitySession,
                                             auditLogRepository))
 
                                     // 引数の同期
@@ -363,6 +378,7 @@ class MainActivity : FragmentActivity() {
                                         personRepository,
                                         personSummaryRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 val medicationViewModel: PersonMedicationViewModel =
                                     viewModel(factory = PersonMedicationViewModel.Factory(
@@ -370,6 +386,7 @@ class MainActivity : FragmentActivity() {
                                         personSummaryRepository,
                                         medicationRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 PersonMedicationScreen(
                                     detailViewModel = detailViewModel,
@@ -385,7 +402,8 @@ class MainActivity : FragmentActivity() {
                                         appMaintenanceRepository,
                                         deleteOrRestorePersonRepository,
                                         auditLogRepository,
-                                        userSettingsRepository))
+                                        userSettingsRepository,
+                                        securitySession))
                                 SettingsScreen(
                                     viewModel = settingsViewModel,
                                     navController = navController,
@@ -397,7 +415,8 @@ class MainActivity : FragmentActivity() {
                                 val auditLogViewModel: AuditLogViewModel =
                                     viewModel(factory = AuditLogViewModel.Factory(
                                         auditLogRepository,
-                                        userSettingsRepository))
+                                        userSettingsRepository,
+                                        securitySession))
                                 AuditLogScreen(viewModel = auditLogViewModel, navController = navController)
                             }
 
@@ -406,6 +425,7 @@ class MainActivity : FragmentActivity() {
                                     viewModel(factory = DeleteOrRestorePersonViewModel.Factory(
                                         deleteOrRestorePersonRepository,
                                         userSettingsRepository,
+                                        securitySession,
                                         auditLogRepository))
                                 DeleteOrRestorePersonScreen(viewModel = archiveViewModel, navController = navController)
                             }
@@ -414,6 +434,7 @@ class MainActivity : FragmentActivity() {
                                 val unassignedViewModel: UnassignedPhotoViewModel =
                                     viewModel(factory = UnassignedPhotoViewModel.Factory(
                                         userSettingsRepository,
+                                        securitySession,
                                         conditionRepository))
                                 UnassignedPhotoManagementScreen(viewModel = unassignedViewModel, navController = navController)
                             }

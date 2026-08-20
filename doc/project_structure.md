@@ -31,39 +31,40 @@
 
 ```text
 jp.mydns.fujiwara.carememo
-├── ui/                 # UIレイヤー（Jetpack Compose）
-│   ├── navigation/     #  ├─ ナビゲーション定義（Type-safe Destinations）
-│   ├── screens/        #  ├─ 各画面のComposable（機能カテゴリ別に4ファイル構成ルールを遵守）
-│   │   ├── main/       #  │   ├─ 利用者一覧、登録・編集、緊急連絡先
-│   │   ├── health/     #  │   ├─ (A)健康記録・一括入力・グラフ拡大
-│   │   ├── condition/  #  │   ├─ (B)所見メモ・写真関連
-│   │   ├── medication/ #  │   ├─ (C)服薬管理
-│   │   └── settings/   #  │   └─ アプリ設定、操作ログ、アーカイブ管理、未割り当て写真
-│   ├── components/     #  ├─ 再利用可能なUIコンポーネント（階層管理）
-│   │   ├── base/       #  │   ├─ 【汎用基盤】ドメイン非依存（例: AppTextField, LoadingScreen）
-│   │   ├── common/     #  │   ├─ 【ドメイン共通】ドメイン依存かつ複数画面（例: PersonHeaderTitle）
-│   │   ├── main/       #  │   ├─ 【固有】利用者一覧・編集専用
-│   │   ├── health/     #  │   ├─ 【固有】(A)健康記録専用（例: HealthGraphView）
-│   │   ├── condition/  #  │   ├─ 【固有】(B)所見メモ専用
-│   │   └── medication/ #  │   └─ 【固有】(C)服薬管理専用
-│   ├── mapping/        #  ├─ 表示用マッピング（ドメイン識別子を日本語リソースIDや色に変換）
-│   ├── preview/        #  ├─ プレビュー用基盤（MockData, PreviewStates）
-│   ├── theme/          #  ├─ アプリのテーマ設定（Color, Type, カスタムパレット、セマンティック配色）
-│   └── utils/          #  └─ UIユーティリティ（PhoneNumberVisualTransformation 等）
-├── viewmodel/          # UI状態管理と実行制御（BaseUiStateViewModel を基盤とする MVI 構造）
-├── logic/              # ドメインロジック（Android API 排除、Pure Kotlin での計算・判定）
-│   ├── common/         #  ├─ アプリ全体で再利用可能な共通計算ロジック
-│   └── feature/        #  └─ 特定画面に密結合したロジック（UiState / ViewEvent 定義を内包）
-├── data/               # データレイヤー
-│   ├── repository/     #  ├─ リポジトリ（データの永続化と監査ログ記録に専念）
-│   ├── spec/           #  ├─ アプリの仕様定義（閾値、制約、定数群）
-│   ├── Entity.kt       #  ├─ Room エンティティ定義
-│   ├── Dao.kt          #  ├─ Room DAO インターフェース
-│   ├── AppDatabase.kt  #  ├─ Room + SQLCipher データベース基盤
-│   └── BackupDto.kt    #  └─ バックアップ用データ転送オブジェクト
-├── utils/              # ユーティリティ（DateTime, Image, PDF, ZIP 等の重量処理）
-├── MainActivity.kt     # アプリのエントリポイント、セキュリティ統括、NavHost
-└── CareMemoApplication.kt # Application クラス、サービスロケーター（Repository 管理）
+├── ui/                    # UIレイヤー（Jetpack Compose）
+│   ├── navigation/        #  ├─ ナビゲーション定義（Type-safe Destinations）
+│   ├── screens/           #  ├─ 各画面のComposable（機能カテゴリ別に4ファイル構成ルールを遵守）
+│   │   ├── main/          #  │   ├─ 利用者一覧、登録・編集、緊急連絡先
+│   │   ├── health/        #  │   ├─ (A)健康記録・一括入力・グラフ拡大
+│   │   ├── condition/     #  │   ├─ (B)所見メモ・写真関連
+│   │   ├── medication/    #  │   ├─ (C)服薬管理
+│   │   └── settings/      #  │   └─ アプリ設定、操作ログ、アーカイブ管理、未割り当て写真
+│   ├── components/        #  ├─ 再利用可能なUIコンポーネント（階層管理）
+│   │   ├── base/          #  │   ├─ 【汎用基盤】ドメイン非依存（例: AppTextField, LoadingScreen）
+│   │   ├── common/        #  │   ├─ 【ドメイン共通】ドメイン依存かつ複数画面（例: PersonHeaderTitle）
+│   │   ├── main/          #  │   ├─ 【固有】利用者一覧・編集専用
+│   │   ├── health/        #  │   ├─ 【固有】(A)健康記録専用（例: HealthGraphView）
+│   │   ├── condition/     #  │   ├─ 【固有】(B)所見メモ専用
+│   │   └── medication/    #  │   └─ 【固有】(C)服薬管理専用
+│   ├── mapping/           #  ├─ 表示用マッピング（ドメイン識別子を日本語リソースIDや色に変換）
+│   ├── preview/           #  ├─ プレビュー用基盤（MockData, PreviewStates）
+│   ├── theme/             #  ├─ アプリのテーマ設定（Color, Type, カスタムパレット、セマンティック配色）
+│   └── utils/             #  └─ UIユーティリティ（PhoneNumberVisualTransformation 等）
+├── viewmodel/             # UI状態管理と実行制御（BaseUiStateViewModel を基盤とする MVI 構造）
+├── logic/                 # ドメインロジック（Android API 排除、Pure Kotlin での計算・判定）
+│   ├── common/            #  ├─ アプリ全体で再利用可能な共通計算ロジック
+│   └── feature/           #  └─ 特定画面に密結合したロジック（UiState / ViewEvent 定義を内包）
+├── data/                  # データレイヤー
+│   ├── repository/        #  ├─ リポジトリ（データの永続化と監査ログ記録に専念）
+│   ├── spec/              #  ├─ アプリの仕様定義（閾値、制約、定数群）
+│   ├── Entity.kt          #  ├─ Room エンティティ定義
+│   ├── Dao.kt             #  ├─ Room DAO インターフェース
+│   ├── AppDatabase.kt     #  ├─ Room + SQLCipher データベース基盤
+│   ├── SecuritySession.kt #  ├─ 揮発性セッション状態（自動ロックバイパス等）
+│   └── BackupDto.kt       #  └─ バックアップ用データ転送オブジェクト
+├── utils/                 # ユーティリティ（DateTime, Image, PDF, ZIP 等の重量処理）
+├── MainActivity.kt        # アプリのエントリポイント、セキュリティ統括、NavHost
+└── CareMemoApplication.kt # Application クラス、サービスロケーター（Repo / Session 管理）
 ```
 
 ---
@@ -258,4 +259,4 @@ Android API を利用する重量級の共通処理をカプセル化してい�
 
 ---
 
-最終更新日: 2026/08/19 (Phase 5 適合性調査完了に伴う網羅的推敲)
+最終更新日: 2026/08/21

@@ -102,17 +102,4 @@ class UserSettingsRepositoryTest {
     }
 
     // endregion
-
-    // region 4. 特殊状態テスト (Memory / Security)
-
-    @Test
-    fun SPC_01_isLockBypassed_memoryOnly() {
-        repository.isLockBypassed = true
-        assertTrue(repository.isLockBypassed)
-        
-        repository.isLockBypassed = false
-        assertFalse(repository.isLockBypassed)
-    }
-
-    // endregion
 }

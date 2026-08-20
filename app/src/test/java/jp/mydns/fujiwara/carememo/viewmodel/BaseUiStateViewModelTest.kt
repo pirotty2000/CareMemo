@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import app.cash.turbine.test
 import io.mockk.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,8 +22,9 @@ import org.junit.Test
 private data class MockUiState(val isLoading: Boolean = false)
 
 private class MockViewModel(
-    userSettingsRepository: UserSettingsRepository
-) : BaseUiStateViewModel<MockUiState, String>(userSettingsRepository, MockUiState()) {
+    userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession
+) : BaseUiStateViewModel<MockUiState, String>(userSettingsRepository, securitySession, MockUiState()) {
     override val featureName: String = "Mock"
     override fun copyWithLoadingState(state: MockUiState, isLoading: Boolean) = state.copy(isLoading = isLoading)
 
@@ -34,6 +36,7 @@ private class MockViewModel(
 class BaseUiStateViewModelTest {
 
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val testDispatcher = StandardTestDispatcher()
     private val isNameMaskingEnabledFlow = MutableStateFlow(true)
 
@@ -48,7 +51,7 @@ class BaseUiStateViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = MockViewModel(userSettingsRepository)
+    private fun createViewModel() = MockViewModel(userSettingsRepository, securitySession)
 
     // region 2. イベント送出テスト (Events)
 

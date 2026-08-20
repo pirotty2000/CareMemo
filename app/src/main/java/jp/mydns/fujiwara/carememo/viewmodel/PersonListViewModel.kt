@@ -8,6 +8,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
@@ -60,9 +61,11 @@ class PersonListViewModel(
     private val conditionRepository: ConditionRepository,
     private val emergencyContactRepository: EmergencyContactRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository,
 ) : BaseUiStateViewModel<PersonListUiState, PersonListViewEvent>(
     userSettingsRepository,
+    securitySession,
     PersonListUiState()
 ) {
 
@@ -404,6 +407,7 @@ class PersonListViewModel(
         private val conditionRepository: ConditionRepository,
         private val emergencyContactRepository: EmergencyContactRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -415,6 +419,7 @@ class PersonListViewModel(
                 conditionRepository,
                 emergencyContactRepository,
                 userSettingsRepository,
+                securitySession,
                 auditLogRepository
             ) as T
         }

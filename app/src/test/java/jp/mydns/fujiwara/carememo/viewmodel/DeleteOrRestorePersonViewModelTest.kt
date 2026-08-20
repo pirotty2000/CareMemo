@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -29,6 +30,7 @@ class DeleteOrRestorePersonViewModelTest {
 
     private val repository = mockk<DeleteOrRestorePersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private val testDispatcher = StandardTestDispatcher()
@@ -62,7 +64,13 @@ class DeleteOrRestorePersonViewModelTest {
 
     private fun createViewModel(mode: String? = null): DeleteOrRestorePersonViewModel {
         val handle = if (mode != null) SavedStateHandle(mapOf("mode" to mode)) else SavedStateHandle()
-        return DeleteOrRestorePersonViewModel(repository, userSettingsRepository, auditLogRepository, handle)
+        return DeleteOrRestorePersonViewModel(
+            repository,
+            userSettingsRepository,
+            securitySession,
+            auditLogRepository,
+            handle
+        )
     }
 
     // region 2. 初期化・データロードテスト (Initialization)

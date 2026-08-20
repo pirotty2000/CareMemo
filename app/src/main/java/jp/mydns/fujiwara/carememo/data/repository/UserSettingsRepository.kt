@@ -124,12 +124,6 @@ class UserSettingsRepository(
             preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] ?: true
         }
 
-    /** 
-     * 一時的にロックを無効化するためのフラグ（メモリ保持）。
-     * PDF出力時のシステム共有シート連携など、アプリを一時離脱して戻る際の誤ロック防止に使用します。
-     */
-    var isLockBypassed: Boolean = false
-
     // --- 設定値の更新メソッド群 ---
 
     suspend fun setNameMaskingEnabled(enabled: Boolean) {

@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +30,7 @@ class PersonMedicationViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private val testDispatcher = StandardTestDispatcher()
@@ -62,7 +64,7 @@ class PersonMedicationViewModelTest {
     private fun createViewModel(): PersonMedicationViewModel {
         return PersonMedicationViewModel(
             medicationRepository, personRepository, summaryRepository, 
-            userSettingsRepository, auditLogRepository, 
+            userSettingsRepository, securitySession, auditLogRepository, 
             SavedStateHandle(mapOf("personId" to personId))
         )
     }

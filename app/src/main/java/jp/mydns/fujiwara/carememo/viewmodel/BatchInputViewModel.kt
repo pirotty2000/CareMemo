@@ -8,6 +8,7 @@ import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -46,12 +47,14 @@ class BatchInputViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository,
     savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<BatchInputUiState, BatchInputViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
+    securitySession,
     auditLogRepository,
     BatchInputUiState(),
     savedStateHandle
@@ -295,6 +298,7 @@ class BatchInputViewModel(
         private val summaryRepository: PersonSummaryRepository,
         private val healthRepository: HealthRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -305,6 +309,7 @@ class BatchInputViewModel(
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
+                securitySession,
                 auditLogRepository,
                 savedStateHandle
             ) as T

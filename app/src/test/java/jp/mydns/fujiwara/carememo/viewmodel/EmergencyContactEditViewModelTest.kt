@@ -7,6 +7,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -32,6 +33,7 @@ class EmergencyContactEditViewModelTest {
     private val emergencyContactRepository = mockk<EmergencyContactRepository>(relaxed = true)
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private val testDispatcher = StandardTestDispatcher()
@@ -74,6 +76,7 @@ class EmergencyContactEditViewModelTest {
             emergencyContactRepository,
             personRepository,
             userSettingsRepository,
+            securitySession,
             auditLogRepository
         )
     }
@@ -112,7 +115,14 @@ class EmergencyContactEditViewModelTest {
         val handle = SavedStateHandle(mapOf("personId" to personId))
         handle["contactId"] = null 
 
-        val viewModel = EmergencyContactEditViewModel(handle, emergencyContactRepository, personRepository, userSettingsRepository, auditLogRepository)
+        val viewModel = EmergencyContactEditViewModel(
+            handle,
+            emergencyContactRepository,
+            personRepository,
+            userSettingsRepository,
+            securitySession,
+            auditLogRepository
+        )
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.isEditing)

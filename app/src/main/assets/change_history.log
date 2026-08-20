@@ -1,3 +1,7 @@
+# Ver.3.2.13 (2026/08/xx)
+- Phase 5 対応
+- メモリ保持用変数（isLockBypassed）の配置場所の変更
+
 # Ver.3.2.12 (2026/08/20)
 - Phase 5 対応
 - AppMaintenanceRepository：主要操作（インポート等）における監査ログの記録漏れ

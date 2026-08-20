@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ class PersonHealthViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private val testDispatcher = StandardTestDispatcher()
@@ -70,7 +72,7 @@ class PersonHealthViewModelTest {
     ): PersonHealthViewModel {
         return PersonHealthViewModel(
             healthRepository, personRepository, summaryRepository, 
-            userSettingsRepository, auditLogRepository, 
+            userSettingsRepository, securitySession, auditLogRepository, 
             SavedStateHandle(mapOf("personId" to personId, "categoryName" to category.name))
         )
     }

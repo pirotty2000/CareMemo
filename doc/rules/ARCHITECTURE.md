@@ -7,6 +7,7 @@
 | レイヤー / パッケージ                 | 主要な役割                        | 注意事項                                  |
 |:-----------------------------|:-----------------------------|:--------------------------------------|
 | **`data/AppSpecifications`** | **数値の源泉**。定数管理。              | ロジック記述禁止。                             |
+| **`data/Session`**           | **セッション状態**。揮発性フラグ管理。        | **[MUST] 永続化禁止**。                     |
 | **`logic/common`**           | **ドメインルール（脳）**。判定ロジック。       | **[MUST] Android依存禁止**。               |
 | **`logic/feature`**          | **機能ロジック**。UiState/Entity変換。 | 副作用（Repo呼び出し、UI操作）禁止。                 |
 | **`ui/utils`**               | **UI固有ユーティリティ**。             | VisualTransformation 等の Compose 依存部品。 |
@@ -19,13 +20,13 @@
 
 レイヤー間の依存関係を単方向に保ち、循環参照や責務の混入を防ぐため、以下の依存許可マトリックスを遵守してください。
 
-| レイヤー                        | 依存可能な対象                            | 依存してはならない対象                                                                    |
-|:----------------------------|:-----------------------------------|:-------------------------------------------------------------------------------|
-| **UI (Screens/Components)** | ViewModel, Mapping, Theme          | Repository, Database, Logic (原則)                                               |
-| **ViewModel**               | Logic, Repository, Mapping, Entity | Activity, Context, Composable, Android Framework クラス (Uri, BiometricManager 等) |
-| **Logic (Common/Feature)**  | AppSpecifications, Entity          | ViewModel, Repository, Android API                                             |
-| **Repository**              | Database (DAO), AuditLog, Entity   | ViewModel, Logic, UI, Android Logic (原則)                                       |
-| **Mapping / Theme**         | AppSpecifications                  | ViewModel, Repository, Logic                                                   |
+| レイヤー                        | 依存可能な対象                                     | 依存してはならない対象                                                                    |
+|:----------------------------|:--------------------------------------------|:-------------------------------------------------------------------------------|
+| **UI (Screens/Components)** | ViewModel, Mapping, Theme                   | Repository, Database, Logic (原則)                                               |
+| **ViewModel**               | Logic, Repository, Mapping, Entity, Session | Activity, Context, Composable, Android Framework クラス (Uri, BiometricManager 等) |
+| **Logic (Common/Feature)**  | AppSpecifications, Entity                   | ViewModel, Repository, Android API                                             |
+| **Repository**              | Database (DAO), AuditLog, Entity            | ViewModel, Logic, UI, Android Logic (原則)                                       |
+| **Mapping / Theme**         | AppSpecifications                           | ViewModel, Repository, Logic                                                   |
 
 - **[MUST] 依存の単方向性**: 依存は常に「上位 (UI)」から「下位 (Data/Spec)」に向かって流れるようにし、下位レイヤーが上位レイヤー（例：Logic が ViewModel）を直接参照することは厳禁とします。
 - **[MUST] UI からの飛び越し禁止**: UI コンポーネントが ViewModel を介さずに Repository や Database に直接アクセスすることを禁止します。
@@ -66,4 +67,4 @@
 - ViewModel からカテゴリ固有の Repo メソッドを直接呼ぶことを制限し、プロセッサに委譲します。
 
 ---
-最終更新日: 2026/08/15
+最終更新日: 2026/08/21

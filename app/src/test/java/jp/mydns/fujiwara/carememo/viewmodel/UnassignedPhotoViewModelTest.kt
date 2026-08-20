@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
@@ -24,6 +25,7 @@ import java.time.Instant
 class UnassignedPhotoViewModelTest {
 
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
@@ -47,6 +49,7 @@ class UnassignedPhotoViewModelTest {
 
     private fun createViewModel() = UnassignedPhotoViewModel(
         userSettingsRepository,
+        securitySession,
         conditionRepository
     )
 

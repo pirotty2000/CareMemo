@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -67,9 +68,11 @@ class EmergencyContactEditViewModel(
     private val emergencyContactRepository: EmergencyContactRepository,
     private val personRepository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository
 ) : BaseUiStateViewModel<EmergencyContactUiState, EmergencyContactViewEvent>(
     userSettingsRepository,
+    securitySession,
     EmergencyContactUiState()
 ) {
 
@@ -270,6 +273,7 @@ class EmergencyContactEditViewModel(
         private val emergencyContactRepository: EmergencyContactRepository,
         private val personRepository: PersonRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -280,6 +284,7 @@ class EmergencyContactEditViewModel(
                 emergencyContactRepository,
                 personRepository,
                 userSettingsRepository,
+                securitySession,
                 auditLogRepository
             ) as T
         }

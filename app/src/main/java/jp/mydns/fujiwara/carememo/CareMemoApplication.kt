@@ -179,4 +179,9 @@ class CareMemoApplication : Application() {
             auditLogRepository
         )
     }
+
+    /** セキュリティに関する揮発的セッション状態の管理 */
+    val securitySession: SecuritySession by lazy {
+        SecuritySession()
+    }
 }

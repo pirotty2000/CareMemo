@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -45,9 +46,11 @@ class PersonEditViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository
 ) : BaseUiStateViewModel<PersonEditUiState, PersonEditViewEvent>(
     userSettingsRepository,
+    securitySession,
     PersonEditUiState()
 ) {
 
@@ -240,12 +243,19 @@ class PersonEditViewModel(
     class Factory(
         private val repository: PersonRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
             val savedStateHandle = extras.createSavedStateHandle()
-            return PersonEditViewModel(savedStateHandle, repository, userSettingsRepository, auditLogRepository) as T
+            return PersonEditViewModel(
+                savedStateHandle,
+                repository,
+                userSettingsRepository,
+                securitySession,
+                auditLogRepository
+            ) as T
         }
     }
 }

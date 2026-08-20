@@ -4,6 +4,7 @@ import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.AuditLog
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
@@ -26,6 +27,7 @@ class AuditLogViewModelTest {
 
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     
     private val testDispatcher = StandardTestDispatcher()
 
@@ -53,7 +55,7 @@ class AuditLogViewModelTest {
 
     @Test
     fun RD_01_RD_02_initialLoad_success() = runTest {
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         
         viewModel.uiState.test {
             // Skip intermediate loading state transitions
@@ -73,7 +75,7 @@ class AuditLogViewModelTest {
             throw RuntimeException("Connection Failed")
         }
 
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
 
         viewModel.uiState.test {
             advanceUntilIdle()
@@ -93,7 +95,7 @@ class AuditLogViewModelTest {
 
     @Test
     fun FLT_01_setFeatureFilter() = runTest {
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         advanceUntilIdle()
 
         viewModel.setFeatureFilter("Settings")
@@ -107,7 +109,7 @@ class AuditLogViewModelTest {
 
     @Test
     fun FLT_02_setResultFilter() = runTest {
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         advanceUntilIdle()
 
         viewModel.setResultFilter("DB_ERROR")
@@ -120,7 +122,7 @@ class AuditLogViewModelTest {
 
     @Test
     fun SRT_01_toggleSortOrder() = runTest {
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         advanceUntilIdle()
 
         // Default is descending (2, 1)
@@ -135,7 +137,7 @@ class AuditLogViewModelTest {
 
     @Test
     fun CLR_01_clearFilters() = runTest {
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         advanceUntilIdle()
 
         viewModel.setFeatureFilter("Settings")
@@ -152,7 +154,7 @@ class AuditLogViewModelTest {
 
     @Test
     fun NAV_01_navigateBack() = runTest {
-        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository)
+        val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         
         viewModel.viewEvent.test {
             viewModel.navigateBack()

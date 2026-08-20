@@ -14,7 +14,7 @@
 | ISS-004 | DeleteOrRestorePersonRepository | 物理削除実行時における紐付く画像ファイルの削除漏れ                                    | **高** | 仕様不備      | ✅  |
 | ISS-005 | DeleteOrRestorePersonRepository | タイムスタンプ取得処理の不整合（System.currentTimeMillis の使用）                |   低   | 一貫性       | ✅  |
 | ISS-006 | UserSettingsRepository          | 設定変更（生体認証、パスワード等）時における監査ログの記録漏れ                              |   中   | ルール違反     | ✅  |
-| ISS-007 | UserSettingsRepository          | メモリ保持用変数（isLockBypassed）の配置場所の検討                             |   低   | 設計議論      | ⏳  |
+| ISS-007 | UserSettingsRepository          | メモリ保持用変数（isLockBypassed）の配置場所の検討                             |   低   | 設計議論      | ✅  |
 | ISS-008 | PdfExportActionHandler          | `BaseUiStateViewModel` への直接依存（コンポーネントの ViewModel 依存禁止規約への抵触） |   中   | アーキテクチャ   | ✅  |
 
 ---
@@ -78,7 +78,7 @@
 
 | 調査対象                   | 状態 | 評価            | 備考                                                                                    |
 |:-----------------------|:--:|:--------------|:--------------------------------------------------------------------------------------|
-| UserSettingsRepository | ⚠️ | **適合 (修正済み)** | 設定変更時の自動ロギングを実装済み。ただし、メモリ保持変数（`isLockBypassed`）の配置場所については設計議論の余地があり、ISS-007 として継続検討中。 |
+| UserSettingsRepository | ✅  | **適合 (Highly Compliant)** | 設定変更時の自動ロギングを実装済み。メモリ保持変数（`isLockBypassed`）は `SecuritySession` へ分離し、責務分離を徹底。 |
 
 ## 3. ViewModel
 

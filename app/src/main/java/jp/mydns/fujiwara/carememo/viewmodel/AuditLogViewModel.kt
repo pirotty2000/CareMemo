@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogLogic
@@ -29,9 +30,11 @@ import kotlinx.coroutines.launch
  */
 class AuditLogViewModel(
     private val auditLogRepository: AuditLogRepository,
-    userSettingsRepository: UserSettingsRepository
+    userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession
 ) : BaseUiStateViewModel<AuditLogUiState, AuditLogViewEvent>(
     userSettingsRepository,
+    securitySession,
     AuditLogUiState()
 ) {
 
@@ -111,11 +114,16 @@ class AuditLogViewModel(
 
     class Factory(
         private val auditLogRepository: AuditLogRepository,
-        private val userSettingsRepository: UserSettingsRepository
+        private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-            return AuditLogViewModel(auditLogRepository, userSettingsRepository) as T
+            return AuditLogViewModel(
+                auditLogRepository,
+                userSettingsRepository,
+                securitySession
+            ) as T
         }
     }
 }
