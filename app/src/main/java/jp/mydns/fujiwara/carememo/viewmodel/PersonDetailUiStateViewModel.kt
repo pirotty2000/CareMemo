@@ -8,6 +8,7 @@ import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
@@ -35,12 +36,14 @@ class PersonDetailUiStateViewModel(
     personRepository: PersonRepository,
     summaryRepository: PersonSummaryRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository,
     savedStateHandle: SavedStateHandle
 ) : PersonBaseUiStateViewModel<PersonDetailUiState, PersonDetailViewEvent>(
     personRepository,
     summaryRepository,
     userSettingsRepository,
+    securitySession,
     auditLogRepository,
     PersonDetailUiState(),
     savedStateHandle
@@ -103,6 +106,7 @@ class PersonDetailUiStateViewModel(
         private val personRepository: PersonRepository,
         private val summaryRepository: PersonSummaryRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -112,6 +116,7 @@ class PersonDetailUiStateViewModel(
                 personRepository,
                 summaryRepository,
                 userSettingsRepository,
+                securitySession,
                 auditLogRepository,
                 savedStateHandle
             ) as T

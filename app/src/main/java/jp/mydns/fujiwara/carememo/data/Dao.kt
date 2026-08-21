@@ -36,6 +36,10 @@ interface PersonDao {
     @Query("SELECT * FROM person_db WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC")
     fun getDeletedPersons(): Flow<List<Person>>
 
+    /** 利用終了した利用者（論理削除済み）をリストで取得（サスペンド版） */
+    @Query("SELECT * FROM person_db WHERE deleted_at IS NOT NULL")
+    suspend fun getDeletedPersonsRaw(): List<Person>
+
     /** IDを指定して利用者を取得 */
     @Query("SELECT * FROM person_db WHERE id = :id")
     fun getPersonById(id: String): Flow<Person?>

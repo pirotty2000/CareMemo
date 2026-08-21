@@ -5,6 +5,7 @@ import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.ThemeSetting
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
@@ -31,6 +32,7 @@ class SettingsViewModelTest {
     private val archivedPersonRepository = mockk<DeleteOrRestorePersonRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     
     private val testDispatcher = StandardTestDispatcher()
 
@@ -63,7 +65,8 @@ class SettingsViewModelTest {
         maintenanceRepository,
         archivedPersonRepository,
         auditLogRepository,
-        userSettingsRepository
+        userSettingsRepository,
+        securitySession
     )
 
     // region 2. 初期化・設定同期テスト (Initialization & Sync)

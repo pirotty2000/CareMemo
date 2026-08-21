@@ -40,7 +40,7 @@ class AppMaintenanceRepositoryTest {
             db.conditionPhotoDao(),
             db.medicationRecordDao(),
             db.emergencyContactDao(),
-            db.auditLogDao()
+            AuditLogRepository(db.auditLogDao())
         )
     }
 
@@ -83,6 +83,10 @@ class AppMaintenanceRepositoryTest {
         val restoredHw = db.heightAndWeightDao().getByPersonId(restoredPersonId).first()
         assertEquals(1, restoredHw.size)
         assertEquals(170.0, restoredHw[0].height!!, 0.0)
+
+        // 6. Verify Log
+        val logs = db.auditLogDao().getAllLogs().first()
+        assertTrue(logs.any { it.operation == "replaceAllData" && it.resultType == "SUCCESS" })
     }
 
     // endregion
@@ -103,7 +107,12 @@ class AppMaintenanceRepositoryTest {
 
         // 3. Verify empty
         assertTrue(personDao.getAllPersons().first().isEmpty())
-        assertTrue(db.auditLogDao().getAllLogs().first().isEmpty())
+        
+        // 4. Verify Log (Should be recorded after cleanup)
+        val logs = db.auditLogDao().getAllLogs().first()
+        assertEquals(1, logs.size)
+        assertEquals("clearAllData", logs[0].operation)
+        assertEquals("SUCCESS", logs[0].resultType)
     }
 
     // endregion
@@ -119,11 +128,16 @@ class AppMaintenanceRepositoryTest {
         var inconsistencies = maintenanceRepository.scanInconsistencies()
         assertEquals(1, inconsistencies.size)
         assertEquals("bp_and_pulse_db", inconsistencies[0].tableName)
+        assertEquals(InconsistencyType.UNASSIGNED_VITAL, inconsistencies[0].type)
 
         // 3. Clean
         maintenanceRepository.cleanInconsistencies(inconsistencies)
         
-        // 4. Verify re-scan is empty
+        // 4. Verify Log
+        val logs = db.auditLogDao().getAllLogs().first()
+        assertTrue(logs.any { it.operation == "cleanInconsistencies" && it.resultType == "SUCCESS" })
+
+        // 5. Verify re-scan is empty
         inconsistencies = maintenanceRepository.scanInconsistencies()
         assertTrue(inconsistencies.isEmpty())
     }

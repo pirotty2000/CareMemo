@@ -62,7 +62,7 @@ class PersonConditionScreenTest {
                 ConditionList(
                     records = listOf(record).toImmutableList(),
                     selectedId = null,
-                    conditionPhotoMap = emptyMap<String, Boolean>(),
+                    conditionPhotoMap = emptyMap(),
                     isAnyDialogOpen = false,
                     onSelect = {},
                     onDelete = {}
@@ -173,7 +173,7 @@ class PersonConditionScreenTest {
     fun NAV_03_backButton_navigatesBack() {
         val detailViewModel = createMockDetailViewModel()
         val conditionViewModel = createMockConditionViewModel()
-        val navController = mockk<NavHostController>(relaxed = true)
+        val navController: NavHostController = mockk(relaxed = true)
         
         composeTestRule.setContent {
             CareMemoTheme {

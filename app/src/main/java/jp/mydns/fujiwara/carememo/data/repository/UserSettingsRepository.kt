@@ -21,8 +21,13 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  * 1. データアクセス専念：Jetpack DataStore を用いた設定値の永続化に専念します。
  * 2. 依存方向の遵守：下位レイヤーとして、上位の Logic レイヤーに依存しない構成を維持します。
  */
-class UserSettingsRepository(private val context: Context) {
+class UserSettingsRepository(
+    private val context: Context,
+    private val auditLogRepository: AuditLogRepository
+) {
     companion object {
+        private const val FEATURE_NAME = "Settings"
+
         /** 氏名のマスキング（伏せ字）を有効にするか */
         private val IS_NAME_MASKING_ENABLED = booleanPreferencesKey("is_name_masking_enabled")
         /** 新規登録時のデフォルト記録者名 */
@@ -119,24 +124,20 @@ class UserSettingsRepository(private val context: Context) {
             preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] ?: true
         }
 
-    /** 
-     * 一時的にロックを無効化するためのフラグ（メモリ保持）。
-     * PDF出力時のシステム共有シート連携など、アプリを一時離脱して戻る際の誤ロック防止に使用します。
-     */
-    var isLockBypassed: Boolean = false
-
     // --- 設定値の更新メソッド群 ---
 
     suspend fun setNameMaskingEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_NAME_MASKING_ENABLED] = enabled
         }
+        auditLogRepository.log(FEATURE_NAME, "setNameMaskingEnabled", "user_settings", "UPDATE", "0", "Enabled: $enabled", "SUCCESS")
     }
 
     suspend fun setBiometricEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_BIOMETRIC_ENABLED] = enabled
         }
+        auditLogRepository.log(FEATURE_NAME, "setBiometricEnabled", "user_settings", "UPDATE", "0", "Enabled: $enabled", "SUCCESS")
     }
 
     /*
@@ -155,30 +156,35 @@ class UserSettingsRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[DEFAULT_RECORDER_NAME] = name
         }
+        auditLogRepository.log(FEATURE_NAME, "setDefaultRecorderName", "user_settings", "UPDATE", "0", "Name updated", "SUCCESS")
     }
 
     suspend fun setBackupPasswordEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_BACKUP_PASSWORD_ENABLED] = enabled
         }
+        auditLogRepository.log(FEATURE_NAME, "setBackupPasswordEnabled", "user_settings", "UPDATE", "0", "Enabled: $enabled", "SUCCESS")
     }
 
     suspend fun setBackupPassword(password: String) {
         context.dataStore.edit { preferences ->
             preferences[BACKUP_PASSWORD] = password
         }
+        auditLogRepository.log(FEATURE_NAME, "setBackupPassword", "user_settings", "UPDATE", "0", "Backup password changed", "SUCCESS")
     }
 
     suspend fun setThemeSetting(theme: ThemeSetting) {
         context.dataStore.edit { preferences ->
             preferences[THEME_SETTING] = theme.name
         }
+        auditLogRepository.log(FEATURE_NAME, "setThemeSetting", "user_settings", "UPDATE", "0", "Theme: ${theme.name}", "SUCCESS")
     }
 
     suspend fun setAuditLogRetentionDays(days: Int) {
         context.dataStore.edit { preferences ->
             preferences[AUDIT_LOG_RETENTION_DAYS] = days
         }
+        auditLogRepository.log(FEATURE_NAME, "setAuditLogRetentionDays", "user_settings", "UPDATE", "0", "Days: $days", "SUCCESS")
     }
     suspend fun setLastAuditLogRotationDate(date: String) {
         context.dataStore.edit { preferences ->
@@ -190,5 +196,6 @@ class UserSettingsRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[HEALTH_DISPLAY_MODE_IS_HISTORY] = isHistory
         }
+        auditLogRepository.log(FEATURE_NAME, "setHealthDisplayModeIsHistory", "user_settings", "UPDATE", "0", "IsHistory: $isHistory", "SUCCESS")
     }
 }

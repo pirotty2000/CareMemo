@@ -17,6 +17,7 @@
 各実装クラスと 1:1 で対応し、計算ルールやデータ変換の正確性を検証します。
 - **Logic層 (共通)**: `JapaneseDateLogic`, `PersonLogic` 等の計算・変換ロジック。
 - **Logic層 (機能)**: `SecurityLogic`, `SettingsLogic` 等の画面固有ロジック。
+- **Data層 (セッション)**: `SecuritySession` 等の揮発性状態管理。
 - **Mapping層**: Entity ↔ UiState 間の相互変換。
 - **Repository層**: DB 操作と監査ログ（AuditLog）の自動記録。
 - **ViewModel層**: 画面状態管理と UI Intent 処理。
@@ -70,4 +71,4 @@
 |                          | **ArchiveManagement**      | 利用終了者の管理         |
 
 ---
-最終更新日: 2026/08/15
+最終更新日: 2026/08/21

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.ConditionMaintenanceLogic
@@ -45,8 +46,13 @@ sealed interface UnassignedPhotoViewEvent {
  */
 class UnassignedPhotoViewModel(
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     private val conditionRepository: ConditionRepository
-) : BaseUiStateViewModel<UnassignedPhotoUiState, UnassignedPhotoViewEvent>(userSettingsRepository, UnassignedPhotoUiState()) {
+) : BaseUiStateViewModel<UnassignedPhotoUiState, UnassignedPhotoViewEvent>(
+    userSettingsRepository,
+    securitySession,
+    UnassignedPhotoUiState()
+) {
 
     override val featureName: String = "UnassignedPhotoManagement"
 
@@ -112,12 +118,14 @@ class UnassignedPhotoViewModel(
 
     class Factory(
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val conditionRepository: ConditionRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
             return UnassignedPhotoViewModel(
                 userSettingsRepository,
+                securitySession,
                 conditionRepository
             ) as T
         }

@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
@@ -16,6 +15,7 @@ import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
 import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationInputDialog
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
+import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
@@ -75,7 +75,6 @@ fun PersonMedicationScreen(
         medicationViewModel.setCategory(detailState.currentCategory)
     }
 
-    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -87,9 +86,6 @@ fun PersonMedicationScreen(
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
-
-    val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
-    val medicationCategoryName = stringResource(Category.MEDICATION.displayNameRes)
 
     // 通知イベント監視
     LaunchedEffect(Unit) {
@@ -130,7 +126,7 @@ fun PersonMedicationScreen(
         }
     }
 
-    if (isExpanded) {
+    if (widthSizeClass == WindowWidthSizeClass.Expanded) {
         PersonMedicationScreenTablet(
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
@@ -145,7 +141,12 @@ fun PersonMedicationScreen(
             onShowPdfSettings = {
                 if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
-                        snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
+                        snackbarHostState.showSnackbar(
+                            context.getString(
+                                R.string.p_detail_error_no_records_for_pdf,
+                                context.getString(Category.MEDICATION.displayNameRes)
+                            )
+                        )
                     }
                 } else {
                     showPdfSettingsDialog = true
@@ -172,7 +173,12 @@ fun PersonMedicationScreen(
             onShowPdfSettings = {
                 if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
-                        snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
+                        snackbarHostState.showSnackbar(
+                            context.getString(
+                                R.string.p_detail_error_no_records_for_pdf,
+                                context.getString(Category.MEDICATION.displayNameRes)
+                            )
+                        )
                     }
                 } else {
                     showPdfSettingsDialog = true
@@ -190,10 +196,29 @@ fun PersonMedicationScreen(
             showDialog = true,
             onDismiss = { showPdfSettingsDialog = false },
             category = Category.MEDICATION,
-            person = detailState.person,
-            records = medicationState.allRecords,
-            viewModel = medicationViewModel,
-            onRequireAuthentication = onRequireAuthentication
+            canExport = detailState.person != null,
+            onRequireAuthentication = onRequireAuthentication,
+            onExportExecute = { range, order, start, end, _, password ->
+                medicationViewModel.setLockBypassEnabled(true)
+                medicationViewModel.safeLaunch(
+                    operation = "exportAndShare",
+                    contextBuilder = { tableName = "pdf_export" }
+                ) {
+                    detailState.person?.let { person ->
+                        PdfExporter.exportAndShare(
+                            context = context,
+                            person = person,
+                            category = Category.MEDICATION,
+                            records = medicationState.allRecords,
+                            range = range,
+                            order = order,
+                            customStartDate = start,
+                            customEndDate = end,
+                            password = password
+                        )
+                    }
+                }
+            }
         )
     }
 

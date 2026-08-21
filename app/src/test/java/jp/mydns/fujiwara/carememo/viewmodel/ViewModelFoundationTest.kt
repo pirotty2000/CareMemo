@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import app.cash.turbine.test
 import io.mockk.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +13,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Unit Test: ViewModel Architectural Foundation (BASE)
@@ -25,8 +27,9 @@ private data class FoundationUiState(
 )
 
 private class FoundationViewModel(
-    userSettingsRepository: UserSettingsRepository
-) : BaseUiStateViewModel<FoundationUiState, Unit>(userSettingsRepository, FoundationUiState()) {
+    userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession
+) : BaseUiStateViewModel<FoundationUiState, Unit>(userSettingsRepository, securitySession, FoundationUiState()) {
     override val featureName: String = "FoundationTest"
     
     override fun copyWithLoadingState(state: FoundationUiState, isLoading: Boolean): FoundationUiState {
@@ -44,6 +47,7 @@ private class FoundationViewModel(
 class ViewModelFoundationTest {
 
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -56,7 +60,7 @@ class ViewModelFoundationTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = FoundationViewModel(userSettingsRepository).apply {
+    private fun createViewModel() = FoundationViewModel(userSettingsRepository, securitySession).apply {
         setHandler(mockk(relaxed = true))
     }
 
@@ -78,7 +82,7 @@ class ViewModelFoundationTest {
             awaitItem() // Initial
             
             viewModel.safeLaunch("Op") {
-                delay(1000)
+                delay(1000.milliseconds)
             }
             
             assertTrue("Should be loading", awaitItem().isLoading)

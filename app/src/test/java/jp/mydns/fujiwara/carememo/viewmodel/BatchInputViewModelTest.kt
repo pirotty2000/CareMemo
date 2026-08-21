@@ -7,6 +7,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import kotlinx.coroutines.delay
@@ -32,6 +33,7 @@ class BatchInputViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
@@ -75,6 +77,7 @@ class BatchInputViewModelTest {
             personRepository,
             summaryRepository,
             userSettingsRepository,
+            securitySession,
             auditLogRepository,
             SavedStateHandle(if (personId != null) mapOf("personId" to personId) else emptyMap())
         )

@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ class PersonConditionViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
@@ -72,7 +74,7 @@ class PersonConditionViewModelTest {
     private fun createViewModel(handleParams: Map<String, Any> = mapOf("personId" to personId)): PersonConditionViewModel {
         return PersonConditionViewModel(
             conditionRepository, personRepository, summaryRepository, 
-            userSettingsRepository, auditLogRepository, 
+            userSettingsRepository, securitySession, auditLogRepository, 
             SavedStateHandle(handleParams)
         )
     }

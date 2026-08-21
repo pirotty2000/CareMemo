@@ -2,6 +2,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -57,6 +58,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 abstract class BaseUiStateViewModel<S, E>(
     protected val userSettingsRepository: UserSettingsRepository,
+    protected val securitySession: SecuritySession,
     initialState: S
 ) : ViewModel() {
 
@@ -160,7 +162,7 @@ abstract class BaseUiStateViewModel<S, E>(
 
     /** アプリロックを一時的にバイパスするかどうかを設定します（PDF共有時や外部アプリ連携時に使用） */
     fun setLockBypassEnabled(enabled: Boolean) {
-        userSettingsRepository.isLockBypassed = enabled
+        securitySession.isLockBypassed = enabled
     }
 
     // --- 4. コルーチン実行制御 (safeLaunch / safeCollect) ---

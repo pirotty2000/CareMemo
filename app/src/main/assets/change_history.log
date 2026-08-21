@@ -1,3 +1,20 @@
+# Ver.4.0.0-RC (2026/08/21)
+- リリース候補版ビルド
+
+# Ver.3.2.13 (2026/08/21)
+- Phase 5 対応
+- メモリ保持用変数（isLockBypassed）の配置場所の変更
+
+# Ver.3.2.12 (2026/08/20)
+- Phase 5 対応
+- AppMaintenanceRepository：主要操作（インポート等）における監査ログの記録漏れ
+- AppMaintenanceRepository：DatabaseInconsistency 生成時における UI リソース（R.string）への直接依存
+- AppMaintenanceRepository：safeLaunch 圏外でのチェックなしの例外スロー
+- DeleteOrRestorePersonRepository：物理削除実行時における紐付く画像ファイルの削除漏れ
+- DeleteOrRestorePersonRepository：タイムスタンプ取得処理の不整合（System.currentTimeMillis の使用）
+- UserSettingsRepository：設定変更（生体認証、パスワード等）時における監査ログの記録漏れ
+- PdfExportActionHandler：BaseUiStateViewModel への直接依存（コンポーネントの ViewModel 依存禁止規約への抵触）
+
 # Ver.3.2.11 (2026/08/18)
 - 機密情報保護の強化: PDF出力ボタン押下後、実際にファイルが生成される直前に生体認証（または端末認証）を要求する
 - 標準化：リポジトリ設計の標準化

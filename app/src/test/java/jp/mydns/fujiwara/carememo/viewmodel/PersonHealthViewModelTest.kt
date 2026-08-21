@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ class PersonHealthViewModelTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private val testDispatcher = StandardTestDispatcher()
@@ -70,7 +72,7 @@ class PersonHealthViewModelTest {
     ): PersonHealthViewModel {
         return PersonHealthViewModel(
             healthRepository, personRepository, summaryRepository, 
-            userSettingsRepository, auditLogRepository, 
+            userSettingsRepository, securitySession, auditLogRepository, 
             SavedStateHandle(mapOf("personId" to personId, "categoryName" to category.name))
         )
     }
@@ -115,7 +117,6 @@ class PersonHealthViewModelTest {
     // region 3. カテゴリ・状態管理テスト (Category & State)
 
     @Test
-    @Suppress("CheckResult", "UNUSED_EXPRESSION")
     fun CAT_01_setCategory_triggersFlowSubscription() = runTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -124,7 +125,10 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
         
         assertEquals(Category.GLUCOSE_AND_HBA1C, viewModel.uiState.value.currentCategory)
-        verify { healthRepository.getGlucoseAndHbA1cByPersonId(personId) }
+        verify { 
+            val flow = healthRepository.getGlucoseAndHbA1cByPersonId(personId)
+            assertNotNull(flow)
+        }
     }
 
     @Test

@@ -22,6 +22,7 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -212,6 +213,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="-783239636">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="-686121777">
           <value>
             <AndroidTestResultsTableState>
@@ -350,6 +364,7 @@
                 <map>
                   <entry key="Duration" value="90" />
                   <entry key="KYOCERA KYG03" value="120" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
@@ -405,6 +420,19 @@
                 <map>
                   <entry key="Duration" value="90" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="358257832">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
               </option>

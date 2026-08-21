@@ -96,7 +96,7 @@ class PersonRegistrationScenarioTest {
         }
 
         // 7. スナックバーの表示を確認する (名前 + さんを登録しました)
-        composeTestRule.onNodeWithText("${fullName} さんを登録しました").assertIsDisplayed()
+        composeTestRule.onNodeWithText("$fullName さんを登録しました").assertIsDisplayed()
 
         // 8. 最終確認
         composeTestRule.onNodeWithText(fullName).assertIsDisplayed()

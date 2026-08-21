@@ -4,6 +4,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.EmergencyContactDao
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -76,10 +77,13 @@ class EmergencyContactRepositoryTest {
     // region 3. データ取得テスト (Query)
 
     @Test
-    @Suppress("UNUSED_EXPRESSION")
     fun GET_01_getContactsByPersonId() = runTest {
-        repository.getContactsByPersonId("u1")
-        verify { emergencyContactDao.getByPersonId("u1") }
+        val flow = repository.getContactsByPersonId("u1")
+        verify {
+            val daoFlow = emergencyContactDao.getByPersonId("u1")
+            assertNotNull(daoFlow)
+        }
+        assertNotNull(flow)
     }
 
     @Test

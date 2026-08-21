@@ -4,6 +4,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.MedicationRecordDao
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -74,21 +75,28 @@ class MedicationRepositoryTest {
     // region 3. データ取得テスト (Query)
 
     @Test
-    @Suppress("UNUSED_EXPRESSION")
     fun GET_01_getMedicationRecords() = runTest {
-        repository.getMedicationRecords("u1")
-        verify { medicationRecordDao.getByPersonId("u1") }
+        val flow = repository.getMedicationRecords("u1")
+        verify {
+            val daoFlow = medicationRecordDao.getByPersonId("u1")
+            assertNotNull(daoFlow)
+        }
+        assertNotNull(flow)
     }
 
     @Test
-    @Suppress("UNUSED_EXPRESSION")
     fun GET_02_getMedicationRecordsByMonth() = runTest {
-        repository.getMedicationRecordsByMonth("u1", "2023-11")
-        verify { medicationRecordDao.getByMonth("u1", "2023-11") }
+        val flow = repository.getMedicationRecordsByMonth("u1", "2023-11")
+        verify {
+            val daoFlow = medicationRecordDao.getByMonth("u1", "2023-11")
+            assertNotNull(daoFlow)
+        }
+        assertNotNull(flow)
     }
 
     // endregion
 
+    @Suppress("SameParameterValue")
     private fun createSampleRecord(id: String) = MedicationRecord(
         id = id,
         personId = "u1",

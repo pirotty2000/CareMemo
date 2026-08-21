@@ -31,6 +31,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.ui.mapping.MaintenanceDisplayMapper
 import jp.mydns.fujiwara.carememo.ui.mapping.ThemeDisplayMapper
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -40,6 +41,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -94,13 +96,13 @@ fun SettingsScreen(
     var isChangedByMe by rememberSaveable { mutableStateOf(false) }
 
     // 子画面（利用者管理 S-003）からの更新要求を監視
-    val childRefreshRequested by navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.getStateFlow("refresh_needed", false)
-        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+    val childRefreshRequested by remember(navController.currentBackStackEntry) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow("refresh_needed", false)
+            ?: MutableStateFlow(false)
+    }.collectAsStateWithLifecycle()
 
     // 戻る際の処理（親画面への通知準備）
-    val performBack: () -> Unit = {
+    val performBack = {
         if (isChangedByMe || childRefreshRequested) {
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
         }
@@ -288,7 +290,7 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
                                     Text(
-                                        text = stringResource(inc.descriptionResId),
+                                        text = stringResource(MaintenanceDisplayMapper.getDescriptionResId(inc.type)),
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.labelMedium
                                     )

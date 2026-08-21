@@ -7,6 +7,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
@@ -37,6 +38,7 @@ class PersonEditViewModelTest {
 
     private val repository = mockk<PersonRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     
     private val testDispatcher = StandardTestDispatcher()
@@ -75,6 +77,7 @@ class PersonEditViewModelTest {
             SavedStateHandle(if (!IdLogic.isNew(personId)) mapOf("personId" to personId!!) else emptyMap()),
             repository,
             userSettingsRepository,
+            securitySession,
             auditLogRepository
         )
     }

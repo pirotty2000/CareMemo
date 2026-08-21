@@ -4,6 +4,7 @@ import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import kotlinx.coroutines.delay
@@ -32,6 +33,7 @@ class PersonListViewModelTest {
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     private val emergencyContactRepository = mockk<EmergencyContactRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
 
     private val testDispatcher = StandardTestDispatcher()
@@ -67,7 +69,7 @@ class PersonListViewModelTest {
         return PersonListViewModel(
             personRepository, archivedRepository, summaryRepository,
             conditionRepository, emergencyContactRepository,
-            userSettingsRepository, auditLogRepository
+            userSettingsRepository, securitySession, auditLogRepository
         )
     }
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -53,11 +54,10 @@ sealed interface EmergencyContactViewEvent {
  * 【役割】
  * 特定の利用者に紐付く緊急連絡先の一覧表示、および新規追加・編集画面の状態管理と保存を制御します。
  * 
- * 【設計指針：レイヤー責務と課題】
+ * 【設計指針：レイヤー責務】
  * 1. 複数モードの統合：一覧表示と個別の編集セッションを単一の ViewModel でシームレスに切り替えます。
- * 2. 状態管理ルールの逸脱（注意）: 現状、`EmergencyContactUiState` の `get()` プロパティ内で
- *    `isChanged`, `isValid` を動的に計算しています。これは計算ロジックが State に混入している状態であり、
- *    将来的に ViewModel 側で算出し、データクラスのプロパティとして保持する構造への修正が推奨されます。
+ * 2. 状態管理の標準化: `updateState` ヘルパーを通じて `isChanged` および `isValid` を算出し、
+ *    データクラスのプロパティとして保持することで、UI 層への単一方向データフローを維持します。
  *
  * 【この ViewModel では行わないこと】
  * ・緊急連絡先の保存用 Entity の詳細な構築ロジック（EmergencyContactLogic が担当）。
@@ -68,9 +68,11 @@ class EmergencyContactEditViewModel(
     private val emergencyContactRepository: EmergencyContactRepository,
     private val personRepository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
+    securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository
 ) : BaseUiStateViewModel<EmergencyContactUiState, EmergencyContactViewEvent>(
     userSettingsRepository,
+    securitySession,
     EmergencyContactUiState()
 ) {
 
@@ -271,6 +273,7 @@ class EmergencyContactEditViewModel(
         private val emergencyContactRepository: EmergencyContactRepository,
         private val personRepository: PersonRepository,
         private val userSettingsRepository: UserSettingsRepository,
+        private val securitySession: SecuritySession,
         private val auditLogRepository: AuditLogRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -281,6 +284,7 @@ class EmergencyContactEditViewModel(
                 emergencyContactRepository,
                 personRepository,
                 userSettingsRepository,
+                securitySession,
                 auditLogRepository
             ) as T
         }

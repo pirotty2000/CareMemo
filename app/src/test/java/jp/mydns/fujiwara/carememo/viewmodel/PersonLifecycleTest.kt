@@ -7,6 +7,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
@@ -42,6 +43,7 @@ class PersonLifecycleTest {
     private val personRepository = mockk<PersonRepository>(relaxed = true)
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
+    private val securitySession = SecuritySession()
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
     
@@ -66,7 +68,14 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_01_loadPerson_clearsStateImmediately() = runTest {
-        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
+        val viewModel = PersonDetailUiStateViewModel(
+            personRepository,
+            summaryRepository,
+            userSettingsRepository,
+            securitySession,
+            auditLogRepository,
+            SavedStateHandle()
+        )
         val person1 = Person(id = "1", lastName = "First", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         every { personRepository.getPersonById("1") } returns flowOf(person1)
@@ -91,7 +100,14 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_02_rapidSwitch_cancelsPreviousLoad() = runTest {
-        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
+        val viewModel = PersonDetailUiStateViewModel(
+            personRepository,
+            summaryRepository,
+            userSettingsRepository,
+            securitySession,
+            auditLogRepository,
+            SavedStateHandle()
+        )
 
         every { personRepository.getPersonById("1") } returns flow {
             delay(2000.milliseconds)
@@ -120,6 +136,7 @@ class PersonLifecycleTest {
             personRepository, 
             summaryRepository, 
             userSettingsRepository, 
+            securitySession,
             auditLogRepository,
             SavedStateHandle()
         )
@@ -143,7 +160,14 @@ class PersonLifecycleTest {
 
     @Test
     fun BP_01_03_sameId_avoidsReload() = runTest {
-        val viewModel = PersonDetailUiStateViewModel(personRepository, summaryRepository, userSettingsRepository, auditLogRepository, SavedStateHandle())
+        val viewModel = PersonDetailUiStateViewModel(
+            personRepository,
+            summaryRepository,
+            userSettingsRepository,
+            securitySession,
+            auditLogRepository,
+            SavedStateHandle()
+        )
         val person1 = Person(id = "1", lastName = "P1", firstName = "", lastNameFurigana = "", firstNameFurigana = "", birthday = Instant.now())
         
         every { personRepository.getPersonById("1") } returns flowOf(person1)
