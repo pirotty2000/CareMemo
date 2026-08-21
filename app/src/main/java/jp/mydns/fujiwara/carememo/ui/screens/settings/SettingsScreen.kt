@@ -102,11 +102,13 @@ fun SettingsScreen(
     }.collectAsStateWithLifecycle()
 
     // 戻る際の処理（親画面への通知準備）
-    val performBack = {
-        if (isChangedByMe || childRefreshRequested) {
-            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
+    val performBack = remember {
+        {
+            if (isChangedByMe || childRefreshRequested) {
+                navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
+            }
+            navController.popBackStack()
         }
-        navController.popBackStack()
     }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
