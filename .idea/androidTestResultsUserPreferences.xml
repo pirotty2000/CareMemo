@@ -213,6 +213,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="-783239636">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="-686121777">
           <value>
             <AndroidTestResultsTableState>
