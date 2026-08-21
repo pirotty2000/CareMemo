@@ -119,8 +119,17 @@ class DeleteOrRestorePersonRepository(
         photos.forEach { photo ->
             try {
                 ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
-            } catch (_: Exception) {
-                // ファイル削除の失敗は DB 抹消を妨げないように抑制する（ログ出力のみ検討）
+            } catch (e: Exception) {
+                // ファイル削除の失敗は DB 抹消を妨げないように抑制するが、証跡として記録する (ID 6)
+                auditLogRepository?.log(
+                    featureName = "DeleteOrRestorePerson",
+                    operation = "permanentlyDeletePerson(file)",
+                    tableName = "external_storage",
+                    actionType = "PERMANENT_DELETE",
+                    affectedId = photo.id,
+                    details = "Failed to delete physical photo file: ${e.message}",
+                    resultType = "IO_ERROR"
+                )
             }
         }
 
@@ -155,8 +164,17 @@ class DeleteOrRestorePersonRepository(
                 for (photo in photos) {
                     try {
                         ImageUtils.deleteImageFiles(context, photo.photoFileName, photo.thumbnailFileName)
-                    } catch (_: Exception) {
-                        // ignore
+                    } catch (e: Exception) {
+                        // ignore & record (ID 6)
+                        auditLogRepository?.log(
+                            featureName = "DeleteOrRestorePerson",
+                            operation = "deleteAllEndedPersons(file)",
+                            tableName = "external_storage",
+                            actionType = "CLEAR_ALL_ARCHIVED",
+                            affectedId = photo.id,
+                            details = "Failed to delete physical photo file during batch delete: ${e.message}",
+                            resultType = "IO_ERROR"
+                        )
                     }
                 }
             }

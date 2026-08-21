@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo
 import android.app.Application
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.utils.SystemEmergencyLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -63,6 +64,19 @@ class CareMemoApplication : Application() {
                 // 1. DB ファイルを開き、SQLCipher の復号化・接続処理を先行して走らせる
                 database.openHelper.writableDatabase
 
+                // DB再作成フラグが立っている場合は監査ログに記録
+                if (AppDatabase.wasRecreated) {
+                    auditLogRepository.log(
+                        featureName = "AppMaintenance",
+                        operation = "databaseInit",
+                        tableName = "all_db",
+                        actionType = "PERMANENT_DELETE",
+                        affectedId = "0",
+                        details = "Database recreated due to password mismatch or corruption.",
+                        resultType = "DB_ERROR"
+                    )
+                }
+
                 // 2. 操作ログの自動メンテナンス（1日1回に制限）
                 val lastDate = userSettingsRepository.lastAuditLogRotationDate.first()
                 val today = LocalDate.now().toString()
@@ -70,12 +84,25 @@ class CareMemoApplication : Application() {
                 if (lastDate != today) {
                     val days = userSettingsRepository.auditLogRetentionDays.first()
                     auditLogRepository.deleteOldLogs(days)
+                    
+                    // 3. 緊急ログファイルの自動ローテーション（固定30日）
+                    SystemEmergencyLogger.deleteOldLogs(this@CareMemoApplication, 30)
+
                     // 実行完了日を記録
                     userSettingsRepository.setLastAuditLogRotationDate(today)
                 }
             } catch (e: Exception) {
-                // 起動時の致命的なエラーはスタックトレースを出力
+                // 起動時の致命的なエラーはスタックトレースを出力し、監査ログにも記録を試みる
                 e.printStackTrace()
+                auditLogRepository.log(
+                    featureName = "System",
+                    operation = "applicationInit",
+                    tableName = "all_db",
+                    actionType = "INFO",
+                    affectedId = "0",
+                    details = "Initialization error: ${e.message}",
+                    resultType = "IO_ERROR"
+                )
             }
         }
     }
@@ -94,7 +121,7 @@ class CareMemoApplication : Application() {
 
     /** アプリ内操作ログ（監査ログ）の記録と取得リポジトリ */
     val auditLogRepository: AuditLogRepository by lazy {
-        AuditLogRepository(database.auditLogDao())
+        AuditLogRepository(this, database.auditLogDao())
     }
 
     /** 利用者のアーカイブ（論理削除）および復元、抹消を管理するリポジトリ */

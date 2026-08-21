@@ -25,11 +25,13 @@ private class MockViewModel(
     userSettingsRepository: UserSettingsRepository,
     securitySession: SecuritySession
 ) : BaseUiStateViewModel<MockUiState, String>(userSettingsRepository, securitySession, MockUiState()) {
-    override val featureName: String = "Mock"
+    public override var featureName: String = "Mock"
     override fun copyWithLoadingState(state: MockUiState, isLoading: Boolean) = state.copy(isLoading = isLoading)
 
     fun testShowSnackbar(msg: String) = showSnackbar(msg)
     fun testSendViewEvent(event: String) = sendViewEvent(event)
+    fun testSafeLaunch(block: suspend () -> Unit) = safeLaunch("TestOp") { block() }
+    fun setHandler(handler: CoroutineErrorHandler) { coroutineErrorHandler = handler }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -94,5 +96,27 @@ class BaseUiStateViewModelTest {
         }
     }
 
-    // endregion
+    @Test
+    fun LAUNCH_01_safeLaunch_recordsGuardSkippedIfFeatureNameThrows() = runTest {
+        val viewModel = createViewModel()
+        val handler = mockk<CoroutineErrorHandler>(relaxed = true)
+        viewModel.setHandler(handler)
+        
+        // Mock featureName to throw
+        val vmSpy = spyk(viewModel)
+        every { vmSpy.featureName } throws UninitializedPropertyAccessException("featureName not initialized")
+
+        vmSpy.testSafeLaunch {
+            throw RuntimeException("Test error")
+        }
+        
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { 
+            handler.handleException(any(), withArg {
+                assertEquals("Unknown", it.featureName)
+                assertEquals("GUARD_SKIPPED", it.tableName)
+            })
+        }
+    }
 }

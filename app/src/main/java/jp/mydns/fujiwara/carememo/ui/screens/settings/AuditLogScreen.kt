@@ -217,10 +217,11 @@ private fun AuditLogFilterBar(
                     selected = selectedResult != null,
                     onClick = { showResultMenu = true },
                     label = { 
-                        Text(
-                            selectedResult?.let { stringResource(it.toResultLabelRes) } 
-                                ?: stringResource(R.string.audit_log_filter_result_prefix, stringResource(R.string.audit_log_filter_all))
-                        ) 
+                        val label = selectedResult?.let {
+                            val resId = it.toResultLabelRes
+                            if (resId != 0) stringResource(resId) else it
+                        } ?: stringResource(R.string.audit_log_filter_result_prefix, stringResource(R.string.audit_log_filter_all))
+                        Text(label)
                     },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
                     leadingIcon = if (selectedResult != null) {
@@ -238,7 +239,11 @@ private fun AuditLogFilterBar(
                     )
                     availableResults.forEach { result ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(result.toResultLabelRes)) },
+                            text = {
+                                val resId = result.toResultLabelRes
+                                val label = if (resId != 0) stringResource(resId) else result
+                                Text(label)
+                            },
                             onClick = {
                                 onResultSelect(result)
                                 showResultMenu = false
@@ -430,8 +435,9 @@ fun AuditLogItem(
                     color = resultColor.copy(alpha = 0.1f),
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, resultColor)
                 ) {
+                    val resultLabelRes = log.resultType.toResultLabelRes
                     Text(
-                        text = stringResource(log.resultType.toResultLabelRes),
+                        text = if (resultLabelRes != 0) stringResource(resultLabelRes) else log.resultType,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),

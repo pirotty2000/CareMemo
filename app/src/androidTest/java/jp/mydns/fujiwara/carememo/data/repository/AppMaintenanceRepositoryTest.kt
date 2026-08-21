@@ -40,7 +40,7 @@ class AppMaintenanceRepositoryTest {
             db.conditionPhotoDao(),
             db.medicationRecordDao(),
             db.emergencyContactDao(),
-            AuditLogRepository(db.auditLogDao())
+            AuditLogRepository(context, db.auditLogDao())
         )
     }
 

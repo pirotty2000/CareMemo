@@ -443,6 +443,10 @@ interface AuditLogDao {
     @Query("SELECT * FROM audit_log_db ORDER BY timestamp DESC")
     fun getAllLogs(): Flow<List<AuditLog>>
 
+    /** ログを日時の降順で全件取得（エクスポート用：サスペンド版） */
+    @Query("SELECT * FROM audit_log_db ORDER BY timestamp DESC")
+    suspend fun getAllLogsRaw(): List<AuditLog>
+
     /** 指定日時より古いログを物理削除（ログの自動クリーンアップ用） */
     @Query("DELETE FROM audit_log_db WHERE timestamp < :threshold")
     suspend fun deleteOldLogs(threshold: java.time.Instant)

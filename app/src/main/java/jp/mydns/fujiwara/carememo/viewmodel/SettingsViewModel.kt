@@ -55,6 +55,7 @@ class SettingsViewModel(
     companion object {
         private const val FEATURE_NAME = "Settings"
         private const val OP_EXPORT = "exportData"
+        private const val OP_EXPORT_LOGS = "exportAuditLogs"
         private const val OP_IMPORT = "importData"
         private const val OP_CLEAR_ALL = "clearAllData"
         private const val OP_CLEAR_LOGS = "clearAuditLogs"
@@ -171,6 +172,15 @@ class SettingsViewModel(
         actionJob = safeLaunch(OP_EXPORT, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
             maintenanceRepository.exportData(uri, password) { updateUiState { s -> s.copy(processingProgress = it) } }
             sendViewEvent(SettingsViewEvent.ExportSuccess); showSnackbar(R.string.settings_msg_export_success)
+        }
+    }
+
+    fun exportAuditLogs(uri: Uri) {
+        if (actionJob?.isActive == true) return
+        val password = if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
+        actionJob = safeLaunch(OP_EXPORT_LOGS, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
+            maintenanceRepository.exportAuditLogs(uri, password) { updateUiState { s -> s.copy(processingProgress = it) } }
+            showSnackbar(R.string.settings_msg_export_success)
         }
     }
 

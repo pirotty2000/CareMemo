@@ -31,3 +31,5 @@
 | MAP-18 | 利用者詳細     | `"PersonDetail"`                   | `R.string.audit_feature_person_detail`        |
 | MAP-19 | 未割り当て写真管理 | `"UnassignedPhotoManagement"`      | `R.string.audit_feature_unassigned_photo`     |
 | MAP-20 | 未定義       | `"UNKNOWN"`                        | `0`                                           |
+| MAP-21 | データメンテナンス | `"AppMaintenance"`                 | `R.string.audit_feature_maintenance`          |
+| MAP-22 | システム      | `"System"`                         | `R.string.audit_feature_system`               |

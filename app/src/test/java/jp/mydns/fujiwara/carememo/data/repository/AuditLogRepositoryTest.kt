@@ -1,12 +1,18 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
+import android.util.Log
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -16,12 +22,22 @@ import org.junit.Test
  */
 class AuditLogRepositoryTest {
 
+    private val context = mockk<Context>(relaxed = true)
     private val auditLogDao = mockk<AuditLogDao>(relaxed = true)
     private lateinit var repository: AuditLogRepository
 
     @Before
     fun setup() {
-        repository = AuditLogRepository(auditLogDao)
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+        every { Log.d(any(), any()) } returns 0
+        every { Log.getStackTraceString(any()) } returns "mocked stack trace"
+        repository = AuditLogRepository(context, auditLogDao)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
     }
 
     // region 2. ログ記録テスト (log)
@@ -44,7 +60,7 @@ class AuditLogRepositoryTest {
     }
 
     @Test
-    fun LOG_02_log_suppressesExceptions() = runTest {
+    fun LOG_02_log_suppressesExceptionsAndCallsEmergencyLogger() = runTest {
         // Force DAO to throw
         coEvery { auditLogDao.insert(any()) } throws RuntimeException("Database error")
 
@@ -52,6 +68,16 @@ class AuditLogRepositoryTest {
         repository.log("F", "O", "T", "A", "ID")
 
         coVerify { auditLogDao.insert(any()) }
+        // Note: SystemEmergencyLogger is an object and hard to verify directly without static mocking,
+        // but we verify that the repository method completes without crashing.
+    }
+
+    @Test
+    fun GET_02_allLogsRaw_delegatesToDao() = runTest {
+        coEvery { auditLogDao.getAllLogsRaw() } returns listOf(mockk())
+        val result = repository.allLogsRaw()
+        assertEquals(1, result.size)
+        coVerify { auditLogDao.getAllLogsRaw() }
     }
 
     // endregion

@@ -102,11 +102,13 @@ fun SettingsScreen(
     }.collectAsStateWithLifecycle()
 
     // 戻る際の処理（親画面への通知準備）
-    val performBack = {
-        if (isChangedByMe || childRefreshRequested) {
-            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
+    val performBack = remember {
+        {
+            if (isChangedByMe || childRefreshRequested) {
+                navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
+            }
+            navController.popBackStack()
         }
-        navController.popBackStack()
     }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -188,6 +190,7 @@ fun SettingsScreen(
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportData(it) } }
+    val exportLogsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportAuditLogs(it) } }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { showImportUri = it } }
 
     if (dialogMessage != null) {
@@ -528,6 +531,10 @@ fun SettingsScreen(
             viewModel.setLockBypassEnabled(enabled = true)
             exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
         },
+        onExportLogsClick = {
+            viewModel.setLockBypassEnabled(enabled = true)
+            exportLogsLauncher.launch("carememo_audit_logs_${System.currentTimeMillis()}.zip")
+        },
         onImportClick = {
             viewModel.setLockBypassEnabled(enabled = true)
             importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
@@ -639,6 +646,7 @@ fun SettingsScreenContent(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
+    onExportLogsClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
@@ -733,6 +741,7 @@ fun SettingsScreenContent(
                         auditLogCount = auditLogCount,
                         onRetentionClick = onRetentionClick,
                         onViewLogsClick = onViewLogsClick,
+                        onExportLogsClick = onExportLogsClick,
                         onRotateLogsClick = onRotateLogsClick,
                         onClearLogsClick = onClearLogsClick,
                         onImportSampleDataClick = onImportSampleDataClick,
@@ -1016,6 +1025,7 @@ private fun ResetSection(
     auditLogCount: Int,
     onRetentionClick: () -> Unit,
     onViewLogsClick: () -> Unit,
+    onExportLogsClick: () -> Unit,
     onRotateLogsClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     onImportSampleDataClick: () -> Unit,
@@ -1049,6 +1059,13 @@ private fun ResetSection(
             supportingContent = { Text(stringResource(R.string.settings_dev_audit_log_count, auditLogCount)) },
             leadingContent = { Icon(Icons.Rounded.History, contentDescription = null) },
             modifier = Modifier.clickable { onViewLogsClick() }.testTag("Settings_AuditLogButton")
+        )
+
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_btn_export_audit_logs)) },
+            supportingContent = { Text(stringResource(R.string.settings_dev_export_audit_logs_desc)) },
+            leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
+            modifier = Modifier.clickable { onExportLogsClick() }.testTag("Settings_AuditLogExportButton")
         )
 
         ListItem(
@@ -1162,6 +1179,7 @@ fun SettingsScreenPreview() {
             auditLogCount = 120,
             onRetentionClick = {},
             onViewLogsClick = {},
+            onExportLogsClick = {},
             onRotateLogsClick = {},
             onClearLogsClick = {},
             onImportSampleDataClick = {},

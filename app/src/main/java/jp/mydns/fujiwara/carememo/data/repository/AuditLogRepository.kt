@@ -1,7 +1,10 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
+import android.util.Log
 import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
+import jp.mydns.fujiwara.carememo.utils.SystemEmergencyLogger
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,12 +22,20 @@ import java.time.Instant
  * 2. 非干渉の徹底：業務ロジックの実行を妨げない独立した副作用として動作します。
  */
 class AuditLogRepository(
+    private val context: Context,
     private val auditLogDao: AuditLogDao
 ) {
     /**
      * 保存されているすべてのログを、日時の降順（新しい順）で取得するための Flow です。
      */
     val allLogs: Flow<List<AuditLog>> get() = auditLogDao.getAllLogs()
+
+    /**
+     * 保存されているすべてのログをリストで取得します。
+     *
+     * @return 監査ログの全件リスト
+     */
+    suspend fun allLogsRaw(): List<AuditLog> = auditLogDao.getAllLogsRaw()
 
     /**
      * ログの総件数を Flow で取得します。
@@ -71,9 +82,17 @@ class AuditLogRepository(
                     resultType = resultType
                 )
                 auditLogDao.insert(entry)
-            } catch (_: Exception) {
-                // ログ記録の失敗は業務処理を中断させないよう、例外をキャッチする。
-                // ログ自体の失敗によりアプリがクラッシュまたは中断することを防ぐ。
+            } catch (e: Exception) {
+                // 1. Logcat への詳細出力
+                Log.e("AuditLogRepository", "CRITICAL: Failed to record audit log. feature=$featureName, op=$operation", e)
+
+                // 2. 緊急用ファイルログへの書き出し
+                SystemEmergencyLogger.log(
+                    context = context,
+                    tag = "AuditLogRepository",
+                    message = "Failed to insert audit log: feature=$featureName, operation=$operation, action=$actionType, affectedId=$affectedId, details=$details, result=$resultType",
+                    throwable = e
+                )
             }
         }
     }
@@ -91,6 +110,10 @@ class AuditLogRepository(
 
     /**
      * 全てのログをデータベースから物理削除します。
+     * 同時に、緊急用ファイルログも削除します。
      */
-    suspend fun deleteAllLogs() = auditLogDao.deleteAll()
+    suspend fun deleteAllLogs() {
+        auditLogDao.deleteAll()
+        SystemEmergencyLogger.deleteLogFile(context)
+    }
 }

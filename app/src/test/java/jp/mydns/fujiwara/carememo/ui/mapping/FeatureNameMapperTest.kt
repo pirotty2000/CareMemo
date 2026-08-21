@@ -108,4 +108,14 @@ class FeatureNameMapperTest {
     fun MAP_20_unknown_mapping() {
         assertEquals(0, "UNKNOWN".toFeatureLabelRes)
     }
+
+    @Test
+    fun MAP_21_maintenance_mapping() {
+        assertEquals(R.string.audit_feature_maintenance, "AppMaintenance".toFeatureLabelRes)
+    }
+
+    @Test
+    fun MAP_22_system_mapping() {
+        assertEquals(R.string.audit_feature_system, "System".toFeatureLabelRes)
+    }
 }

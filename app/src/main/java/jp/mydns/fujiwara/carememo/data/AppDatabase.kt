@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import jp.mydns.fujiwara.carememo.utils.SystemEmergencyLogger
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -58,6 +59,10 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var Instance: AppDatabase? = null
 
+        /** DBが再作成されたことを示すフラグ（起動セッション内のみ有効） */
+        var wasRecreated: Boolean = false
+            private set
+
         /**
          * データベースインスタンスを取得します。
          * 初回呼び出し時には SQLCipher のロードと暗号化キーの準備を行います。
@@ -90,9 +95,17 @@ abstract class AppDatabase : RoomDatabase() {
                             null
                         )
                         db.close()
-                    } catch (_: Exception) {
-                        // パスワード不一致または平文DBの場合は、一度削除して Room に再作成させる
+                    } catch (e: Exception) {
+                        // 1. 緊急ログへの記録（重大事象：パスワード不一致または平文DBからの移行失敗）
+                        SystemEmergencyLogger.log(
+                            context = context,
+                            tag = "AppDatabase",
+                            message = "CRITICAL: Database password mismatch or corrupted. Recreating database...",
+                            throwable = e
+                        )
+                        // 2. パスワード不一致または平文DBの場合は、一度削除して Room に再作成させる
                         context.deleteDatabase(dbName)
+                        wasRecreated = true
                     }
                 }
 

@@ -529,6 +529,19 @@ class PersonConditionViewModel(
     fun notifyPhotoError(message: String) {
         updateUiState { it.copy(errorMessage = message) }
         showError(message)
+        
+        // カメラ起動失敗や写真処理エラーを証跡として記録する (ID 12)
+        scope.launch {
+            auditLogRepository.log(
+                featureName = featureName,
+                operation = "cameraOrPhotoError",
+                tableName = "external_storage",
+                actionType = "INFO",
+                affectedId = currentState.personId ?: "unknown",
+                details = message,
+                resultType = "EXTERNAL_ERROR"
+            )
+        }
     }
 
     /**

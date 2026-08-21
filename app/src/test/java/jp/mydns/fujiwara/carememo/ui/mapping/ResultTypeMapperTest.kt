@@ -61,6 +61,6 @@ class ResultTypeMapperTest {
 
     @Test
     fun MAP_11_undefined_mapping() {
-        assertEquals(R.string.audit_result_unknown, "UNDEFINED".toResultLabelRes)
+        assertEquals(0, "UNDEFINED".toResultLabelRes)
     }
 }
