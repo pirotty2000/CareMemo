@@ -140,6 +140,18 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun MNT_02_exportAuditLogs_success() = runTest {
+        val viewModel = createViewModel()
+        val uri = mockk<Uri>(relaxed = true)
+        advanceUntilIdle()
+
+        viewModel.exportAuditLogs(uri)
+        advanceUntilIdle()
+
+        coVerify { maintenanceRepository.exportAuditLogs(uri, any(), any()) }
+    }
+
+    @Test
     fun MNT_03_importData_passwordError_emitsRequestEvent() = runTest {
         val viewModel = createViewModel()
         val uri = mockk<Uri>(relaxed = true)

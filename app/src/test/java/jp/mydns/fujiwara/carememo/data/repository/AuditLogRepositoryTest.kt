@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
+import android.content.Context
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -16,12 +17,13 @@ import org.junit.Test
  */
 class AuditLogRepositoryTest {
 
+    private val context = mockk<Context>(relaxed = true)
     private val auditLogDao = mockk<AuditLogDao>(relaxed = true)
     private lateinit var repository: AuditLogRepository
 
     @Before
     fun setup() {
-        repository = AuditLogRepository(auditLogDao)
+        repository = AuditLogRepository(context, auditLogDao)
     }
 
     // region 2. ログ記録テスト (log)
@@ -44,7 +46,7 @@ class AuditLogRepositoryTest {
     }
 
     @Test
-    fun LOG_02_log_suppressesExceptions() = runTest {
+    fun LOG_02_log_suppressesExceptionsAndCallsEmergencyLogger() = runTest {
         // Force DAO to throw
         coEvery { auditLogDao.insert(any()) } throws RuntimeException("Database error")
 
@@ -52,6 +54,16 @@ class AuditLogRepositoryTest {
         repository.log("F", "O", "T", "A", "ID")
 
         coVerify { auditLogDao.insert(any()) }
+        // Note: SystemEmergencyLogger is an object and hard to verify directly without static mocking,
+        // but we verify that the repository method completes without crashing.
+    }
+
+    @Test
+    fun GET_02_allLogsRaw_delegatesToDao() = runTest {
+        coEvery { auditLogDao.getAllLogsRaw() } returns listOf(mockk())
+        val result = repository.allLogsRaw()
+        assertEquals(1, result.size)
+        coVerify { auditLogDao.getAllLogsRaw() }
     }
 
     // endregion

@@ -5,7 +5,9 @@ import android.net.Uri
 import androidx.room.withTransaction
 import jp.mydns.fujiwara.carememo.BuildConfig
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogExportLogic
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
+import jp.mydns.fujiwara.carememo.utils.SystemEmergencyLogger
 import jp.mydns.fujiwara.carememo.utils.ZipUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -262,6 +264,59 @@ class AppMaintenanceRepository(
             auditLogRepository.log(FEATURE_NAME, "exportData", "all_db", "UPDATE", "0", resultType = "SUCCESS")
         } finally {
             // 一時ディレクトリの清掃
+            tempDir.deleteRecursively()
+        }
+    }
+
+    /**
+     * 監査ログを ZIP 形式（JSON & CSV 同梱）で外部ストレージへエクスポートします。
+     *
+     * @param uri 保存先の Uri
+     * @param password ZIP 圧縮用のパスワード
+     * @param onProgress 進捗状況を通知するコールバック (0-100)
+     */
+    suspend fun exportAuditLogs(uri: Uri, password: String?, onProgress: (Int) -> Unit = {}) = withContext(Dispatchers.IO) {
+        val logs = auditLogRepository.allLogsRaw()
+        val jsonString = AuditLogExportLogic.toJson(logs)
+        val csvString = AuditLogExportLogic.toCsv(context, logs)
+        
+        val tempDir = File(context.cacheDir, "audit_export_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        
+        try {
+            // 1. JSON 出力
+            val jsonFile = File(tempDir, "audit_log.json")
+            jsonFile.writeText(jsonString)
+            
+            // 2. CSV 出力（Excel での文字化け防止のため BOM 付与）
+            val csvFile = File(tempDir, "audit_log.csv")
+            val bos = java.io.ByteArrayOutputStream()
+            bos.write(0xEF)
+            bos.write(0xBB)
+            bos.write(0xBF)
+            bos.write(csvString.toByteArray(Charsets.UTF_8))
+            csvFile.writeBytes(bos.toByteArray())
+
+            // 3. 緊急ログファイルがあれば追加
+            val emergencyFile = SystemEmergencyLogger.getLogFile(context)
+            val filesToZip = mutableListOf(jsonFile, csvFile)
+            if (emergencyFile.exists()) {
+                filesToZip.add(emergencyFile)
+            }
+            
+            // 4. ZIP アーカイブの生成
+            val tempZipFile = File(context.cacheDir, "audit_export.zip")
+            ZipUtils.zip(filesToZip, tempZipFile, password, onProgress)
+            
+            // 5. 外部ストレージへの書き出し
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                tempZipFile.inputStream().use { input ->
+                    input.copyTo(output)
+                }
+            }
+            tempZipFile.delete()
+            auditLogRepository.log(FEATURE_NAME, "exportAuditLogs", "audit_log_db", "UPDATE", "0", resultType = "SUCCESS")
+        } finally {
             tempDir.deleteRecursively()
         }
     }

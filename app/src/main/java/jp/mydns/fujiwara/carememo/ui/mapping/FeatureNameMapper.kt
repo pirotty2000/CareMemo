@@ -41,5 +41,7 @@ val String.toFeatureLabelRes: Int
         "PersonDetail" -> R.string.audit_feature_person_detail
         "UnassignedPhotoManagement" -> R.string.audit_feature_unassigned_photo
         "PersonDetail/Base" -> R.string.audit_feature_detail_base
+        "AppMaintenance" -> R.string.audit_feature_maintenance
+        "System" -> R.string.audit_feature_system
         else -> 0 // 該当なし
     }

@@ -42,14 +42,18 @@ class ViewModelCoroutineErrorHandler(
 
         // 2. 例外の種類に基づいて監査ログ用の resultType を決定
         // AppException の各サブクラスや、標準的な Java/Kotlin 例外を分類する
-        val resultType = when (e) {
-            is SQLiteException, is AppDataException -> "DB_ERROR"
-            is AppIOException, is IOException -> "IO_ERROR"
-            is SerializationException -> "FORMAT_ERROR"
-            is AppValidationException, is IllegalArgumentException -> "VALIDATION_ERROR"
-            is AppSecurityException -> "SECURITY_ERROR"
-            is AppExternalException -> "EXTERNAL_ERROR"
-            else -> "OTHER_ERROR"
+        val resultType = if (context.tableName == "GUARD_SKIPPED") {
+            "GUARD_SKIPPED"
+        } else {
+            when (e) {
+                is SQLiteException, is AppDataException -> "DB_ERROR"
+                is AppIOException, is IOException -> "IO_ERROR"
+                is SerializationException -> "FORMAT_ERROR"
+                is AppValidationException, is IllegalArgumentException -> "VALIDATION_ERROR"
+                is AppSecurityException -> "SECURITY_ERROR"
+                is AppExternalException -> "EXTERNAL_ERROR"
+                else -> "OTHER_ERROR"
+            }
         }
 
         // 3. 監査ログへの記録

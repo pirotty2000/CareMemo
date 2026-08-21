@@ -511,6 +511,8 @@
     <string name="audit_feature_person_detail">利用者詳細</string>
     <string name="audit_feature_unassigned_photo">未割り当て写真管理</string>
     <string name="audit_feature_detail_base">詳細/基底</string>
+    <string name="audit_feature_maintenance">データメンテナンス</string>
+    <string name="audit_feature_system">システム</string>
 
     <string name="audit_action_insert">追加 (INSERT)</string>
     <string name="audit_action_update">更新 (UPDATE)</string>
@@ -532,6 +534,10 @@
     <string name="audit_result_external_error">外部エラー</string>
     <string name="audit_result_guard_skipped">ガード回避</string>
     <string name="audit_result_unknown">不明</string>
+
+    <!-- 設定画面 監査ログエクスポート -->
+    <string name="settings_btn_export_audit_logs">監査ログをエクスポート</string>
+    <string name="settings_dev_export_audit_logs_desc">全期間の監査ログを ZIP 形式で保存します。</string>
 
     <!-- 緊急連絡先 (MedicalContact) -->
     <string name="medical_contacts_title_format">%1$s さんの緊急連絡先</string>

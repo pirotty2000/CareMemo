@@ -20,5 +20,5 @@ val String.toResultLabelRes: Int
         "EXTERNAL_ERROR" -> R.string.audit_result_external_error
         "GUARD_SKIPPED" -> R.string.audit_result_guard_skipped
         "UNKNOWN" -> R.string.audit_result_unknown
-        else -> R.string.audit_result_unknown
+        else -> 0
     }

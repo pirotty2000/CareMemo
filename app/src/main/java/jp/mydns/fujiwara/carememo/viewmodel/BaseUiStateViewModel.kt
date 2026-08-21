@@ -199,8 +199,16 @@ abstract class BaseUiStateViewModel<S, E>(
         contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
         block: suspend CoroutineScope.() -> Unit
     ): Job {
-        // featureName が未初期化(null)の場合は安全なデフォルト値を使用する
-        val safeFeatureName = try { featureName } catch (_: Exception) { "Unknown" }
+        // featureName が未初期化(null)の場合は "Unknown" にフォールバックし、
+        // 開発ミスとして GUARD_SKIPPED 相当の状態であることを特定可能にする
+        var isFeatureNameValid = true
+        val safeFeatureName = try {
+            featureName
+        } catch (_: Exception) {
+            isFeatureNameValid = false
+            "Unknown"
+        }
+
         val context = ErrorContextBuilder(safeFeatureName, operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
@@ -212,11 +220,16 @@ abstract class BaseUiStateViewModel<S, E>(
             try {
                 block()
             } catch (t: Throwable) {
-                // キャンセル例外は上位へ伝播させる（コルーチン基盤の標準ルールに従う）
                 if (t is CancellationException) throw t
-                // それ以外の例外はハンドラ（ErrorHandler）に委譲して通知とログ記録を行う
-                coroutineErrorHandler.handleException(t, context)
-                // 致命的な Error は再送出
+                
+                // featureName が未定義だった場合は、コンテキストを補正してハンドラに渡す
+                val effectiveContext = if (!isFeatureNameValid) {
+                    context.copy(tableName = "GUARD_SKIPPED")
+                } else {
+                    context
+                }
+
+                coroutineErrorHandler.handleException(t, effectiveContext)
                 if (t is Error) throw t
             } finally {
                 actualLoadingState.value = false
@@ -247,7 +260,14 @@ abstract class BaseUiStateViewModel<S, E>(
         flowProvider: () -> Flow<T>,
         action: suspend (T) -> Unit
     ): Job {
-        val safeFeatureName = try { featureName } catch (_: Exception) { "Unknown" }
+        var isFeatureNameValid = true
+        val safeFeatureName = try {
+            featureName
+        } catch (_: Exception) {
+            isFeatureNameValid = false
+            "Unknown"
+        }
+
         val context = ErrorContextBuilder(safeFeatureName, operation)
             .apply { contextBuilder?.invoke(this) }
             .build()
@@ -276,8 +296,15 @@ abstract class BaseUiStateViewModel<S, E>(
                         continue
                     }
 
+                    // featureName が未定義だった場合は、コンテキストを補正してハンドラに渡す
+                    val effectiveContext = if (!isFeatureNameValid) {
+                        context.copy(tableName = "GUARD_SKIPPED")
+                    } else {
+                        context
+                    }
+
                     // 規定回数の試行が失敗した後に例外をハンドル
-                    coroutineErrorHandler.handleException(t, context)
+                    coroutineErrorHandler.handleException(t, effectiveContext)
                     if (t is Error) throw t
                     break
                 } finally {

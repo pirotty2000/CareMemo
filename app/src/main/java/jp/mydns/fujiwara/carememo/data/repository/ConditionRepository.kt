@@ -290,8 +290,17 @@ class ConditionRepository(
         if ((uri.scheme == "file") || (uri.scheme == "content")) {
             try {
                 context.contentResolver.delete(uri, null, null)
-            } catch (_: Exception) {
-                // 削除失敗は致命的ではないため無視
+            } catch (e: Exception) {
+                // 削除失敗は致命的ではないが、証跡として記録する (ID 5)
+                auditLogRepository?.log(
+                    featureName = "PersonCondition",
+                    operation = "deleteTempPhoto",
+                    tableName = "external_storage",
+                    actionType = "DELETE",
+                    affectedId = uri.toString(),
+                    details = "Failed to delete temporary camera file: ${e.message}",
+                    resultType = "IO_ERROR"
+                )
             }
         }
         return result

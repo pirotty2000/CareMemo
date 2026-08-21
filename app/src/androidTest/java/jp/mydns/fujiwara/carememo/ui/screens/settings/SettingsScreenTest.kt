@@ -94,6 +94,7 @@ class SettingsScreenTest {
         uiStateFlow.value = uiStateFlow.value.copy(isDeveloperModeEnabled = true)
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("Settings_AuditLogButton").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("Settings_AuditLogExportButton").performScrollTo().assertIsDisplayed()
     }
 
     //endregion
