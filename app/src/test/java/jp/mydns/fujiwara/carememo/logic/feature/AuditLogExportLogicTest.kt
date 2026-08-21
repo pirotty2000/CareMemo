@@ -53,6 +53,6 @@ class AuditLogExportLogicTest {
     fun JSON_01_toJson_isParsable() {
         val json = AuditLogExportLogic.toJson(testLogs)
         assertTrue(json.contains("\"id\": 1"))
-        assertTrue(json.contains("\"featureName\": \"SpecialFeature\""))
+        assertTrue(json.contains("\"featureName\": \"PersonList\""))
     }
 }

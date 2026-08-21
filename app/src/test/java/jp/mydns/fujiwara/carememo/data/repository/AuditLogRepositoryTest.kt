@@ -1,13 +1,18 @@
 package jp.mydns.fujiwara.carememo.data.repository
 
 import android.content.Context
+import android.util.Log
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import jp.mydns.fujiwara.carememo.data.AuditLogDao
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -23,7 +28,16 @@ class AuditLogRepositoryTest {
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any(), any()) } returns 0
+        every { Log.d(any(), any()) } returns 0
+        every { Log.getStackTraceString(any()) } returns "mocked stack trace"
         repository = AuditLogRepository(context, auditLogDao)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
     }
 
     // region 2. ログ記録テスト (log)
