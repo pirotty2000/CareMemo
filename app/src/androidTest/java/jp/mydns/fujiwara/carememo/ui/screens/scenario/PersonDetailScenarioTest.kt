@@ -49,6 +49,7 @@ class PersonDetailScenarioTest {
         ActivityScenario.launch<MainActivity>(intent)
     }
 
+    @Suppress("SameParameterValue")
     private fun hasTestTagPrefix(prefix: String): SemanticsMatcher {
         return SemanticsMatcher("Matches test tag starting with $prefix") {
             it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith(prefix) == true
