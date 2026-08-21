@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
@@ -76,7 +75,6 @@ fun PersonMedicationScreen(
         medicationViewModel.setCategory(detailState.currentCategory)
     }
 
-    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -88,9 +86,6 @@ fun PersonMedicationScreen(
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
-
-    val noRecordsMsgFormat = stringResource(R.string.p_detail_error_no_records_for_pdf)
-    val medicationCategoryName = stringResource(Category.MEDICATION.displayNameRes)
 
     // 通知イベント監視
     LaunchedEffect(Unit) {
@@ -131,7 +126,7 @@ fun PersonMedicationScreen(
         }
     }
 
-    if (isExpanded) {
+    if (widthSizeClass == WindowWidthSizeClass.Expanded) {
         PersonMedicationScreenTablet(
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
@@ -146,7 +141,12 @@ fun PersonMedicationScreen(
             onShowPdfSettings = {
                 if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
-                        snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
+                        snackbarHostState.showSnackbar(
+                            context.getString(
+                                R.string.p_detail_error_no_records_for_pdf,
+                                context.getString(Category.MEDICATION.displayNameRes)
+                            )
+                        )
                     }
                 } else {
                     showPdfSettingsDialog = true
@@ -173,7 +173,12 @@ fun PersonMedicationScreen(
             onShowPdfSettings = {
                 if (medicationState.allRecords.isEmpty()) {
                     scope.launch {
-                        snackbarHostState.showSnackbar(noRecordsMsgFormat.format(medicationCategoryName))
+                        snackbarHostState.showSnackbar(
+                            context.getString(
+                                R.string.p_detail_error_no_records_for_pdf,
+                                context.getString(Category.MEDICATION.displayNameRes)
+                            )
+                        )
                     }
                 } else {
                     showPdfSettingsDialog = true

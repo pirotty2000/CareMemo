@@ -60,10 +60,9 @@
 
 ## 2. Repository
 
-### 2.1. 適合しているRepository
-
 | No. | 調査対象                            | 状態 | 評価                        | 備考                                                                                                  |
 |:---:|:--------------------------------|:--:|:--------------------------|:----------------------------------------------------------------------------------------------------|
+|  1  | UserSettingsRepository          | ✅  | **適合 (Highly Compliant)** | 設定変更時の自動ロギングを実装済み。メモリ保持変数（`isLockBypassed`）は `SecuritySession` へ分離し、責務分離を徹底。                        |
 |  2  | AppMaintenanceRepository        | ✅  | **適合 (Highly Compliant)** | データのバックアップ、復元、全消去、整合性修復を統括。`AuditLogRepository` 連携による自動ロギング、`InconsistencyType` によるアーキテクチャ適正化が完了済み。 |
 |  3  | AuditLogRepository              | ✅  | **適合 (Highly Compliant)** | 責務が明確であり、`NonCancellable` を用いた堅牢な例外抑制により業務への非干渉が徹底されている。                                            |
 |  4  | ConditionRepository             | ✅  | **適合 (Compliant)**        | DB 操作と物理ファイル操作（写真）の双方が適切にカプセル化され、監査ログ記録も徹底されている。                                                    |
@@ -73,12 +72,6 @@
 |  8  | MedicationRepository            | ✅  | **適合 (Highly Compliant)** | プロジェクトの標準的な Repository 構造を忠実に守り、詳細な監査ログ記録が行われている。                                                   |
 |  9  | PersonRepository                | ✅  | **適合 (Compliant)**        | 基本情報の CRUD と重複チェックを適切に提供。サマリー集計の分離も完了済み。                                                            |
 | 10  | PersonSummaryRepository         | ✅  | **適合 (Highly Compliant)** | 複数テーブルの横断的な集計に特化。`combine` を用いたリアクティブな実装は効率的で、責務分離も完璧。                                              |
-
-### 2.2. UserSettingsRepository (一部課題あり)
-
-| 調査対象                   | 状態 | 評価                        | 備考                                                                           |
-|:-----------------------|:--:|:--------------------------|:-----------------------------------------------------------------------------|
-| UserSettingsRepository | ✅  | **適合 (Highly Compliant)** | 設定変更時の自動ロギングを実装済み。メモリ保持変数（`isLockBypassed`）は `SecuritySession` へ分離し、責務分離を徹底。 |
 
 ## 3. ViewModel
 
@@ -303,4 +296,4 @@
 
 
 ---
-最終更新日: 2026/08/19
+最終更新日: 2026/08/21
