@@ -182,24 +182,24 @@
 明示的に `auditLogRepository.log` を呼び出す箇所の網羅表です。（`BaseUiStateViewModel` による自動エラー記録は除く）
 `☑` は今回の Phase 6 で新規追加または改善される項目です。
 
-| FeatureName | ActionType | 記録場所 (ファイル名) | ResultType (主なもの) | To-Be |
-| :--- | :--- | :--- | :--- | :---: |
-| `PersonList` | INSERT, UPDATE, DELETE | `PersonRepository` | SUCCESS | |
-| `PersonEdit` | INSERT, UPDATE | `PersonRepository` | SUCCESS | |
-| `DeleteOrRestorePerson` | LOGICAL_DELETE, RESTORE | `DeleteOrRestorePersonRepo` | SUCCESS | |
-| `DeleteOrRestorePerson` | PERMANENT_DELETE | `DeleteOrRestorePersonRepo` | SUCCESS, **IO_ERROR** | ☑ |
-| `PersonHealth` | INSERT, UPDATE, DELETE | `HealthRepository` | SUCCESS | |
-| `PersonCondition` | INSERT, UPDATE, DELETE | `ConditionRepository` | SUCCESS, **IO_ERROR** | ☑ |
-| `PersonCondition` | INFO (Camera Error) | `PersonConditionScreen` | **EXTERNAL_ERROR** | ☑ |
-| `PersonMedication` | INSERT, UPDATE, DELETE | `MedicationRepository` | SUCCESS | |
-| `MedicalContact` | INSERT, UPDATE, DELETE | `EmergencyContactRepo` | SUCCESS | |
-| `Settings` | UPDATE | `UserSettingsRepository` | SUCCESS | |
-| `AuditLog` | DELETE | `AuditLogRepository` | SUCCESS | |
-| `AuditLog` | ERROR (Rec failure) | `AuditLogRepository` | **IO_ERROR (File)** | ☑ |
-| `AppMaintenance` | UPDATE (Export/Import) | `AppMaintenanceRepo` | SUCCESS | |
-| `AppMaintenance` | DELETE (Clear) | `AppMaintenanceRepo` | SUCCESS | |
-| `AppMaintenance` | PERMANENT_DELETE | `AppDatabase` | **DB_ERROR** | ☑ |
-| `System` (New) | INFO (Init/Rotation) | `CareMemoApplication` | SUCCESS, **IO_ERROR** | ☑ |
+| FeatureName             | ActionType              | 記録場所 (ファイル名)                | ResultType (主なもの)     | To-Be |
+|:------------------------|:------------------------|:----------------------------|:----------------------|:-----:|
+| `PersonList`            | INSERT, UPDATE, DELETE  | `PersonRepository`          | SUCCESS               |       |
+| `PersonEdit`            | INSERT, UPDATE          | `PersonRepository`          | SUCCESS               |       |
+| `DeleteOrRestorePerson` | LOGICAL_DELETE, RESTORE | `DeleteOrRestorePersonRepo` | SUCCESS               |       |
+| `DeleteOrRestorePerson` | PERMANENT_DELETE        | `DeleteOrRestorePersonRepo` | SUCCESS, **IO_ERROR** |   ☑   |
+| `PersonHealth`          | INSERT, UPDATE, DELETE  | `HealthRepository`          | SUCCESS               |       |
+| `PersonCondition`       | INSERT, UPDATE, DELETE  | `ConditionRepository`       | SUCCESS, **IO_ERROR** |   ☑   |
+| `PersonCondition`       | INFO (Camera Error)     | `PersonConditionScreen`     | **EXTERNAL_ERROR**    |   ☑   |
+| `PersonMedication`      | INSERT, UPDATE, DELETE  | `MedicationRepository`      | SUCCESS               |       |
+| `MedicalContact`        | INSERT, UPDATE, DELETE  | `EmergencyContactRepo`      | SUCCESS               |       |
+| `Settings`              | UPDATE                  | `UserSettingsRepository`    | SUCCESS               |       |
+| `AuditLog`              | DELETE                  | `AuditLogRepository`        | SUCCESS               |       |
+| `AuditLog`              | ERROR (Rec failure)     | `AuditLogRepository`        | **IO_ERROR (File)**   |   ☑   |
+| `AppMaintenance`        | UPDATE (Export/Import)  | `AppMaintenanceRepo`        | SUCCESS               |       |
+| `AppMaintenance`        | DELETE (Clear)          | `AppMaintenanceRepo`        | SUCCESS               |       |
+| `AppMaintenance`        | PERMANENT_DELETE        | `AppDatabase`               | **DB_ERROR**          |   ☑   |
+| `System` (New)          | INFO (Init/Rotation)    | `CareMemoApplication`       | SUCCESS, **IO_ERROR** |   ☑   |
 
 
 ## 5. TODO リスト
