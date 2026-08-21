@@ -102,7 +102,7 @@ fun SettingsScreen(
     }.collectAsStateWithLifecycle()
 
     // 戻る際の処理（親画面への通知準備）
-    val performBack: () -> Unit = {
+    val performBack = {
         if (isChangedByMe || childRefreshRequested) {
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
         }
