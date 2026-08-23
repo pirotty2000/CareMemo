@@ -47,16 +47,16 @@
 ## 7. ナビゲーションテスト (Navigation)
 **目的:** 画面遷移等の副作用（ViewEvent）が正しく発行されることを検証する。
 
-| ID     | テスト項目   | 操作                              | 期待結果                                               |
-|:-------|:--------|:--------------------------------|:---------------------------------------------------|
-| NAV-01 | 写真プレビュー遷移 | `onPhotoCaptured(...)` | `viewEvent` から `NavigateToPhotoPreview` が発行されること |
-| NAV-02 | 写真全画面遷移 | `navigateToPhotoFullScreen(...)` | `viewEvent` から `NavigateToPhotoFullScreen` が発行されること |
+| ID     | テスト項目     | 操作                               | 期待結果                                                |
+|:-------|:----------|:---------------------------------|:----------------------------------------------------|
+| NAV-01 | 写真プレビュー遷移 | `onPhotoCaptured(...)`           | `viewEvent` から `NavigateToPhotoPreview` が発行されること    |
+| NAV-02 | 写真全画面遷移   | `navigateToPhotoFullScreen(...)` | `viewEvent` から `NavigateToPhotoFullScreen` が発行されること |
 
 ## 8. 状態復元テスト (State Restoration)
 **目的:** プロセス死（Process Death）からの復元において、長文の所見メモや写真プレビュー状態が正しく維持されることを検証する。
 
-| ID     | テスト項目 | 検証内容 | 期待結果 |
-|:-------|:------|:------------------|:-----------------------------------------|
-| RST-01 | 入力値とセッションの復元 | `SavedStateHandle` に本文や編集フラグがある状態で起動 | `isEditing` が true になり、タイトル・本文・日時が UI 状態に復元されること |
-| RST-02 | 変更検知基準の復元 | `SavedStateHandle` に `initialSnapshot` がある状態で起動 | 復元された基準値と現在の入力値が比較され、`isChanged` が正しく算出されること |
-| RST-03 | 写真プレビューの復元 | `SavedStateHandle` に `previewUri` と `previewCaption` がある状態で起動 | 撮影直後の写真と書きかけのキャプションが UI 状態に復元されること |
+| ID     | テスト項目        | 検証内容                                                          | 期待結果                                             |
+|:-------|:-------------|:--------------------------------------------------------------|:-------------------------------------------------|
+| RST-01 | 入力値とセッションの復元 | `SavedStateHandle` に本文や編集フラグがある状態で起動                          | `isEditing` が true になり、タイトル・本文・日時が UI 状態に復元されること |
+| RST-02 | 変更検知基準の復元    | `SavedStateHandle` に `initialSnapshot` がある状態で起動               | 復元された基準値と現在の入力値が比較され、`isChanged` が正しく算出されること     |
+| RST-03 | 写真プレビューの復元   | `SavedStateHandle` に `previewUri` と `previewCaption` がある状態で起動 | 撮影直後の写真と書きかけのキャプションが UI 状態に復元されること               |

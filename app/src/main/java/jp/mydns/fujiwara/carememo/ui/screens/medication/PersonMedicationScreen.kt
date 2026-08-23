@@ -224,7 +224,6 @@ fun PersonMedicationScreen(
     if (medicationState.selectedDialogDate != null) {
         MedicationInputDialog(
             date = medicationState.selectedDialogDate!!,
-            personId = detailState.personId ?: "",
             tempRecords = medicationState.dialogTempRecords,
             onDismiss = { medicationViewModel.dismissDialog() },
             onStatusToggle = { slotIndex: Int, status: MedicationStatus, time: Instant ->

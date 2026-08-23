@@ -439,7 +439,6 @@ fun MedicationHistoryTable(
  * 特定の日の服薬状況を登録・編集するためのダイアログ。
  *
  * @param date 対象の日付
- * @param personId 利用者ID
  * @param tempRecords 入力中（一時的）な記録リスト
  * @param modifier 修飾子
  * @param onDismiss ダイアログを閉じる際のコールバック
@@ -449,7 +448,6 @@ fun MedicationHistoryTable(
 @Composable
 fun MedicationInputDialog(
     date: LocalDate,
-    personId: String,
     tempRecords: List<MedicationRecord?>,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
