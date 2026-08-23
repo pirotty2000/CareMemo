@@ -186,7 +186,7 @@ class MainScreenTest {
             try {
                 composeTestRule.onNodeWithTag("UserListItem_21").assertIsDisplayed()
                 true
-            } catch (e: AssertionError) {
+            } catch (_: AssertionError) {
                 false
             }
         }
@@ -199,7 +199,7 @@ class MainScreenTest {
             try {
                 composeTestRule.onNodeWithTag("UserListItem_21").assertIsDisplayed()
                 true
-            } catch (e: AssertionError) {
+            } catch (_: AssertionError) {
                 false
             }
         }
