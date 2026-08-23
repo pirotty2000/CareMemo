@@ -388,7 +388,7 @@ class BatchInputViewModel(
 
         val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
             val details = HealthProcessorRegistry.getAll()
-                .filter { !it.isEmpty(state) && it.validate(state) == HealthInputValidationResult.OUT_OF_RANGE }
+                .filter { !it.isEmpty(state) && (it.validate(state) == HealthInputValidationResult.OUT_OF_RANGE) }
                 .map { "__RES__${it.outOfRangeErrorResId}" }
             
             if (details.isEmpty()) listOf("__RES__${R.string.common_error_invalid_input}") else listOf(details.joinToString("、"))

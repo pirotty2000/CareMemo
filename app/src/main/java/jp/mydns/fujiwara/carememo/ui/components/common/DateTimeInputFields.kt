@@ -2,10 +2,7 @@ package jp.mydns.fujiwara.carememo.ui.components.common
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,18 +98,29 @@ class DateTimeInputState(
  */
 @Composable
 fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
-    // rememberSaveable の inputs には saveable な型（Long等）を渡す必要があるため変換する
-    val key = initialInstant?.toEpochMilli()
     val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
     
     // 画面回転やプロセス再生成に対応するため rememberSaveable を使用
-    val year = rememberSaveable(key) { mutableStateOf(zdt.year.toString()) }
-    val month = rememberSaveable(key) { mutableStateOf(zdt.monthValue.toString()) }
-    val day = rememberSaveable(key) { mutableStateOf(zdt.dayOfMonth.toString()) }
-    val hour = rememberSaveable(key) { mutableStateOf("%02d".format(zdt.hour)) }
-    val minute = rememberSaveable(key) { mutableStateOf("%02d".format(zdt.minute)) }
+    // キーを外して、初期化のみに徹し、外部からの変更は別途監視する（入力中の不意なリセット防止）
+    val year = rememberSaveable { mutableStateOf(zdt.year.toString()) }
+    val month = rememberSaveable { mutableStateOf(zdt.monthValue.toString()) }
+    val day = rememberSaveable { mutableStateOf(zdt.dayOfMonth.toString()) }
+    val hour = rememberSaveable { mutableStateOf("%02d".format(zdt.hour)) }
+    val minute = rememberSaveable { mutableStateOf("%02d".format(zdt.minute)) }
 
-    return remember(key) {
+    // initialInstant が明示的に変更された場合のみ、ステートを更新する
+    LaunchedEffect(initialInstant) {
+        if (initialInstant != null) {
+            val updatedZdt = initialInstant.atZone(ZoneId.systemDefault())
+            year.value = updatedZdt.year.toString()
+            month.value = updatedZdt.monthValue.toString()
+            day.value = updatedZdt.dayOfMonth.toString()
+            hour.value = "%02d".format(updatedZdt.hour)
+            minute.value = "%02d".format(updatedZdt.minute)
+        }
+    }
+
+    return remember {
         DateTimeInputState(year, month, day, hour, minute)
     }
 }

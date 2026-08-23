@@ -22,7 +22,6 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 
 /**
  * Screen：PersonMedicationScreen

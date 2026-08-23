@@ -436,7 +436,7 @@ class PersonConditionViewModel(
      */
     fun cancelEditSession() {
         val recordId = currentState.selectedConditionId
-        if ((recordId != null && IdLogic.isNew(recordId))) {
+        if (recordId != null && IdLogic.isNew(recordId)) {
             setSelectedConditionId(null)
         } else {
             updateUiState { 

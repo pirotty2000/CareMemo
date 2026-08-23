@@ -23,7 +23,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import java.time.Instant
 
 /**
  * UI State：EmergencyContactUiState
@@ -175,7 +174,7 @@ class EmergencyContactEditViewModel(
      * SavedStateHandle から状態を復元します。
      */
     private fun restoreState() {
-        val handle = savedStateHandle ?: return
+        val handle = savedStateHandle
         val isEditing = handle.get<Boolean>(KEY_IS_EDITING) ?: false
         
         // 1. Current Input の復元
@@ -219,7 +218,7 @@ class EmergencyContactEditViewModel(
      * 復元対象の状態をバックアップします。
      */
     private fun backupRestorableState(state: EmergencyContactUiState) {
-        val handle = savedStateHandle ?: return
+        val handle = savedStateHandle
         handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
         handle[KEY_IS_EDITING] = state.isEditing
 
@@ -248,7 +247,7 @@ class EmergencyContactEditViewModel(
      * 復元用データを破棄します。
      */
     private fun clearRestorableState() {
-        val handle = savedStateHandle ?: return
+        val handle = savedStateHandle
         handle.remove<Int>(KEY_RESTORE_VERSION)
         handle.remove<Boolean>(KEY_IS_EDITING)
         

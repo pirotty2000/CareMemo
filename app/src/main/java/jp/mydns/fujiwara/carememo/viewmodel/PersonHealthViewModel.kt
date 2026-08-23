@@ -134,7 +134,7 @@ class PersonHealthViewModel(
                     try {
                         val category = Category.valueOf(name)
                         // 復元中かつ、カテゴリがSSHのものと一致する場合は再セットを避ける
-                        if (!isRestoring || currentState.currentCategory != category) {
+                        if (!isRestoring || (currentState.currentCategory != category)) {
                             setCategory(category)
                         }
                     } catch (_: Exception) {
