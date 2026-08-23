@@ -120,12 +120,12 @@ fun save() {
 ### 8.1. 状態の 4 分類と保存機構
 画面上の全状態を以下の 4 つに分類し、適切な保存機構を選択します。
 
-| 分類 | SSOT | 保存機構 | 内容 |
-|:---|:---|:---|:---|
-| **UI State** | ViewModel | `StateFlow` | 通常動作時の真実のソース。 |
-| **VM State** | ViewModel | `SavedStateHandle` | **「復元用のバックアップ」**。未保存の入力値や検索条件。 |
-| **Nav State** | NavController | `Type-safe Nav` | 画面のアイデンティティ（ID等）。 |
-| **Transient UI State** | Composable | `rememberSaveable` | スクロール位置、タブ選択等の純粋な UI 状態。 |
+| 分類                     | SSOT          | 保存機構               | 内容                             |
+|:-----------------------|:--------------|:-------------------|:-------------------------------|
+| **UI State**           | ViewModel     | `StateFlow`        | 通常動作時の真実のソース。                  |
+| **VM State**           | ViewModel     | `SavedStateHandle` | **「復元用のバックアップ」**。未保存の入力値や検索条件。 |
+| **Nav State**          | NavController | `Type-safe Nav`    | 画面のアイデンティティ（ID等）。              |
+| **Transient UI State** | Composable    | `rememberSaveable` | スクロール位置、タブ選択等の純粋な UI 状態。       |
 
 ### 8.2. SavedStateHandle の位置付け (Backup Only)
 - **[MUST] SavedStateHandle を第二の SSOT にしない**: 通常動作中は `UiState` (StateFlow) を唯一の SSOT とし、`SavedStateHandle` は退避先としてのみ使用します。
