@@ -298,6 +298,7 @@ class PersonListViewModelTest {
 
         // 復元起動であっても、リストは DB から取得されていること
         assertEquals(1, viewModel.uiState.value.userList.size)
+        @Suppress("CheckResult")
         verify { personRepository.getAllPersons() }
     }
 
