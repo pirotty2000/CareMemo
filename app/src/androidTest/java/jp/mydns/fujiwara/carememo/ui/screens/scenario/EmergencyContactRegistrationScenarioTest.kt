@@ -96,15 +96,20 @@ class EmergencyContactRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("EmergencyContact_SaveButton").performClick()
 
         // 5. 一覧画面に戻り、反映を確認
-        // まずはノードがツリー上に存在するまで待つ
+        // まずは画面遷移（一覧への復帰）自体を待つ
         composeTestRule.waitUntil(20000) {
-            composeTestRule.onAllNodesWithText(facility).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithTag("MedicalContactList_AddButton").fetchSemanticsNodes().isNotEmpty()
         }
+
+        // リスト（MedicalContactList）をスクロールして対象を表示させる
+        // LazyColumn の場合は performScrollToNode を使用して確実にツリーへ引き込む
+        composeTestRule.onNodeWithTag("MedicalContactList")
+            .performScrollToNode(hasText(facility))
         
-        // 【重要】表示順序によって画面外にいる可能性があるため、スクロールしてから検証する
-        composeTestRule.onNodeWithText(facility).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText(person).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText(displayPhone).performScrollTo().assertIsDisplayed()
+        // 反映を確認
+        composeTestRule.onNodeWithText(facility).assertIsDisplayed()
+        composeTestRule.onNodeWithText(person).assertIsDisplayed()
+        composeTestRule.onNodeWithText(displayPhone).assertIsDisplayed()
 
         // 6. 戻るボタンをタップしてメイン画面へ
         composeTestRule.onNodeWithTag("MedicalContactList_BackButton").performClick()

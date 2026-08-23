@@ -101,16 +101,18 @@ class DateTimeInputState(
  */
 @Composable
 fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputState {
+    // rememberSaveable の inputs には saveable な型（Long等）を渡す必要があるため変換する
+    val key = initialInstant?.toEpochMilli()
     val zdt = (initialInstant ?: Instant.now()).atZone(ZoneId.systemDefault())
     
     // 画面回転やプロセス再生成に対応するため rememberSaveable を使用
-    val year = rememberSaveable(initialInstant) { mutableStateOf(zdt.year.toString()) }
-    val month = rememberSaveable(initialInstant) { mutableStateOf(zdt.monthValue.toString()) }
-    val day = rememberSaveable(initialInstant) { mutableStateOf(zdt.dayOfMonth.toString()) }
-    val hour = rememberSaveable(initialInstant) { mutableStateOf("%02d".format(zdt.hour)) }
-    val minute = rememberSaveable(initialInstant) { mutableStateOf("%02d".format(zdt.minute)) }
+    val year = rememberSaveable(key) { mutableStateOf(zdt.year.toString()) }
+    val month = rememberSaveable(key) { mutableStateOf(zdt.monthValue.toString()) }
+    val day = rememberSaveable(key) { mutableStateOf(zdt.dayOfMonth.toString()) }
+    val hour = rememberSaveable(key) { mutableStateOf("%02d".format(zdt.hour)) }
+    val minute = rememberSaveable(key) { mutableStateOf("%02d".format(zdt.minute)) }
 
-    return remember(initialInstant) {
+    return remember(key) {
         DateTimeInputState(year, month, day, hour, minute)
     }
 }

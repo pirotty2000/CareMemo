@@ -13,9 +13,9 @@
 #### A. State / Recomposition (性能・安定性)
 - [x] **Compose Compiler Report に基づく State/Model の Stable 化**
     - 調査完了：主要なデータモデル（PersonUiState等）は Stable であり、現状維持で問題ないことを確認。
-- [ ] **Lambda の安定性と Callback 設計の最適化**
+- [/] **Lambda の安定性と Callback 設計の最適化**
     - **Lambda の安定性**: キャプチャによる `unstable` 化を防ぐための検討（安定した引数の利用や、キャプチャ対象の安定性確保）。
-    - **Callback 設計**: Composable 内での ViewModel 直接参照を排除し、疎結合な Action Callback 形式（`onEvent: () -> Unit`）への統一を徹底。
+    - **Callback 設計**: Composable 内での ViewModel 直接参照を排除し、疎結合な Action Callback 形式（`onAction: () -> Unit`）への統一を徹底（一部のダイアログ等で先行実施）。
 
 #### B. アクセシビリティ (TalkBack & Semantics)
 - [ ] **TalkBack 読み上げの最適化**
@@ -45,7 +45,7 @@
     - 完了：UI/VM/Nav/Transient の 4 つの状態責務を定義し、設計指針を確立。
 - [x] **結果返却パターンの洗練**
 - [x] **プロセス死からの復元 (State Restoration)**
-    - 完了：PersonList/PersonEdit において SavedStateHandle を用いた復元ロジックを実装。
+    - 完了：全主要画面（利用者一覧、登録編集、健康、所見、服薬、一括入力、緊急連絡先）において、状態管理 7 原則に基づく SavedStateHandle 復元ロジックを実装。
 
 #### F. 入力 UI (滑らかなインタラクション)
 - [ ] **IME 連動の最適化**
@@ -78,7 +78,7 @@
 
 ### Step 3: 画面個別対応
 - [/] 高優先度カテゴリから順次、各画面の UI リファクタリングを実施。
-    - 利用者一覧(Main)・登録編集(Edit) の状態復元対応が完了。
+    - 全主要画面（利用者一覧、登録編集、健康、所見、服薬、一括入力、緊急連絡先）の状態復元対応が完了。
 
 ---
 最終更新日: 2026/08/23

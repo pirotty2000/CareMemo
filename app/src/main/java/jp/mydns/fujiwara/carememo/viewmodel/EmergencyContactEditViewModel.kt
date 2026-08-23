@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
+import androidx.navigation.toRoute
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
@@ -14,6 +15,7 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -21,6 +23,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 /**
  * UI State：EmergencyContactUiState
@@ -81,11 +84,35 @@ class EmergencyContactEditViewModel(
         private const val OP_SAVE = "saveContact"
         private const val OP_DELETE = "deleteContact"
         private const val TABLE_NAME = "emergency_contact_db"
+
+        // --- Shared Keys (Navigation & Restoration) ---
         private const val KEY_PERSON_ID = "personId"
         private const val KEY_CONTACT_ID = "contactId"
+        private const val KEY_RESTORE_VERSION = "restoration_version"
+        private const val RESTORE_VERSION = 1
+        private const val KEY_IS_EDITING = "restoration_is_editing"
+        
+        // Input Fields (Current)
+        private const val KEY_IN_ID = "restoration_in_id"
+        private const val KEY_IN_TYPE = "restoration_in_type"
+        private const val KEY_IN_FACILITY = "restoration_in_facility"
+        private const val KEY_IN_PERSON_NAME = "restoration_in_person_name"
+        private const val KEY_IN_PHONE = "restoration_in_phone"
+        private const val KEY_IN_PRIORITY = "restoration_in_priority"
+
+        // Snapshot Fields (Baseline)
+        private const val KEY_BASE_ID = "restoration_base_id"
+        private const val KEY_BASE_TYPE = "restoration_base_type"
+        private const val KEY_BASE_FACILITY = "restoration_base_facility"
+        private const val KEY_BASE_PERSON_NAME = "restoration_base_person_name"
+        private const val KEY_BASE_PHONE = "restoration_base_phone"
+        private const val KEY_BASE_PRIORITY = "restoration_base_priority"
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 復元中であることを示すフラグ */
+    private var isRestoring = false
 
     /** 保存処理用の Job */
     private var saveJob: Job? = null
@@ -98,7 +125,27 @@ class EmergencyContactEditViewModel(
             showError(title, msg, *args)
         }
 
-        observeParams()
+        // 1. 引数から personId を先に確定させる（復元の前提条件）
+        val personId = savedStateHandle.get<String>(KEY_PERSON_ID) 
+            ?: try { savedStateHandle.toRoute<Destination.MedicalContacts>().personId } catch (_: Exception) { null }
+            ?: try { savedStateHandle.toRoute<Destination.MedicalContactEdit>().personId } catch (_: Exception) { "" }
+
+        if (personId.isNotBlank()) {
+            updateUiState { it.copy(personId = personId) }
+            loadPersonInfo(personId)
+            loadEmergencyContacts(personId)
+        }
+
+        // 2. 状態復元
+        if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+            isRestoring = true
+            restoreState()
+        }
+
+        // 3. ナビゲーション引数に基づく初期化（復元中でない場合のみ）
+        if (!isRestoring && personId.isNotBlank()) {
+            initializeFromNavigation()
+        }
 
         // 共通設定の変更を購読
         scope.launch {
@@ -108,34 +155,107 @@ class EmergencyContactEditViewModel(
         }
     }
 
-    private fun observeParams() {
-        // personId の監視
-        scope.launch {
-            savedStateHandle.getStateFlow<String?>(KEY_PERSON_ID, null).collect { id ->
-                if (!id.isNullOrBlank()) {
-                    updateUiState { it.copy(personId = id) }
-                    loadPersonInfo(id)
-                    loadEmergencyContacts(id)
+    private fun initializeFromNavigation() {
+        val contactId = savedStateHandle.get<String>(KEY_CONTACT_ID)
+            ?: try { savedStateHandle.toRoute<Destination.MedicalContactEdit>().contactId } catch (_: Exception) { null }
+
+        if (savedStateHandle.contains(KEY_CONTACT_ID) || contactId != null) {
+            if (IdLogic.isNew(contactId)) {
+                startAdd()
+            } else if (contactId != null) {
+                scope.launch {
+                    val contact = emergencyContactRepository.getContactById(contactId)
+                    if (contact != null) startEdit(contact)
                 }
             }
+        }
+    }
+
+    /**
+     * SavedStateHandle から状態を復元します。
+     */
+    private fun restoreState() {
+        val handle = savedStateHandle ?: return
+        val isEditing = handle.get<Boolean>(KEY_IS_EDITING) ?: false
+        
+        // 1. Current Input の復元
+        val input = if (handle.contains(KEY_IN_ID)) {
+            EmergencyContact(
+                id = handle.get<String>(KEY_IN_ID) ?: "",
+                personId = currentState.personId, // personId は navArgs から別途復元
+                contactType = handle.get<String>(KEY_IN_TYPE) ?: "DOCTOR",
+                facilityName = handle.get<String>(KEY_IN_FACILITY) ?: "",
+                personName = handle.get<String>(KEY_IN_PERSON_NAME),
+                phoneNumber = handle.get<String>(KEY_IN_PHONE),
+                priority = handle.get<Int>(KEY_IN_PRIORITY) ?: 99
+            )
+        } else null
+
+        // 2. Baseline の復元
+        val snapshot = if (handle.contains(KEY_BASE_ID)) {
+            EmergencyContact(
+                id = handle.get<String>(KEY_BASE_ID) ?: "",
+                personId = currentState.personId,
+                contactType = handle.get<String>(KEY_BASE_TYPE) ?: "DOCTOR",
+                facilityName = handle.get<String>(KEY_BASE_FACILITY) ?: "",
+                personName = handle.get<String>(KEY_BASE_PERSON_NAME),
+                phoneNumber = handle.get<String>(KEY_BASE_PHONE),
+                priority = handle.get<Int>(KEY_BASE_PRIORITY) ?: 99
+            )
+        } else null
+
+        updateUiState { current ->
+            current.copy(
+                isEditing = isEditing,
+                editingContact = input,
+                initialContact = snapshot,
+                isChanged = EmergencyContactLogic.isChanged(input, snapshot),
+                isValid = EmergencyContactLogic.isValid(input)
+            )
+        }
+    }
+
+    /**
+     * 復元対象の状態をバックアップします。
+     */
+    private fun backupRestorableState(state: EmergencyContactUiState) {
+        val handle = savedStateHandle ?: return
+        handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        handle[KEY_IS_EDITING] = state.isEditing
+
+        // Input Backup
+        state.editingContact?.let { contact ->
+            handle[KEY_IN_ID] = contact.id
+            handle[KEY_IN_TYPE] = contact.contactType
+            handle[KEY_IN_FACILITY] = contact.facilityName
+            handle[KEY_IN_PERSON_NAME] = contact.personName
+            handle[KEY_IN_PHONE] = contact.phoneNumber
+            handle[KEY_IN_PRIORITY] = contact.priority
         }
 
-        // contactId の監視（編集画面用）
-        scope.launch {
-            savedStateHandle.getStateFlow<String?>(KEY_CONTACT_ID, null).collect { id ->
-                // KEY_CONTACT_ID が存在する場合（MedicalContactEdit 目的地の場合）のみ処理
-                if (savedStateHandle.contains(KEY_CONTACT_ID)) {
-                    if (IdLogic.isNew(id)) {
-                        startAdd()
-                    } else {
-                        val contact = emergencyContactRepository.getContactById(id!!)
-                        if (contact != null) {
-                            startEdit(contact)
-                        }
-                    }
-                }
-            }
+        // Baseline Backup
+        state.initialContact?.let { base ->
+            handle[KEY_BASE_ID] = base.id
+            handle[KEY_BASE_TYPE] = base.contactType
+            handle[KEY_BASE_FACILITY] = base.facilityName
+            handle[KEY_BASE_PERSON_NAME] = base.personName
+            handle[KEY_BASE_PHONE] = base.phoneNumber
+            handle[KEY_BASE_PRIORITY] = base.priority
         }
+    }
+
+    /**
+     * 復元用データを破棄します。
+     */
+    private fun clearRestorableState() {
+        val handle = savedStateHandle ?: return
+        handle.remove<Int>(KEY_RESTORE_VERSION)
+        handle.remove<Boolean>(KEY_IS_EDITING)
+        
+        listOf(
+            KEY_IN_ID, KEY_IN_TYPE, KEY_IN_FACILITY, KEY_IN_PERSON_NAME, KEY_IN_PHONE, KEY_IN_PRIORITY,
+            KEY_BASE_ID, KEY_BASE_TYPE, KEY_BASE_FACILITY, KEY_BASE_PERSON_NAME, KEY_BASE_PHONE, KEY_BASE_PRIORITY
+        ).forEach { handle.remove<Any>(it) }
     }
 
     private fun loadPersonInfo(id: String) {
@@ -169,34 +289,44 @@ class EmergencyContactEditViewModel(
     fun startAdd() {
         val initial = EmergencyContactLogic.createInitialEntity(currentState.personId)
         updateState {
-            it.copy(
+            val next = it.copy(
                 editingContact = initial,
                 initialContact = initial,
                 isEditing = true
             )
+            backupRestorableState(next)
+            next
         }
     }
 
     fun startEdit(contact: EmergencyContact) {
         updateState {
-            it.copy(
+            val next = it.copy(
                 editingContact = contact,
                 initialContact = contact,
                 isEditing = true
             )
+            backupRestorableState(next)
+            next
         }
     }
 
     fun updateEditingContact(reducer: (EmergencyContact) -> EmergencyContact) {
         updateState { current ->
-            current.editingContact?.let {
+            val next = current.editingContact?.let {
                 current.copy(editingContact = reducer(it))
             } ?: current
+            backupRestorableState(next)
+            next
         }
     }
 
     fun dismissEdit() {
-        updateState { it.copy(isEditing = false, editingContact = null, initialContact = null) }
+        updateState { 
+            val next = it.copy(isEditing = false, editingContact = null, initialContact = null)
+            clearRestorableState()
+            next
+        }
     }
 
     /**
@@ -245,6 +375,7 @@ class EmergencyContactEditViewModel(
 
             sendViewEvent(EmergencyContactViewEvent.SaveSuccess)
             dismissEdit()
+            clearRestorableState()
         }
     }
 

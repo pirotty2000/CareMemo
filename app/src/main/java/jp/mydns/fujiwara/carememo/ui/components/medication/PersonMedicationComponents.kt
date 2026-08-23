@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -439,59 +440,45 @@ fun MedicationHistoryTable(
  *
  * @param date 対象の日付
  * @param personId 利用者ID
- * @param records 現在保存されている記録リスト
+ * @param tempRecords 入力中（一時的）な記録リスト
  * @param modifier 修飾子
  * @param onDismiss ダイアログを閉じる際のコールバック
- * @param onConfirm 保存が確定した際のコールバック（全スロットの最新状態を渡す）
+ * @param onStatusToggle ステータス変更時のコールバック
+ * @param onConfirm 保存が確定した際のコールバック
  */
 @Composable
 fun MedicationInputDialog(
     date: LocalDate,
     personId: String,
-    records: ImmutableList<MedicationRecord>,
+    tempRecords: List<MedicationRecord?>,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
-    onConfirm: (List<MedicationRecord?>) -> Unit
+    onStatusToggle: (Int, MedicationStatus, Instant) -> Unit,
+    onConfirm: () -> Unit
 ) {
-    // スロットごとの一時的な状態を保持。外部からの records 変更に追従。
-    var tempRecords by remember(records) { 
-        mutableStateOf(
-            MedicationTimeSlot.entries.map { slot ->
-                records.find { it.timeSlot == slot.index }
-            }
-        )
-    }
-    
     // 現在時刻編集（DateTimeInputFields）の対象となっているスロット
-    var editingSlot by remember { mutableStateOf<Int?>(null) }
+    var editingSlot by rememberSaveable { mutableStateOf<Int?>(null) }
     
     // 特定のスロットの時刻を編集するためのステート
+    val initialInstantForSlot = remember(editingSlot, tempRecords) {
+        editingSlot?.let { tempRecords.getOrNull(it)?.recordTime }
+    }
     val dateTimeState = rememberDateTimeInputState(
-        initialInstant = editingSlot?.let { tempRecords[it]?.recordTime }
+        initialInstant = initialInstantForSlot
     )
 
-    /**
-     * 現在 DateTimeInputFields で入力中の日時を一時的なリスト（tempRecords）に同期反映。
-     */
-    fun syncCurrentTimeFieldsToTemp() {
+    // dateTimeState の変更を ViewModel 側に同期するための Effect
+    // (入力のたびに ViewModel 側の状態を更新し、SSH にバックアップする)
+    LaunchedEffect(dateTimeState.year.value, dateTimeState.month.value, dateTimeState.day.value,
+                   dateTimeState.hour.value, dateTimeState.minute.value) {
         editingSlot?.let { slot ->
-            val instant = dateTimeState.toInstant()
-            if (instant != null) {
-                tempRecords[slot]?.let { record ->
-                    tempRecords = tempRecords.toMutableList().apply {
-                        set(slot, record.copy(recordTime = instant))
-                    }
+            dateTimeState.toInstant()?.let { instant ->
+                val currentStatus = tempRecords[slot]?.let { MedicationStatus.fromCode(it.status) }
+                if (currentStatus != null) {
+                    onStatusToggle(slot, currentStatus, instant)
                 }
             }
         }
-    }
-
-    /**
-     * 特定のスロットを選択し、時刻編集を開始。
-     */
-    fun startEditingSlot(slot: Int) {
-        syncCurrentTimeFieldsToTemp()
-        editingSlot = slot
     }
 
     AppDialog(
@@ -516,33 +503,12 @@ fun MedicationInputDialog(
                             isSelectedForTime = editingSlot == slot.index,
                             onStatusToggle = { code ->
                                 val status = MedicationStatus.fromCode(code)!!
-                                val current = tempRecords[slot.index]
-                                if (current?.status == status.code) {
-                                    // 【トグル動作】既に同じステータスなら解除（削除対象）
-                                    syncCurrentTimeFieldsToTemp()
-                                    tempRecords = tempRecords.toMutableList().apply { set(slot.index, null) }
-                                    if (editingSlot == slot.index) editingSlot = null
-                                } else {
-                                    // ステータス変更または新規作成
-                                    syncCurrentTimeFieldsToTemp()
-                                    val instant = current?.recordTime ?: Instant.now()
-                                    val newRecord = current?.copy(status = status.code, recordTime = instant)
-                                        ?: MedicationRecord(
-                                            id = AppSpecifications.Id.NEW_RECORD_ID,
-                                            personId = personId,
-                                            dosageDate = date.toString(),
-                                            timeSlot = slot.index,
-                                            status = status.code,
-                                            recordTime = instant
-                                        )
-                                    tempRecords = tempRecords.toMutableList().apply {
-                                        set(slot.index, newRecord)
-                                    }
-                                    startEditingSlot(slot.index)
-                                }
+                                val instant = tempRecords[slot.index]?.recordTime ?: Instant.now()
+                                onStatusToggle(slot.index, status, instant)
+                                editingSlot = slot.index
                             },
                             onTimeClick = {
-                                startEditingSlot(slot.index)
+                                editingSlot = slot.index
                             }
                         )
                     }
@@ -559,9 +525,7 @@ fun MedicationInputDialog(
             AppDialogConfirmButton(
                 text = stringResource(R.string.common_save),
                 onClick = {
-                    syncCurrentTimeFieldsToTemp()
-                    onConfirm(tempRecords)
-                    onDismiss()
+                    onConfirm()
                 },
                 modifier = Modifier.testTag("Medication_SaveButton")
             )

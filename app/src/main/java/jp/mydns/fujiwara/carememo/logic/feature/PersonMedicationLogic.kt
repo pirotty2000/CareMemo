@@ -8,6 +8,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import java.time.LocalDate
 import java.time.YearMonth
 
 /**
@@ -23,6 +24,8 @@ import java.time.YearMonth
  * @param recordsByDate 日付（"yyyy-MM-dd"）をキーとした、1日ごとの服薬記録リストのマップ
  * @param allRecords 全期間の服薬記録リスト（統計や将来的な拡張用）
  * @param isLoading データの読み込み中フラグ
+ * @param selectedDialogDate ダイアログを表示している対象の日付（null なら非表示）
+ * @param dialogTempRecords ダイアログ内での一時的な服用ステータス（4スロット分）
  */
 @Immutable
 data class PersonMedicationUiState(
@@ -34,7 +37,11 @@ data class PersonMedicationUiState(
     val recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>> = persistentMapOf(),
     val allRecords: ImmutableList<MedicationRecord> = persistentListOf(),
 
-    override val isLoading: Boolean = false
+    override val isLoading: Boolean = false,
+
+    // --- ダイアログ状態 ---
+    val selectedDialogDate: LocalDate? = null,
+    val dialogTempRecords: ImmutableList<MedicationRecord?> = persistentListOf(null, null, null, null)
 ) : PersonAwareState
 
 /**

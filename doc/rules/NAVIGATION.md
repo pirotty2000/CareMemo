@@ -14,7 +14,8 @@
 
 ## 3. 引数の受け取り (SavedStateHandle)
 
-- 遷移引数は `SavedStateHandle` を介して ViewModel が直接取得します。
+- **[MUST] `toRoute<T>()` の使用**: 遷移引数は `SavedStateHandle.toRoute<T>()` を用いて、型安全な目的地クラスから直接抽出してください。
+- `getStateFlow("key", ...)` 等による直接的なキー参照は、サードパーティ製テスト等の互換性維持が必要な場合を除き、原則禁止します。
 - `MainActivity` や Composable を経由して手動で引数を渡す実装は禁止します。
 
 ## 4. 標準実装テンプレート (遷移イベント購読)

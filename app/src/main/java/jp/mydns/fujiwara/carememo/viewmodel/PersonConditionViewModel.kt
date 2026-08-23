@@ -77,9 +77,29 @@ class PersonConditionViewModel(
         private const val OP_PHOTO_MAP_FLOW = "photoMapFlow"
         private const val OP_PHOTOS_FLOW = "photosFlow"
         private const val TABLE_CONDITION = "condition_db"
+
+        // --- Restoration Keys ---
+        private const val KEY_SEARCH_QUERY = "restoration_search_query"
+        private const val KEY_SELECTED_ID = "restoration_selected_id"
+        private const val KEY_IS_EDITING = "restoration_is_editing"
+        private const val KEY_PREVIEW_URI = "restoration_preview_uri"
+        private const val KEY_PREVIEW_CAPTION = "restoration_preview_caption"
+        // Input Fields
+        private const val KEY_IN_TITLE = "restoration_in_title"
+        private const val KEY_IN_BODY = "restoration_in_body"
+        private const val KEY_IN_AUTHOR = "restoration_in_author"
+        private const val KEY_IN_TIME = "restoration_in_time"
+        // Snapshot (Baseline) Fields
+        private const val KEY_BASE_TITLE = "restoration_base_title"
+        private const val KEY_BASE_BODY = "restoration_base_body"
+        private const val KEY_BASE_AUTHOR = "restoration_base_author"
+        private const val KEY_BASE_TIME = "restoration_base_time"
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 復元中であることを示すフラグ */
+    private var isRestoring = false
 
     /** 各種ロード用の Job */
     private var recordsJob: Job? = null
@@ -96,6 +116,12 @@ class PersonConditionViewModel(
     private var photoActionJob: Job? = null
 
     init {
+        // --- State Restoration ---
+        if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+            isRestoring = true
+            restoreState()
+        }
+
         // 初期化
         initializeFromNavigation()
         
@@ -106,13 +132,85 @@ class PersonConditionViewModel(
         scope.launch {
             defaultRecorderName.collect { name ->
                 updateUiState { state ->
-                    if (state.isEditing && IdLogic.isNew(state.selectedConditionId ?: "") && state.editInput.author.isBlank()) {
+                    // 復元中、または既にユーザーが入力済みの場合は自動セットをバイパスする
+                    if (!isRestoring && state.isEditing && IdLogic.isNew(state.selectedConditionId ?: "") && state.editInput.author.isBlank()) {
                         state.copy(editInput = state.editInput.copy(author = name))
                     } else {
                         state
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * SavedStateHandle から状態を復元します。
+     */
+    private fun restoreState() {
+        val handle = savedStateHandle ?: return
+        val query = handle.get<String>(KEY_SEARCH_QUERY) ?: ""
+        val selectedId = handle.get<String>(KEY_SELECTED_ID)
+        val isEditing = handle.get<Boolean>(KEY_IS_EDITING) ?: false
+        val previewUri = handle.get<String>(KEY_PREVIEW_URI)
+        val previewCaption = handle.get<String>(KEY_PREVIEW_CAPTION) ?: ""
+
+        val input = ConditionEditInput(
+            title = handle.get<String>(KEY_IN_TITLE) ?: "",
+            condition = handle.get<String>(KEY_IN_BODY) ?: "",
+            author = handle.get<String>(KEY_IN_AUTHOR) ?: "",
+            recordTime = handle.get<Long>(KEY_IN_TIME)?.let { Instant.ofEpochMilli(it) }
+        )
+
+        val snapshot = if (handle.contains(KEY_BASE_TIME)) {
+            ConditionEditInput(
+                title = handle.get<String>(KEY_BASE_TITLE) ?: "",
+                condition = handle.get<String>(KEY_BASE_BODY) ?: "",
+                author = handle.get<String>(KEY_BASE_AUTHOR) ?: "",
+                recordTime = handle.get<Long>(KEY_BASE_TIME)?.let { Instant.ofEpochMilli(it) }
+            )
+        } else null
+
+        val isChanged = PersonConditionLogic.isChanged(input, snapshot)
+
+        updateUiState { current ->
+            current.copy(
+                searchQuery = query,
+                selectedConditionId = selectedId,
+                isEditing = isEditing,
+                previewUri = previewUri,
+                previewCaption = previewCaption,
+                editInput = input,
+                initialSnapshot = snapshot,
+                isChanged = isChanged,
+                isSaveEnabled = PersonConditionLogic.isValid(input) && isChanged
+            )
+        }
+    }
+
+    /**
+     * 復元対象の状態をバックアップします。
+     */
+    private fun backupRestorableState(state: PersonConditionUiState) {
+        val handle = savedStateHandle ?: return
+        handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        handle[KEY_SEARCH_QUERY] = state.searchQuery
+        handle[KEY_SELECTED_ID] = state.selectedConditionId
+        handle[KEY_IS_EDITING] = state.isEditing
+        handle[KEY_PREVIEW_URI] = state.previewUri
+        handle[KEY_PREVIEW_CAPTION] = state.previewCaption
+
+        // Input
+        handle[KEY_IN_TITLE] = state.editInput.title
+        handle[KEY_IN_BODY] = state.editInput.condition
+        handle[KEY_IN_AUTHOR] = state.editInput.author
+        handle[KEY_IN_TIME] = state.editInput.recordTime?.toEpochMilli()
+
+        // Snapshot
+        state.initialSnapshot?.let { base ->
+            handle[KEY_BASE_TITLE] = base.title
+            handle[KEY_BASE_BODY] = base.condition
+            handle[KEY_BASE_AUTHOR] = base.author
+            handle[KEY_BASE_TIME] = base.recordTime?.toEpochMilli()
         }
     }
 
@@ -155,6 +253,8 @@ class PersonConditionViewModel(
     }
 
     override fun onPrepareLoadPerson(state: PersonConditionUiState): PersonConditionUiState {
+        if (isRestoring) return state
+
         return state.copy(
             personId = null,
             searchQuery = "",
@@ -226,7 +326,7 @@ class PersonConditionViewModel(
         updateUiState {
             val next = it.copy(selectedConditionId = id)
             if (id == null) {
-                next.copy(
+                val cleared = next.copy(
                     isEditing = false,
                     editInput = ConditionEditInput(),
                     initialRecordTime = null,
@@ -234,24 +334,45 @@ class PersonConditionViewModel(
                     isChanged = false,
                     isSaveEnabled = false
                 )
+                clearRestorableState(
+                    KEY_SELECTED_ID, KEY_IS_EDITING, KEY_IN_TITLE, KEY_IN_BODY, KEY_IN_AUTHOR, KEY_IN_TIME,
+                    KEY_BASE_TITLE, KEY_BASE_BODY, KEY_BASE_AUTHOR, KEY_BASE_TIME, KEY_PREVIEW_URI, KEY_PREVIEW_CAPTION
+                )
+                cleared
             } else if (IdLogic.isNew(id)) {
-                // 新規作成時は即座に編集セッションを開始
-                val now = Instant.now()
-                val initialInput = ConditionEditInput(
-                    author = defaultRecorderName.value,
-                    recordTime = now
-                )
-                next.copy(
-                    isEditing = true,
-                    editInput = initialInput,
-                    initialRecordTime = now,
-                    initialSnapshot = initialInput,
-                    isChanged = false,
-                    isSaveEnabled = false
-                )
+                // 復元中の場合は、SSH からの値を優先する
+                if (isRestoring) {
+                    isRestoring = false // 復元処理を消費
+                    next
+                } else {
+                    // 新規作成時は即座に編集セッションを開始
+                    val now = Instant.now()
+                    val initialInput = ConditionEditInput(
+                        author = defaultRecorderName.value,
+                        recordTime = now
+                    )
+                    val nextWithInput = next.copy(
+                        isEditing = true,
+                        editInput = initialInput,
+                        initialRecordTime = now,
+                        initialSnapshot = initialInput,
+                        isChanged = false,
+                        isSaveEnabled = false
+                    )
+                    backupRestorableState(nextWithInput)
+                    nextWithInput
+                }
             } else {
                 // 既存レコード選択時は閲覧モードから開始
-                next.copy(isEditing = false, initialRecordTime = null)
+                // 復元中の場合は既に state に値が入っているため、そのまま返す
+                if (isRestoring) {
+                    isRestoring = false
+                    next
+                } else {
+                    val nextView = next.copy(isEditing = false, initialRecordTime = null)
+                    backupRestorableState(nextView)
+                    nextView
+                }
             }
         }
 
@@ -273,10 +394,12 @@ class PersonConditionViewModel(
 
     fun updateSearchQuery(query: String) {
         updateUiState { current ->
-            current.copy(
+            val next = current.copy(
                 searchQuery = query,
                 filteredRecords = ConditionLogic.filterRecords(current.records, query).toImmutableList()
             )
+            backupRestorableState(next)
+            next
         }
     }
 
@@ -295,7 +418,7 @@ class PersonConditionViewModel(
         )
 
         updateUiState {
-            it.copy(
+            val next = it.copy(
                 isEditing = true,
                 editInput = initialInput,
                 initialRecordTime = record.recordTime,
@@ -303,6 +426,8 @@ class PersonConditionViewModel(
                 isChanged = false,
                 isSaveEnabled = false
             )
+            backupRestorableState(next)
+            next
         }
     }
 
@@ -314,7 +439,11 @@ class PersonConditionViewModel(
         if ((recordId != null && IdLogic.isNew(recordId))) {
             setSelectedConditionId(null)
         } else {
-            updateUiState { it.copy(isEditing = false) }
+            updateUiState { 
+                val next = it.copy(isEditing = false)
+                backupRestorableState(next)
+                next
+            }
         }
     }
 
@@ -331,11 +460,13 @@ class PersonConditionViewModel(
             val isChanged = PersonConditionLogic.isChanged(nextInput, state.initialSnapshot)
             val isSaveEnabled = PersonConditionLogic.isValid(nextInput) && isChanged
 
-            state.copy(
+            val next = state.copy(
                 editInput = nextInput,
                 isChanged = isChanged,
                 isSaveEnabled = isSaveEnabled
             )
+            backupRestorableState(next)
+            next
         }
     }
 
@@ -379,6 +510,12 @@ class PersonConditionViewModel(
             val finalId = record.id
             setSelectedConditionId(finalId)
             onSuccess(finalId)
+
+            // 状態復元データを破棄
+            clearRestorableState(
+                KEY_SEARCH_QUERY, KEY_SELECTED_ID, KEY_IS_EDITING, KEY_IN_TITLE, KEY_IN_BODY, KEY_IN_AUTHOR, KEY_IN_TIME,
+                KEY_BASE_TITLE, KEY_BASE_BODY, KEY_BASE_AUTHOR, KEY_BASE_TIME, KEY_PREVIEW_URI, KEY_PREVIEW_CAPTION
+            )
         }
     }
 
@@ -420,8 +557,23 @@ class PersonConditionViewModel(
 
     fun onPhotoCaptured(uri: Uri, conditionId: String) {
         // プレビュー画面に渡すために URI を保持
-        updateUiState { it.copy(previewUri = uri.toString()) }
+        updateUiState { current ->
+            val next = current.copy(previewUri = uri.toString())
+            backupRestorableState(next)
+            next
+        }
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoPreview(uri.toString(), conditionId))
+    }
+
+    /**
+     * 写真プレビュー中のキャプションを更新します。
+     */
+    fun updatePreviewCaption(caption: String) {
+        updateUiState { current ->
+            val next = current.copy(previewCaption = caption)
+            backupRestorableState(next)
+            next
+        }
     }
 
     /**

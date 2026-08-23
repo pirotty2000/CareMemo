@@ -67,14 +67,46 @@ class BatchInputViewModel(
         private const val OP_SAVE_BATCH = "OP_SAVE_BATCH"
         /** 監査ログ用：対象概念テーブル名 */
         private const val TABLE_HEALTH = "health_db"
+
+        // --- Restoration Keys ---
+        private const val KEY_IN_HEIGHT = "restoration_in_height"
+        private const val KEY_IN_WEIGHT = "restoration_in_weight"
+        private const val KEY_IN_BP_S = "restoration_in_bp_s"
+        private const val KEY_IN_BP_D = "restoration_in_bp_d"
+        private const val KEY_IN_SAT = "restoration_in_sat"
+        private const val KEY_IN_PULSE = "restoration_in_pulse"
+        private const val KEY_IN_TEMP = "restoration_in_temp"
+        private const val KEY_IN_GLUCOSE = "restoration_in_glucose"
+        private const val KEY_IN_HBA1C = "restoration_in_hba1c"
+        
+        private const val KEY_IN_YEAR = "restoration_in_year"
+        private const val KEY_IN_MONTH = "restoration_in_month"
+        private const val KEY_IN_DAY = "restoration_in_day"
+        private const val KEY_IN_HOUR = "restoration_in_hour"
+        private const val KEY_IN_MINUTE = "restoration_in_minute"
+
+        private const val KEY_BASE_YEAR = "restoration_base_year"
+        private const val KEY_BASE_MONTH = "restoration_base_month"
+        private const val KEY_BASE_DAY = "restoration_base_day"
+        private const val KEY_BASE_HOUR = "restoration_base_hour"
+        private const val KEY_BASE_MINUTE = "restoration_base_minute"
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 復元中であることを示すフラグ */
+    private var isRestoring = false
 
     /** 保存処理の実行状態を管理する Job */
     private var saveJob: Job? = null
 
     init {
+        // --- State Restoration ---
+        if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+            isRestoring = true
+            restoreState()
+        }
+
         // 共通設定（氏名マスキング）の変更を購読し、UI 状態へ反映
         scope.launch {
             isNameMaskingEnabled.collect { enabled ->
@@ -84,6 +116,80 @@ class BatchInputViewModel(
 
         // 最後に監視を開始 (featureName が初期化された後)
         startObservePersonId()
+    }
+
+    /**
+     * SavedStateHandle から状態を復元します。
+     */
+    private fun restoreState() {
+        val handle = savedStateHandle ?: return
+        updateUiState { current ->
+            current.copy(
+                height = handle.get<String>(KEY_IN_HEIGHT) ?: "",
+                weight = handle.get<String>(KEY_IN_WEIGHT) ?: "",
+                bpSystolic = handle.get<String>(KEY_IN_BP_S) ?: "",
+                bpDiastolic = handle.get<String>(KEY_IN_BP_D) ?: "",
+                sat = handle.get<String>(KEY_IN_SAT) ?: "",
+                pulse = handle.get<String>(KEY_IN_PULSE) ?: "",
+                bodyTemperature = handle.get<String>(KEY_IN_TEMP) ?: "",
+                glucose = handle.get<String>(KEY_IN_GLUCOSE) ?: "",
+                hba1c = handle.get<String>(KEY_IN_HBA1C) ?: "",
+                year = handle.get<String>(KEY_IN_YEAR) ?: current.year,
+                month = handle.get<String>(KEY_IN_MONTH) ?: current.month,
+                day = handle.get<String>(KEY_IN_DAY) ?: current.day,
+                hour = handle.get<String>(KEY_IN_HOUR) ?: current.hour,
+                minute = handle.get<String>(KEY_IN_MINUTE) ?: current.minute,
+                initialYear = handle.get<String>(KEY_BASE_YEAR) ?: current.initialYear,
+                initialMonth = handle.get<String>(KEY_BASE_MONTH) ?: current.initialMonth,
+                initialDay = handle.get<String>(KEY_BASE_DAY) ?: current.initialDay,
+                initialHour = handle.get<String>(KEY_BASE_HOUR) ?: current.initialHour,
+                initialMinute = handle.get<String>(KEY_BASE_MINUTE) ?: current.initialMinute
+            ).let { next ->
+                next.copy(
+                    isValid = BatchInputLogic.isValid(next),
+                    isChanged = BatchInputLogic.isChanged(next),
+                    recordTime = BatchInputLogic.calculateRecordTime(next)
+                )
+            }
+        }
+    }
+
+    /**
+     * 復元対象の状態をバックアップします。
+     */
+    private fun backupRestorableState(state: BatchInputUiState) {
+        val handle = savedStateHandle ?: return
+        handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        handle[KEY_IN_HEIGHT] = state.height
+        handle[KEY_IN_WEIGHT] = state.weight
+        handle[KEY_IN_BP_S] = state.bpSystolic
+        handle[KEY_IN_BP_D] = state.bpDiastolic
+        handle[KEY_IN_SAT] = state.sat
+        handle[KEY_IN_PULSE] = state.pulse
+        handle[KEY_IN_TEMP] = state.bodyTemperature
+        handle[KEY_IN_GLUCOSE] = state.glucose
+        handle[KEY_IN_HBA1C] = state.hba1c
+        handle[KEY_IN_YEAR] = state.year
+        handle[KEY_IN_MONTH] = state.month
+        handle[KEY_IN_DAY] = state.day
+        handle[KEY_IN_HOUR] = state.hour
+        handle[KEY_IN_MINUTE] = state.minute
+        handle[KEY_BASE_YEAR] = state.initialYear
+        handle[KEY_BASE_MONTH] = state.initialMonth
+        handle[KEY_BASE_DAY] = state.initialDay
+        handle[KEY_BASE_HOUR] = state.initialHour
+        handle[KEY_BASE_MINUTE] = state.initialMinute
+    }
+
+    /**
+     * 復元用データを破棄します。
+     */
+    private fun clearRestorableState() {
+        clearRestorableState(
+            KEY_IN_HEIGHT, KEY_IN_WEIGHT, KEY_IN_BP_S, KEY_IN_BP_D, KEY_IN_SAT, KEY_IN_PULSE, KEY_IN_TEMP, KEY_IN_GLUCOSE, KEY_IN_HBA1C,
+            KEY_IN_YEAR, KEY_IN_MONTH, KEY_IN_DAY, KEY_IN_HOUR, KEY_IN_MINUTE,
+            KEY_BASE_YEAR, KEY_BASE_MONTH, KEY_BASE_DAY, KEY_BASE_HOUR, KEY_BASE_MINUTE
+        )
     }
 
     // --- 基底クラスの抽象メソッド実装 ---
@@ -97,6 +203,17 @@ class BatchInputViewModel(
         person: Person,
         summary: PersonCategorySummary?
     ): BatchInputUiState {
+        // 復元中の場合は、初期化によるリセットをスキップして現在の状態を維持する
+        if (isRestoring) {
+            isRestoring = false // 復元処理を消費
+            return state.copy(
+                personId = person.id,
+                person = person,
+                currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
+                personSummary = summary
+            )
+        }
+
         // 利用者が切り替わった場合、または初回ロード時は、入力をリセットし、記録日時を現在時刻に設定する
         val isFirstLoad = state.personId == null
         val isDifferentPerson = state.personId != person.id
@@ -171,11 +288,13 @@ class BatchInputViewModel(
             val finalIsChanged = BatchInputLogic.isChanged(partialNext)
             val finalRecordTime = BatchInputLogic.calculateRecordTime(partialNext)
             
-            partialNext.copy(
+            val next = partialNext.copy(
                 isValid = finalIsValid,
                 isChanged = finalIsChanged,
                 recordTime = finalRecordTime
             )
+            backupRestorableState(next)
+            next
         }
     }
 
@@ -251,7 +370,9 @@ class BatchInputViewModel(
                     isChanged = false,
                     isValid = false
                 )
-                next.copy(recordTime = BatchInputLogic.calculateRecordTime(next))
+                val final = next.copy(recordTime = BatchInputLogic.calculateRecordTime(next))
+                clearRestorableState() // 保存成功時にクリア
+                final
             }
         }
     }

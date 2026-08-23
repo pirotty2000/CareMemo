@@ -7,6 +7,7 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
@@ -118,10 +119,11 @@ class PersonMedicationViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        val date = LocalDate.now().toString()
-        val record = MedicationRecord(personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
+        val date = LocalDate.now()
+        viewModel.onDayClick(date)
+        viewModel.updateDialogRecord(0, MedicationStatus.TAKEN, Instant.now())
 
-        viewModel.syncMedicationDay(date, listOf(record, null, null, null))
+        viewModel.syncMedicationDay()
         advanceUntilIdle()
 
         coVerify { medicationRepository.saveMedicationRecord(any(), false, any(), any()) }
@@ -129,8 +131,8 @@ class PersonMedicationViewModelTest {
 
     @Test
     fun SYN_02_syncMedicationDay_deleteRecord() = runTest {
-        val date = LocalDate.now().toString()
-        val existingRecord = MedicationRecord(id = "c1", personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
+        val date = LocalDate.now()
+        val existingRecord = MedicationRecord(id = "c1", personId = personId, dosageDate = date.toString(), timeSlot = 0, status = 2, recordTime = Instant.now())
         
         // Mock existing data for that day
         every { medicationRepository.getMedicationRecordsByMonth(personId, any()) } returns flowOf(listOf(existingRecord))
@@ -138,8 +140,13 @@ class PersonMedicationViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
+        // Open dialog for that day (will load existing record into temp state)
+        viewModel.onDayClick(date)
+        // Toggle off the TAKEN status to delete
+        viewModel.updateDialogRecord(0, MedicationStatus.TAKEN, Instant.now())
+
         // Clear all slots for that day
-        viewModel.syncMedicationDay(date, listOf(null, null, null, null))
+        viewModel.syncMedicationDay()
         advanceUntilIdle()
 
         coVerify { medicationRepository.deleteMedicationRecord(match { it.id == "c1" }, any(), any()) }
@@ -150,11 +157,12 @@ class PersonMedicationViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        val futureDate = LocalDate.now().plusDays(1).toString()
-        val record = MedicationRecord(personId = personId, dosageDate = futureDate, timeSlot = 0, status = 2, recordTime = Instant.now())
+        val futureDate = LocalDate.now().plusDays(1)
+        viewModel.onDayClick(futureDate)
+        viewModel.updateDialogRecord(0, MedicationStatus.TAKEN, Instant.now())
 
         viewModel.uiEventFlow.test {
-            viewModel.syncMedicationDay(futureDate, listOf(record, null, null, null))
+            viewModel.syncMedicationDay()
             val event = awaitItem()
             assertTrue(event is BaseUiStateViewModel.UiEvent.ShowErrorDialogRes)
         }
@@ -182,14 +190,76 @@ class PersonMedicationViewModelTest {
 
         coEvery { medicationRepository.saveMedicationRecord(any(), any(), any(), any()) } throws RuntimeException("Sync Error")
 
-        val date = LocalDate.now().toString()
-        val record = MedicationRecord(personId = personId, dosageDate = date, timeSlot = 0, status = 2, recordTime = Instant.now())
+        val date = LocalDate.now()
+        viewModel.onDayClick(date)
+        viewModel.updateDialogRecord(0, MedicationStatus.TAKEN, Instant.now())
 
-        viewModel.syncMedicationDay(date, listOf(record, null, null, null))
+        viewModel.syncMedicationDay()
         advanceUntilIdle()
 
         assertFalse(viewModel.uiState.value.isLoading)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Sync Error") }, any()) }
+    }
+
+    // region 6. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_restore_selected_month() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_selected_month" to "2023-12"
+        ))
+
+        val viewModel = PersonMedicationViewModel(
+            medicationRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        assertEquals(YearMonth.of(2023, 12), viewModel.uiState.value.selectedMonth)
+    }
+
+    @Test
+    fun RST_02_restore_dialog_state() = runTest {
+        val date = LocalDate.of(2023, 10, 27)
+        val record = MedicationRecord(id = "m1", personId = personId, dosageDate = date.toString(), timeSlot = 0, status = 2, recordTime = Instant.ofEpochMilli(1000L))
+        
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_dialog_date" to "2023-10-27",
+            "restoration_dialog_records" to listOf(record, null, null, null)
+        ))
+
+        val viewModel = PersonMedicationViewModel(
+            medicationRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(date, state.selectedDialogDate)
+        assertEquals(record, state.dialogTempRecords[0])
+    }
+
+    @Test
+    fun RST_03_restore_prevents_month_overwrite_on_load() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_selected_month" to "2020-01"
+        ))
+
+        val viewModel = PersonMedicationViewModel(
+            medicationRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        // Person data load trigger
+        viewModel.loadPerson(personId)
+        advanceUntilIdle()
+
+        // Should STILL be 2020-01, not YearMonth.now()
+        assertEquals(YearMonth.of(2020, 1), viewModel.uiState.value.selectedMonth)
     }
 
     // endregion

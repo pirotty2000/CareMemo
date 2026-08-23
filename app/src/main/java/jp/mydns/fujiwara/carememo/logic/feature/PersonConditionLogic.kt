@@ -52,6 +52,7 @@ data class PersonConditionUiState(
     val selectedConditionId: String? = null,
     val initialPhotoId: String? = null,
     val previewUri: String? = null,
+    val previewCaption: String = "",
     val currentConditionPhotos: ImmutableList<ConditionPhoto> = persistentListOf(),
     val conditionPhotoMap: Map<String, Boolean> = emptyMap(),
     val unassignedPhotoCount: Int = 0,

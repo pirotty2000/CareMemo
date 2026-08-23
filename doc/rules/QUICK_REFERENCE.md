@@ -32,6 +32,7 @@
     - ViewModel から `sendViewEvent` を発行し、`Screen.kt` の `LaunchedEffect` で購読します。
 - **[MUST] `SavedStateHandle` から自律的に引数を取得する**
     - Composable を介さず、ViewModel が自ら引数（`personId` 等）をロードします。
+    - 抽出には必ず **`toRoute<T>()`** を使用し、型安全性を確保してください。
 
 ## 4. UI とコーディング (UI & Coding)
 
@@ -59,6 +60,8 @@
     - 理由: 通常動作中は `UiState` を唯一の真実のソースとし、不整合を防ぐため。`SavedStateHandle` は退避先（バックアップ）としてのみ使用します。
 - **[MUST] 比較基準 (Baseline) を個別に退避する**
     - 理由: プロセス死の間に DB が更新されても `isChanged` を正確に判定できるようにするため。ID による再取得は不可です。
+- **[MUST] 復元時の上書きを `isRestoring` 等のフラグでガードする**
+    - 理由: 復元されたユーザー入力を、初期化処理（現在時刻セットや DB 自動補完）で消し去らないようにするため。
 
 ## 6. Compose 最適化と UI コーディング (Compose Optimization)
 

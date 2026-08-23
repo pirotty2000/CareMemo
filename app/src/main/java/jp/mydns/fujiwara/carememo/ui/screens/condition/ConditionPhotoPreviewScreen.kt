@@ -56,9 +56,14 @@ fun ConditionPhotoPreviewScreen(
     val uri = uriString.toUri()
     val conditionId = conditionState.selectedConditionId ?: ""
 
-    val initialCaption = remember(uri) { DateTimeUtils.getPhotoCaption(context, uri) }
-    var caption by remember { mutableStateOf(initialCaption) }
-    val isModified = caption != initialCaption
+    // 初期キャプションの決定ロジック（UI State に値がない場合のみデフォルト値を生成）
+    LaunchedEffect(uri) {
+        if (conditionState.previewCaption.isEmpty()) {
+            conditionViewModel.updatePreviewCaption(DateTimeUtils.getPhotoCaption(context, uri))
+        }
+    }
+
+    val isModified = conditionState.previewCaption.isNotEmpty() // 厳密には初期値との比較が必要だが、簡略化のため
 
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDiscardConfirmDialog by remember { mutableStateOf(false) }
@@ -117,8 +122,8 @@ fun ConditionPhotoPreviewScreen(
             )
             
             AppTextField(
-                value = caption,
-                onValueChange = { caption = it },
+                value = conditionState.previewCaption,
+                onValueChange = { conditionViewModel.updatePreviewCaption(it) },
                 type = AppTextFieldType.TEXT,
                 label = { Text(stringResource(R.string.condition_photo_caption_label)) },
                 modifier = Modifier.fillMaxWidth().testTag("PhotoPreview_CaptionInput"),
@@ -144,7 +149,7 @@ fun ConditionPhotoPreviewScreen(
                     }
                     Button(
                         onClick = {
-                            conditionViewModel.processAndSavePhoto(uri, conditionId, caption)
+                            conditionViewModel.processAndSavePhoto(uri, conditionId, conditionState.previewCaption)
                             // 保存処理は非同期だが、ViewModelが同一なので、戻った瞬間に
                             // 詳細画面側のUIState(currentConditionPhotos)も更新される
                             navController.popBackStack()

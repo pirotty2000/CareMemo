@@ -276,5 +276,72 @@ class BatchInputViewModelTest {
         }
     }
 
+    // region 6. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_restore_inputs() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_in_weight" to "70.5",
+            "restoration_in_year" to "2024",
+            "restoration_in_month" to "12",
+            "restoration_in_day" to "31"
+        ))
+
+        val viewModel = BatchInputViewModel(
+            healthRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("70.5", state.weight)
+        assertEquals("2024", state.year)
+        assertEquals("12", state.month)
+        assertEquals("31", state.day)
+    }
+
+    @Test
+    fun RST_02_restore_baseline_and_isChanged() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_in_weight" to "70.0",
+            "restoration_base_year" to "2020", // Baseline year different from default
+            "restoration_in_year" to "2020"
+        ))
+
+        val viewModel = BatchInputViewModel(
+            healthRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("70.0", state.weight)
+        assertEquals("2020", state.initialYear)
+        assertTrue(state.isChanged) // Weight is entered, so changed
+    }
+
+    @Test
+    fun RST_03_restore_prevents_reset_on_person_load() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_in_height" to "175.0"
+        ))
+
+        val viewModel = BatchInputViewModel(
+            healthRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        // Trigger person load (which usually resets inputs)
+        viewModel.loadPerson("u1")
+        advanceUntilIdle()
+
+        // Should STILL have 175.0, not empty
+        assertEquals("175.0", viewModel.uiState.value.height)
+    }
+
     // endregion
 }

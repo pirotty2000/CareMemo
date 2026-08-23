@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppInfoDialog
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
@@ -19,8 +20,8 @@ import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 
 /**
@@ -81,7 +82,6 @@ fun PersonMedicationScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showPdfSettingsDialog by remember { mutableStateOf(false) }
 
-    var showDialog by remember { mutableStateOf<LocalDate?>(null) }
     var isHistoryMode by rememberSaveable { mutableStateOf(false) }
 
     var dialogTitle by remember { mutableStateOf<String?>(null) }
@@ -152,7 +152,7 @@ fun PersonMedicationScreen(
                     showPdfSettingsDialog = true
                 }
             },
-            onDayClick = { date -> showDialog = date },
+            onDayClick = { date -> medicationViewModel.onDayClick(date) },
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
@@ -184,7 +184,7 @@ fun PersonMedicationScreen(
                     showPdfSettingsDialog = true
                 }
             },
-            onDayClick = { date -> showDialog = date },
+            onDayClick = { date -> medicationViewModel.onDayClick(date) },
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
@@ -222,15 +222,17 @@ fun PersonMedicationScreen(
         )
     }
 
-    if (showDialog != null) {
-        val dateStr = showDialog.toString()
+    if (medicationState.selectedDialogDate != null) {
         MedicationInputDialog(
-            date = showDialog!!,
+            date = medicationState.selectedDialogDate!!,
             personId = detailState.personId ?: "",
-            records = medicationState.recordsByDate[dateStr] ?: persistentListOf(),
-            onDismiss = { showDialog = null },
-            onConfirm = { slotRecords ->
-                medicationViewModel.syncMedicationDay(dateStr, slotRecords)
+            tempRecords = medicationState.dialogTempRecords,
+            onDismiss = { medicationViewModel.dismissDialog() },
+            onStatusToggle = { slotIndex: Int, status: MedicationStatus, time: Instant ->
+                medicationViewModel.updateDialogRecord(slotIndex, status, time)
+            },
+            onConfirm = {
+                medicationViewModel.syncMedicationDay()
             }
         )
     }

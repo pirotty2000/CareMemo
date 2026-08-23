@@ -68,15 +68,19 @@
 - **代替案（ViewModel での翻訳）の却下理由**: 
     - 監査ログは数千件に及ぶ可能性があり、ViewModel でリストを全件ループして String 変換した中間オブジェクトを作るのはメモリ消費量とパフォーマンスの観点から不利である。
     - CSV 生成という「データ変換」の核となるロジックは Logic レイヤーに閉じ込めておくべきであり、翻訳はその変換プロセスの一部として組み込むのが最も効率的であると判断した。
-## 12. State Restoration における 4 つの状態責務の分離と保存方針
-- **決定事項**: 画面の状態を「UI State」「ViewModel State」「Navigation State」「Transient UI State」の 4 つに分類し、それぞれに最適な保存・復元機構を割り当てた。
-- **背景**: プロセス死（Process Death）からの復元において、何でも `SavedStateHandle` に保存すると設計が複雑化し、リアクティブなデータフロー（UDF）が壊れるリスクがあった。
-- **設計指針**:
-    - **UI State (`StateFlow`)**: 通常動作時の真実のソース (SSOT)。
-    - **ViewModel State (`SavedStateHandle`)**: **「復元用のバックアップ」**。SSOT にはせず、復元時のみ `init` で `UiState` を再構築するための材料として扱う。
-    - **Navigation State**: `Type-safe Navigation` 引数。
-    - **Transient UI State**: スクロール位置等の純粋な UI 状態（`rememberSaveable`）。
-- **効果**: UDF のシンプルさを保ちつつ、ユーザー入力や検索条件をプロセス死から確実に守る堅牢性を実現。
+## 12. 状態の 4 分類と復元（Restorable State）バックアップ方針
+- **決定事項**: 画面の状態を「UI State」「Restorable State (VM State)」「Navigation State」「Transient UI State」の 4 つに厳格に分類し、それぞれに最適な保存・復元機構を割り当てた。
+- **背景**: プロセス死（Process Death）からの復元において、リアクティブなデータフロー（UDF）を維持しつつ、ユーザーの未保存入力を確実に保護する必要があった。
+- **設計指針（CareMemo 状態管理 7 原則）**:
+    1. **SSOT の確立**: `ViewModel.uiState` (StateFlow) を真実のソースとする。
+    2. **バックアップ限定**: `SavedStateHandle` は Restorable State（復帰に必要な最小限のデータ）のバックアップのみに使用する。
+    3. **機械的同期の禁止**: `updateUiState()` と `SavedStateHandle` を連動させない。
+    4. **明示的バックアップ**: ビジネスロジック上の状態変更箇所で明示的に SSH を更新する。
+    5. **論理的一括復元**: 復元時は SSH から原始データを一括で読み込み、Logic 層を通して `UiState` を再構築する。
+    6. **初期化上書きの防止**: 復帰時に `isRestoring` フラグ等を用いて、通常の DB ロードや現在時刻へのリセット処理による上書きを確実に防ぐ。
+    7. **未保存入力の優先**: ユーザーが入力した情報を 1 文字も失わないことを、復元における最優先事項とする。
+- **UI コンポーネントの強化**: ダイアログの選択状態や写真プレビューのキャプション等、従来 Composable 内に閉じていた揮発性状態を ViewModel へ引き上げ、プロセス死を跨いだ作業継続を保証する設計へリファクタリング。
+- **効果**: UDF のシンプルさと、1文字も失わない入力保護の両立。
 
 ## 13. Compose UI 最適化における安定性判定と改善方針
 - **決定事項**: Compose Compiler Report で判定される `unstable` なクラスを「ゼロにすること」を目的とせず、実効性のある最適化に注力する。
