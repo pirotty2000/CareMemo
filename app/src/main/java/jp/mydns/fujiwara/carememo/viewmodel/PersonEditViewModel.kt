@@ -19,17 +19,18 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.ZoneOffset
 
 /**
  * ViewModel：PersonEditViewModel
  *
  * 【役割】
- * 利用者の新規登録および既存情報の編集画面における状態管理と実行制御を担当します。
+ * 利用者の新規登録および情報編集画面における状態管理と実行制御を担当します。
  * 入力バリデーション、和暦変換、重複チェック、およびデータの永続化処理を統合します。
  *
  * 【設計指針：UI 境界の責務】
@@ -37,13 +38,15 @@ import java.time.ZoneOffset
  *    初期状態からの変更の有無 (`isChanged`) を ViewModel 側で即座に判定し、UI のボタン活性制御や
  *    「変更破棄警告」の表示判定に反映します。
  * 2. データの正規化：UI 上での和暦入力等を、保存に適した標準的なデータ型（Instant 等）に変換する責務を負います。
+ * 3. State Restoration：Process Death 対策として、未保存のユーザー入力と編集開始時の比較基準 (baseline) を
+ *    SavedStateHandle に保持し、画面復帰時に状態を正確に再構築します。
  *
  * 【この ViewModel では行わないこと】
  * ・和暦・西暦の相互変換ロジック（JapaneseDateLogic が担当）。
  * ・氏名のマスキング計算（Person 共通拡張メソッドまたは Logic が担当）。
  */
 class PersonEditViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val repository: PersonRepository,
     userSettingsRepository: UserSettingsRepository,
     securitySession: SecuritySession,
@@ -63,13 +66,38 @@ class PersonEditViewModel(
         private const val OP_SAVE = "save"
         /** 監査ログ用：対象テーブル名 */
         private const val TABLE_PERSON = "person_db"
-        /** 引数キー */
+        /** 引数キー（Navigation Argument） */
         private const val KEY_PERSON_ID = "personId"
+
+        // --- Restoration State Keys ---
+        /** 復元用：バージョン（存在確認用） */
+        private const val KEY_RESTORE_VERSION = "restoration_version"
+        private const val RESTORE_VERSION = 1
+
+        /** 復元用：Baseline (比較基準) */
+        private const val KEY_BASE_LAST_NAME = "baseline_last_name"
+        private const val KEY_BASE_FIRST_NAME = "baseline_first_name"
+        private const val KEY_BASE_LAST_NAME_KANA = "baseline_last_name_furigana"
+        private const val KEY_BASE_FIRST_NAME_KANA = "baseline_first_name_furigana"
+        private const val KEY_BASE_BIRTHDAY_EPOCH = "baseline_birthday_epoch"
+        private const val KEY_BASE_NOTE = "baseline_note"
+
+        /** 復元用：Current Input (ユーザー入力) */
+        private const val KEY_INPUT_LAST_NAME = "input_last_name"
+        private const val KEY_INPUT_FIRST_NAME = "input_first_name"
+        private const val KEY_INPUT_LAST_NAME_KANA = "input_last_name_furigana"
+        private const val KEY_INPUT_FIRST_NAME_KANA = "input_first_name_furigana"
+        private const val KEY_INPUT_NOTE = "input_note"
+        private const val KEY_INPUT_ERA = "input_era"
+        private const val KEY_INPUT_YEAR = "input_year"
+        private const val KEY_INPUT_MONTH = "input_month"
+        private const val KEY_INPUT_DAY = "input_day"
+        private const val KEY_INPUT_IS_NEW = "input_is_new"
     }
 
     override val featureName: String = FEATURE_NAME
 
-    /** 変更検知の比較元となるロード時の初期データ */
+    /** 変更検知の比較元となるロード時の初期データ (SSOT: SavedStateHandle for restoration) */
     private var initialPerson: Person? = null
 
     /** コンストラクタで取得した personId（新規なら null） */
@@ -88,12 +116,17 @@ class PersonEditViewModel(
         val personIdRaw = savedStateHandle.get<String>(KEY_PERSON_ID)
         personId = if (IdLogic.isNew(personIdRaw) || personIdRaw == "_new") null else personIdRaw
         
-        // 初期状態の設定（新規か編集か）
-        updateUiState { it.copy(isNew = IdLogic.isNew(personId)) }
+        // --- State Restoration フロー ---
+        if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+            restoreState()
+        } else {
+            // 通常起動：初期状態の設定（新規か編集か）
+            updateUiState { it.copy(isNew = IdLogic.isNew(personId)) }
 
-        // 編集モードの場合、初期データをロード
-        if (!IdLogic.isNew(personId)) {
-            loadPerson(personId!!)
+            // 既存編集モードの場合、初期データをロード
+            if (!IdLogic.isNew(personId)) {
+                loadPerson(personId!!)
+            }
         }
 
         // 共通設定（氏名マスキング）の変更を購読し、UI 状態へ反映
@@ -101,6 +134,60 @@ class PersonEditViewModel(
             isNameMaskingEnabled.collect { enabled ->
                 updateUiState { it.copy(isNameMaskingEnabled = enabled) }
             }
+        }
+    }
+
+    /**
+     * SavedStateHandle から状態を復元します。
+     */
+    private fun restoreState() {
+        val isNew = savedStateHandle.get<Boolean>(KEY_INPUT_IS_NEW) ?: true
+
+        // 1. Baseline (initialPerson) の復元
+        // 修正：DB から再取得せず、SavedStateHandle の値から直接 Baseline を再構成する
+        if (!isNew) {
+            val baseLastName = savedStateHandle.get<String>(KEY_BASE_LAST_NAME) ?: ""
+            val baseFirstName = savedStateHandle.get<String>(KEY_BASE_FIRST_NAME) ?: ""
+            val baseLastKana = savedStateHandle.get<String>(KEY_BASE_LAST_NAME_KANA) ?: ""
+            val baseFirstKana = savedStateHandle.get<String>(KEY_BASE_FIRST_NAME_KANA) ?: ""
+            val baseEpoch = savedStateHandle.get<Long>(KEY_BASE_BIRTHDAY_EPOCH) ?: 0L
+            val baseNote = savedStateHandle.get<String>(KEY_BASE_NOTE) ?: ""
+
+            initialPerson = Person(
+                id = personId ?: "", // Nav Arg から取得
+                lastName = baseLastName,
+                firstName = baseFirstName,
+                lastNameFurigana = baseLastKana,
+                firstNameFurigana = baseFirstKana,
+                birthday = Instant.ofEpochMilli(baseEpoch),
+                note = baseNote,
+                updatedAt = Instant.ofEpochMilli(baseEpoch), // 更新日時は Baseline 構築時の値を使用
+                isSynced = true // 既存データとして扱う
+            )
+        }
+
+        // 2. Current Input の復元
+        val eraName = savedStateHandle.get<String>(KEY_INPUT_ERA)
+        val era = BirthEra.entries.find { it.name == eraName } ?: BirthEra.SHOWA
+
+        updateUiState { current ->
+            val next = current.copy(
+                isNew = isNew,
+                lastName = savedStateHandle.get<String>(KEY_INPUT_LAST_NAME) ?: "",
+                firstName = savedStateHandle.get<String>(KEY_INPUT_FIRST_NAME) ?: "",
+                lastNameFurigana = savedStateHandle.get<String>(KEY_INPUT_LAST_NAME_KANA) ?: "",
+                firstNameFurigana = savedStateHandle.get<String>(KEY_INPUT_FIRST_NAME_KANA) ?: "",
+                note = savedStateHandle.get<String>(KEY_INPUT_NOTE) ?: "",
+                era = era,
+                year = savedStateHandle.get<String>(KEY_INPUT_YEAR) ?: "",
+                month = savedStateHandle.get<String>(KEY_INPUT_MONTH) ?: "",
+                day = savedStateHandle.get<String>(KEY_INPUT_DAY) ?: ""
+            )
+            // 復元された原始データから Derived State を再計算
+            next.copy(
+                isValid = PersonEditLogic.isValid(next),
+                isChanged = PersonEditLogic.isChanged(next, initialPerson)
+            )
         }
     }
 
@@ -124,6 +211,10 @@ class PersonEditViewModel(
         ) {
             repository.getPersonById(id).filterNotNull().first().let { person ->
                 initialPerson = person
+                
+                // baseline を SavedStateHandle に保存（編集開始時の固定値）
+                saveBaseline(person)
+
                 // 誕生日は常に UTC 基準で読み込み、和暦コンポーネントに分解する
                 val date = person.birthday.atZone(ZoneOffset.UTC).toLocalDate()
                 val (initialEra, initialYear) = JapaneseDateLogic.toJapaneseDate(date)
@@ -141,13 +232,64 @@ class PersonEditViewModel(
                         day = date.dayOfMonth.toString()
                     )
                     // 初期データロード完了後にバリデーションと変更状態を確定
-                    next.copy(
+                    val finalState = next.copy(
                         isValid = PersonEditLogic.isValid(next),
                         isChanged = PersonEditLogic.isChanged(next, initialPerson)
                     )
+                    // ロード直後の入力値をバックアップ
+                    saveCurrentInput(finalState)
+                    finalState
                 }
             }
         }
+    }
+
+    /** baseline フィールドを SavedStateHandle へ退避します。 */
+    private fun saveBaseline(person: Person) {
+        savedStateHandle[KEY_BASE_LAST_NAME] = person.lastName
+        savedStateHandle[KEY_BASE_FIRST_NAME] = person.firstName
+        savedStateHandle[KEY_BASE_LAST_NAME_KANA] = person.lastNameFurigana
+        savedStateHandle[KEY_BASE_FIRST_NAME_KANA] = person.firstNameFurigana
+        savedStateHandle[KEY_BASE_BIRTHDAY_EPOCH] = person.birthday.toEpochMilli()
+        savedStateHandle[KEY_BASE_NOTE] = person.note
+    }
+
+    /** 現在の入力値を SavedStateHandle へ退避します。 */
+    private fun saveCurrentInput(state: PersonEditUiState) {
+        savedStateHandle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        savedStateHandle[KEY_INPUT_LAST_NAME] = state.lastName
+        savedStateHandle[KEY_INPUT_FIRST_NAME] = state.firstName
+        savedStateHandle[KEY_INPUT_LAST_NAME_KANA] = state.lastNameFurigana
+        savedStateHandle[KEY_INPUT_FIRST_NAME_KANA] = state.firstNameFurigana
+        savedStateHandle[KEY_INPUT_NOTE] = state.note
+        savedStateHandle[KEY_INPUT_ERA] = state.era.name
+        savedStateHandle[KEY_INPUT_YEAR] = state.year
+        savedStateHandle[KEY_INPUT_MONTH] = state.month
+        savedStateHandle[KEY_INPUT_DAY] = state.day
+        savedStateHandle[KEY_INPUT_IS_NEW] = state.isNew
+    }
+
+    /** Restoration State を削除します。 */
+    private fun clearRestorationState() {
+        savedStateHandle.remove<Int>(KEY_RESTORE_VERSION)
+        // Baseline
+        savedStateHandle.remove<String>(KEY_BASE_LAST_NAME)
+        savedStateHandle.remove<String>(KEY_BASE_FIRST_NAME)
+        savedStateHandle.remove<String>(KEY_BASE_LAST_NAME_KANA)
+        savedStateHandle.remove<String>(KEY_BASE_FIRST_NAME_KANA)
+        savedStateHandle.remove<Long>(KEY_BASE_BIRTHDAY_EPOCH)
+        savedStateHandle.remove<String>(KEY_BASE_NOTE)
+        // Input
+        savedStateHandle.remove<String>(KEY_INPUT_LAST_NAME)
+        savedStateHandle.remove<String>(KEY_INPUT_FIRST_NAME)
+        savedStateHandle.remove<String>(KEY_INPUT_LAST_NAME_KANA)
+        savedStateHandle.remove<String>(KEY_INPUT_FIRST_NAME_KANA)
+        savedStateHandle.remove<String>(KEY_INPUT_NOTE)
+        savedStateHandle.remove<String>(KEY_INPUT_ERA)
+        savedStateHandle.remove<String>(KEY_INPUT_YEAR)
+        savedStateHandle.remove<String>(KEY_INPUT_MONTH)
+        savedStateHandle.remove<String>(KEY_INPUT_DAY)
+        savedStateHandle.remove<Boolean>(KEY_INPUT_IS_NEW)
     }
 
     // --- 入力項目更新メソッド群 ---
@@ -164,18 +306,18 @@ class PersonEditViewModel(
 
     /**
      * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
-     *
-     * 【設計指針：UI 境界の責務】
-     * 以前は Composable 内で行っていた変更検知ロジックを ViewModel へ集約し、
-     * UI に対しては判定済みのフラグとして提供することで、表示ロジックを簡素化しています。
+     * あわせて、復元用のバックアップを SavedStateHandle に同期します。
      */
     private fun updateState(reducer: (PersonEditUiState) -> PersonEditUiState) {
         updateUiState { current ->
             val next = reducer(current)
-            next.copy(
+            val finalState = next.copy(
                 isValid = PersonEditLogic.isValid(next),
                 isChanged = PersonEditLogic.isChanged(next, initialPerson)
             )
+            // 通常動作中は UiState が SSOT だが、退避用バックアップとして同期
+            saveCurrentInput(finalState)
+            finalState
         }
     }
 
@@ -219,10 +361,14 @@ class PersonEditViewModel(
 
             if (IdLogic.isNew(personId)) {
                 repository.insertPerson(person, featureName, OP_SAVE)
+                // 保存が正常に完了したことが確定した場合のみクリーンアップ
+                clearRestorationState()
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
                 sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.ADDED, maskedName))
             } else {
                 repository.updatePerson(person, featureName, OP_SAVE)
+                // 保存が正常に完了したことが確定した場合のみクリーンアップ
+                clearRestorationState()
                 sendUiEvent(UiEvent.SaveSuccess(person.id))
                 sendViewEvent(PersonEditViewEvent.NavigateBack(EditResult.UPDATED, maskedName))
             }

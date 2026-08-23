@@ -17,10 +17,11 @@
 
 ユーザーの意図しないデータ破棄を防ぐため、以下のパターンを標準とします。
 
-- **`initialSnapshot` の保持**: 編集開始時の値を `initialSnapshot` に保持します。
-- **[MUST] `isChanged` の算出**: ViewModel 内で最新入力と `initialSnapshot` を比較し、`UiState.isChanged` を更新します。
-    - **禁止**: `derivedStateOf` による UI 層での変更検知。
-- **一貫性の検証**: 値を初期値に書き戻した際、`isChanged` が正確に `false` に戻ることをユニットテストで検証してください。
+- **`baseline` の保持**: 編集開始時点の比較基準となる原始データを `baseline` として保持します。
+- **[MUST] `isChanged` の算出**: ViewModel内で現在の入力値と `baseline` を比較し、`UiState.isChanged` を更新します。
+- **[MUST] Process Death対策**: Process Death後も編集開始時点の `baseline` を維持する必要がある場合、SavedStateHandleへ必要なフィールドを退避します。
+- **[禁止] UI層での検知**: `derivedStateOf` によるUI層での変更検知は禁止です。
+- **一貫性の検証**: 値をbaselineと同じ状態に戻した際、`isChanged == false` になることをユニットテストで検証してください。
 
 ## 4. 非同期処理の実行と排他制御
 
@@ -112,5 +113,27 @@ fun save() {
     - `CareMemoApplication` でシングルトンとして保持し、ViewModel や Activity へ注入します。
 - **目的**: 不必要な Observable パターンのオーバーヘッドを避け、コードの意図（ワンショットの制御であること）を明確にします。
 
+## 8. プロセス死耐性と状態復元 (State Restoration)
+
+アプリケーションがシステムによってメモリ解放（Process Death）された後、ユーザーが期待する状態を復元するための指針です。
+
+### 8.1. 状態の 4 分類と保存機構
+画面上の全状態を以下の 4 つに分類し、適切な保存機構を選択します。
+
+| 分類 | SSOT | 保存機構 | 内容 |
+|:---|:---|:---|:---|
+| **UI State** | ViewModel | `StateFlow` | 通常動作時の真実のソース。 |
+| **VM State** | ViewModel | `SavedStateHandle` | **「復元用のバックアップ」**。未保存の入力値や検索条件。 |
+| **Nav State** | NavController | `Type-safe Nav` | 画面のアイデンティティ（ID等）。 |
+| **Transient UI State** | Composable | `rememberSaveable` | スクロール位置、タブ選択等の純粋な UI 状態。 |
+
+### 8.2. SavedStateHandle の位置付け (Backup Only)
+- **[MUST] SavedStateHandle を第二の SSOT にしない**: 通常動作中は `UiState` (StateFlow) を唯一の SSOT とし、`SavedStateHandle` は退避先としてのみ使用します。
+- **復元フロー**: `init` ブロックで `SavedStateHandle` から値を読み込み、`UiState` を再構築します。
+- **派生状態の保存禁止**: `isChanged`, `isValid` 等の派生値は保存せず、復元された原始データから Logic 層を用いて再計算してください。
+
+### 8.3. 編集基準 (Baseline) の保護
+- **[MUST] 比較基準 (initialSnapshot) の個別保存**: プロセス死の間に DB の値が変化しても `isChanged` を正確に判定できるよう、編集開始時点の baseline フィールドを個別に `SavedStateHandle` へ退避してください。ID による DB 再取得は baseline の維持には不十分です。
+
 ---
-最終更新日: 2026/08/21
+最終更新日: 2026/08/23

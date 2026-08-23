@@ -11,15 +11,8 @@
 ### 🔴 高優先度：安定性と品質の核
 
 #### A. State / Recomposition (性能・安定性)
-- [ ] **Compose Compiler Report に基づく State/Model の Stable 化**
-    - `unstable` な State を抽出・特定し、再コンポーズ抑制のための根本原因を解消する。
-    - ワークフロー:
-        1. `unstable` な State の抽出
-        2. 原因の特定（不安定なプロパティ、外部ライブラリ依存等）
-        3. 不変 (Immutable) 化の検討（`ImmutableList` 等の適用はあくまで手段）
-        4. `@Immutable` / `@Stable` アノテーションの適用可否を検討
-        5. 必要に応じて「UI専用モデル」を導入し、安定性を確保
-        6. 改善前後の Compiler Report を比較し、効果を検証
+- [x] **Compose Compiler Report に基づく State/Model の Stable 化**
+    - 調査完了：主要なデータモデル（PersonUiState等）は Stable であり、現状維持で問題ないことを確認。
 - [ ] **Lambda の安定性と Callback 設計の最適化**
     - **Lambda の安定性**: キャプチャによる `unstable` 化を防ぐための検討（安定した引数の利用や、キャプチャ対象の安定性確保）。
     - **Callback 設計**: Composable 内での ViewModel 直接参照を排除し、疎結合な Action Callback 形式（`onEvent: () -> Unit`）への統一を徹底。
@@ -35,8 +28,9 @@
 #### C. Material 3 適合性と UI 状態設計
 - [ ] **Material 3 テーマ・トークンの徹底利用**
     - `ColorScheme`, `Typography`, `Shape` への完全移行。ハードコードされた色の撲滅。
-- [ ] **L/E/E/C パターンの標準化**
+- [ ] **UI 状態設計の標準化 (L/E/E/C + Content 詳細)**
     - Loading / Empty / Error / Content 状態の網羅と、それらをカバーする Preview の実装。
+    - **Content 内部の状態網羅**: 各画面の主要コンテンツ内における「選択状態」「展開/折りたたみ」「表示モード切り替え」等の詳細な UI 状態が漏れなく定義されているか検証。
 
 ### 🟠 中優先度：体験の向上
 
@@ -47,10 +41,11 @@
     - 画面回転や折りたたみ・展開時における入力状態・スクロール位置の維持。
 
 #### E. Navigation & Lifecycle (整合性)
-- [ ] **結果返却パターンの洗練**
-    - `SavedStateHandle` を用いた型安全な遷移先からのデータ返却処理の統一。
-- [ ] **プロセス死からの復元 (State Restoration)**
-    - 入力フォーム等の重要画面における `rememberSaveable` と `SavedStateHandle` の連携強化。
+- [x] **Navigation & Lifecycle の整合性と責務整理**
+    - 完了：UI/VM/Nav/Transient の 4 つの状態責務を定義し、設計指針を確立。
+- [x] **結果返却パターンの洗練**
+- [x] **プロセス死からの復元 (State Restoration)**
+    - 完了：PersonList/PersonEdit において SavedStateHandle を用いた復元ロジックを実装。
 
 #### F. 入力 UI (滑らかなインタラクション)
 - [ ] **IME 連動の最適化**
@@ -75,7 +70,7 @@
 ## 3. アクションプラン (調査 → 実行)
 
 ### Step 1: 性能とアクセシビリティの現状診断
-- [ ] Compose Compiler Report の生成と解析。
+- [x] Compose Compiler Report の生成と解析。
 - [ ] 全主要画面でのアクセシビリティ・スキャナー実行。
 
 ### Step 2: 共通基盤の修正

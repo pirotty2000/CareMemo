@@ -76,6 +76,7 @@ fun MainScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    // スクロール位置の復元 (rememberLazyListState は内部で rememberSaveable を使用しているため、そのまま維持で復元される)
     val lazyListState = rememberLazyListState()
     val userEndedFormat = stringResource(R.string.main_snackbar_user_ended)
     val undoLabel = stringResource(R.string.common_undo)

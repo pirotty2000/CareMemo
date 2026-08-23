@@ -55,5 +55,19 @@
     - 理由: Repository にビジネスルール（クレンジング、正規化等）を混ぜないため。
     - Repository は「渡されたデータを忠実に保存する」ことに専念し、加工が必要な場合は必ず Logic を経由させてください。
 
+- **[MUST] `SavedStateHandle` を第二の SSOT にしない**
+    - 理由: 通常動作中は `UiState` を唯一の真実のソースとし、不整合を防ぐため。`SavedStateHandle` は退避先（バックアップ）としてのみ使用します。
+- **[MUST] 比較基準 (Baseline) を個別に退避する**
+    - 理由: プロセス死の間に DB が更新されても `isChanged` を正確に判定できるようにするため。ID による再取得は不可です。
+
+## 6. Compose 最適化と UI コーディング (Compose Optimization)
+
+- **[MUST] UI ツリーへ流入する Model/State を Stable に保つ**
+    - 理由: 不要な再コンポーズを抑制するため。`@Immutable` / `@Stable` は型の不変性が保証できる場合のみ適用してください。
+- **[MUST] Composable を ViewModel から疎結合にする**
+    - 理由: アーキテクチャ上の責務分離のため。ViewModel を直接渡さず、Action Callback (`onEvent: () -> Unit`) 形式を徹底してください。
+- **[MUST] 重要な UI 状態には `rememberSaveable` を検討する**
+    - 理由: スクロール位置などの UX 上重要な一時状態をプロセス死から保護するため。
+
 ---
-最終更新日: 2026/08/15
+最終更新日: 2026/08/23

@@ -3,6 +3,7 @@ package jp.mydns.fujiwara.carememo.viewmodel
 import android.util.Log
 import app.cash.turbine.test
 import io.mockk.*
+import androidx.lifecycle.SavedStateHandle
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
@@ -65,8 +66,9 @@ class PersonListViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    private fun createViewModel(): PersonListViewModel {
+    private fun createViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): PersonListViewModel {
         return PersonListViewModel(
+            savedStateHandle,
             personRepository, archivedRepository, summaryRepository,
             conditionRepository, emergencyContactRepository,
             userSettingsRepository, securitySession, auditLogRepository
@@ -264,6 +266,39 @@ class PersonListViewModelTest {
 
         assertFalse(viewModel.uiState.value.isLoading)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("List Error") }, any()) }
+    }
+
+    // endregion
+
+    // region 8. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_RST_02_restore_query_and_section() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "search_query" to "restore-test",
+            "selected_section" to "さ"
+        ))
+        
+        val viewModel = createViewModel(handle)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("restore-test", state.searchQuery)
+        assertEquals("さ", state.selectedSection)
+    }
+
+    @Test
+    fun RST_03_restore_initializes_userList() = runTest {
+        // リポジトリからデータを返すよう設定 ( setup で設定済み )
+        val handle = SavedStateHandle(mapOf("restoration_version" to 1))
+        
+        val viewModel = createViewModel(handle)
+        advanceUntilIdle()
+
+        // 復元起動であっても、リストは DB から取得されていること
+        assertEquals(1, viewModel.uiState.value.userList.size)
+        coVerify { personRepository.getAllPersons() }
     }
 
     // endregion

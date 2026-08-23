@@ -68,5 +68,22 @@
 - **代替案（ViewModel での翻訳）の却下理由**: 
     - 監査ログは数千件に及ぶ可能性があり、ViewModel でリストを全件ループして String 変換した中間オブジェクトを作るのはメモリ消費量とパフォーマンスの観点から不利である。
     - CSV 生成という「データ変換」の核となるロジックは Logic レイヤーに閉じ込めておくべきであり、翻訳はその変換プロセスの一部として組み込むのが最も効率的であると判断した。
+## 12. State Restoration における 4 つの状態責務の分離と保存方針
+- **決定事項**: 画面の状態を「UI State」「ViewModel State」「Navigation State」「Transient UI State」の 4 つに分類し、それぞれに最適な保存・復元機構を割り当てた。
+- **背景**: プロセス死（Process Death）からの復元において、何でも `SavedStateHandle` に保存すると設計が複雑化し、リアクティブなデータフロー（UDF）が壊れるリスクがあった。
+- **設計指針**:
+    - **UI State (`StateFlow`)**: 通常動作時の真実のソース (SSOT)。
+    - **ViewModel State (`SavedStateHandle`)**: **「復元用のバックアップ」**。SSOT にはせず、復元時のみ `init` で `UiState` を再構築するための材料として扱う。
+    - **Navigation State**: `Type-safe Navigation` 引数。
+    - **Transient UI State**: スクロール位置等の純粋な UI 状態（`rememberSaveable`）。
+- **効果**: UDF のシンプルさを保ちつつ、ユーザー入力や検索条件をプロセス死から確実に守る堅牢性を実現。
+
+## 13. Compose UI 最適化における安定性判定と改善方針
+- **決定事項**: Compose Compiler Report で判定される `unstable` なクラスを「ゼロにすること」を目的とせず、実効性のある最適化に注力する。
+- **判断基準**:
+    - **データモデルの安定性**: UI ツリーへ流入する State や Model が `stable` であることを最優先する。
+    - **外部・基盤依存の許容**: `Context` や `Job` 等を保持する Repository や ViewModel が `unstable` になるのは、それらが UI ツリーの下層へ伝播しない限り許容する（安易な `@Stable` 付与による整合性破壊を防ぐ）。
+    - **Lambda の安定性**: キャプチャ対象の安定性確認と、Callback 化による疎結合設計を分離して考える。
+- **効果**: 過剰なリファクタリングを抑制し、メンテナンス性を損なわずに Compose の描画性能を確保。
 ---
-最終更新日: 2026/08/21
+最終更新日: 2026/08/23

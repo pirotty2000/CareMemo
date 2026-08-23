@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
@@ -162,7 +163,32 @@ class PersonEditScreenTest {
 
     //endregion
 
-    // --- Helpers ---
+    //region 6. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_02_scrollPosition_isMaintained_onConfigurationChange() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        
+        restorationTester.setContent {
+            CareMemoTheme {
+                // Content 層での内部状態 (ScrollState) の復元を検証
+                PersonEditScreenContentWrapper(isNew = true)
+            }
+        }
+
+        // 下方へスクロール (保存ボタンが見える位置まで)
+        composeTestRule.onNodeWithTag("PersonEdit_SaveButton").performScrollTo()
+        composeTestRule.waitForIdle()
+
+        // 構成変更をエミュレート
+        restorationTester.emulateSavedInstanceStateRestore()
+        composeTestRule.waitForIdle()
+
+        // スクロール位置が維持されていること (保存ボタンが引き続き表示されていること)
+        composeTestRule.onNodeWithTag("PersonEdit_SaveButton").assertIsDisplayed()
+    }
+
+    //endregion
 
     private fun setContent(content: @Composable () -> Unit) {
         composeTestRule.setContent {

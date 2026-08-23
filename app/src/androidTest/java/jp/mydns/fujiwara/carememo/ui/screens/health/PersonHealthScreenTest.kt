@@ -143,6 +143,9 @@ class PersonHealthScreenTest {
         val detailViewModel = createMockDetailViewModel()
         val healthViewModel = createMockHealthViewModel()
         
+        // 確実に back が呼ばれる状態にする (編集モードではない状態)
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(selectedRecordId = null))
+
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonHealthScreen(
@@ -155,6 +158,7 @@ class PersonHealthScreenTest {
         }
 
         composeTestRule.onNodeWithTag("HealthScreen_BackButton").performClick()
+        composeTestRule.waitForIdle() // UIスレッドの待機
         verify { detailViewModel.navigateBackToMain() }
     }
 

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
@@ -162,7 +163,50 @@ class MainScreenTest {
 
     //endregion
 
-    // --- Helpers ---
+    //region 6. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_listScrollPosition_isRestored_onConfigurationChange() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        val mockItems = (1..50).map { createMockUiState(it.toString(), "User $it") }
+
+        restorationTester.setContent {
+            CareMemoTheme {
+                MainScreenContentWrapper(userList = mockItems)
+            }
+        }
+
+        // 最初の項目が表示されていることを確認
+        composeTestRule.onNodeWithTag("UserListItem_1").assertIsDisplayed()
+
+        // 下方へスクロール (Index 20 -> User 21)
+        composeTestRule.onNodeWithTag("MainScreen_UserList").performScrollToIndex(20)
+        // 描画とスクロール完了を待機 (ID 21 が表示されるのを待つ)
+        composeTestRule.waitUntil(5000) {
+            try {
+                composeTestRule.onNodeWithTag("UserListItem_21").assertIsDisplayed()
+                true
+            } catch (e: AssertionError) {
+                false
+            }
+        }
+
+        // 構成変更をエミュレート
+        restorationTester.emulateSavedInstanceStateRestore()
+        
+        // 復帰後の描画を待機
+        composeTestRule.waitUntil(5000) {
+            try {
+                composeTestRule.onNodeWithTag("UserListItem_21").assertIsDisplayed()
+                true
+            } catch (e: AssertionError) {
+                false
+            }
+        }
+        composeTestRule.onNodeWithTag("UserListItem_21").assertIsDisplayed()
+    }
+
+    //endregion
 
     private fun setContent(content: @Composable () -> Unit) {
         composeTestRule.setContent {

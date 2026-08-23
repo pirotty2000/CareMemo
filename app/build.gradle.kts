@@ -19,7 +19,7 @@ android {
         targetSdk = 35
         //noinspection HighAppVersionCode
         versionCode = 2026082301
-        versionName = "4.0.0"
+        versionName = "4.1.0"
 
         val buildTime = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN).format(Date())
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
@@ -69,6 +69,11 @@ android {
             excludes += "META-INF/LICENSE-notice.md"
         }
     }
+}
+
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
+    metricsDestination = layout.buildDirectory.dir("compose_compiler")
 }
 
 // 最新のコンパイラオプション指定方法

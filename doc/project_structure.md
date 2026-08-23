@@ -50,7 +50,7 @@ jp.mydns.fujiwara.carememo
 │   ├── preview/           #  ├─ プレビュー用基盤（MockData, PreviewStates）
 │   ├── theme/             #  ├─ アプリのテーマ設定（Color, Type, カスタムパレット、セマンティック配色）
 │   └── utils/             #  └─ UIユーティリティ（PhoneNumberVisualTransformation 等）
-├── viewmodel/             # UI状態管理と実行制御（BaseUiStateViewModel を基盤とする MVI 構造）
+├── viewmodel/             # UI状態管理と実行制御（BaseUiStateViewModel 基盤、MVI、State Restoration 対応）
 ├── logic/                 # ドメインロジック（Android API 排除、Pure Kotlin での計算・判定）
 │   ├── common/            #  ├─ アプリ全体で再利用可能な共通計算ロジック
 │   └── feature/           #  └─ 特定画面に密結合したロジック（UiState / ViewEvent 定義を内包）
@@ -132,8 +132,8 @@ jp.mydns.fujiwara.carememo
 ```text
 ViewModel (androidx.lifecycle.ViewModel)
 └── BaseUiStateViewModel<S, E> (基盤：UI状態、UIイベント、ロード制御、エラー通知)
-    ├── PersonListViewModel (利用者一覧・フィルタリング)
-    ├── PersonEditViewModel (利用者登録・変更検知)
+    ├── PersonListViewModel (利用者一覧、State Restoration [検索・セクション])
+    ├── PersonEditViewModel (利用者登録、State Restoration [未保存入力・Baseline])
     ├── EmergencyContactEditViewModel (緊急連絡先 CRUD)
     ├── SettingsViewModel (アプリ設定、バックアップ、整合性チェック)
     ├── AuditLogViewModel (監査ログ参照)
@@ -261,4 +261,4 @@ Android API を利用する重量級の共通処理をカプセル化してい�
 
 ---
 
-最終更新日: 2026/08/21
+最終更新日: 2026/08/23

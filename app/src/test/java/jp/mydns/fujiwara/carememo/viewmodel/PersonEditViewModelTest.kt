@@ -322,4 +322,103 @@ class PersonEditViewModelTest {
     }
 
     // endregion
+
+    // region 6. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_restore_input() = runTest {
+        // SavedStateHandle に入力値をセット
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "input_last_name" to "佐藤",
+            "input_first_name" to "花子",
+            "input_era" to BirthEra.REIWA.name,
+            "input_year" to "1",
+            "input_month" to "5",
+            "input_day" to "1",
+            "input_is_new" to true
+        ))
+        
+        val viewModel = PersonEditViewModel(handle, repository, userSettingsRepository, securitySession, auditLogRepository)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("佐藤", state.lastName)
+        assertEquals("花子", state.firstName)
+        assertEquals(BirthEra.REIWA, state.era)
+    }
+
+    @Test
+    fun RST_02_RST_03_restore_baseline_and_isChanged() = runTest {
+        // 既存編集モードでの復元
+        val handle = SavedStateHandle(mapOf(
+            "personId" to "u1",
+            "restoration_version" to 1,
+            // Baseline: 山田太郎 (1950/1/1)
+            "baseline_last_name" to "山田",
+            "baseline_first_name" to "太郎",
+            "baseline_last_name_furigana" to "ヤマダ",
+            "baseline_first_name_furigana" to "タロウ",
+            "baseline_birthday_epoch" to testPerson.birthday.toEpochMilli(),
+            "baseline_note" to "備考",
+            // Current Input: 佐藤次郎 (変更あり)
+            "input_last_name" to "佐藤",
+            "input_first_name" to "次郎",
+            "input_last_name_furigana" to "サトウ",
+            "input_first_name_furigana" to "ジロウ",
+            "input_note" to "備考変更",
+            "input_era" to BirthEra.SHOWA.name,
+            "input_year" to "25",
+            "input_month" to "1",
+            "input_day" to "1",
+            "input_is_new" to false
+        ))
+
+        val viewModel = PersonEditViewModel(handle, repository, userSettingsRepository, securitySession, auditLogRepository)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("佐藤", state.lastName)
+        // baseline が正しく復帰し、現在の入力と比較されて isChanged == true になること
+        assertTrue("isChanged should be true when input differs from baseline", state.isChanged)
+        
+        // 元に戻すと false になること (baseline の全フィールドを一致させる)
+        viewModel.updateLastName("山田")
+        viewModel.updateFirstName("太郎")
+        viewModel.updateLastNameFurigana("ヤマダ")
+        viewModel.updateFirstNameFurigana("タロウ")
+        viewModel.updateNote("備考")
+        assertFalse("isChanged should be false when input matches baseline", viewModel.uiState.value.isChanged)
+    }
+
+    @Test
+    fun RST_04_cleanup_on_success() = runTest {
+        // バリデーションを通る完全な入力を提供
+        val handle = SavedStateHandle(mapOf(
+            "personId" to "u1",
+            "restoration_version" to 1,
+            "input_last_name" to "佐藤",
+            "input_first_name" to "花子",
+            "input_last_name_furigana" to "サトウ",
+            "input_first_name_furigana" to "ハナコ",
+            "input_era" to BirthEra.REIWA.name,
+            "input_year" to "1",
+            "input_month" to "5",
+            "input_day" to "1",
+            "input_is_new" to false
+        ))
+
+        val viewModel = PersonEditViewModel(handle, repository, userSettingsRepository, securitySession, auditLogRepository)
+        advanceUntilIdle()
+
+        // 保存実行 (coEvery での成功を前提)
+        viewModel.save()
+        advanceUntilIdle()
+
+        // 保存成功後に SavedStateHandle から復元用データが削除されていること
+        assertFalse("Restoration version should be removed", handle.contains("restoration_version"))
+        assertFalse("Input data should be removed", handle.contains("input_last_name"))
+    }
+
+    // endregion
 }

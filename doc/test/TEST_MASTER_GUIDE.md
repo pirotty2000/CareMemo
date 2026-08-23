@@ -31,6 +31,11 @@
 画面（Composable）が状態を正しく描画し、操作が ViewModel に伝達されるかを検証します。
 - **Screen層**: Phone/Tablet 別の Adaptive レイアウト、ナビゲーション、ダイアログ制御。
 
+### 2.5. 状態復元テスト (State Restoration)
+システムによるメモリ解放（Process Death）や画面回転後も、ユーザーが期待する状態が維持されるかを検証します。
+- **検証項目:** 未保存入力の保持、編集基準 (baseline) の維持、検索条件の復元、スクロール位置の維持。
+- **実装対象:** `SavedStateHandle` を用いた ViewModel テスト、および `StateRestorationTester` を用いた UI テスト。
+
 ---
 
 ## 3. テスト作成の基本ルール
@@ -38,6 +43,7 @@
 2. **Single Source of Truth**: 閾値や定数は全て `AppSpecifications` を参照し、テストコードへのハードコードを禁止する。
 3. **監査ログの必須検証**: 保存・更新を伴う処理では、必ず正しい `AuditLog` が記録されることを検証する。
 4. **Adaptive UI 対応**: 画面（Screen）テストでは、Phone 幅と Tablet 幅の両方での描画整合性を検証する。
+5. **[NEW] 状態復元の必須検証**: 入力や検索を伴う主要画面では、必ずプロセス死からの復元シナリオをテストに含める。
 
 ---
 

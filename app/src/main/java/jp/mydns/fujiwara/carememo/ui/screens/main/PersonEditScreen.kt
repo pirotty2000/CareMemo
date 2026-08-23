@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.ui.screens.main
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -8,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -254,6 +256,11 @@ fun PersonEditScreenContent(
             LoadingScreen(modifier = Modifier.testTag("PersonEdit_Loading"))
         } else {
             val scrollState = rememberScrollState()
+            // 状態復元のための Saver 対応：rememberSaveable を使用
+            // ScrollState はデフォルトで Saver が提供されているため、単に rememberSaveable に変更可能
+            val scrollStateRestorable = rememberSaveable(saver = ScrollState.Saver) {
+                scrollState
+            }
             Box(
                 modifier = Modifier
                     .padding(paddingValues)
@@ -262,7 +269,7 @@ fun PersonEditScreenContent(
             ) {
                 Column(
                     modifier = Modifier
-                        .verticalScroll(scrollState)
+                        .verticalScroll(scrollStateRestorable)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
