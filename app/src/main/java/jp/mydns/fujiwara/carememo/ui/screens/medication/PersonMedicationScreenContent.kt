@@ -16,7 +16,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
@@ -26,10 +25,7 @@ import jp.mydns.fujiwara.carememo.ui.components.medication.MedicationHistoryTabl
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatYearMonthHeader
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
-import java.time.LocalDate
 import java.time.YearMonth
 
 /**

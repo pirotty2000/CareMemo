@@ -340,8 +340,8 @@ fun MainScreen(
  *
  * @param contacts 表示対象の連絡先リスト
  * @param personName 利用者名（表示用）
- * @param onContactClick 連絡先がタップされた際のコールバック（発信等を想定）
- * @param onManageClick 管理画面への遷移が選択された際のコールバック
+ * @param onAction アクションハンドラ
+ * @param modifier 修飾子
  */
 @Composable
 fun EmergencyContactSelectionSheet(

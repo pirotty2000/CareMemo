@@ -43,7 +43,6 @@ import jp.mydns.fujiwara.carememo.ui.theme.getAuditActionColor
 import jp.mydns.fujiwara.carememo.ui.theme.getAuditResultMainColor
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
 /**

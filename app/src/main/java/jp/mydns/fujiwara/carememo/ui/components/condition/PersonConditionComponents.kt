@@ -345,12 +345,12 @@ private fun ConditionRecordEditForm(
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isSaveEnabled: Boolean,
-    unassignedPhotoCount: Int = 0,
     onAction: (PersonConditionUiAction) -> Unit,
     onDeletePhotoRequest: (ConditionPhoto) -> Unit,
     onCancelRequest: () -> Unit,
-    onReattachRequest: () -> Unit = {},
     modifier: Modifier = Modifier,
+    unassignedPhotoCount: Int = 0,
+    onReattachRequest: () -> Unit = {},
 ) {
     // 音声認識ランチャーの設定
     val speechLauncher = rememberLauncherForActivityResult(
@@ -607,10 +607,10 @@ private fun ConditionRecordDisplayCard(
     memo: ConditionAtVisit?,
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
-    unassignedPhotoCount: Int = 0,
     onAction: (PersonConditionUiAction) -> Unit,
-    onReattachRequest: () -> Unit = {},
     modifier: Modifier = Modifier,
+    unassignedPhotoCount: Int = 0,
+    onReattachRequest: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     Box(

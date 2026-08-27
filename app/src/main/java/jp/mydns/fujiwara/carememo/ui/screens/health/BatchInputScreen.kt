@@ -25,7 +25,6 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.launch
 
 /**
  * UI Action：一括入力画面におけるユーザー操作の集約定義

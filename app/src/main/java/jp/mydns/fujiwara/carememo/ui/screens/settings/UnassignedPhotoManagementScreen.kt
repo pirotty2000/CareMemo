@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
-import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoUiState
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewModel

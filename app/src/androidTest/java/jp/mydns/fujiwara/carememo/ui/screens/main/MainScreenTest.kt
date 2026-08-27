@@ -14,7 +14,6 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
-import jp.mydns.fujiwara.carememo.ui.screens.main.MainUiAction
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.collections.immutable.toImmutableList

@@ -26,7 +26,6 @@ import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoUiState
-import jp.mydns.fujiwara.carememo.ui.screens.settings.UnassignedPhotoUiAction
 
 /**
  * Component：UnassignedPhotoManagementContent

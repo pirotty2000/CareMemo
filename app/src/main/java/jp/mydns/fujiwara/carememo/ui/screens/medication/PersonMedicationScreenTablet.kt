@@ -50,11 +50,8 @@ import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import java.time.Instant
-import java.time.LocalDate
 import java.time.YearMonth
 
 /**
