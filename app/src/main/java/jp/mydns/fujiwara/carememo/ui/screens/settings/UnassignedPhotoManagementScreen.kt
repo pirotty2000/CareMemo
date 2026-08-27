@@ -22,9 +22,20 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
+import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoUiState
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewModel
+
+/**
+ * UI Action：未割り当て写真管理画面におけるユーザー操作の集約定義
+ */
+sealed interface UnassignedPhotoUiAction {
+    data class DeleteRequest(val info: UnassignedPhotoInfo) : UnassignedPhotoUiAction
+    data object ConfirmDelete : UnassignedPhotoUiAction
+    data object Back : UnassignedPhotoUiAction
+    data object DismissDialog : UnassignedPhotoUiAction
+}
 
 /**
  * Screen：UnassignedPhotoManagementScreen
@@ -59,11 +70,27 @@ fun UnassignedPhotoManagementScreen(
         }
     }
 
+    // アクションハンドラ
+    // 削除対象の選択状態をキーに含め、ダイアログ表示状態の変化に追従する
+    val handleAction: (UnassignedPhotoUiAction) -> Unit = remember(viewModel, photoToDelete) {
+        { action ->
+            when (action) {
+                is UnassignedPhotoUiAction.DeleteRequest -> photoToDelete = action.info
+                UnassignedPhotoUiAction.ConfirmDelete -> {
+                    photoToDelete?.let { viewModel.deletePhoto(it) }
+                    photoToDelete = null
+                }
+                UnassignedPhotoUiAction.Back -> viewModel.navigateBack()
+                UnassignedPhotoUiAction.DismissDialog -> photoToDelete = null
+            }
+        }
+    }
+
     // 削除確認ダイアログ
-    photoToDelete?.let { info ->
+    photoToDelete?.let {
         AppDeleteConfirmDialog(
-            onDismiss = { photoToDelete = null },
-            onDelete = { viewModel.deletePhoto(info) }
+            onDismiss = { handleAction(UnassignedPhotoUiAction.DismissDialog) },
+            onDelete = { handleAction(UnassignedPhotoUiAction.ConfirmDelete) }
         )
     }
 
@@ -73,7 +100,7 @@ fun UnassignedPhotoManagementScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.unassigned_photo_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateBack() }, modifier = Modifier.testTag("UnassignedPhoto_BackButton")) {
+                    IconButton(onClick = { handleAction(UnassignedPhotoUiAction.Back) }, modifier = Modifier.testTag("UnassignedPhoto_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
@@ -82,7 +109,7 @@ fun UnassignedPhotoManagementScreen(
     ) { paddingValues ->
         UnassignedPhotoManagementContent(
             uiState = uiState,
-            onDelete = { photoToDelete = it },
+            onAction = handleAction,
             modifier = Modifier.padding(paddingValues)
         )
     }

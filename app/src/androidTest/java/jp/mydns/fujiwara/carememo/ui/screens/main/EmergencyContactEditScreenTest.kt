@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.ui.screens.main.EmergencyContactEditUiAction
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
@@ -172,9 +173,12 @@ class EmergencyContactEditScreenTest {
                 isChanged = EmergencyContactLogic.isChanged(contact, initialContact),
                 isValid = EmergencyContactLogic.isValid(contact)
             ),
-            onNavigateBack = {},
-            onUpdateContact = onUpdateContact,
-            onSaveClick = {}
+            onAction = { action ->
+                when (action) {
+                    is EmergencyContactEditUiAction.UpdateContact -> onUpdateContact(action.reducer)
+                    else -> {}
+                }
+            }
         )
     }
 }

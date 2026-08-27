@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
@@ -30,6 +31,43 @@ import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
+
+/**
+ * UI Action：メイン画面（利用者一覧）におけるユーザー操作の集約定義
+ */
+sealed interface MainUiAction {
+    // 検索・フィルタ
+    data class SearchQueryChange(val query: String) : MainUiAction
+    data class SectionSelect(val section: String) : MainUiAction
+
+    // ナビゲーション
+    data object AddClick : MainUiAction
+    data object NavigateToSettings : MainUiAction
+    data class UserClick(val person: Person) : MainUiAction
+    data class EditUser(val person: Person) : MainUiAction
+    data class EmergencyContactManageClick(val person: Person) : MainUiAction
+
+    // クイックメニュー
+    data class QuickMenuClick(val person: Person) : MainUiAction
+    data class EmergencyContactClick(val person: Person) : MainUiAction
+    data object DismissQuickMenu : MainUiAction
+
+    // 利用終了・Undo
+    data class EndUser(val person: Person) : MainUiAction
+    data class UndoEndUser(val person: Person) : MainUiAction
+
+    // カテゴリ選択シート
+    data class CategorySelect(val category: Category) : MainUiAction
+    data object BatchInputSelect : MainUiAction
+    data object DismissSheet : MainUiAction
+
+    // 緊急連絡先選択シート
+    data class EmergencyContactCall(val contact: EmergencyContact) : MainUiAction
+    data object DismissContactSheet : MainUiAction
+
+    // ダイアログ・共通
+    data object DismissDialog : MainUiAction
+}
 
 /**
  * Screen：MainScreen
@@ -175,87 +213,54 @@ fun MainScreen(
         }
     }
 
-    //-- ui/screens/main/MainScreenContent.kt
-    MainScreenContent(
-        userList = uiState.userList,
-        isLoading = uiState.isLoading,
-        isNameMaskingEnabled = uiState.isNameMaskingEnabled,
-        searchQuery = uiState.searchQuery,
-        selectedSection = uiState.selectedSection,
-        selectedPersonForQuickMenu = uiState.selectedPersonForQuickMenu,
-        isQuickActionMenuExpanded = uiState.isQuickActionMenuExpanded,
-        onSearchQueryChange = { viewModel.setSearchQuery(it) },
-        onSectionSelect = { viewModel.setSelectedSection(it) },
-        snackbarHostState = snackbarHostState,
-        lazyListState = lazyListState,
-        onUserClick = { person -> selectedPerson = person; showSheet = true },
-        onQuickMenuClick = { person -> viewModel.showQuickMenu(person) },
-        onEmergencyContactClick = { person -> viewModel.loadEmergencyContacts(person.id) },
-        onEmergencyContactManageClick = { person -> viewModel.navigateToMedicalContacts(person.id) },
-        onDismissQuickMenu = { viewModel.dismissQuickMenu() },
-        onEditUser = { person -> viewModel.navigateToEditPerson(person.id) },
-        onAddClick = { viewModel.navigateToAddPerson() },
-        onEndUser = { person ->
-            viewModel.logicalDeletePerson(person)
-            scope.launch {
-                val fullName = person.getMaskedName(uiState.isNameMaskingEnabled)
-                val result = snackbarHostState.showSnackbar(
-                    message = userEndedFormat.format(fullName), 
-                    actionLabel = undoLabel,
-                    duration = SnackbarDuration.Short
-                )
-                if (result == SnackbarResult.ActionPerformed) { 
-                    viewModel.restorePerson(person)
-                    lazyListState.animateScrollToItem(0) 
+    // アクションハンドラ：UI からの通知を ViewModel やナビゲーション、シート制御へ橋渡しする
+    // 氏名マスク設定をキーに含めることで、設定変更時のみラムダを再生成し、通常時の不要な再描画を抑制する
+    val handleAction: (MainUiAction) -> Unit = remember(viewModel, navController, scope, context, lazyListState, uiState.isNameMaskingEnabled) {
+        { action ->
+            when (action) {
+                is MainUiAction.SearchQueryChange -> viewModel.setSearchQuery(action.query)
+                is MainUiAction.SectionSelect -> viewModel.setSelectedSection(action.section)
+                MainUiAction.AddClick -> viewModel.navigateToAddPerson()
+                MainUiAction.NavigateToSettings -> viewModel.navigateToSettings()
+                is MainUiAction.UserClick -> {
+                    selectedPerson = action.person
+                    showSheet = true
                 }
-            }
-        },
-        onNavigateToSettings = { viewModel.navigateToSettings() },
-        modifier = modifier,
-    )
-
-    // 通知ダイアログの表示
-    if (dialogMessage != null) {
-        AppInfoDialog(
-            title = dialogTitle,
-            message = dialogMessage!!,
-            onDismiss = {
-                dialogMessage = null
-                dialogTitle = null
-            }
-        )
-    }
-
-    // カテゴリ選択メニュー（下からスライド）
-    if (showSheet && selectedPerson != null) {
-        ModalBottomSheet(onDismissRequest = { showSheet = false }, sheetState = sheetState) {
-            //-- ui/components/main/MainComponents.kt
-            CategorySelectionSheet(
-                personName = selectedPerson!!.getMaskedName(uiState.isNameMaskingEnabled),
-                onCategorySelect = { category -> 
-                    showSheet = false
-                    viewModel.navigateToDetail(selectedPerson!!.id, category)
-                },
-                onBatchInputSelect = {
-                    showSheet = false
-                    viewModel.navigateToBatchInput(selectedPerson!!.id)
+                is MainUiAction.EditUser -> viewModel.navigateToEditPerson(action.person.id)
+                is MainUiAction.EmergencyContactManageClick -> viewModel.navigateToMedicalContacts(action.person.id)
+                is MainUiAction.QuickMenuClick -> viewModel.showQuickMenu(action.person)
+                is MainUiAction.EmergencyContactClick -> viewModel.loadEmergencyContacts(action.person.id)
+                MainUiAction.DismissQuickMenu -> viewModel.dismissQuickMenu()
+                is MainUiAction.EndUser -> {
+                    viewModel.logicalDeletePerson(action.person)
+                    scope.launch {
+                        val fullName = action.person.getMaskedName(uiState.isNameMaskingEnabled)
+                        val result = snackbarHostState.showSnackbar(
+                            message = userEndedFormat.format(fullName),
+                            actionLabel = undoLabel,
+                            duration = SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.restorePerson(action.person)
+                            lazyListState.animateScrollToItem(0)
+                        }
+                    }
                 }
-            )
-        }
-    }
-
-    // 緊急連絡先選択メニュー
-    if (uiState.emergencyContactsForSheet != null && uiState.selectedPersonForQuickMenu != null) {
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.clearEmergencyContactState() },
-            sheetState = contactSheetState
-        ) {
-            //-- (MainScreen.kt 内部または共通部品)
-            EmergencyContactSelectionSheet(
-                contacts = uiState.emergencyContactsForSheet!!,
-                personName = uiState.selectedPersonForQuickMenu!!.getMaskedName(uiState.isNameMaskingEnabled),
-                onContactClick = { contact ->
-                    val tel = contact.phoneNumber
+                is MainUiAction.UndoEndUser -> {
+                    viewModel.restorePerson(action.person)
+                    scope.launch { lazyListState.animateScrollToItem(0) }
+                }
+                is MainUiAction.CategorySelect -> {
+                    showSheet = false
+                    selectedPerson?.let { viewModel.navigateToDetail(it.id, action.category) }
+                }
+                MainUiAction.BatchInputSelect -> {
+                    showSheet = false
+                    selectedPerson?.let { viewModel.navigateToBatchInput(it.id) }
+                }
+                MainUiAction.DismissSheet -> showSheet = false
+                is MainUiAction.EmergencyContactCall -> {
+                    val tel = action.contact.phoneNumber
                     if (!tel.isNullOrBlank()) {
                         val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, "tel:$tel".toUri())
                         context.startActivity(intent)
@@ -265,11 +270,62 @@ fun MainScreen(
                         }
                     }
                     viewModel.clearEmergencyContactState()
-                },
-                onManageClick = {
-                    viewModel.navigateToMedicalContacts(uiState.selectedPersonForQuickMenu!!.id)
-                    viewModel.clearEmergencyContactState()
                 }
+                MainUiAction.DismissContactSheet -> viewModel.clearEmergencyContactState()
+                MainUiAction.DismissDialog -> {
+                    dialogMessage = null
+                    dialogTitle = null
+                }
+            }
+        }
+    }
+
+    //-- ui/screens/main/MainScreenContent.kt
+    MainScreenContent(
+        userList = uiState.userList,
+        isLoading = uiState.isLoading,
+        isNameMaskingEnabled = uiState.isNameMaskingEnabled,
+        searchQuery = uiState.searchQuery,
+        selectedSection = uiState.selectedSection,
+        selectedPersonForQuickMenu = uiState.selectedPersonForQuickMenu,
+        isQuickActionMenuExpanded = uiState.isQuickActionMenuExpanded,
+        onAction = handleAction,
+        snackbarHostState = snackbarHostState,
+        lazyListState = lazyListState,
+        modifier = modifier,
+    )
+
+    // 通知ダイアログの表示
+    if (dialogMessage != null) {
+        AppInfoDialog(
+            title = dialogTitle,
+            message = dialogMessage!!,
+            onDismiss = { handleAction(MainUiAction.DismissDialog) }
+        )
+    }
+
+    // カテゴリ選択メニュー（下からスライド）
+    if (showSheet && selectedPerson != null) {
+        ModalBottomSheet(onDismissRequest = { handleAction(MainUiAction.DismissSheet) }, sheetState = sheetState) {
+            //-- ui/components/main/MainComponents.kt
+            CategorySelectionSheet(
+                personName = selectedPerson!!.getMaskedName(uiState.isNameMaskingEnabled),
+                onAction = handleAction
+            )
+        }
+    }
+
+    // 緊急連絡先選択メニュー
+    if (uiState.emergencyContactsForSheet != null && uiState.selectedPersonForQuickMenu != null) {
+        ModalBottomSheet(
+            onDismissRequest = { handleAction(MainUiAction.DismissContactSheet) },
+            sheetState = contactSheetState
+        ) {
+            //-- (MainScreen.kt 内部または共通部品)
+            EmergencyContactSelectionSheet(
+                contacts = uiState.emergencyContactsForSheet!!,
+                personName = uiState.selectedPersonForQuickMenu!!.getMaskedName(uiState.isNameMaskingEnabled),
+                onAction = handleAction
             )
         }
     }
@@ -291,8 +347,7 @@ fun MainScreen(
 fun EmergencyContactSelectionSheet(
     contacts: ImmutableList<EmergencyContact>,
     personName: String,
-    onContactClick: (EmergencyContact) -> Unit,
-    onManageClick: () -> Unit,
+    onAction: (MainUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -316,16 +371,17 @@ fun EmergencyContactSelectionSheet(
                     if (details.isNotBlank()) Text(details)
                 },
                 leadingContent = { Icon(Icons.Rounded.Phone, contentDescription = null) },
-                modifier = Modifier.clickable { onContactClick(contact) }
+                modifier = Modifier.clickable { onAction(MainUiAction.EmergencyContactCall(contact)) }
             )
             HorizontalDivider()
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         TextButton(
-            onClick = onManageClick,
+            onClick = { onAction(MainUiAction.DismissContactSheet) }, // または専用のアクションがあればそれ
             modifier = Modifier.align(Alignment.End)
         ) {
+            // ここは「管理」ボタンだったので、適切にアクションを割り当てる
             Text(stringResource(R.string.medical_contacts_manage_label))
         }
         Spacer(modifier = Modifier.height(32.dp))

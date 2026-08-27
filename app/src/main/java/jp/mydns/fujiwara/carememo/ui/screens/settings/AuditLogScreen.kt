@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AuditLog
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -44,6 +45,17 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.AuditLogViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+/**
+ * UI Action：監査ログ画面におけるユーザー操作の集約定義
+ */
+sealed interface AuditLogUiAction {
+    data class SetFeatureFilter(val feature: String?) : AuditLogUiAction
+    data class SetResultFilter(val result: String?) : AuditLogUiAction
+    data object ToggleSortOrder : AuditLogUiAction
+    data object ClearFilters : AuditLogUiAction
+    data object Back : AuditLogUiAction
+}
 
 /**
  * Screen：AuditLogScreen
@@ -88,19 +100,22 @@ fun AuditLogScreen(
         }
     }
 
+    // アクションハンドラ
+    val handleAction: (AuditLogUiAction) -> Unit = remember(viewModel) {
+        { action ->
+            when (action) {
+                is AuditLogUiAction.SetFeatureFilter -> viewModel.setFeatureFilter(action.feature)
+                is AuditLogUiAction.SetResultFilter -> viewModel.setResultFilter(action.result)
+                AuditLogUiAction.ToggleSortOrder -> viewModel.toggleSortOrder()
+                AuditLogUiAction.ClearFilters -> viewModel.clearFilters()
+                AuditLogUiAction.Back -> viewModel.navigateBack()
+            }
+        }
+    }
+
     AuditLogScreenContent(
-        auditLogs = uiState.filteredLogs, // filteredLogs を使用するように変更
-        isLoading = uiState.isLoading,
-        selectedFeature = uiState.selectedFeature,
-        selectedResult = uiState.selectedResult,
-        isAscending = uiState.isAscending,
-        availableFeatures = uiState.availableFeatures,
-        availableResults = uiState.availableResults,
-        onFeatureSelect = { viewModel.setFeatureFilter(it) },
-        onResultSelect = { viewModel.setResultFilter(it) },
-        onToggleSort = { viewModel.toggleSortOrder() },
-        onClearFilters = { viewModel.clearFilters() },
-        onBack = { viewModel.navigateBack() },
+        uiState = uiState,
+        onAction = handleAction,
         modifier = modifier
     )
 }
@@ -108,22 +123,12 @@ fun AuditLogScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditLogScreenContent(
-    auditLogs: ImmutableList<AuditLog>,
-    isLoading: Boolean,
-    selectedFeature: String?,
-    selectedResult: String?,
-    isAscending: Boolean,
-    availableFeatures: ImmutableList<String>,
-    availableResults: ImmutableList<String>,
-    onFeatureSelect: (String?) -> Unit,
-    onResultSelect: (String?) -> Unit,
-    onToggleSort: () -> Unit,
-    onClearFilters: () -> Unit,
-    onBack: () -> Unit,
+    uiState: AuditLogUiState,
+    onAction: (AuditLogUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val lazyListState = rememberLazyListState()
-    val isFiltered = (selectedFeature != null) || (selectedResult != null)
+    val isFiltered = (uiState.selectedFeature != null) || (uiState.selectedResult != null)
 
     Scaffold(
         modifier = modifier,
@@ -131,7 +136,7 @@ fun AuditLogScreenContent(
             TopAppBar(
                 title = { Text(stringResource(R.string.audit_log_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag("AuditLogScreen_BackButton")) {
+                    IconButton(onClick = { onAction(AuditLogUiAction.Back) }, modifier = Modifier.testTag("AuditLogScreen_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -141,26 +146,19 @@ fun AuditLogScreenContent(
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             // フィルター・ソートバー
-            if (availableFeatures.isNotEmpty() || availableResults.isNotEmpty() || isFiltered) {
+            if (uiState.availableFeatures.isNotEmpty() || uiState.availableResults.isNotEmpty() || isFiltered) {
                 AuditLogFilterBar(
-                    selectedFeature = selectedFeature,
-                    selectedResult = selectedResult,
-                    isAscending = isAscending,
-                    availableFeatures = availableFeatures,
-                    availableResults = availableResults,
-                    onFeatureSelect = onFeatureSelect,
-                    onResultSelect = onResultSelect,
-                    onToggleSort = onToggleSort,
-                    onClear = onClearFilters,
+                    uiState = uiState,
+                    onAction = onAction,
                     modifier = Modifier.testTag("AuditLog_FilterChips")
                 )
             }
 
-            if (isLoading) {
+            if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(modifier = Modifier.testTag("AuditLog_Loading"))
                 }
-            } else if (auditLogs.isEmpty()) {
+            } else if (uiState.filteredLogs.isEmpty()) {
                 EmptyState(
                     message = if (isFiltered) stringResource(R.string.audit_log_empty_filtered_msg) else stringResource(R.string.audit_log_empty),
                     icon = Icons.Rounded.History,
@@ -175,7 +173,7 @@ fun AuditLogScreenContent(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(auditLogs) { log ->
+                        items(uiState.filteredLogs) { log ->
                             AuditLogItem(log, modifier = Modifier.testTag("AuditLogItem_${log.id}"))
                         }
                     }
@@ -190,15 +188,8 @@ fun AuditLogScreenContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AuditLogFilterBar(
-    selectedFeature: String?,
-    selectedResult: String?,
-    isAscending: Boolean,
-    availableFeatures: ImmutableList<String>,
-    availableResults: ImmutableList<String>,
-    onFeatureSelect: (String?) -> Unit,
-    onResultSelect: (String?) -> Unit,
-    onToggleSort: () -> Unit,
-    onClear: () -> Unit,
+    uiState: AuditLogUiState,
+    onAction: (AuditLogUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showFeatureMenu by remember { mutableStateOf(value = false) }
@@ -214,17 +205,17 @@ private fun AuditLogFilterBar(
         item {
             Box {
                 FilterChip(
-                    selected = selectedResult != null,
+                    selected = uiState.selectedResult != null,
                     onClick = { showResultMenu = true },
                     label = { 
-                        val label = selectedResult?.let {
+                        val label = uiState.selectedResult?.let {
                             val resId = it.toResultLabelRes
                             if (resId != 0) stringResource(resId) else it
                         } ?: stringResource(R.string.audit_log_filter_result_prefix, stringResource(R.string.audit_log_filter_all))
                         Text(label)
                     },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
-                    leadingIcon = if (selectedResult != null) {
+                    leadingIcon = if (uiState.selectedResult != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     } else null,
                     modifier = Modifier.testTag("AuditLog_ResultFilter")
@@ -233,11 +224,11 @@ private fun AuditLogFilterBar(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.audit_log_filter_all)) },
                         onClick = {
-                            onResultSelect(null)
+                            onAction(AuditLogUiAction.SetResultFilter(null))
                             showResultMenu = false
                         },
                     )
-                    availableResults.forEach { result ->
+                    uiState.availableResults.forEach { result ->
                         DropdownMenuItem(
                             text = {
                                 val resId = result.toResultLabelRes
@@ -245,7 +236,7 @@ private fun AuditLogFilterBar(
                                 Text(label)
                             },
                             onClick = {
-                                onResultSelect(result)
+                                onAction(AuditLogUiAction.SetResultFilter(result))
                                 showResultMenu = false
                             },
                             modifier = Modifier.testTag("ResultFilterItem_$result")
@@ -259,17 +250,17 @@ private fun AuditLogFilterBar(
         item {
             Box {
                 FilterChip(
-                    selected = selectedFeature != null,
+                    selected = uiState.selectedFeature != null,
                     onClick = { showFeatureMenu = true },
                     label = { 
-                        val label = selectedFeature?.let {
+                        val label = uiState.selectedFeature?.let {
                             val resId = it.toFeatureLabelRes
                             if (resId != 0) stringResource(resId) else it
                         } ?: stringResource(R.string.audit_log_filter_feature_prefix, stringResource(R.string.audit_log_filter_all))
                         Text(label)
                     },
                     trailingIcon = { Icon(Icons.Rounded.ArrowDropDown, contentDescription = null) },
-                    leadingIcon = if (selectedFeature != null) {
+                    leadingIcon = if (uiState.selectedFeature != null) {
                         { Icon(Icons.Rounded.FilterAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     } else null,
                     modifier = Modifier.testTag("AuditLog_FeatureFilter")
@@ -278,11 +269,11 @@ private fun AuditLogFilterBar(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.audit_log_filter_all)) },
                         onClick = {
-                            onFeatureSelect(null)
+                            onAction(AuditLogUiAction.SetFeatureFilter(null))
                             showFeatureMenu = false
                         },
                     )
-                    availableFeatures.forEach { feature ->
+                    uiState.availableFeatures.forEach { feature ->
                         DropdownMenuItem(
                             text = {
                                 val resId = feature.toFeatureLabelRes
@@ -290,7 +281,7 @@ private fun AuditLogFilterBar(
                                 Text(label)
                             },
                             onClick = {
-                                onFeatureSelect(feature)
+                                onAction(AuditLogUiAction.SetFeatureFilter(feature))
                                 showFeatureMenu = false
                             },
                             modifier = Modifier.testTag("FeatureFilterItem_$feature")
@@ -303,21 +294,21 @@ private fun AuditLogFilterBar(
         // 並び替えトグル
         item {
             IconButton(
-                onClick = onToggleSort,
+                onClick = { onAction(AuditLogUiAction.ToggleSortOrder) },
                 modifier = Modifier.testTag("AuditLog_SortToggle")
             ) {
                 Icon(
                     imageVector = Icons.Rounded.SwapVert,
-                    contentDescription = if (isAscending) stringResource(R.string.audit_log_sort_asc) else stringResource(R.string.audit_log_sort_desc),
-                    tint = if (isAscending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    contentDescription = if (uiState.isAscending) stringResource(R.string.audit_log_sort_asc) else stringResource(R.string.audit_log_sort_desc),
+                    tint = if (uiState.isAscending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         // クリアボタン
-        if ((selectedFeature != null) || (selectedResult != null)) {
+        if ((uiState.selectedFeature != null) || (uiState.selectedResult != null)) {
             item {
-                IconButton(onClick = onClear, modifier = Modifier.testTag("AuditLog_FilterClear")) {
+                IconButton(onClick = { onAction(AuditLogUiAction.ClearFilters) }, modifier = Modifier.testTag("AuditLog_FilterClear")) {
                     Icon(
                         Icons.Rounded.ClearAll,
                         contentDescription = stringResource(R.string.audit_log_filter_clear),
@@ -332,53 +323,28 @@ private fun AuditLogFilterBar(
 @Preview(showBackground = true)
 @Composable
 fun AuditLogScreenPreview() {
+    val mockLogs = persistentListOf(
+        AuditLog(
+            id = 1,
+            timestamp = java.time.Instant.now(),
+            featureName = "PersonList",
+            operation = "addPerson",
+            tableName = "person_db",
+            actionType = "INSERT",
+            affectedId = "1",
+            resultType = "SUCCESS"
+        )
+    )
     CareMemoTheme {
         AuditLogScreenContent(
-            auditLogs = persistentListOf(
-                AuditLog(
-                    id = 1,
-                    timestamp = java.time.Instant.now(),
-                    featureName = "PersonList",
-                    operation = "addPerson",
-                    tableName = "person_db",
-                    actionType = "INSERT",
-                    affectedId = "1",
-                    resultType = "SUCCESS"
-                ),
-                AuditLog(
-                    id = 2,
-                    timestamp = java.time.Instant.now().minusSeconds(3600),
-                    featureName = "PersonHealth",
-                    operation = "saveRecord",
-                    tableName = "health_db",
-                    actionType = "UPDATE",
-                    affectedId = "10",
-                    resultType = "DB_ERROR",
-                    details = "android.database.sqlite.SQLiteConstraintException: UNIQUE constraint failed..."
-                ),
-                AuditLog(
-                    id = 3,
-                    timestamp = java.time.Instant.now().minusSeconds(7200),
-                    featureName = "Settings",
-                    operation = "exportData",
-                    tableName = "all_db",
-                    actionType = "UPDATE",
-                    affectedId = "0",
-                    resultType = "OTHER_ERROR",
-                    details = "java.io.IOException: Permission denied"
-                )
+            uiState = AuditLogUiState(
+                auditLogs = mockLogs,
+                filteredLogs = mockLogs,
+                isLoading = false,
+                availableFeatures = persistentListOf("PersonList", "PersonHealth", "Settings"),
+                availableResults = persistentListOf("SUCCESS", "DB_ERROR", "OTHER_ERROR")
             ),
-            isLoading = false,
-            selectedFeature = null,
-            selectedResult = null,
-            isAscending = false,
-            availableFeatures = persistentListOf("PersonList", "PersonHealth", "Settings"),
-            availableResults = persistentListOf("SUCCESS", "DB_ERROR", "OTHER_ERROR"),
-            onFeatureSelect = {},
-            onResultSelect = {},
-            onToggleSort = {},
-            onClearFilters = {},
-            onBack = {}
+            onAction = {}
         )
     }
 }

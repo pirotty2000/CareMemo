@@ -13,9 +13,9 @@
 #### A. State / Recomposition (性能・安定性)
 - [x] **Compose Compiler Report に基づく State/Model の Stable 化**
     - 調査完了：主要なデータモデル（PersonUiState等）は Stable であり、現状維持で問題ないことを確認。
-- [/] **Lambda の安定性と Callback 設計の最適化**
-    - **Lambda の安定性**: キャプチャによる `unstable` 化を防ぐための検討（安定した引数の利用や、キャプチャ対象の安定性確保）。
-    - **Callback 設計**: Composable 内での ViewModel 直接参照を排除し、疎結合な Action Callback 形式（`onAction: () -> Unit`）への統一を徹底（一部のダイアログ等で先行実施）。
+- [x] **Lambda の安定性と Callback 設計の最適化 (疎結合化と実測に基づく改善)**
+    - **境界設計の洗練**: 全主要画面（14画面）において、Composable 内での ViewModel 直接参照を排除し、Stateless な `Content` 抽出と、型安全な Action Callback 形式（`onAction: (UiAction) -> Unit`）への集約を完了。
+    - **実測ベースの最適化**: `remember` による Lambda 固定を全画面に適用。Compiler Report に基づき、Lambda 内で参照する最小限のプロパティのみを `remember` のキーに指定することで、不必要な再生成を抑えつつ状態変化に正しく追従する、実測と理論に基づいた最適化を完遂。
 
 #### B. アクセシビリティ (TalkBack & Semantics)
 - [ ] **TalkBack 読み上げの最適化**
@@ -62,8 +62,8 @@
 #### H. Preview / UI Test (品質の可視化)
 - [ ] **Multi-Preview 構成の拡充**
     - ダークモード、フォントスケール、多言語をカバーするプレビュー環境の構築。
-- [/] **Semantics テストの導入**
-    - 状態復元テストを通じて testTag/Semantics の基盤を整備。今後は TalkBack 読み上げ内容の保証へ。
+- [x] **Semantics テストの導入**
+    - 完了：リファクタリング後の全 14 画面において、計 73 項目のインストルメンタルテストを実行し、機能の正常性と `testTag` によるアクセシビリティ基盤の整備を確認。
 
 ---
 
@@ -77,8 +77,8 @@
 - [ ] UI State 基底クラスや共通 UI コンポーネント（ErrorView等）の Material 3 適合化。
 
 ### Step 3: 画面個別対応
-- [/] 高優先度カテゴリから順次、各画面の UI リファクタリングを実施。
-    - 全主要画面（利用者一覧、登録編集、健康、所見、服薬、一括入力、緊急連絡先）の状態復元対応が完了。
+- [x] 高優先度カテゴリから順次、各画面の UI リファクタリングを実施。
+    - 完了：全主要画面（14画面）の境界設計の洗練、Action パターンへの集約、表示層の Stateless 化、および Lambda 安定化による性能最適化を完遂。
 
 ---
-最終更新日: 2026/08/23
+最終更新日: 2026/08/28

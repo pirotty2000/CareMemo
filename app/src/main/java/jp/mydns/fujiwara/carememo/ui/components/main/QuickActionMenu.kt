@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.ui.screens.main.MainUiAction
 
 /**
  * 全体像：クイックアクションメニュー（Quick Action Menu）
@@ -46,8 +47,7 @@ import jp.mydns.fujiwara.carememo.data.Person
  * @param expanded メニューを表示するかどうか
  * @param person 対象の利用者情報
  * @param isNameMaskingEnabled 氏名を伏せ字にするかどうか
- * @param onDismissRequest メニューを閉じる際のコールバック
- * @param onEmergencyContactClick 緊急連絡先へのアクセスが選択された際のコールバック
+ * @param onAction アクションハンドラ
  * @param modifier 修飾子
  */
 @Composable
@@ -55,13 +55,12 @@ fun QuickActionMenu(
     expanded: Boolean,
     person: Person,
     isNameMaskingEnabled: Boolean,
-    onDismissRequest: () -> Unit,
-    onEmergencyContactClick: () -> Unit,
+    onAction: (MainUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     DropdownMenu(
         expanded = expanded,
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { onAction(MainUiAction.DismissQuickMenu) },
         modifier = modifier.testTag("QuickActionMenu_${person.id}")
     ) {
         // メニューヘッダー (名前表示用：クリック不可)
@@ -84,8 +83,8 @@ fun QuickActionMenu(
             text = { Text(stringResource(R.string.main_quick_action_emergency_contact)) },
             leadingIcon = { Icon(Icons.Rounded.Phone, contentDescription = null) },
             onClick = {
-                onDismissRequest()
-                onEmergencyContactClick()
+                onAction(MainUiAction.DismissQuickMenu)
+                onAction(MainUiAction.EmergencyContactClick(person))
             },
             modifier = Modifier.testTag("QuickActionMenu_EmergencyContact")
         )

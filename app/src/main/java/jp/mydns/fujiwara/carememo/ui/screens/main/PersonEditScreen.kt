@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.NavigationKeys
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -29,6 +30,31 @@ import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputFields
 import jp.mydns.fujiwara.carememo.ui.components.main.BirthdayInputState
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonEditViewModel
+
+/**
+ * UI Action：利用者登録・編集画面におけるユーザー操作の集約定義
+ */
+sealed interface PersonEditUiAction {
+    // 入力変更操作
+    data class LastNameChanged(val value: String) : PersonEditUiAction
+    data class FirstNameChanged(val value: String) : PersonEditUiAction
+    data class LastNameFuriganaChanged(val value: String) : PersonEditUiAction
+    data class FirstNameFuriganaChanged(val value: String) : PersonEditUiAction
+    data class NoteChanged(val value: String) : PersonEditUiAction
+    data class EraChanged(val value: BirthEra) : PersonEditUiAction
+    data class YearChanged(val value: String) : PersonEditUiAction
+    data class MonthChanged(val value: String) : PersonEditUiAction
+    data class DayChanged(val value: String) : PersonEditUiAction
+
+    // ボタン・ナビゲーション操作
+    data object Save : PersonEditUiAction
+    data object Cancel : PersonEditUiAction
+
+    // ダイアログ操作
+    data object DismissDiscardDialog : PersonEditUiAction
+    data object ConfirmDiscard : PersonEditUiAction
+    data object DismissErrorDialog : PersonEditUiAction
+}
 
 /**
  * Screen：PersonEditScreen
@@ -64,13 +90,11 @@ fun PersonEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val isChanged = uiState.isChanged
-    val isValid = uiState.isValid
-    val isLoading = uiState.isLoading
-
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     val context = androidx.compose.ui.platform.LocalContext.current
+    
+    // UI 制御用の内部状態
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
@@ -115,14 +139,56 @@ fun PersonEditScreen(
     }
 
     // システムの戻るボタン制御
-    BackHandler(enabled = isChanged) {
+    BackHandler(enabled = uiState.isChanged) {
         showDiscardDialog = true
+    }
+
+    // アクションハンドラ：UI からの通知を ViewModel やナビゲーションへ橋渡しする
+    // remember を使用してラムダインスタンスを固定し、下位コンポーネントの不要な再描画を抑制する
+    val handleAction: (PersonEditUiAction) -> Unit = remember(viewModel, navController, focusManager, uiState.isChanged, isDuplicateError) {
+        { action ->
+            when (action) {
+                is PersonEditUiAction.LastNameChanged -> viewModel.updateLastName(action.value)
+                is PersonEditUiAction.FirstNameChanged -> viewModel.updateFirstName(action.value)
+                is PersonEditUiAction.LastNameFuriganaChanged -> viewModel.updateLastNameFurigana(action.value)
+                is PersonEditUiAction.FirstNameFuriganaChanged -> viewModel.updateFirstNameFurigana(action.value)
+                is PersonEditUiAction.NoteChanged -> viewModel.updateNote(action.value)
+                is PersonEditUiAction.EraChanged -> viewModel.updateEra(action.value)
+                is PersonEditUiAction.YearChanged -> viewModel.updateYear(action.value)
+                is PersonEditUiAction.MonthChanged -> viewModel.updateMonth(action.value)
+                is PersonEditUiAction.DayChanged -> viewModel.updateDay(action.value)
+                
+                PersonEditUiAction.Save -> {
+                    focusManager.clearFocus()
+                    viewModel.save()
+                }
+                PersonEditUiAction.Cancel -> {
+                    focusManager.clearFocus()
+                    if (uiState.isChanged) showDiscardDialog = true else navController.popBackStack()
+                }
+                PersonEditUiAction.DismissDiscardDialog -> {
+                    showDiscardDialog = false
+                }
+                PersonEditUiAction.ConfirmDiscard -> {
+                    showDiscardDialog = false
+                    navController.popBackStack()
+                }
+                PersonEditUiAction.DismissErrorDialog -> {
+                    dialogMessage = null
+                    dialogTitle = null
+                    if (isDuplicateError) {
+                        focusRequester.requestFocus()
+                    }
+                    isDuplicateError = false
+                }
+            }
+        }
     }
 
     // 破棄確認ダイアログ
     if (showDiscardDialog) {
         AppDialog(
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = { handleAction(PersonEditUiAction.DismissDiscardDialog) },
             modifier = Modifier.testTag("PersonEdit_DiscardConfirmDialog"),
             title = { Text(stringResource(R.string.common_confirm_discard_title)) },
             text = {
@@ -132,16 +198,13 @@ fun PersonEditScreen(
                 AppDialogConfirmButton(
                     text = stringResource(R.string.common_discard),
                     type = AppDialogActionType.DELETE,
-                    onClick = {
-                        showDiscardDialog = false
-                        navController.popBackStack()
-                    }
+                    onClick = { handleAction(PersonEditUiAction.ConfirmDiscard) }
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showDiscardDialog = false }
+                    onClick = { handleAction(PersonEditUiAction.DismissDiscardDialog) }
                 )
             }
         )
@@ -152,14 +215,7 @@ fun PersonEditScreen(
         AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
-            onDismiss = {
-                dialogMessage = null
-                dialogTitle = null
-                if (isDuplicateError) {
-                    focusRequester.requestFocus()
-                }
-                isDuplicateError = false
-            },
+            onDismiss = { handleAction(PersonEditUiAction.DismissErrorDialog) },
             confirmButtonText = if (isDuplicateError) stringResource(R.string.common_continue_editing)
                                 else stringResource(R.string.common_close),
             modifier = Modifier.testTag("PersonEdit_DuplicateDialog")
@@ -167,35 +223,8 @@ fun PersonEditScreen(
     }
 
     PersonEditScreenContent(
-        isNew = uiState.isNew,
-        isLoading = isLoading,
-        lastName = uiState.lastName,
-        firstName = uiState.firstName,
-        lastNameFurigana = uiState.lastNameFurigana,
-        firstNameFurigana = uiState.firstNameFurigana,
-        note = uiState.note,
-        era = uiState.era,
-        year = uiState.year,
-        month = uiState.month,
-        day = uiState.day,
-        isValid = isValid,
-        onLastNameChange = { viewModel.updateLastName(it) },
-        onFirstNameChange = { viewModel.updateFirstName(it) },
-        onLastNameFuriganaChange = { viewModel.updateLastNameFurigana(it) },
-        onFirstNameFuriganaChange = { viewModel.updateFirstNameFurigana(it) },
-        onNoteChange = { viewModel.updateNote(it) },
-        onEraChange = { viewModel.updateEra(it) },
-        onYearChange = { viewModel.updateYear(it) },
-        onMonthChange = { viewModel.updateMonth(it) },
-        onDayChange = { viewModel.updateDay(it) },
-        onSave = {
-            focusManager.clearFocus()
-            viewModel.save()
-        },
-        onCancel = {
-            focusManager.clearFocus()
-            if (isChanged) showDiscardDialog = true else navController.popBackStack()
-        },
+        uiState = uiState,
+        onAction = handleAction,
         snackbarHostState = snackbarHostState,
         noteFocusRequester = focusRequester,
         modifier = modifier,
@@ -205,29 +234,8 @@ fun PersonEditScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonEditScreenContent(
-    isNew: Boolean,
-    isLoading: Boolean,
-    lastName: String,
-    firstName: String,
-    lastNameFurigana: String,
-    firstNameFurigana: String,
-    note: String,
-    era: BirthEra,
-    year: String,
-    month: String,
-    day: String,
-    isValid: Boolean,
-    onLastNameChange: (String) -> Unit,
-    onFirstNameChange: (String) -> Unit,
-    onLastNameFuriganaChange: (String) -> Unit,
-    onFirstNameFuriganaChange: (String) -> Unit,
-    onNoteChange: (String) -> Unit,
-    onEraChange: (BirthEra) -> Unit,
-    onYearChange: (String) -> Unit,
-    onMonthChange: (String) -> Unit,
-    onDayChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
+    uiState: PersonEditUiState,
+    onAction: (PersonEditUiAction) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     noteFocusRequester: FocusRequester = remember { FocusRequester() }
@@ -238,12 +246,12 @@ fun PersonEditScreenContent(
             TopAppBar(
                 title = {
                     Text(
-                        if (isNew) stringResource(R.string.main_user_registration)
+                        if (uiState.isNew) stringResource(R.string.main_user_registration)
                         else stringResource(R.string.main_user_edit)
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onCancel) {
+                    IconButton(onClick = { onAction(PersonEditUiAction.Cancel) }) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -252,12 +260,11 @@ fun PersonEditScreenContent(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        if (isLoading) {
+        if (uiState.isLoading) {
             LoadingScreen(modifier = Modifier.testTag("PersonEdit_Loading"))
         } else {
             val scrollState = rememberScrollState()
             // 状態復元のための Saver 対応：rememberSaveable を使用
-            // ScrollState はデフォルトで Saver が提供されているため、単に rememberSaveable に変更可能
             val scrollStateRestorable = rememberSaveable(saver = ScrollState.Saver) {
                 scrollState
             }
@@ -277,16 +284,16 @@ fun PersonEditScreenContent(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val nameSpec = AppSpecifications.Constraints.Person.Validation
                         AppTextField(
-                            value = lastName,
-                            onValueChange = onLastNameChange,
+                            value = uiState.lastName,
+                            onValueChange = { onAction(PersonEditUiAction.LastNameChanged(it)) },
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_last_name)) },
                             maxLength = nameSpec.MAX_LENGTH_LAST_NAME,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_LastName")
                         )
                         AppTextField(
-                            value = firstName,
-                            onValueChange = onFirstNameChange,
+                            value = uiState.firstName,
+                            onValueChange = { onAction(PersonEditUiAction.FirstNameChanged(it)) },
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_first_name)) },
                             maxLength = nameSpec.MAX_LENGTH_FIRST_NAME,
@@ -297,16 +304,16 @@ fun PersonEditScreenContent(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val kanaSpec = AppSpecifications.Constraints.Person.Validation
                         AppTextField(
-                            value = lastNameFurigana,
-                            onValueChange = onLastNameFuriganaChange,
+                            value = uiState.lastNameFurigana,
+                            onValueChange = { onAction(PersonEditUiAction.LastNameFuriganaChanged(it)) },
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_last_name_furigana)) },
                             maxLength = kanaSpec.MAX_LENGTH_LAST_NAME_FURIGANA,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_LastNameKana")
                         )
                         AppTextField(
-                            value = firstNameFurigana,
-                            onValueChange = onFirstNameFuriganaChange,
+                            value = uiState.firstNameFurigana,
+                            onValueChange = { onAction(PersonEditUiAction.FirstNameFuriganaChanged(it)) },
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_first_name_furigana)) },
                             maxLength = kanaSpec.MAX_LENGTH_FIRST_NAME_FURIGANA,
@@ -315,8 +322,8 @@ fun PersonEditScreenContent(
                     }
 
                     AppTextField(
-                        value = note,
-                        onValueChange = onNoteChange,
+                        value = uiState.note,
+                        onValueChange = { onAction(PersonEditUiAction.NoteChanged(it)) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.main_label_note)) },
                         maxLength = AppSpecifications.Constraints.Person.Validation.MAX_LENGTH_NOTE,
@@ -330,14 +337,11 @@ fun PersonEditScreenContent(
 
                     // 生年月日
                     BirthdayInputSection(
-                        era = era,
-                        year = year,
-                        month = month,
-                        day = day,
-                        onEraChange = onEraChange,
-                        onYearChange = onYearChange,
-                        onMonthChange = onMonthChange,
-                        onDayChange = onDayChange
+                        era = uiState.era,
+                        year = uiState.year,
+                        month = uiState.month,
+                        day = uiState.day,
+                        onAction = onAction
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -348,14 +352,14 @@ fun PersonEditScreenContent(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OutlinedButton(
-                            onClick = onCancel,
+                            onClick = { onAction(PersonEditUiAction.Cancel) },
                             modifier = Modifier.weight(1f).testTag("PersonEdit_CancelButton")
                         ) {
                             Text(stringResource(R.string.common_cancel))
                         }
                         Button(
-                            onClick = onSave,
-                            enabled = isValid,
+                            onClick = { onAction(PersonEditUiAction.Save) },
+                            enabled = uiState.isValid,
                             modifier = Modifier.weight(1f).testTag("PersonEdit_SaveButton")
                         ) {
                             Text(stringResource(R.string.common_save))
@@ -376,58 +380,47 @@ private fun BirthdayInputSection(
     year: String,
     month: String,
     day: String,
-    onEraChange: (BirthEra) -> Unit,
-    onYearChange: (String) -> Unit,
-    onMonthChange: (String) -> Unit,
-    onDayChange: (String) -> Unit,
+    onAction: (PersonEditUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 外部（ViewModel）からの値を常に最新状態で参照するための State
-    val currentEra by rememberUpdatedState(era)
-    val currentYear by rememberUpdatedState(year)
-    val currentMonth by rememberUpdatedState(month)
-    val currentDay by rememberUpdatedState(day)
-
-    // コールバックを常に最新状態で保持
-    val currentOnEraChange by rememberUpdatedState(onEraChange)
-    val currentOnYearChange by rememberUpdatedState(onYearChange)
-    val currentOnMonthChange by rememberUpdatedState(onMonthChange)
-    val currentOnDayChange by rememberUpdatedState(onDayChange)
-
-    // BirthdayInputFields が要求する MutableState インターフェースをデリゲート形式で実装
-    // これにより、LaunchedEffect による非同期同期を排除し、ViewModel と UI を直結（パターン①）させる。
-    val birthdayState = remember {
+    // 外部からの値を MutableState インターフェース経由で BirthdayInputFields へ橋渡しする
+    // remember でラップしつつ、各セッターで onAction を呼び出す
+    val birthdayState = remember(onAction) {
         BirthdayInputState(
             era = object : MutableState<BirthEra> {
                 override var value: BirthEra
-                    get() = currentEra
-                    set(v) { currentOnEraChange(v) }
+                    get() = era // note: composition will update this value directly
+                    set(v) { onAction(PersonEditUiAction.EraChanged(v)) }
                 override fun component1() = value
                 override fun component2(): (BirthEra) -> Unit = { value = it }
             },
             year = object : MutableState<String> {
                 override var value: String
-                    get() = currentYear
-                    set(v) { currentOnYearChange(v) }
+                    get() = year
+                    set(v) { onAction(PersonEditUiAction.YearChanged(v)) }
                 override fun component1() = value
                 override fun component2(): (String) -> Unit = { value = it }
             },
             month = object : MutableState<String> {
                 override var value: String
-                    get() = currentMonth
-                    set(v) { currentOnMonthChange(v) }
+                    get() = month
+                    set(v) { onAction(PersonEditUiAction.MonthChanged(v)) }
                 override fun component1() = value
                 override fun component2(): (String) -> Unit = { value = it }
             },
             day = object : MutableState<String> {
                 override var value: String
-                    get() = currentDay
-                    set(v) { currentOnDayChange(v) }
+                    get() = day
+                    set(v) { onAction(PersonEditUiAction.DayChanged(v)) }
                 override fun component1() = value
                 override fun component2(): (String) -> Unit = { value = it }
             }
         )
     }
+
+    // 値が更新された際に MutableState 内の getter が参照する値も最新になるよう、
+    // BirthdayInputState 内の getter は引数の era, year 等を直接参照する。
+    // (コンポーザブルが再描画される際、引数は最新の値になっているため)
 
     BirthdayInputFields(state = birthdayState, modifier = modifier)
 }

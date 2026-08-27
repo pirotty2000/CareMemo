@@ -54,6 +54,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import jp.mydns.fujiwara.carememo.ui.preview.MockData
 import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
 import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionPreviewParameterProvider
+import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionUiAction
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
@@ -201,36 +202,14 @@ private fun ConditionMemoContent(
  * 所見メモの詳細・編集ペイン。
  *
  * @param uiState UI 状態
+ * @param onAction アクションハンドラ
  * @param modifier 修飾子
- * @param onDeletePhoto 写真削除処理のコールバック
- * @param onSelectedIdChange 選択ID変更（新規作成中止時など）のコールバック
- * @param onCancel 閲覧モードの終了コールバック
- * @param onEditClick 編集モードへの移行コールバック
- * @param onEditInputUpdate 入力値の更新コールバック
- * @param onSaveClick 保存実行のコールバック
- * @param onCancelEdit 編集キャンセルのコールバック
- * @param onAddPhotoClick カメラ起動のコールバック
- * @param onPickPhotoClick ギャラリー起動のコールバック
- * @param onReattachPhoto 未割り当て写真の再紐付けコールバック
- * @param onNavigateToFullScreen 写真フルスクリーン表示への遷移コールバック
- * @param onMicClick 音声入力開始時のコールバック（効果音再生等に使用）
  */
 @Composable
 fun ConditionDetailPane(
     uiState: PersonConditionUiState,
+    onAction: (PersonConditionUiAction) -> Unit,
     modifier: Modifier = Modifier,
-    onDeletePhoto: (ConditionPhoto) -> Unit,
-    onSelectedIdChange: (String?) -> Unit,
-    onCancel: () -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
-    onSaveClick: ((String) -> Unit) -> Unit,
-    onCancelEdit: () -> Unit,
-    onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit = {},
-    onNavigateToFullScreen: (String, String) -> Unit,
-    onMicClick: () -> Unit,
 ) {
     val memo = remember(uiState.records, uiState.selectedConditionId) {
         if ((uiState.selectedConditionId == null || IdLogic.isNew(uiState.selectedConditionId))) null
@@ -263,7 +242,7 @@ fun ConditionDetailPane(
                     type = AppDialogActionType.DELETE,
                     onClick = {
                         showDiscardDialog = false
-                        onCancelEdit()
+                        onAction(PersonConditionUiAction.CancelEdit)
                     }
                 )
             },
@@ -305,23 +284,15 @@ fun ConditionDetailPane(
             photos = uiState.currentConditionPhotos,
             isProcessing = uiState.isProcessing,
             isSaveEnabled = uiState.isSaveEnabled,
-            modifier = modifier,
-            onEditInputUpdate = onEditInputUpdate,
-            onSave = {
-                onSaveClick { newId ->
-                    onSelectedIdChange(newId)
-                }
-            },
-            onCancel = {
-                if (uiState.isChanged) showDiscardDialog = true
-                else onCancelEdit()
-            },
-            onAddPhotoClick = onAddPhotoClick,
-            onPickPhotoClick = onPickPhotoClick,
-            onReattachClick = { showUnassignedSelectDialog = true },
             unassignedPhotoCount = uiState.unassignedPhotoCount,
-            onDeletePhoto = { photoToDelete = it },
-            onMicClick = onMicClick
+            onAction = onAction,
+            onDeletePhotoRequest = { photoToDelete = it },
+            onCancelRequest = {
+                if (uiState.isChanged) showDiscardDialog = true
+                else onAction(PersonConditionUiAction.CancelEdit)
+            },
+            onReattachRequest = { showUnassignedSelectDialog = true },
+            modifier = modifier
         )
     } else {
         // [2-2] ConditionRecordDisplayCard (記録の閲覧)
@@ -329,14 +300,10 @@ fun ConditionDetailPane(
             memo = memo,
             photos = uiState.currentConditionPhotos,
             isProcessing = uiState.isProcessing,
-            modifier = modifier,
-            onCancel = onCancel,
-            onEditClick = onEditClick,
-            onPhotoClick = { onNavigateToFullScreen(it.id, it.conditionId) },
-            onAddPhotoClick = onAddPhotoClick,
-            onPickPhotoClick = onPickPhotoClick,
-            onReattachClick = { showUnassignedSelectDialog = true },
-            unassignedPhotoCount = uiState.unassignedPhotoCount
+            unassignedPhotoCount = uiState.unassignedPhotoCount,
+            onAction = onAction,
+            onReattachRequest = { showUnassignedSelectDialog = true },
+            modifier = modifier
         )
     }
 
@@ -346,7 +313,7 @@ fun ConditionDetailPane(
             unassignedPhotos = uiState.availableUnassignedPhotos,
             onDismiss = { showUnassignedSelectDialog = false },
             onSelect = { info ->
-                onReattachPhoto(info)
+                onAction(PersonConditionUiAction.ReattachPhoto(info))
                 showUnassignedSelectDialog = false
             }
         )
@@ -357,7 +324,7 @@ fun ConditionDetailPane(
         AppDeleteConfirmDialog(
             onDismiss = { photoToDelete = null },
             onDelete = {
-                photoToDelete?.let { onDeletePhoto(it) }
+                photoToDelete?.let { onAction(PersonConditionUiAction.DeletePhoto(it)) }
                 photoToDelete = null
             },
             title = stringResource(R.string.condition_photo_delete_confirm_title),
@@ -378,16 +345,12 @@ private fun ConditionRecordEditForm(
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isSaveEnabled: Boolean,
-    modifier: Modifier = Modifier,
-    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
-    onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
-    onReattachClick: () -> Unit = {},
     unassignedPhotoCount: Int = 0,
-    onDeletePhoto: (ConditionPhoto) -> Unit,
-    onMicClick: () -> Unit,
+    onAction: (PersonConditionUiAction) -> Unit,
+    onDeletePhotoRequest: (ConditionPhoto) -> Unit,
+    onCancelRequest: () -> Unit,
+    onReattachRequest: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     // 音声認識ランチャーの設定
     val speechLauncher = rememberLauncherForActivityResult(
@@ -397,7 +360,7 @@ private fun ConditionRecordEditForm(
             val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
             if (spokenText != null) {
                 // 音声入力の結果を既存のテキストに追記
-                onEditInputUpdate { it.copy(condition = "${it.condition}$spokenText。\n") }
+                onAction(PersonConditionUiAction.EditInputUpdate { it.copy(condition = "${it.condition}$spokenText。\n") })
             }
         }
     }
@@ -414,7 +377,7 @@ private fun ConditionRecordEditForm(
     ) {
         val nextTime = dateTimeState.toInstant()
         if (nextTime != editInput.recordTime) {
-            onEditInputUpdate { it.copy(recordTime = nextTime) }
+            onAction(PersonConditionUiAction.EditInputUpdate { it.copy(recordTime = nextTime) })
         }
     }
 
@@ -446,7 +409,7 @@ private fun ConditionRecordEditForm(
                     HorizontalDivider(thickness = 0.5.dp)
                     AppTextField(
                         value = editInput.title,
-                        onValueChange = { v -> onEditInputUpdate { it.copy(title = v) } },
+                        onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(title = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
@@ -454,14 +417,14 @@ private fun ConditionRecordEditForm(
                     )
                     AppTextField(
                         value = editInput.author,
-                        onValueChange = { v -> onEditInputUpdate { it.copy(author = v) } },
+                        onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(author = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_author)) },
                         modifier = Modifier.fillMaxWidth().testTag("Condition_AuthorInput")
                     )
                     AppTextField(
                         value = editInput.condition,
-                        onValueChange = { v -> onEditInputUpdate { it.copy(condition = v) } },
+                        onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(condition = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_memo)) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).testTag("Condition_MemoInput"),
@@ -473,7 +436,7 @@ private fun ConditionRecordEditForm(
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                     putExtra(RecognizerIntent.EXTRA_PROMPT, "音声入力を開始します")
                                 }
-                                onMicClick()
+                                onAction(PersonConditionUiAction.MicClick)
                                 speechLauncher.launch(intent)
                             }) {
                                 Icon(Icons.Rounded.Mic, contentDescription = stringResource(R.string.condition_btn_mic_desc), tint = MaterialTheme.colorScheme.primary)
@@ -482,11 +445,11 @@ private fun ConditionRecordEditForm(
                     )
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            onClick = onCancel,
+                            onClick = onCancelRequest,
                             modifier = Modifier.weight(1f)
                         ) { Text(stringResource(R.string.common_cancel)) }
                         Button(
-                            onClick = onSave,
+                            onClick = { onAction(PersonConditionUiAction.SaveClick { onAction(PersonConditionUiAction.SelectedIdChanged(it)) }) },
                             modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
                             enabled = isSaveEnabled
                         ) { Text(stringResource(R.string.common_save)) }
@@ -505,7 +468,7 @@ private fun ConditionRecordEditForm(
                 Row {
                     // 未割り当て写真の再登録ボタン (既存レコードかつ未割り当てがある場合のみ表示)
                     if (unassignedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
-                        IconButton(onClick = onReattachClick, enabled = !isProcessing) {
+                        IconButton(onClick = onReattachRequest, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.CloudDownload,
                                 contentDescription = stringResource(R.string.common_unassigned_photo_reattach_title),
@@ -515,7 +478,7 @@ private fun ConditionRecordEditForm(
                     }
                     // ギャラリーから追加
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
-                        IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
+                        IconButton(onClick = { onAction(PersonConditionUiAction.PickPhotoClick) }, enabled = !isProcessing) {
                             Icon(
                                 imageVector = Icons.Rounded.PhotoLibrary,
                                 contentDescription = stringResource(R.string.condition_btn_gallery_desc),
@@ -526,7 +489,7 @@ private fun ConditionRecordEditForm(
                     // カメラで撮影
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
                         IconButton(
-                            onClick = onAddPhotoClick,
+                            onClick = { onAction(PersonConditionUiAction.AddPhotoClick) },
                             enabled = !isProcessing,
                             modifier = Modifier.testTag("Condition_AddPhotoButton")
                         ) {
@@ -549,12 +512,17 @@ private fun ConditionRecordEditForm(
             if (photos.isEmpty()) {
                 Text(stringResource(R.string.common_no_photos), color = MaterialTheme.colorScheme.outline)
             } else {
-                PhotoGrid(photos = photos, isEditable = true, onPhotoClick = {}, onDeletePhoto = onDeletePhoto)
+                PhotoGrid(
+                    photos = photos,
+                    isEditable = true,
+                    onPhotoClick = {},
+                    onDeletePhoto = onDeletePhotoRequest
+                )
             }
 
             // 撮影ボタン（強調用）
             if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && !IdLogic.isNew(conditionId)) {
-                Button(onClick = onAddPhotoClick, enabled = !isProcessing, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { onAction(PersonConditionUiAction.AddPhotoClick) }, enabled = !isProcessing, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.condition_btn_capture))
@@ -639,14 +607,10 @@ private fun ConditionRecordDisplayCard(
     memo: ConditionAtVisit?,
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
-    modifier: Modifier = Modifier,
-    onCancel: () -> Unit,
-    onEditClick: () -> Unit,
-    onPhotoClick: (ConditionPhoto) -> Unit,
-    onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
-    onReattachClick: () -> Unit = {},
     unassignedPhotoCount: Int = 0,
+    onAction: (PersonConditionUiAction) -> Unit,
+    onReattachRequest: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
     Box(
@@ -671,7 +635,7 @@ private fun ConditionRecordDisplayCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = onCancel,
+                        onClick = { onAction(PersonConditionUiAction.SelectedIdChanged(null)) },
                         modifier = Modifier.offset(x = (-12).dp)
                     ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
@@ -683,7 +647,7 @@ private fun ConditionRecordDisplayCard(
                         modifier = Modifier.offset(x = (-8).dp)
                     )
                 }
-                IconButton(onClick = onEditClick) {
+                IconButton(onClick = { onAction(PersonConditionUiAction.EditClick) }) {
                     Icon(Icons.Rounded.EditNote, contentDescription = stringResource(R.string.common_edit))
                 }
             }
@@ -727,18 +691,18 @@ private fun ConditionRecordDisplayCard(
 
                 Row {
                     if (unassignedPhotoCount > 0 && photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
-                        IconButton(onClick = onReattachClick, enabled = !isProcessing) {
+                        IconButton(onClick = onReattachRequest, enabled = !isProcessing) {
                             Icon(imageVector = Icons.Rounded.CloudDownload, contentDescription = stringResource(R.string.common_unassigned_photo_reattach_title), tint = MaterialTheme.colorScheme.tertiary)
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT && memo != null) {
-                        IconButton(onClick = onPickPhotoClick, enabled = !isProcessing) {
+                        IconButton(onClick = { onAction(PersonConditionUiAction.PickPhotoClick) }, enabled = !isProcessing) {
                             Icon(imageVector = Icons.Rounded.PhotoLibrary, contentDescription = stringResource(R.string.condition_btn_gallery_desc), tint = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     if (photos.size < AppSpecifications.Condition.Photo.MAX_COUNT) {
                         IconButton(
-                            onClick = onAddPhotoClick,
+                            onClick = { onAction(PersonConditionUiAction.AddPhotoClick) },
                             enabled = !isProcessing,
                             modifier = Modifier.testTag("Condition_AddPhotoButton")
                         ) {
@@ -750,7 +714,12 @@ private fun ConditionRecordDisplayCard(
             if (photos.isEmpty()) {
                 Text(stringResource(R.string.common_no_photos), color = MaterialTheme.colorScheme.outline)
             } else {
-                PhotoGrid(photos = photos, isEditable = false, onPhotoClick = onPhotoClick, onDeletePhoto = {})
+                PhotoGrid(
+                    photos = photos,
+                    isEditable = false,
+                    onPhotoClick = { onAction(PersonConditionUiAction.NavigateToPhotoFullScreen(it.id, it.conditionId)) },
+                    onDeletePhoto = {}
+                )
             }
             Spacer(modifier = Modifier.height(80.dp))
         }
@@ -843,18 +812,7 @@ private fun PreviewConditionDetailPane(
                 records = state.records,
                 isLoading = state.isLoading
             ),
-            onDeletePhoto = {},
-            onSelectedIdChange = {},
-            onCancel = {},
-            onEditClick = {},
-            onEditInputUpdate = {},
-            onSaveClick = {},
-            onCancelEdit = {},
-            onAddPhotoClick = {},
-            onPickPhotoClick = {},
-            onReattachPhoto = {},
-            onNavigateToFullScreen = { _, _ -> },
-            onMicClick = {}
+            onAction = {}
         )
     }
 }
@@ -875,14 +833,11 @@ private fun PreviewConditionRecordEditFormDirect() {
             photos = persistentListOf(),
             isProcessing = false,
             isSaveEnabled = true,
-            onEditInputUpdate = {},
-            onSave = {},
-            onCancel = {},
-            onAddPhotoClick = {},
-            onPickPhotoClick = {},
-            onReattachClick = {},
-            onDeletePhoto = {},
-            onMicClick = {}
+            unassignedPhotoCount = 0,
+            onAction = {},
+            onDeletePhotoRequest = {},
+            onCancelRequest = {},
+            onReattachRequest = {}
         )
     }
 }

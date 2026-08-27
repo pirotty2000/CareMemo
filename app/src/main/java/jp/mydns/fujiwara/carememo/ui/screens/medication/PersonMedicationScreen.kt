@@ -22,6 +22,28 @@ import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonMedicationViewModel
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+
+/**
+ * UI Action：服薬記録画面におけるユーザー操作の集約定義
+ */
+sealed interface PersonMedicationUiAction {
+    // ナビゲーション・月操作
+    data object PreviousMonth : PersonMedicationUiAction
+    data object NextMonth : PersonMedicationUiAction
+    data object Back : PersonMedicationUiAction
+    data class NavigateToCategory(val category: Category) : PersonMedicationUiAction
+
+    // 表示モード・表示制御
+    data class HistoryModeChange(val isHistoryMode: Boolean) : PersonMedicationUiAction
+    data object ShowPdfSettings : PersonMedicationUiAction
+    data class DayClick(val date: LocalDate) : PersonMedicationUiAction
+
+    // ダイアログ操作
+    data object DismissDialog : PersonMedicationUiAction
+    data class DialogStatusToggle(val slotIndex: Int, val status: MedicationStatus, val time: Instant) : PersonMedicationUiAction
+    data object DialogConfirm : PersonMedicationUiAction
+}
 
 /**
  * Screen：PersonMedicationScreen
@@ -75,6 +97,7 @@ fun PersonMedicationScreen(
         medicationViewModel.setCategory(detailState.currentCategory)
     }
 
+    val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -125,65 +148,62 @@ fun PersonMedicationScreen(
         }
     }
 
-    if (widthSizeClass == WindowWidthSizeClass.Expanded) {
-        PersonMedicationScreenTablet(
-            currentPerson = detailState.person,
-            isNameMaskingEnabled = isNameMaskingEnabled,
-            isLoading = medicationState.isLoading,
-            selectedMonth = medicationState.selectedMonth,
-            recordsByDate = medicationState.recordsByDate,
-            personCategorySummary = detailState.personSummary,
-            onPreviousMonth = { medicationViewModel.previousMonth() },
-            onNextMonth = { medicationViewModel.nextMonth() },
-            onBack = { detailViewModel.navigateBackToMain() },
-            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
-            onShowPdfSettings = {
-                if (medicationState.allRecords.isEmpty()) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            context.getString(
-                                R.string.p_detail_error_no_records_for_pdf,
-                                context.getString(Category.MEDICATION.displayNameRes)
+    // アクションハンドラ：UI からの通知を ViewModel やナビゲーションへ橋渡しする
+    val handleAction: (PersonMedicationUiAction) -> Unit = remember(medicationViewModel, detailViewModel, navController, scope, medicationState.allRecords.isEmpty()) {
+        { action ->
+            when (action) {
+                PersonMedicationUiAction.PreviousMonth -> medicationViewModel.previousMonth()
+                PersonMedicationUiAction.NextMonth -> medicationViewModel.nextMonth()
+                PersonMedicationUiAction.Back -> detailViewModel.navigateBackToMain()
+                is PersonMedicationUiAction.NavigateToCategory -> detailViewModel.navigateToCategory(action.category)
+                is PersonMedicationUiAction.HistoryModeChange -> isHistoryMode = action.isHistoryMode
+                PersonMedicationUiAction.ShowPdfSettings -> {
+                    if (medicationState.allRecords.isEmpty()) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                context.getString(
+                                    R.string.p_detail_error_no_records_for_pdf,
+                                    context.getString(Category.MEDICATION.displayNameRes)
+                                )
                             )
-                        )
+                        }
+                    } else {
+                        showPdfSettingsDialog = true
                     }
-                } else {
-                    showPdfSettingsDialog = true
                 }
-            },
-            onDayClick = { date -> medicationViewModel.onDayClick(date) },
+                is PersonMedicationUiAction.DayClick -> medicationViewModel.onDayClick(action.date)
+                PersonMedicationUiAction.DismissDialog -> {
+                    showPdfSettingsDialog = false
+                    dialogMessage = null
+                    dialogTitle = null
+                    medicationViewModel.dismissDialog()
+                }
+                is PersonMedicationUiAction.DialogStatusToggle -> {
+                    medicationViewModel.updateDialogRecord(action.slotIndex, action.status, action.time)
+                }
+                PersonMedicationUiAction.DialogConfirm -> medicationViewModel.syncMedicationDay()
+            }
+        }
+    }
+
+    if (isExpanded) {
+        PersonMedicationScreenTablet(
+            uiState = medicationState,
+            currentPerson = detailState.person,
+            personCategorySummary = detailState.personSummary,
+            isNameMaskingEnabled = isNameMaskingEnabled,
+            onAction = handleAction,
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
     } else {
         PersonMedicationScreenPhone(
+            uiState = medicationState,
             currentPerson = detailState.person,
-            isNameMaskingEnabled = isNameMaskingEnabled,
-            isLoading = medicationState.isLoading,
-            selectedMonth = medicationState.selectedMonth,
-            recordsByDate = medicationState.recordsByDate,
             personCategorySummary = detailState.personSummary,
+            isNameMaskingEnabled = isNameMaskingEnabled,
             isHistoryMode = isHistoryMode,
-            onHistoryModeChange = { isHistoryMode = it },
-            onPreviousMonth = { medicationViewModel.previousMonth() },
-            onNextMonth = { medicationViewModel.nextMonth() },
-            onBack = { detailViewModel.navigateBackToMain() },
-            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
-            onShowPdfSettings = {
-                if (medicationState.allRecords.isEmpty()) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            context.getString(
-                                R.string.p_detail_error_no_records_for_pdf,
-                                context.getString(Category.MEDICATION.displayNameRes)
-                            )
-                        )
-                    }
-                } else {
-                    showPdfSettingsDialog = true
-                }
-            },
-            onDayClick = { date -> medicationViewModel.onDayClick(date) },
+            onAction = handleAction,
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
@@ -193,7 +213,7 @@ fun PersonMedicationScreen(
     if (showPdfSettingsDialog) {
         PdfExportActionHandler(
             showDialog = true,
-            onDismiss = { showPdfSettingsDialog = false },
+            onDismiss = { handleAction(PersonMedicationUiAction.DismissDialog) },
             category = Category.MEDICATION,
             canExport = detailState.person != null,
             onRequireAuthentication = onRequireAuthentication,
@@ -225,13 +245,7 @@ fun PersonMedicationScreen(
         MedicationInputDialog(
             date = medicationState.selectedDialogDate!!,
             tempRecords = medicationState.dialogTempRecords,
-            onDismiss = { medicationViewModel.dismissDialog() },
-            onStatusToggle = { slotIndex: Int, status: MedicationStatus, time: Instant ->
-                medicationViewModel.updateDialogRecord(slotIndex, status, time)
-            },
-            onConfirm = {
-                medicationViewModel.syncMedicationDay()
-            }
+            onAction = handleAction
         )
     }
 
@@ -239,10 +253,7 @@ fun PersonMedicationScreen(
         AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
-            onDismiss = {
-                dialogMessage = null
-                dialogTitle = null
-            }
+            onDismiss = { handleAction(PersonMedicationUiAction.DismissDialog) }
         )
     }
 }

@@ -33,6 +33,16 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 import kotlinx.collections.immutable.persistentListOf
 
 /**
+ * UI Action：緊急連絡先一覧画面におけるユーザー操作の集約定義
+ */
+sealed interface EmergencyContactListUiAction {
+    data object AddClick : EmergencyContactListUiAction
+    data class EditClick(val contact: EmergencyContact) : EmergencyContactListUiAction
+    data class DeleteConfirm(val contact: EmergencyContact) : EmergencyContactListUiAction
+    data object Back : EmergencyContactListUiAction
+}
+
+/**
  * Screen：EmergencyContactListScreen
  *
  * 【役割】
@@ -63,20 +73,30 @@ fun EmergencyContactListScreen(
         }
     }
 
+    val handleAction: (EmergencyContactListUiAction) -> Unit = remember(viewModel, navController, uiState.personId) {
+        { action ->
+            when (action) {
+                EmergencyContactListUiAction.AddClick -> {
+                    viewModel.startAdd()
+                    navController.navigate(Destination.MedicalContactEdit(uiState.personId, null))
+                }
+                is EmergencyContactListUiAction.EditClick -> {
+                    viewModel.startEdit(action.contact)
+                    navController.navigate(Destination.MedicalContactEdit(uiState.personId, action.contact.id))
+                }
+                is EmergencyContactListUiAction.DeleteConfirm -> {
+                    viewModel.deleteContact(action.contact)
+                }
+                EmergencyContactListUiAction.Back -> {
+                    navController.popBackStack()
+                }
+            }
+        }
+    }
+
     EmergencyContactListContent(
         uiState = uiState,
-        onNavigateBack = { navController.popBackStack() },
-        onAddClick = {
-            viewModel.startAdd()
-            navController.navigate(Destination.MedicalContactEdit(uiState.personId, null))
-        },
-        onEditClick = { contact ->
-            viewModel.startEdit(contact)
-            navController.navigate(Destination.MedicalContactEdit(uiState.personId, contact.id))
-        },
-        onDeleteConfirm = { contact ->
-            viewModel.deleteContact(contact)
-        },
+        onAction = handleAction,
         modifier = modifier,
     )
 }
@@ -88,10 +108,7 @@ fun EmergencyContactListScreen(
 @Composable
 fun EmergencyContactListContent(
     uiState: EmergencyContactUiState,
-    onNavigateBack: () -> Unit,
-    onAddClick: () -> Unit,
-    onEditClick: (EmergencyContact) -> Unit,
-    onDeleteConfirm: (EmergencyContact) -> Unit,
+    onAction: (EmergencyContactListUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var contactToDelete by remember { mutableStateOf<EmergencyContact?>(null) }
@@ -106,7 +123,7 @@ fun EmergencyContactListContent(
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = onNavigateBack,
+                        onClick = { onAction(EmergencyContactListUiAction.Back) },
                         modifier = Modifier.testTag("MedicalContactList_BackButton")
                     ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
@@ -117,7 +134,7 @@ fun EmergencyContactListContent(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onAddClick,
+                onClick = { onAction(EmergencyContactListUiAction.AddClick) },
                 modifier = Modifier.testTag("MedicalContactList_AddButton")
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.common_add))
@@ -140,7 +157,7 @@ fun EmergencyContactListContent(
                     items(uiState.contacts, key = { it.id }) { contact ->
                         EmergencyContactItem(
                             contact = contact,
-                            onEditClick = { onEditClick(contact) },
+                            onAction = onAction,
                             onDeleteClick = { contactToDelete = contact },
                             modifier = Modifier.testTag("EmergencyContactItem_${contact.id}")
                         )
@@ -157,7 +174,7 @@ fun EmergencyContactListContent(
             title = stringResource(R.string.medical_contact_delete_confirm_title),
             message = stringResource(R.string.medical_contact_delete_confirm_msg, contactToDelete!!.facilityName),
             onDelete = {
-                onDeleteConfirm(contactToDelete!!)
+                onAction(EmergencyContactListUiAction.DeleteConfirm(contactToDelete!!))
                 contactToDelete = null
             },
             onDismiss = { contactToDelete = null }
@@ -168,7 +185,7 @@ fun EmergencyContactListContent(
 @Composable
 fun EmergencyContactItem(
     contact: EmergencyContact,
-    onEditClick: () -> Unit,
+    onAction: (EmergencyContactListUiAction) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -204,7 +221,7 @@ fun EmergencyContactItem(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.common_edit)) },
                         leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) },
-                        onClick = { showMenu = false; onEditClick() }
+                        onClick = { showMenu = false; onAction(EmergencyContactListUiAction.EditClick(contact)) }
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
@@ -229,10 +246,7 @@ fun EmergencyContactListContentPreview_Normal() {
                     EmergencyContact(facilityName = "長男の妻", personName = "○○さん", phoneNumber = "08011111111", contactType = "FAMILY", personId = "1", priority = 1)
                 )
             ),
-            onNavigateBack = {},
-            onAddClick = {},
-            onEditClick = {},
-            onDeleteConfirm = {}
+            onAction = {}
         )
     }
 }

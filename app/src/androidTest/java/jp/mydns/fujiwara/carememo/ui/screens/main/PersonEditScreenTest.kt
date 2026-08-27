@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -73,7 +72,9 @@ class PersonEditScreenTest {
     fun ACT_01_nameInput_callsViewModel() {
         var capturedLastName = ""
         setContent {
-            PersonEditScreenContentWrapper(onLastNameChange = { capturedLastName = it })
+            PersonEditScreenContentWrapper(onAction = { action ->
+                if (action is PersonEditUiAction.LastNameChanged) capturedLastName = action.value
+            })
         }
         composeTestRule.onNodeWithTag("PersonEdit_LastName").performTextInput("佐藤")
         assert(capturedLastName == "佐藤")
@@ -83,7 +84,9 @@ class PersonEditScreenTest {
     fun ACT_03_saveButton_callsViewModel() {
         var saveCalled = false
         setContent {
-            PersonEditScreenContentWrapper(isValid = true, onSave = { saveCalled = true })
+            PersonEditScreenContentWrapper(isValid = true, onAction = { action ->
+                if (action is PersonEditUiAction.Save) saveCalled = true
+            })
         }
         composeTestRule.onNodeWithTag("PersonEdit_SaveButton").performClick()
         assert(saveCalled)
@@ -205,33 +208,17 @@ class PersonEditScreenTest {
         lastName: String = "",
         firstName: String = "",
         isValid: Boolean = false,
-        onLastNameChange: (String) -> Unit = {},
-        onSave: () -> Unit = {}
+        onAction: (PersonEditUiAction) -> Unit = {}
     ) {
         PersonEditScreenContent(
-            isNew = isNew,
-            isLoading = isLoading,
-            lastName = lastName,
-            firstName = firstName,
-            lastNameFurigana = "",
-            firstNameFurigana = "",
-            note = "",
-            era = BirthEra.SHOWA,
-            year = "",
-            month = "",
-            day = "",
-            isValid = isValid,
-            onLastNameChange = onLastNameChange,
-            onFirstNameChange = {},
-            onLastNameFuriganaChange = {},
-            onFirstNameFuriganaChange = {},
-            onNoteChange = {},
-            onEraChange = {},
-            onYearChange = {},
-            onMonthChange = {},
-            onDayChange = {},
-            onSave = onSave,
-            onCancel = {},
+            uiState = PersonEditUiState(
+                isNew = isNew,
+                isLoading = isLoading,
+                lastName = lastName,
+                firstName = firstName,
+                isValid = isValid
+            ),
+            onAction = onAction,
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

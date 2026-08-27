@@ -37,24 +37,9 @@ fun PersonConditionScreenPhone(
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
     isAnyDialogOpen: Boolean,
-    modifier: Modifier = Modifier,
-    onSearchQueryChange: (String) -> Unit,
-    onSelectedIdChange: (String?) -> Unit,
-    onBack: () -> Unit,
-    onNavigateToCategory: (Category) -> Unit,
-    onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
-    onNavigateToFullScreen: (String, String) -> Unit,
-    onShowPdfSettings: () -> Unit,
-    onDeleteRecord: (HistoryRecord) -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
-    onSaveClick: ((String) -> Unit) -> Unit,
-    onCancelEdit: () -> Unit,
-    onDeletePhoto: (ConditionPhoto) -> Unit,
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit,
-    onMicClick: () -> Unit,
+    onAction: (PersonConditionUiAction) -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.testTag("ConditionScreen_PhoneContent"),
@@ -71,7 +56,10 @@ fun PersonConditionScreenPhone(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = { if (uiState.selectedConditionId != null) onCancelEdit() else onBack() },
+                            onClick = { 
+                                if (uiState.selectedConditionId != null) onAction(PersonConditionUiAction.CancelEdit) 
+                                else onAction(PersonConditionUiAction.Back) 
+                            },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
                             Icon(
@@ -83,7 +71,7 @@ fun PersonConditionScreenPhone(
                     actions = {
                         if (uiState.selectedConditionId == null) {
                             IconButton(
-                                onClick = onShowPdfSettings,
+                                onClick = { onAction(PersonConditionUiAction.ShowPdfSettings) },
                                 modifier = Modifier.testTag("ConditionScreen_PdfButton")
                             ) {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = stringResource(R.string.common_pdf_export))
@@ -95,7 +83,7 @@ fun PersonConditionScreenPhone(
                 CategorySelectorBar(
                     currentCategory = Category.CONDITION_AT_VISIT,
                     personCategorySummary = personCategorySummary,
-                    onCategoryClick = onNavigateToCategory,
+                    onCategoryClick = { onAction(PersonConditionUiAction.NavigateToCategory(it)) },
                     modifier = Modifier.testTag("CategorySelectorBar")
                 )
             }
@@ -103,7 +91,7 @@ fun PersonConditionScreenPhone(
         floatingActionButton = {
             if (uiState.selectedConditionId == null) {
                 FloatingActionButton(
-                    onClick = { onSelectedIdChange(AppSpecifications.Id.NEW_RECORD_ID) },
+                    onClick = { onAction(PersonConditionUiAction.SelectedIdChanged(AppSpecifications.Id.NEW_RECORD_ID)) },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
                 ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.common_create_new))
@@ -119,19 +107,7 @@ fun PersonConditionScreenPhone(
                 PersonConditionScreenContent(
                     isExpanded = false,
                     uiState = uiState,
-                    onSearchQueryChange = onSearchQueryChange,
-                    onSelectedIdChange = onSelectedIdChange,
-                    onDeleteRecord = onDeleteRecord,
-                    onEditClick = onEditClick,
-                    onEditInputUpdate = onEditInputUpdate,
-                    onSaveClick = onSaveClick,
-                    onCancelEdit = onCancelEdit,
-                    onDeletePhoto = onDeletePhoto,
-                    onAddPhotoClick = onAddPhotoClick,
-                    onPickPhotoClick = onPickPhotoClick,
-                    onReattachPhoto = onReattachPhoto,
-                    onNavigateToFullScreen = onNavigateToFullScreen,
-                    onMicClick = onMicClick,
+                    onAction = onAction,
                     isAnyDialogOpen = isAnyDialogOpen
                 )
             }

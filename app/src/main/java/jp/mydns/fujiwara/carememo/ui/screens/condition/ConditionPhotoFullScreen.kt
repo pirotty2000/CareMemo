@@ -26,9 +26,17 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.ConditionPhoto
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.utils.ImageUtils
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import kotlin.math.abs
+
+/**
+ * UI Action：写真全画面閲覧におけるユーザー操作の集約定義
+ */
+sealed interface ConditionPhotoFullUiAction {
+    data object Back : ConditionPhotoFullUiAction
+}
 
 /**
  * Screen：ConditionPhotoFullScreen
@@ -64,19 +72,47 @@ fun ConditionPhotoFullScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val handleAction: (ConditionPhotoFullUiAction) -> Unit = remember(navController) {
+        { action ->
+            when (action) {
+                ConditionPhotoFullUiAction.Back -> navController.popBackStack()
+            }
+        }
+    }
+
+    ConditionPhotoFullContent(
+        uiState = uiState,
+        onAction = handleAction,
+        modifier = modifier
+    )
+}
+
+/**
+ * Screen：ConditionPhotoFullContent
+ *
+ * 【役割】
+ * 写真全画面閲覧のレイアウト本体 (Stateless)
+ */
+@Composable
+fun ConditionPhotoFullContent(
+    uiState: PersonConditionUiState,
+    onAction: (ConditionPhotoFullUiAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val photos = uiState.currentConditionPhotos
     val initialPhotoId = uiState.initialPhotoId
     val isLoading = uiState.isLoading
 
     if (photos.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Container"), contentAlignment = Alignment.Center) {
+        Box(modifier = modifier.fillMaxSize().background(Color.Black).testTag("PhotoFullScreen_Container"), contentAlignment = Alignment.Center) {
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.testTag("PhotoFullScreen_Spinner"))
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(stringResource(R.string.condition_msg_no_photos_to_show), color = Color.White)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { navController.popBackStack() }) {
+                    Button(onClick = { onAction(ConditionPhotoFullUiAction.Back) }) {
                         Text(stringResource(R.string.common_back))
                     }
                 }
@@ -117,7 +153,7 @@ fun ConditionPhotoFullScreen(
         }
         
         IconButton(
-            onClick = { navController.popBackStack() },
+            onClick = { onAction(ConditionPhotoFullUiAction.Back) },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 32.dp, start = 16.dp)

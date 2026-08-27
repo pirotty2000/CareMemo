@@ -26,14 +26,14 @@
 | CPN-04 | 入力フォーム表示 | `selectedRecordId` が非 null     | カテゴリに応じた入力フィールド（数値入力等）が表示されること       |
 
 ## 4. 状態・インタラクション検証 (Interaction)
-**目的:** ユーザーの操作が、ViewModel の適切なメソッド呼び出し（Intent 伝達）に繋がることを検証する。
+**目的:** ユーザーの操作が `PersonHealthUiAction` として発行され、ViewModel の適切なメソッド呼び出し（Intent 伝達）に繋がることを検証する。
 
-| ID     | テスト項目    | 操作              | 期待結果 (呼び出される Intent)                           |
+| ID     | テスト項目    | 操作              | 期待結果 (発行 Action / 呼び出し Intent)                       |
 |:-------|:---------|:----------------|:-----------------------------------------------|
-| ACT-01 | カテゴリ切り替え | カテゴリバーのタブをタップ   | `navigateToCategory` (DetailViewModel) が呼ばれること |
-| ACT-02 | 表示モード変更  | 履歴/グラフのスイッチをタップ | `updatePreferredShowHistory` が呼ばれること           |
-| ACT-03 | レコード選択   | 履歴リストの項目をタップ    | `setSelectedRecordId` が該当 ID で呼ばれること           |
-| ACT-04 | 保存処理の実行  | 保存ボタンをタップ       | `saveCurrentEdit()` が ViewModel 側で実行されること      |
+| ACT-01 | カテゴリ切り替え | カテゴリバーのタブをタップ   | `NavigateToCategory` が発行され、ViewModel の遷移処理が呼ばれること |
+| ACT-02 | 表示モード変更  | 履歴/グラフのスイッチをタップ | `PreferredShowHistoryChanged` が発行され、表示モードが更新されること |
+| ACT-03 | レコード選択   | 履歴リストの項目をタップ    | `SelectedRecordIdChanged` が発行され、対象レコードが選択されること |
+| ACT-04 | 保存処理の実行  | 保存ボタンをタップ       | `SaveClick` が発行され、`saveCurrentEdit()` が実行されること     |
 
 ## 5. ナビゲーション・副作用検証 (Navigation)
 **目的:** ViewModel から発行される `ViewEvent` や `UiEvent` に応じて、正しい画面遷移や通知が実行されることを検証する。

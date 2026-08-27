@@ -36,12 +36,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import kotlinx.coroutines.launch
+
+/**
+ * UI Action：利用者の復帰・抹消画面におけるユーザー操作の集約定義
+ */
+sealed interface DeleteOrRestorePersonUiAction {
+    data class ToggleSelection(val id: String) : DeleteOrRestorePersonUiAction
+    data object SelectAll : DeleteOrRestorePersonUiAction
+    data object ClearSelection : DeleteOrRestorePersonUiAction
+    data object ActionClick : DeleteOrRestorePersonUiAction
+    data object ConfirmRestore : DeleteOrRestorePersonUiAction
+    data object ConfirmDelete : DeleteOrRestorePersonUiAction
+    data object Back : DeleteOrRestorePersonUiAction
+    data object DismissDialog : DeleteOrRestorePersonUiAction
+}
 
 /**
  * Screen：DeleteOrRestorePersonScreen
@@ -66,7 +81,6 @@ fun DeleteOrRestorePersonScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val (isLoading, mode, archivedPersons, selectedIds, isNameMaskingEnabled) = uiState
 
     val scope = rememberCoroutineScope()
     // 操作が行われた場合に、戻り先の画面にリスト更新を促すためのフラグ
@@ -140,6 +154,71 @@ fun DeleteOrRestorePersonScreen(
         }
     }
 
+    // アクションハンドラ：UI からの通知を ViewModel やダイアログ制御へ橋渡しする
+    // 表示モードをキーに含めることで、モード切替時のみラムダを再生成する
+    val handleAction: (DeleteOrRestorePersonUiAction) -> Unit = remember(viewModel, uiState.mode) {
+        { action ->
+            when (action) {
+                is DeleteOrRestorePersonUiAction.ToggleSelection -> viewModel.toggleSelection(action.id)
+                DeleteOrRestorePersonUiAction.SelectAll -> viewModel.selectAll(uiState.archivedPersons)
+                DeleteOrRestorePersonUiAction.ClearSelection -> viewModel.clearSelection()
+                DeleteOrRestorePersonUiAction.ActionClick -> {
+                    if (uiState.mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE) {
+                        showFinalConfirmDialog = true
+                    } else {
+                        showRestoreConfirmDialog = true
+                    }
+                }
+                DeleteOrRestorePersonUiAction.ConfirmRestore -> {
+                    showRestoreConfirmDialog = false
+                    viewModel.restoreSelectedPersons(uiState.archivedPersons)
+                }
+                DeleteOrRestorePersonUiAction.ConfirmDelete -> {
+                    showFinalConfirmDialog = false
+                    viewModel.deleteSelectedPersons(uiState.archivedPersons)
+                }
+                DeleteOrRestorePersonUiAction.Back -> viewModel.navigateBack()
+                DeleteOrRestorePersonUiAction.DismissDialog -> {
+                    showRestoreConfirmDialog = false
+                    showFinalConfirmDialog = false
+                    dialogMessage = null
+                    dialogTitle = null
+                }
+            }
+        }
+    }
+
+    DeleteOrRestorePersonContent(
+        uiState = uiState,
+        onAction = handleAction,
+        showRestoreConfirmDialog = showRestoreConfirmDialog,
+        showFinalConfirmDialog = showFinalConfirmDialog,
+        dialogTitle = dialogTitle,
+        dialogMessage = dialogMessage,
+        snackbarHostState = snackbarHostState,
+        modifier = modifier
+    )
+}
+
+/**
+ * Screen：DeleteOrRestorePersonContent
+ *
+ * 【役割】
+ * 利用者の復帰・抹消画面のレイアウト本体 (Stateless)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeleteOrRestorePersonContent(
+    uiState: DeleteOrRestorePersonUiState,
+    onAction: (DeleteOrRestorePersonUiAction) -> Unit,
+    showRestoreConfirmDialog: Boolean,
+    showFinalConfirmDialog: Boolean,
+    dialogTitle: String?,
+    dialogMessage: String?,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
+    val (isLoading, mode, archivedPersons, selectedIds, isNameMaskingEnabled) = uiState
     val isDeleteMode = mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
     
     // 背景色の決定 (DELETEモード時は、注意を促すために薄いエラー色を適用)
@@ -178,7 +257,7 @@ fun DeleteOrRestorePersonScreen(
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateBack() }, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
+                    IconButton(onClick = { onAction(DeleteOrRestorePersonUiAction.Back) }, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -190,9 +269,9 @@ fun DeleteOrRestorePersonScreen(
                         TextButton(
                             onClick = {
                                 if (isAllSelected) {
-                                    viewModel.clearSelection()
+                                    onAction(DeleteOrRestorePersonUiAction.ClearSelection)
                                 } else {
-                                    viewModel.selectAll(archivedPersons)
+                                    onAction(DeleteOrRestorePersonUiAction.SelectAll)
                                 }
                             },
                             modifier = Modifier.testTag("DeleteOrRestore_SelectAllButton")
@@ -216,13 +295,7 @@ fun DeleteOrRestorePersonScreen(
                     modifier = Modifier.navigationBarsPadding()
                 ) {
                     Button(
-                        onClick = {
-                            if (isDeleteMode) {
-                                showFinalConfirmDialog = true
-                            } else {
-                                showRestoreConfirmDialog = true
-                            }
-                        },
+                        onClick = { onAction(DeleteOrRestorePersonUiAction.ActionClick) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)
@@ -312,7 +385,7 @@ fun DeleteOrRestorePersonScreen(
                                     leadingContent = {
                                         Checkbox(
                                             checked = isSelected,
-                                            onCheckedChange = { viewModel.toggleSelection(person.id) },
+                                            onCheckedChange = { onAction(DeleteOrRestorePersonUiAction.ToggleSelection(person.id)) },
                                             colors = if (isDeleteMode) {
                                                 // 抹消モード時はチェックボックスも赤色にして警告を強調
                                                 CheckboxDefaults.colors(
@@ -340,7 +413,7 @@ fun DeleteOrRestorePersonScreen(
     // 復帰実行前の最終確認ダイアログ
     if (showRestoreConfirmDialog) {
         AppDialog(
-            onDismissRequest = { showRestoreConfirmDialog = false },
+            onDismissRequest = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) },
             title = { Text(stringResource(R.string.archive_title_restore)) },
             text = {
                 AppDialogContent(text = stringResource(R.string.archive_dialog_restore_confirm_msg, selectedIds.size))
@@ -348,16 +421,13 @@ fun DeleteOrRestorePersonScreen(
             confirmButton = {
                 AppDialogConfirmButton(
                     text = stringResource(R.string.archive_dialog_restore_confirm_btn),
-                    onClick = {
-                        showRestoreConfirmDialog = false
-                        viewModel.restoreSelectedPersons(archivedPersons)
-                    }
+                    onClick = { onAction(DeleteOrRestorePersonUiAction.ConfirmRestore) }
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showRestoreConfirmDialog = false }
+                    onClick = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) }
                 )
             }
         )
@@ -366,7 +436,7 @@ fun DeleteOrRestorePersonScreen(
     // 抹消実行前の最終確認ダイアログ（破壊的操作）
     if (showFinalConfirmDialog) {
         AppDialog(
-            onDismissRequest = { showFinalConfirmDialog = false },
+            onDismissRequest = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) },
             icon = { Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.archive_dialog_delete_confirm_title), modifier = Modifier.testTag("DeleteOrRestore_ConfirmDialog")) },
             text = {
@@ -376,16 +446,13 @@ fun DeleteOrRestorePersonScreen(
                 AppDialogConfirmButton(
                     text = stringResource(R.string.archive_dialog_delete_confirm_btn),
                     type = AppDialogActionType.DELETE,
-                    onClick = {
-                        showFinalConfirmDialog = false
-                        viewModel.deleteSelectedPersons(archivedPersons)
-                    }
+                    onClick = { onAction(DeleteOrRestorePersonUiAction.ConfirmDelete) }
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showFinalConfirmDialog = false }
+                    onClick = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) }
                 )
             }
         )
@@ -395,11 +462,8 @@ fun DeleteOrRestorePersonScreen(
     if (dialogMessage != null) {
         AppInfoDialog(
             title = dialogTitle,
-            message = dialogMessage!!,
-            onDismiss = {
-                dialogMessage = null
-                dialogTitle = null
-            }
+            message = dialogMessage,
+            onDismiss = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) }
         )
     }
 }

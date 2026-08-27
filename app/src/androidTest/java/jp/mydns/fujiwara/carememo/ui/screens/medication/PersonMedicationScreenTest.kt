@@ -56,14 +56,13 @@ class PersonMedicationScreenTest {
             CareMemoTheme {
                 PersonMedicationScreenContent(
                     isExpanded = false,
-                    selectedMonth = month,
-                    isLoading = false,
-                    recordsByDate = persistentMapOf(),
+                    uiState = PersonMedicationUiState(
+                        selectedMonth = month,
+                        isLoading = false,
+                        recordsByDate = persistentMapOf()
+                    ),
                     isHistoryMode = false,
-                    onHistoryModeChange = {},
-                    onPreviousMonth = {},
-                    onNextMonth = {},
-                    onDayClick = {}
+                    onAction = {}
                 )
             }
         }
@@ -79,14 +78,13 @@ class PersonMedicationScreenTest {
             CareMemoTheme {
                 PersonMedicationScreenContent(
                     isExpanded = false,
-                    selectedMonth = YearMonth.now(),
-                    isLoading = false,
-                    recordsByDate = persistentMapOf(),
+                    uiState = PersonMedicationUiState(
+                        selectedMonth = YearMonth.now(),
+                        isLoading = false,
+                        recordsByDate = persistentMapOf()
+                    ),
                     isHistoryMode = true, // History mode
-                    onHistoryModeChange = {},
-                    onPreviousMonth = {},
-                    onNextMonth = {},
-                    onDayClick = {}
+                    onAction = {}
                 )
             }
         }

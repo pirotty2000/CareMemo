@@ -1,5 +1,6 @@
-# Ver.4.1.0 (2026/08/23)
-- Phase 7 対応：Compose UI 基盤の高度化と UX 最適化（第一弾：状態管理の堅牢化）
+# Ver.4.1.0 (2026/08/28)
+- Phase 7 対応：Compose UI 基盤の高度化と UX 最適化（第一弾：状態管理の堅牢化 ＆ 境界設計の洗練）
+立
 - プロセス死対策：SavedStateHandle を用いた入力値・検索条件・選択状態のバックアップと復元を全主要画面で実装
 - 変更検知の整合性保証：編集開始時の基準値（Baseline）を SavedStateHandle へ退避し、復帰後も正確な「変更あり/なし」判定を維持
 - 「CareMemo 状態管理 7 原則」を確立：SSOT（StateFlow）と復元用バックアップの責務を明確化し、状態の4分類（UI/Restorable/Nav/Transient）を定義

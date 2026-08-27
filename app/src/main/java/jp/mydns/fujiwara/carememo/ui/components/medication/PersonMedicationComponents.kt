@@ -47,6 +47,7 @@ import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.logic.common.*
 import jp.mydns.fujiwara.carememo.ui.mapping.MedicationDisplayMapper
+import jp.mydns.fujiwara.carememo.ui.screens.medication.PersonMedicationUiAction
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatMedicationDialogTitle
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatRecordTime
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils.formatShortDayOfWeek
@@ -92,15 +93,15 @@ import kotlinx.collections.immutable.ImmutableMap
  *
  * @param yearMonth 表示対象の年月
  * @param recordsByDate 日付（文字列）をキーとした服薬記録のマップ
+ * @param onAction アクションハンドラ
  * @param modifier 修飾子
- * @param onDayClick 日付セルがタップされた際のコールバック（ダイアログ起動用）
  */
 @Composable
 fun CalendarGrid(
     yearMonth: YearMonth,
     recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
+    onAction: (PersonMedicationUiAction) -> Unit,
     modifier: Modifier = Modifier,
-    onDayClick: (LocalDate) -> Unit
 ) {
     // 表示用の日付リスト（月初の空白を含む）を取得
     val calendarDays = remember(yearMonth) { MedicationLogic.getCalendarDays(yearMonth) }
@@ -163,7 +164,7 @@ fun CalendarGrid(
                                     DayCell(
                                         date = date,
                                         records = recordsByDate[date.toString()] ?: emptyList(),
-                                        onClick = { onDayClick(date) }
+                                        onClick = { onAction(PersonMedicationUiAction.DayClick(date)) }
                                     )
                                 } else {
                                     // 月初の余白
@@ -440,19 +441,15 @@ fun MedicationHistoryTable(
  *
  * @param date 対象の日付
  * @param tempRecords 入力中（一時的）な記録リスト
+ * @param onAction アクションハンドラ
  * @param modifier 修飾子
- * @param onDismiss ダイアログを閉じる際のコールバック
- * @param onStatusToggle ステータス変更時のコールバック
- * @param onConfirm 保存が確定した際のコールバック
  */
 @Composable
 fun MedicationInputDialog(
     date: LocalDate,
     tempRecords: List<MedicationRecord?>,
+    onAction: (PersonMedicationUiAction) -> Unit,
     modifier: Modifier = Modifier,
-    onDismiss: () -> Unit,
-    onStatusToggle: (Int, MedicationStatus, Instant) -> Unit,
-    onConfirm: () -> Unit
 ) {
     // 現在時刻編集（DateTimeInputFields）の対象となっているスロット
     var editingSlot by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -473,14 +470,14 @@ fun MedicationInputDialog(
             dateTimeState.toInstant()?.let { instant ->
                 val currentStatus = tempRecords[slot]?.let { MedicationStatus.fromCode(it.status) }
                 if (currentStatus != null) {
-                    onStatusToggle(slot, currentStatus, instant)
+                    onAction(PersonMedicationUiAction.DialogStatusToggle(slot, currentStatus, instant))
                 }
             }
         }
     }
 
     AppDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onAction(PersonMedicationUiAction.DismissDialog) },
         modifier = modifier,
         title = {
             Text(
@@ -502,7 +499,7 @@ fun MedicationInputDialog(
                             onStatusToggle = { code ->
                                 val status = MedicationStatus.fromCode(code)!!
                                 val instant = tempRecords[slot.index]?.recordTime ?: Instant.now()
-                                onStatusToggle(slot.index, status, instant)
+                                onAction(PersonMedicationUiAction.DialogStatusToggle(slot.index, status, instant))
                                 editingSlot = slot.index
                             },
                             onTimeClick = {
@@ -523,7 +520,7 @@ fun MedicationInputDialog(
             AppDialogConfirmButton(
                 text = stringResource(R.string.common_save),
                 onClick = {
-                    onConfirm()
+                    onAction(PersonMedicationUiAction.DialogConfirm)
                 },
                 modifier = Modifier.testTag("Medication_SaveButton")
             )
@@ -531,7 +528,7 @@ fun MedicationInputDialog(
         dismissButton = {
             AppDialogDismissButton(
                 text = stringResource(R.string.common_cancel),
-                onClick = onDismiss,
+                onClick = { onAction(PersonMedicationUiAction.DismissDialog) },
                 modifier = Modifier.testTag("Medication_CancelButton")
             )
         }

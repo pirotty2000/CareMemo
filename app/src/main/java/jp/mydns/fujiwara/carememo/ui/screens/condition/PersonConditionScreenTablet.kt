@@ -36,24 +36,9 @@ fun PersonConditionScreenTablet(
     isNameMaskingEnabled: Boolean,
     personCategorySummary: PersonCategorySummary?,
     isAnyDialogOpen: Boolean,
-    modifier: Modifier = Modifier,
-    onSearchQueryChange: (String) -> Unit,
-    onSelectedIdChange: (String?) -> Unit,
-    onBack: () -> Unit,
-    onNavigateToCategory: (Category) -> Unit,
-    onAddPhotoClick: () -> Unit,
-    onPickPhotoClick: () -> Unit = {},
-    onNavigateToFullScreen: (String, String) -> Unit,
-    onShowPdfSettings: () -> Unit,
-    onDeleteRecord: (HistoryRecord) -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
-    onSaveClick: ((String) -> Unit) -> Unit,
-    onCancelEdit: () -> Unit,
-    onDeletePhoto: (ConditionPhoto) -> Unit,
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit,
-    onMicClick: () -> Unit,
+    onAction: (PersonConditionUiAction) -> Unit,
     snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.testTag("ConditionScreen_TabletContent"),
@@ -71,7 +56,7 @@ fun PersonConditionScreenTablet(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = onBack,
+                            onClick = { onAction(PersonConditionUiAction.Back) },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
                         ) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
@@ -79,11 +64,11 @@ fun PersonConditionScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedIdChange(AppSpecifications.Id.NEW_RECORD_ID) }) {
+                        IconButton(onClick = { onAction(PersonConditionUiAction.SelectedIdChanged(AppSpecifications.Id.NEW_RECORD_ID)) }) {
                             Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.common_create_new))
                         }
                         IconButton(
-                            onClick = onShowPdfSettings,
+                            onClick = { onAction(PersonConditionUiAction.ShowPdfSettings) },
                             modifier = Modifier.testTag("ConditionScreen_PdfButton")
                         ) {
                             Icon(Icons.Rounded.PictureAsPdf, contentDescription = stringResource(R.string.common_pdf_export))
@@ -93,7 +78,7 @@ fun PersonConditionScreenTablet(
                 CategorySelectorBar(
                     currentCategory = Category.CONDITION_AT_VISIT,
                     personCategorySummary = personCategorySummary,
-                    onCategoryClick = onNavigateToCategory,
+                    onCategoryClick = { onAction(PersonConditionUiAction.NavigateToCategory(it)) },
                     modifier = Modifier.testTag("CategorySelectorBar")
                 )
             }
@@ -107,19 +92,7 @@ fun PersonConditionScreenTablet(
             PersonConditionScreenContent(
                 isExpanded = true,
                 uiState = uiState,
-                onSearchQueryChange = onSearchQueryChange,
-                onSelectedIdChange = onSelectedIdChange,
-                onDeleteRecord = onDeleteRecord,
-                onEditClick = onEditClick,
-                onEditInputUpdate = onEditInputUpdate,
-                onSaveClick = onSaveClick,
-                onCancelEdit = onCancelEdit,
-                onDeletePhoto = onDeletePhoto,
-                onAddPhotoClick = onAddPhotoClick,
-                onPickPhotoClick = onPickPhotoClick,
-                onReattachPhoto = onReattachPhoto,
-                onNavigateToFullScreen = onNavigateToFullScreen,
-                onMicClick = onMicClick,
+                onAction = onAction,
                 isAnyDialogOpen = isAnyDialogOpen
             )
         }

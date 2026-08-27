@@ -14,6 +14,7 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
+import jp.mydns.fujiwara.carememo.ui.screens.main.MainUiAction
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
 import kotlinx.collections.immutable.toImmutableList
@@ -235,19 +236,16 @@ class MainScreenTest {
             selectedSection = selectedSection,
             selectedPersonForQuickMenu = null,
             isQuickActionMenuExpanded = false,
-            onSearchQueryChange = onSearchQueryChange,
-            onSectionSelect = onSectionSelect,
+            onAction = { action ->
+                when (action) {
+                    is MainUiAction.SearchQueryChange -> onSearchQueryChange(action.query)
+                    is MainUiAction.SectionSelect -> onSectionSelect(action.section)
+                    is MainUiAction.QuickMenuClick -> onQuickMenuClick(action.person)
+                    else -> {}
+                }
+            },
             snackbarHostState = remember { SnackbarHostState() },
-            lazyListState = rememberLazyListState(),
-            onUserClick = {},
-            onQuickMenuClick = onQuickMenuClick,
-            onEmergencyContactClick = {},
-            onEmergencyContactManageClick = {},
-            onDismissQuickMenu = {},
-            onEditUser = {},
-            onAddClick = {},
-            onEndUser = {},
-            onNavigateToSettings = {}
+            lazyListState = rememberLazyListState()
         )
     }
 

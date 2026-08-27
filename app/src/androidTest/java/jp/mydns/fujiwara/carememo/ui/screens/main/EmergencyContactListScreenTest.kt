@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.ui.screens.main.EmergencyContactListUiAction
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 import kotlinx.collections.immutable.toImmutableList
@@ -123,10 +124,13 @@ class EmergencyContactListScreenTest {
                 personName = personName,
                 contacts = contacts.toImmutableList()
             ),
-            onNavigateBack = {},
-            onAddClick = onAddClick,
-            onEditClick = {},
-            onDeleteConfirm = onDeleteConfirm
+            onAction = { action ->
+                when (action) {
+                    EmergencyContactListUiAction.AddClick -> onAddClick()
+                    is EmergencyContactListUiAction.DeleteConfirm -> onDeleteConfirm(action.contact)
+                    else -> {}
+                }
+            }
         )
     }
 }

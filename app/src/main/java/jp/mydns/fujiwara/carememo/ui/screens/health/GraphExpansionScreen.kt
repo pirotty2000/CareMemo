@@ -33,8 +33,16 @@ import jp.mydns.fujiwara.carememo.ui.components.health.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.health.LineChart
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
+
+/**
+ * UI Action：グラフ拡大画面におけるユーザー操作の集約定義
+ */
+sealed interface GraphExpansionUiAction {
+    data object Back : GraphExpansionUiAction
+}
 
 /**
  * Screen：GraphExpansionScreen
@@ -83,8 +91,6 @@ fun GraphExpansionScreen(
         healthViewModel.getHealthRecords(category) 
     }.collectAsStateWithLifecycle()
     
-    val isLoading = healthState.isLoading
-
     // 画面を横向きに固定
     DisposableEffect(Unit) {
         val activity = context as? Activity
@@ -95,6 +101,44 @@ fun GraphExpansionScreen(
         }
     }
 
+    val handleAction: (GraphExpansionUiAction) -> Unit = remember(navController) {
+        { action ->
+            when (action) {
+                GraphExpansionUiAction.Back -> navController.popBackStack()
+            }
+        }
+    }
+
+    GraphExpansionScreenContent(
+        uiState = healthState,
+        records = records,
+        person = detailState.person,
+        category = category,
+        isNameMaskingEnabled = isNameMaskingEnabled,
+        initialGraphIndex = initialGraphIndex,
+        onAction = handleAction,
+        modifier = modifier
+    )
+}
+
+/**
+ * Screen：GraphExpansionScreenContent
+ *
+ * 【役割】
+ * グラフ拡大画面のレイアウト本体 (Stateless)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GraphExpansionScreenContent(
+    uiState: PersonHealthUiState,
+    records: List<Any>,
+    person: Person?,
+    category: Category,
+    isNameMaskingEnabled: Boolean,
+    initialGraphIndex: Int,
+    onAction: (GraphExpansionUiAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val listState = rememberLazyListState()
     var highlightedIndex by remember { mutableIntStateOf(initialGraphIndex) }
 
@@ -123,7 +167,7 @@ fun GraphExpansionScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { navController.popBackStack() },
+                        onClick = { onAction(GraphExpansionUiAction.Back) },
                         modifier = Modifier
                             .size(32.dp)
                             .testTag("GraphExpansion_BackButton")
@@ -131,7 +175,7 @@ fun GraphExpansionScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), modifier = Modifier.size(20.dp))
                     }
                     Text(
-                        text = "${detailState.person?.getMaskedName(isNameMaskingEnabled) ?: ""}${stringResource(R.string.common_honorific_suffix)}${stringResource(R.string.common_title_separator)}${stringResource(category.displayNameRes)}",
+                        text = "${person?.getMaskedName(isNameMaskingEnabled) ?: ""}${stringResource(R.string.common_honorific_suffix)}${stringResource(R.string.common_title_separator)}${stringResource(category.displayNameRes)}",
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1,
                         modifier = Modifier.testTag("GraphExpansion_HeaderTitle")
@@ -141,7 +185,7 @@ fun GraphExpansionScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (isLoading && records.isEmpty()) {
+            if (uiState.isLoading && records.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_Loading")) {
                     LoadingScreen()
                 }

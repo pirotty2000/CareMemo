@@ -5,8 +5,13 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.Category
+import jp.mydns.fujiwara.carememo.data.HistoryRecord
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.common.PdfExportActionHandler
@@ -15,6 +20,34 @@ import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
+
+/**
+ * UI Action：健康記録画面におけるユーザー操作の集約定義
+ */
+sealed interface PersonHealthUiAction {
+    // 表示モード・選択
+    data class PreferredShowHistoryChanged(val showHistory: Boolean) : PersonHealthUiAction
+    data class SelectedRecordIdChanged(val id: String?) : PersonHealthUiAction
+    data class ItemClick(val record: HistoryRecord) : PersonHealthUiAction
+
+    // 編集・保存
+    data object EditClick : PersonHealthUiAction
+    data class EditInputUpdate(val update: (HealthEditInput) -> HealthEditInput) : PersonHealthUiAction
+    data object SaveClick : PersonHealthUiAction
+    data object CancelEdit : PersonHealthUiAction
+
+    // 削除
+    data class DeleteRecord(val record: HistoryRecord) : PersonHealthUiAction
+
+    // グラフ・カテゴリ・外部連携
+    data class ExpandGraph(val index: Int) : PersonHealthUiAction
+    data class NavigateToCategory(val category: Category) : PersonHealthUiAction
+    data object ShowPdfSettings : PersonHealthUiAction
+    data object Back : PersonHealthUiAction
+
+    // ダイアログ・共通
+    data object DismissDialog : PersonHealthUiAction
+}
 
 /**
  * Screen：PersonHealthScreen
@@ -132,6 +165,36 @@ fun PersonHealthScreen(
         }
     }
 
+    // アクションハンドラ：UI からの通知を ViewModel やナビゲーションへ橋渡しする
+    // 表示中の利用者IDやカテゴリをキーに含め、状態変更時のみラムダを再生成する
+    val handleAction: (PersonHealthUiAction) -> Unit = remember(healthViewModel, detailViewModel, navController, detailState.personId, detailState.currentCategory) {
+        { action ->
+            when (action) {
+                is PersonHealthUiAction.PreferredShowHistoryChanged -> healthViewModel.updatePreferredShowHistory(action.showHistory)
+                is PersonHealthUiAction.SelectedRecordIdChanged -> healthViewModel.setSelectedRecordId(action.id)
+                is PersonHealthUiAction.ItemClick -> healthViewModel.setSelectedRecordId(action.record.id)
+                PersonHealthUiAction.EditClick -> healthViewModel.startEditSession()
+                is PersonHealthUiAction.EditInputUpdate -> healthViewModel.updateEditInput(action.update)
+                PersonHealthUiAction.SaveClick -> healthViewModel.saveCurrentEdit()
+                PersonHealthUiAction.CancelEdit -> healthViewModel.cancelEditSession()
+                is PersonHealthUiAction.DeleteRecord -> healthViewModel.deleteRecord(action.record)
+                is PersonHealthUiAction.ExpandGraph -> {
+                    detailState.personId?.let { pid ->
+                        healthViewModel.navigateToGraphExpansion(pid, detailState.currentCategory, action.index)
+                    }
+                }
+                is PersonHealthUiAction.NavigateToCategory -> detailViewModel.navigateToCategory(action.category)
+                PersonHealthUiAction.ShowPdfSettings -> showPdfSettingsDialog = true
+                PersonHealthUiAction.Back -> detailViewModel.navigateBackToMain()
+                PersonHealthUiAction.DismissDialog -> {
+                    showPdfSettingsDialog = false
+                    dialogMessage = null
+                    dialogTitle = null
+                }
+            }
+        }
+    }
+
     if (isExpanded) {
         // Tablet
         PersonHealthScreenTablet(
@@ -139,20 +202,7 @@ fun PersonHealthScreen(
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
-            onBack = { detailViewModel.navigateBackToMain() },
-            onExpandGraph = { index ->
-                detailState.personId?.let { pid ->
-                    healthViewModel.navigateToGraphExpansion(pid, detailState.currentCategory, index)
-                }
-            },
-            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
-            onShowPdfSettings = { showPdfSettingsDialog = true },
-            onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onEditClick = { healthViewModel.startEditSession() },
-            onEditInputUpdate = { healthViewModel.updateEditInput(it) },
-            onSaveClick = { healthViewModel.saveCurrentEdit() },
-            onCancelEdit = { healthViewModel.cancelEditSession() },
+            onAction = handleAction,
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
@@ -163,21 +213,7 @@ fun PersonHealthScreen(
             currentPerson = detailState.person,
             personCategorySummary = detailState.personSummary,
             isNameMaskingEnabled = isNameMaskingEnabled,
-            onPreferredShowHistoryChange = { healthViewModel.updatePreferredShowHistory(it) },
-            onSelectedRecordIdChange = { healthViewModel.setSelectedRecordId(it) },
-            onBack = { detailViewModel.navigateBackToMain() },
-            onExpandGraph = { index ->
-                detailState.personId?.let { pid ->
-                    healthViewModel.navigateToGraphExpansion(pid, detailState.currentCategory, index)
-                }
-            },
-            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
-            onShowPdfSettings = { showPdfSettingsDialog = true },
-            onDeleteRecord = { healthViewModel.deleteRecord(it) },
-            onEditClick = { healthViewModel.startEditSession() },
-            onEditInputUpdate = { healthViewModel.updateEditInput(it) },
-            onSaveClick = { healthViewModel.saveCurrentEdit() },
-            onCancelEdit = { healthViewModel.cancelEditSession() },
+            onAction = handleAction,
             snackbarHostState = snackbarHostState,
             modifier = modifier
         )
@@ -198,7 +234,7 @@ fun PersonHealthScreen(
     if (showPdfSettingsDialog) {
         PdfExportActionHandler(
             showDialog = true,
-            onDismiss = { showPdfSettingsDialog = false },
+            onDismiss = { handleAction(PersonHealthUiAction.DismissDialog) },
             category = detailState.currentCategory,
             canExport = detailState.person != null,
             onRequireAuthentication = onRequireAuthentication,

@@ -41,41 +41,17 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  *
  * @param isExpanded タブレット版（2カラム）として表示するかどうか
  * @param uiState UI 状態
- * @param modifier 修飾子
- * @param onSearchQueryChange 検索クエリ変更時のコールバック
- * @param onSelectedIdChange 選択されたレコード ID 変更時のコールバック
- * @param onDeleteRecord レコード削除（スワイプ）時のコールバック
- * @param onEditClick 編集モード開始ボタンが押された際のコールバック
- * @param onEditInputUpdate 入力値が更新された際のコールバック
- * @param onSaveClick 保存ボタンが押された際のコールバック
- * @param onCancelEdit 編集キャンセルボタンが押された際のコールバック
- * @param onDeletePhoto 写真削除ボタンが押された際のコールバック
- * @param onAddPhotoClick カメラ撮影ボタンが押された際のコールバック
- * @param onReattachPhoto 未割り当て写真の再紐付けが要求された際のコールバック
- * @param onNavigateToFullScreen 写真のフルスクリーン表示が要求された際のコールバック
- * @param onMicClick 音声入力ボタンが押された際のコールバック
+ * @param onAction アクションハンドラ
  * @param isAnyDialogOpen 他のダイアログが開いているかどうか。スワイプ状態のリセットに使用。
- * @param onPickPhotoClick 写真ギャラリー選択ボタンが押された際のコールバック
+ * @param modifier 修飾子
  */
 @Composable
 fun PersonConditionScreenContent(
     isExpanded: Boolean,
     uiState: PersonConditionUiState,
-    modifier: Modifier = Modifier,
-    onSearchQueryChange: (String) -> Unit,
-    onSelectedIdChange: (String?) -> Unit,
-    onDeleteRecord: (HistoryRecord) -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((ConditionEditInput) -> ConditionEditInput) -> Unit,
-    onSaveClick: ((String) -> Unit) -> Unit,
-    onCancelEdit: () -> Unit,
-    onDeletePhoto: (ConditionPhoto) -> Unit,
-    onAddPhotoClick: () -> Unit,
-    onReattachPhoto: (jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) -> Unit,
-    onNavigateToFullScreen: (String, String) -> Unit,
-    onMicClick: () -> Unit,
+    onAction: (PersonConditionUiAction) -> Unit,
     isAnyDialogOpen: Boolean,
-    onPickPhotoClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     val lazyListState = rememberLazyListState()
 
@@ -98,7 +74,7 @@ fun PersonConditionScreenContent(
                 // 検索ボックス
                 SearchBox(
                     query = uiState.searchQuery,
-                    onQueryChange = onSearchQueryChange,
+                    onQueryChange = { onAction(PersonConditionUiAction.SearchQueryChanged(it)) },
                     placeholder = stringResource(R.string.main_search_hint_short)
                 )
                 // 所見メモ・履歴一覧
@@ -115,8 +91,8 @@ fun PersonConditionScreenContent(
                             selectedId = uiState.selectedConditionId,
                             conditionPhotoMap = uiState.conditionPhotoMap,
                             isAnyDialogOpen = isAnyDialogOpen,
-                            onSelect = { onSelectedIdChange(it) },
-                            onDelete = onDeleteRecord,
+                            onSelect = { onAction(PersonConditionUiAction.SelectedIdChanged(it)) },
+                            onDelete = { onAction(PersonConditionUiAction.DeleteRecordRequest(it)) },
                             lazyListState = lazyListState
                         )
                         VerticalScrollIndicator(lazyListState = lazyListState)
@@ -132,18 +108,7 @@ fun PersonConditionScreenContent(
             ) {
                 ConditionDetailPane(
                     uiState = uiState,
-                    onDeletePhoto = onDeletePhoto,
-                    onSelectedIdChange = onSelectedIdChange,
-                    onCancel = { onSelectedIdChange(null) },
-                    onEditClick = onEditClick,
-                    onEditInputUpdate = onEditInputUpdate,
-                    onSaveClick = onSaveClick,
-                    onCancelEdit = onCancelEdit,
-                    onAddPhotoClick = onAddPhotoClick,
-                    onPickPhotoClick = onPickPhotoClick,
-                    onReattachPhoto = onReattachPhoto,
-                    onNavigateToFullScreen = onNavigateToFullScreen,
-                    onMicClick = onMicClick
+                    onAction = onAction
                 )
             }
         }
@@ -158,7 +123,7 @@ fun PersonConditionScreenContent(
             // 検索ボックス
             SearchBox(
                 query = uiState.searchQuery,
-                onQueryChange = onSearchQueryChange,
+                onQueryChange = { onAction(PersonConditionUiAction.SearchQueryChanged(it)) },
                 modifier = Modifier.testTag("ConditionScreen_SearchBox")
             )
             // 所見メモ・履歴一覧
@@ -175,8 +140,8 @@ fun PersonConditionScreenContent(
                         selectedId = uiState.selectedConditionId,
                         conditionPhotoMap = uiState.conditionPhotoMap,
                         isAnyDialogOpen = isAnyDialogOpen,
-                        onSelect = { onSelectedIdChange(it) },
-                        onDelete = onDeleteRecord,
+                        onSelect = { onAction(PersonConditionUiAction.SelectedIdChanged(it)) },
+                        onDelete = { onAction(PersonConditionUiAction.DeleteRecordRequest(it)) },
                         lazyListState = lazyListState
                     )
                     VerticalScrollIndicator(lazyListState = lazyListState)
@@ -203,18 +168,7 @@ private fun PreviewPersonConditionScreenContent(
                 isLoading = state.isLoading,
                 selectedConditionId = state.selectedRecordId
             ),
-            onSearchQueryChange = {},
-            onSelectedIdChange = {},
-            onDeleteRecord = {},
-            onEditClick = {},
-            onEditInputUpdate = {},
-            onSaveClick = {},
-            onCancelEdit = {},
-            onDeletePhoto = {},
-            onAddPhotoClick = {},
-            onReattachPhoto = {},
-            onNavigateToFullScreen = { _, _ -> },
-            onMicClick = {},
+            onAction = {},
             isAnyDialogOpen = false
         )
     }
