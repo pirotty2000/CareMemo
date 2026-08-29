@@ -40,9 +40,67 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+
+/**
+ * UI Action：設定画面におけるユーザー操作の集約定義
+ */
+sealed interface SettingsUiAction {
+    // 表示・記録設定
+    data class MaskingChanged(val enabled: Boolean) : SettingsUiAction
+    data class RecorderNameChanged(val name: String) : SettingsUiAction
+
+    // 利用者管理
+    data object NavigateToRestore : SettingsUiAction
+    data object EraseArchivedClick : SettingsUiAction
+    data object ConfirmEraseArchived : SettingsUiAction
+
+    // データ管理
+    data class BackupPasswordEnabledChanged(val enabled: Boolean) : SettingsUiAction
+    data class BackupPasswordChanged(val password: String) : SettingsUiAction
+    data object PasswordVisibilityToggle : SettingsUiAction
+    data object ExportClick : SettingsUiAction
+    data object ExportLogsClick : SettingsUiAction
+    data object ImportClick : SettingsUiAction
+    data object UnassignedPhotosClick : SettingsUiAction
+    data class PasswordInputForImportChanged(val password: String) : SettingsUiAction
+    data object ConfirmImportWithPassword : SettingsUiAction
+
+    // セキュリティ
+    data class BiometricEnabledChanged(val enabled: Boolean) : SettingsUiAction
+
+    // テーマ設定
+    data object ThemeClick : SettingsUiAction
+    data class ThemeSelected(val setting: ThemeSetting) : SettingsUiAction
+
+    // バージョン・開発者ツール
+    data object VersionClick : SettingsUiAction
+    data object ClearAllClick : SettingsUiAction
+    data object ConfirmClearAll : SettingsUiAction
+    data object CheckIntegrity : SettingsUiAction
+    data object InsertTestInconsistency : SettingsUiAction
+    data object RetentionClick : SettingsUiAction
+    data class RetentionSelected(val days: Int) : SettingsUiAction
+    data object ViewLogsClick : SettingsUiAction
+    data object RotateLogsClick : SettingsUiAction
+    data object ClearLogsClick : SettingsUiAction
+    data object ConfirmClearLogs : SettingsUiAction
+    data object ImportSampleDataClick : SettingsUiAction
+    data object ConfirmImportSampleData : SettingsUiAction
+    data class ForceImportEnabledChanged(val enabled: Boolean) : SettingsUiAction
+
+    // 不整合修正
+    data object FixInconsistencies : SettingsUiAction
+    data object ClearInconsistencyResults : SettingsUiAction
+
+    // ナビゲーション・共通
+    data object Back : SettingsUiAction
+    data object DismissDialog : SettingsUiAction
+    data object ConfirmImportRestore : SettingsUiAction
+}
 
 /**
  * Screen：SettingsScreen
@@ -51,32 +109,18 @@ import kotlinx.coroutines.launch
  * アプリケーションの設定・管理機能を統括する最上位 Screen コンポーネントです。
  * 表示設定、セキュリティ、データ管理、および開発者向けツールに至るまで、アプリの振る舞いをカスタマイズする全設定項目を集約します。
  *
- * 【主な機能】
- * ・設定管理：氏名伏せ字、自動ロック、バックアップパスワード、テーマ等の永続設定の変更。
- * ・データ操作：DB バックアップ（エクスポート）および復元（インポート）の仲介。
- * ・保守ツール：整合性チェック、サンプルデータ投入、監査ログ消去等の管理用機能。
- * ・OS 連携：SAF（Storage Access Framework）によるファイル入出力、および生体認証の要求。
- *
  * 【全体像：設定画面階層（Settings Hierarchy）】
  *
  * ■ SettingsScreen (★本コンポーネント：全体制御・ダイアログ管理)
  * │
- * ├─ [1] SettingsScreenContent (表示層：各セクションの配置)
- * │    ├─ DisplayAndRecordingSection (表示・記録設定)
- * │    ├─ UserManagementSection (利用者管理) ➔ [ 子画面 ] DeleteOrRestorePerson
- * │    ├─ DataManagementSection (データ管理) ➔ [ 子画面 ] UnassignedPhotoManagement
- * │    ├─ SecuritySection (セキュリティ)
- * │    ├─ ThemeSection (テーマ設定)
- * │    ├─ OtherSection (その他) ➔ バージョン情報
- * │    └─ ResetSection (開発者用：条件付き表示) ➔ [ 子画面 ] AuditLogScreen
- * │
- * └─ [2] 各種設定ダイアログ群 (制御層内で完結)
- *      ├─ ThemeDialog, TimeoutDialog, RetentionDialog (選択肢系)
- *      ├─ ImportConfirm, EraseConfirm, ClearLogsConfirm (確認系)
- *      └─ InconsistencyReportDialog (データ不整合報告)
- *
- * 【このコンポーネントでは行わないこと】
- * 実際のデータ永続化処理（SettingsViewModel および Repository 層が担当）。
+ * └─ [1] SettingsScreenContent (表示層：各セクションの配置)
+ *      ├─ DisplayAndRecordingSection (表示・記録設定)
+ *      ├─ UserManagementSection (利用者管理) ➔ [ 子画面 ] DeleteOrRestorePerson
+ *      ├─ DataManagementSection (データ管理) ➔ [ 子画面 ] UnassignedPhotoManagement
+ *      ├─ SecuritySection (セキュリティ)
+ *      ├─ ThemeSection (テーマ設定)
+ *      ├─ OtherSection (その他) ➔ バージョン情報
+ *      └─ ResetSection (開発者用：条件付き表示) ➔ [ 子画面 ] AuditLogScreen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,13 +146,11 @@ fun SettingsScreen(
     }.collectAsStateWithLifecycle()
 
     // 戻る際の処理（親画面への通知準備）
-    val performBack = remember {
-        {
-            if (isChangedByMe || childRefreshRequested) {
-                navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
-            }
-            navController.popBackStack()
+    val performBack = {
+        if (isChangedByMe || childRefreshRequested) {
+            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
         }
+        navController.popBackStack()
     }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -160,9 +202,7 @@ fun SettingsScreen(
                     is BaseUiStateViewModel.UiEvent.ShowSnackbar -> {
                         snackbarHostState.showSnackbar(event.message)
                     }
-                    is BaseUiStateViewModel.UiEvent.ShowOverwriteConfirm -> {
-                        // 設定画面では上書き確認は使用しない
-                    }
+                    is BaseUiStateViewModel.UiEvent.ShowOverwriteConfirm -> {}
                 }
             }
         }
@@ -193,6 +233,174 @@ fun SettingsScreen(
     val exportLogsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri -> uri?.let { viewModel.exportAuditLogs(it) } }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { showImportUri = it } }
 
+    val handleAction: (SettingsUiAction) -> Unit = remember(viewModel, navController, onCheckBiometricSupport, onRequireAuthentication) {
+        { action ->
+            when (action) {
+                is SettingsUiAction.MaskingChanged -> {
+                    viewModel.setNameMaskingEnabled(action.enabled)
+                    isChangedByMe = true
+                }
+                is SettingsUiAction.RecorderNameChanged -> {
+                    viewModel.setDefaultRecorderName(action.name)
+                    isChangedByMe = true
+                }
+                SettingsUiAction.NavigateToRestore -> {
+                    viewModel.navigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE)
+                }
+                SettingsUiAction.EraseArchivedClick -> {
+                    showEraseConfirm = true
+                }
+                SettingsUiAction.ConfirmEraseArchived -> {
+                    viewModel.deleteEndedPersons()
+                    showEraseConfirm = false
+                }
+                is SettingsUiAction.BackupPasswordEnabledChanged -> {
+                    if (action.enabled) {
+                        viewModel.setBackupPasswordEnabled(enabled = true)
+                        isPasswordVisible = false
+                    } else {
+                        if (onCheckBiometricSupport()) {
+                            onRequireAuthentication(R.string.security_auth_title, R.string.security_auth_reason_change_settings) {
+                                viewModel.setBackupPasswordEnabled(enabled = false)
+                            }
+                        } else {
+                            viewModel.setBackupPasswordEnabled(enabled = false)
+                        }
+                    }
+                    isChangedByMe = true
+                }
+                is SettingsUiAction.BackupPasswordChanged -> {
+                    if (action.password.length >= AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH || action.password.isEmpty()) {
+                        viewModel.setBackupPassword(action.password)
+                    }
+                    isChangedByMe = true
+                }
+                SettingsUiAction.PasswordVisibilityToggle -> {
+                    if (isPasswordVisible) {
+                        isPasswordVisible = false
+                    } else {
+                        if (onCheckBiometricSupport()) {
+                            onRequireAuthentication(R.string.security_auth_title, R.string.security_auth_reason_show_password) {
+                                isPasswordVisible = true
+                            }
+                        } else {
+                            isPasswordVisible = true
+                        }
+                    }
+                }
+                SettingsUiAction.ExportClick -> {
+                    viewModel.setLockBypassEnabled(enabled = true)
+                    exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
+                }
+                SettingsUiAction.ExportLogsClick -> {
+                    viewModel.setLockBypassEnabled(enabled = true)
+                    exportLogsLauncher.launch("carememo_audit_logs_${System.currentTimeMillis()}.zip")
+                }
+                SettingsUiAction.ImportClick -> {
+                    viewModel.setLockBypassEnabled(enabled = true)
+                    importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
+                }
+                SettingsUiAction.UnassignedPhotosClick -> {
+                    viewModel.navigateToUnassignedPhotos()
+                }
+                is SettingsUiAction.PasswordInputForImportChanged -> {
+                    inputPasswordForImport = action.password
+                }
+                SettingsUiAction.ConfirmImportWithPassword -> {
+                    pendingImportUri?.let { viewModel.importData(it, identifierSuffix, inputPasswordForImport) }
+                    showPasswordInputDialog = false
+                    inputPasswordForImport = ""
+                }
+                is SettingsUiAction.BiometricEnabledChanged -> {
+                    if (action.enabled) {
+                        viewModel.setBiometricEnabled(isSupported = onCheckBiometricSupport(), enabled = true)
+                    } else {
+                        if (onCheckBiometricSupport()) {
+                            onRequireAuthentication(R.string.security_auth_title, R.string.security_auth_reason_change_settings) {
+                                viewModel.setBiometricEnabled(isSupported = true, enabled = false)
+                            }
+                        } else {
+                            viewModel.setBiometricEnabled(isSupported = false, enabled = false)
+                        }
+                    }
+                    isChangedByMe = true
+                }
+                SettingsUiAction.ThemeClick -> showThemeDialog = true
+                is SettingsUiAction.ThemeSelected -> {
+                    viewModel.setThemeSetting(action.setting)
+                    showThemeDialog = false
+                }
+                SettingsUiAction.VersionClick -> {
+                    viewModel.handleVersionClick()
+                    showVersionDialog = true
+                }
+                SettingsUiAction.ClearAllClick -> {
+                    if (onCheckBiometricSupport()) {
+                        onRequireAuthentication(R.string.security_auth_title, R.string.security_auth_reason_change_settings) {
+                            showDevClearConfirm = true
+                        }
+                    } else {
+                        showDevClearConfirm = true
+                    }
+                }
+                SettingsUiAction.ConfirmClearAll -> {
+                    viewModel.clearAllData()
+                    showDevClearConfirm = false
+                }
+                SettingsUiAction.CheckIntegrity -> viewModel.checkIntegrity()
+                SettingsUiAction.InsertTestInconsistency -> viewModel.insertTestInconsistency()
+                SettingsUiAction.RetentionClick -> showRetentionDialog = true
+                is SettingsUiAction.RetentionSelected -> {
+                    viewModel.setAuditLogRetentionDays(action.days)
+                    showRetentionDialog = false
+                }
+                SettingsUiAction.ViewLogsClick -> viewModel.navigateToAuditLog()
+                SettingsUiAction.RotateLogsClick -> viewModel.rotateLogsManually()
+                SettingsUiAction.ClearLogsClick -> showLogClearConfirm = true
+                SettingsUiAction.ConfirmClearLogs -> {
+                    viewModel.clearAuditLogs()
+                    showLogClearConfirm = false
+                }
+                SettingsUiAction.ImportSampleDataClick -> {
+                    if (onCheckBiometricSupport()) {
+                        onRequireAuthentication(R.string.security_auth_title, R.string.security_auth_reason_change_settings) {
+                            showImportSampleConfirm = true
+                        }
+                    } else {
+                        showImportSampleConfirm = true
+                    }
+                }
+                SettingsUiAction.ConfirmImportSampleData -> {
+                    viewModel.importSampleData()
+                    showImportSampleConfirm = false
+                }
+                is SettingsUiAction.ForceImportEnabledChanged -> {
+                    viewModel.setForceImportEnabled(action.enabled)
+                }
+                SettingsUiAction.FixInconsistencies -> viewModel.fixInconsistencies()
+                SettingsUiAction.ClearInconsistencyResults -> viewModel.clearInconsistencyResults()
+                SettingsUiAction.Back -> performBack()
+                SettingsUiAction.DismissDialog -> {
+                    showImportUri = null
+                    showEraseConfirm = false
+                    showDevClearConfirm = false
+                    showVersionDialog = false
+                    showThemeDialog = false
+                    showRetentionDialog = false
+                    showLogClearConfirm = false
+                    showImportSampleConfirm = false
+                    showPasswordInputDialog = false
+                    inputPasswordForImport = ""
+                }
+                SettingsUiAction.ConfirmImportRestore -> {
+                    pendingImportUri = showImportUri
+                    viewModel.importData(showImportUri!!, identifierSuffix)
+                    showImportUri = null
+                }
+            }
+        }
+    }
+
     if (dialogMessage != null) {
         AppInfoDialog(
             title = dialogTitle,
@@ -207,25 +415,19 @@ fun SettingsScreen(
 
     if (showImportUri != null) {
         AppDialog(
-            onDismissRequest = { showImportUri = null },
+            onDismissRequest = { handleAction(SettingsUiAction.DismissDialog) },
             title = { Text(stringResource(R.string.settings_dialog_restore_confirm_title)) },
-            text = {
-                AppDialogContent(text = stringResource(R.string.settings_dialog_restore_confirm_msg))
-            },
+            text = { AppDialogContent(text = stringResource(R.string.settings_dialog_restore_confirm_msg)) },
             confirmButton = {
                 AppDialogConfirmButton(
                     text = stringResource(R.string.settings_dialog_restore_confirm_btn),
-                    onClick = {
-                        pendingImportUri = showImportUri
-                        viewModel.importData(showImportUri!!, identifierSuffix)
-                        showImportUri = null
-                    }
+                    onClick = { handleAction(SettingsUiAction.ConfirmImportRestore) }
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showImportUri = null }
+                    onClick = { handleAction(SettingsUiAction.DismissDialog) }
                 )
             }
         )
@@ -233,8 +435,8 @@ fun SettingsScreen(
 
     if (showEraseConfirm) {
         AppDeleteConfirmDialog(
-            onDismiss = { showEraseConfirm = false },
-            onDelete = { viewModel.deleteEndedPersons() },
+            onDismiss = { handleAction(SettingsUiAction.DismissDialog) },
+            onDelete = { handleAction(SettingsUiAction.ConfirmEraseArchived) },
             title = stringResource(R.string.settings_dialog_permanent_delete_confirm_title),
             message = stringResource(R.string.settings_dialog_permanent_delete_confirm_msg, uiState.endedUserCount),
             confirmButtonText = stringResource(R.string.settings_dialog_permanent_delete_confirm_btn, uiState.endedUserCount)
@@ -243,8 +445,8 @@ fun SettingsScreen(
 
     if (showDevClearConfirm) {
         AppDeleteConfirmDialog(
-            onDismiss = { showDevClearConfirm = false },
-            onDelete = { viewModel.clearAllData() },
+            onDismiss = { handleAction(SettingsUiAction.DismissDialog) },
+            onDelete = { handleAction(SettingsUiAction.ConfirmClearAll) },
             title = stringResource(R.string.settings_dialog_clear_all_confirm_title),
             message = stringResource(R.string.settings_dialog_clear_all_confirm_msg),
             confirmButtonText = stringResource(R.string.decision)
@@ -253,8 +455,8 @@ fun SettingsScreen(
 
     if (showLogClearConfirm) {
         AppDeleteConfirmDialog(
-            onDismiss = { showLogClearConfirm = false },
-            onDelete = { viewModel.clearAuditLogs() },
+            onDismiss = { handleAction(SettingsUiAction.DismissDialog) },
+            onDelete = { handleAction(SettingsUiAction.ConfirmClearLogs) },
             title = context.getString(R.string.audit_log_clear_confirm_title),
             message = context.getString(R.string.audit_log_clear_confirm_msg),
             confirmButtonText = context.getString(R.string.common_delete)
@@ -263,8 +465,8 @@ fun SettingsScreen(
 
     if (showImportSampleConfirm) {
         AppDeleteConfirmDialog(
-            onDismiss = { showImportSampleConfirm = false },
-            onDelete = { viewModel.importSampleData() },
+            onDismiss = { handleAction(SettingsUiAction.DismissDialog) },
+            onDelete = { handleAction(SettingsUiAction.ConfirmImportSampleData) },
             title = context.getString(R.string.settings_import_sample_confirm_title),
             message = context.getString(R.string.settings_import_sample_confirm_msg),
             confirmButtonText = context.getString(R.string.settings_btn_import_sample_data)
@@ -274,7 +476,7 @@ fun SettingsScreen(
     // データベース不整合レポート・ダイアログ
     if (uiState.inconsistencies.isNotEmpty()) {
         AppDialog(
-            onDismissRequest = { viewModel.clearInconsistencyResults() },
+            onDismissRequest = { handleAction(SettingsUiAction.ClearInconsistencyResults) },
             title = { Text(stringResource(R.string.settings_dialog_inconsistency_report_title)) },
             text = {
                 AppDialogContent {
@@ -286,52 +488,30 @@ fun SettingsScreen(
 
                         uiState.inconsistencies.forEach { inc ->
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                             ) {
                                 Column(modifier = Modifier.padding(8.dp)) {
-                                    Text(
-                                        text = stringResource(MaintenanceDisplayMapper.getDescriptionResId(inc.type)),
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                    Text(
-                                        text = buildString {
-                                            append(stringResource(R.string.settings_dialog_inconsistency_person_id, inc.personId ?: stringResource(R.string.audit_result_unknown)))
-                                            append(" | ")
-                                            append(stringResource(R.string.settings_dialog_inconsistency_table, inc.tableName))
-                                        },
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                    inc.recordTime?.let { time ->
-                                        Text(
-                                            text = stringResource(R.string.settings_dialog_inconsistency_record_time, DateTimeUtils.formatRecordTime(time)),
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
+                                    Text(text = stringResource(MaintenanceDisplayMapper.getDescriptionResId(inc.type)), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                                    Text(text = buildString { append(stringResource(R.string.settings_dialog_inconsistency_person_id, inc.personId ?: stringResource(R.string.audit_result_unknown))); append(" | "); append(stringResource(R.string.settings_dialog_inconsistency_table, inc.tableName)) }, style = MaterialTheme.typography.labelSmall)
+                                    inc.recordTime?.let { time -> Text(text = stringResource(R.string.settings_dialog_inconsistency_record_time, DateTimeUtils.formatRecordTime(time)), style = MaterialTheme.typography.labelSmall) }
                                 }
                             }
                         }
-                        Text(
-                            stringResource(R.string.settings_dialog_inconsistency_summary),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelSmall
-                        )
+                        Text(stringResource(R.string.settings_dialog_inconsistency_summary), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             },
             confirmButton = {
                 AppDialogConfirmButton(
                     text = stringResource(R.string.settings_dialog_inconsistency_cleanup_btn),
-                    onClick = { viewModel.fixInconsistencies() }
+                    onClick = { handleAction(SettingsUiAction.FixInconsistencies) }
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_close),
-                    onClick = { viewModel.clearInconsistencyResults() }
+                    onClick = { handleAction(SettingsUiAction.ClearInconsistencyResults) }
                 )
             }
         )
@@ -341,24 +521,19 @@ fun SettingsScreen(
         AppInfoDialog(
             title = stringResource(R.string.main_dialog_version_title),
             message = stringResource(R.string.settings_version_msg, BuildConfig.VERSION_NAME),
-            onDismiss = { showVersionDialog = false }
+            onDismiss = { handleAction(SettingsUiAction.DismissDialog) }
         )
     }
 
     if (showThemeDialog) {
         AppDialog(
-            onDismissRequest = { showThemeDialog = false },
+            onDismissRequest = { handleAction(SettingsUiAction.DismissDialog) },
             title = { Text(stringResource(R.string.settings_dialog_theme_title)) },
             text = {
                 AppDialogContent {
                     ThemeSetting.entries.forEach { selectionOption ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setThemeSetting(selectionOption)
-                                    showThemeDialog = false
-                                }.padding(16.dp),
+                            modifier = Modifier.fillMaxWidth().clickable { handleAction(SettingsUiAction.ThemeSelected(selectionOption)) }.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(selected = uiState.themeSetting == selectionOption, onClick = null)
@@ -371,7 +546,7 @@ fun SettingsScreen(
             confirmButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showThemeDialog = false }
+                    onClick = { handleAction(SettingsUiAction.DismissDialog) }
                 )
             }
         )
@@ -380,7 +555,7 @@ fun SettingsScreen(
     if (showRetentionDialog) {
         val options = AppSpecifications.Settings.AUDIT_LOG_RETENTION_OPTIONS
         AppDialog(
-            onDismissRequest = { showRetentionDialog = false },
+            onDismissRequest = { handleAction(SettingsUiAction.DismissDialog) },
             title = { Text(context.getString(R.string.audit_log_label_retention)) },
             text = {
                 AppDialogContent {
@@ -396,13 +571,7 @@ fun SettingsScreen(
                             else -> stringResource(R.string.settings_retention_days, days)
                         }
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setAuditLogRetentionDays(days)
-                                    showRetentionDialog = false
-                                }
-                                .padding(16.dp),
+                            modifier = Modifier.fillMaxWidth().clickable { handleAction(SettingsUiAction.RetentionSelected(days)) }.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(selected = uiState.auditLogRetentionDays == days, onClick = null)
@@ -415,7 +584,7 @@ fun SettingsScreen(
             confirmButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { showRetentionDialog = false }
+                    onClick = { handleAction(SettingsUiAction.DismissDialog) }
                 )
             }
         )
@@ -424,7 +593,7 @@ fun SettingsScreen(
     if (showPasswordInputDialog) {
         var isInputPasswordVisible by remember { mutableStateOf(false) }
         AppDialog(
-            onDismissRequest = { showPasswordInputDialog = false },
+            onDismissRequest = { handleAction(SettingsUiAction.DismissDialog) },
             title = { Text(stringResource(R.string.settings_dialog_import_password_title)) },
             text = {
                 AppDialogContent {
@@ -432,7 +601,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     AppTextField(
                         value = inputPasswordForImport,
-                        onValueChange = { inputPasswordForImport = it },
+                        onValueChange = { handleAction(SettingsUiAction.PasswordInputForImportChanged(it)) },
                         type = AppTextFieldType.PASSWORD,
                         label = { Text(stringResource(R.string.settings_dialog_import_password_label)) },
                         modifier = Modifier.fillMaxWidth(),
@@ -450,158 +619,25 @@ fun SettingsScreen(
             confirmButton = {
                 AppDialogConfirmButton(
                     text = stringResource(R.string.decision),
-                    onClick = {
-                        pendingImportUri?.let { viewModel.importData(it, identifierSuffix, inputPasswordForImport) }
-                        showPasswordInputDialog = false
-                        inputPasswordForImport = ""
-                    },
+                    onClick = { handleAction(SettingsUiAction.ConfirmImportWithPassword) },
                     enabled = inputPasswordForImport.isNotEmpty()
                 )
             },
             dismissButton = {
                 AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = {
-                        showPasswordInputDialog = false
-                        inputPasswordForImport = ""
-                    }
+                    onClick = { handleAction(SettingsUiAction.DismissDialog) }
                 )
             }
         )
     }
 
     SettingsScreenContent(
-        snackbarHostState = snackbarHostState,
-        isMaskingEnabled = uiState.isNameMaskingEnabled,
-        defaultRecorderName = uiState.defaultRecorderName,
-        onMaskingChange = {
-            viewModel.setNameMaskingEnabled(it)
-            isChangedByMe = true // 伏せ字設定が変更されたらフラグを立てる (BH-01)
-        },
-        onRecorderNameChange = {
-            viewModel.setDefaultRecorderName(it)
-            isChangedByMe = true
-        },
-        endedUserCount = uiState.endedUserCount,
-        onNavigateToRestore = { viewModel.navigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.RESTORE) },
-        onEraseClick = { viewModel.navigateToArchiveManagement(DeleteOrRestorePersonViewModel.OperationMode.DELETE) },
-        isBackupPasswordEnabled = uiState.isBackupPasswordEnabled,
-        backupPassword = uiState.backupPassword,
+        uiState = uiState,
+        onAction = handleAction,
         isPasswordValid = isPasswordValid,
         isPasswordVisible = isPasswordVisible,
-        onBackupPasswordEnabledChange = { enabled ->
-            if (enabled) {
-                viewModel.setBackupPasswordEnabled(enabled = true)
-                isPasswordVisible = false
-            } else {
-                if (onCheckBiometricSupport()) {
-                    onRequireAuthentication(
-                        R.string.security_auth_title,
-                        R.string.security_auth_reason_change_settings
-                    ) {
-                        viewModel.setBackupPasswordEnabled(enabled = false)
-                    }
-                } else {
-                    viewModel.setBackupPasswordEnabled(enabled = false)
-                }
-            }
-            isChangedByMe = true
-        },
-        onBackupPasswordChange = {
-            if (it.length >= AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH || it.isEmpty()) viewModel.setBackupPassword(it)
-            isChangedByMe = true
-        },
-        onPasswordVisibilityToggle = {
-            if (isPasswordVisible) {
-                isPasswordVisible = false
-            } else {
-                if (onCheckBiometricSupport()) {
-                    onRequireAuthentication(
-                        R.string.security_auth_title,
-                        R.string.security_auth_reason_show_password
-                    ) {
-                        isPasswordVisible = true
-                    }
-                } else {
-                    isPasswordVisible = true
-                }
-            }
-        },
-        onExportClick = {
-            viewModel.setLockBypassEnabled(enabled = true)
-            exportLauncher.launch("carememo_backup_${System.currentTimeMillis()}.zip")
-        },
-        onExportLogsClick = {
-            viewModel.setLockBypassEnabled(enabled = true)
-            exportLogsLauncher.launch("carememo_audit_logs_${System.currentTimeMillis()}.zip")
-        },
-        onImportClick = {
-            viewModel.setLockBypassEnabled(enabled = true)
-            importLauncher.launch(arrayOf("application/zip", "application/json", "application/octet-stream"))
-        },
-        onUnassignedPhotosClick = { viewModel.navigateToUnassignedPhotos() },
-        isBiometricEnabled = uiState.isBiometricEnabled,
-        onBiometricEnabledChange = { enabled ->
-            if (enabled) {
-                viewModel.setBiometricEnabled(isSupported = onCheckBiometricSupport(), enabled = true)
-            } else {
-                if (onCheckBiometricSupport()) {
-                    onRequireAuthentication(
-                        R.string.security_auth_title,
-                        R.string.security_auth_reason_change_settings
-                    ) {
-                        viewModel.setBiometricEnabled(isSupported = true, enabled = false)
-                    }
-                } else {
-                    viewModel.setBiometricEnabled(isSupported = false, enabled = false)
-                }
-            }
-            isChangedByMe = true
-        },
-        themeSetting = uiState.themeSetting,
-        onThemeClick = { showThemeDialog = true },
-        onVersionClick = {
-            viewModel.handleVersionClick()
-            showVersionDialog = true
-        },
-        onClearAllClick = {
-            if (onCheckBiometricSupport()) {
-                onRequireAuthentication(
-                    R.string.security_auth_title,
-                    R.string.security_auth_reason_change_settings
-                ) {
-                    showDevClearConfirm = true
-                }
-            } else {
-                showDevClearConfirm = true
-            }
-        },
-        onCheckIntegrity = { viewModel.checkIntegrity() },
-        onInsertTestInconsistency = { viewModel.insertTestInconsistency() },
-        auditLogRetentionDays = uiState.auditLogRetentionDays,
-        auditLogCount = uiState.auditLogCount,
-        onRetentionClick = { showRetentionDialog = true },
-        onViewLogsClick = { viewModel.navigateToAuditLog() },
-        onRotateLogsClick = { viewModel.rotateLogsManually() },
-        onClearLogsClick = { showLogClearConfirm = true },
-        onImportSampleDataClick = {
-            if (onCheckBiometricSupport()) {
-                onRequireAuthentication(
-                    R.string.security_auth_title,
-                    R.string.security_auth_reason_change_settings
-                ) {
-                    showImportSampleConfirm = true
-                }
-            } else {
-                showImportSampleConfirm = true
-            }
-        },
-        isForceImportEnabled = uiState.isForceImportEnabled,
-        onForceImportEnabledChange = { viewModel.setForceImportEnabled(it) },
-        isDeveloperModeEnabled = uiState.isDeveloperModeEnabled,
-        isProcessing = uiState.isProcessing,
-        processingProgress = uiState.processingProgress,
-        onBack = { viewModel.navigateBack() },
+        snackbarHostState = snackbarHostState,
         modifier = modifier
     )
 }
@@ -616,46 +652,11 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreenContent(
-    snackbarHostState: SnackbarHostState,
-    isMaskingEnabled: Boolean,
-    defaultRecorderName: String,
-    onMaskingChange: (Boolean) -> Unit,
-    onRecorderNameChange: (String) -> Unit,
-    endedUserCount: Int,
-    onNavigateToRestore: () -> Unit,
-    onEraseClick: () -> Unit,
-    isBackupPasswordEnabled: Boolean,
-    backupPassword: String,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     isPasswordValid: Boolean,
     isPasswordVisible: Boolean,
-    onBackupPasswordEnabledChange: (Boolean) -> Unit,
-    onBackupPasswordChange: (String) -> Unit,
-    onPasswordVisibilityToggle: () -> Unit,
-    onExportClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onUnassignedPhotosClick: () -> Unit,
-    isBiometricEnabled: Boolean,
-    onBiometricEnabledChange: (Boolean) -> Unit,
-    themeSetting: ThemeSetting,
-    onThemeClick: () -> Unit,
-    onVersionClick: () -> Unit,
-    onClearAllClick: () -> Unit,
-    onCheckIntegrity: () -> Unit,
-    onInsertTestInconsistency: () -> Unit,
-    auditLogRetentionDays: Int,
-    auditLogCount: Int,
-    onRetentionClick: () -> Unit,
-    onViewLogsClick: () -> Unit,
-    onExportLogsClick: () -> Unit,
-    onRotateLogsClick: () -> Unit,
-    onClearLogsClick: () -> Unit,
-    onImportSampleDataClick: () -> Unit,
-    isForceImportEnabled: Boolean,
-    onForceImportEnabledChange: (Boolean) -> Unit,
-    isDeveloperModeEnabled: Boolean,
-    isProcessing: Boolean,
-    processingProgress: Int,
-    onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -666,7 +667,7 @@ fun SettingsScreenContent(
                 title = { Text(stringResource(R.string.audit_feature_settings), fontWeight = FontWeight.Bold) },
                 navigationIcon = { 
                     IconButton(
-                        onClick = onBack,
+                        onClick = { onAction(SettingsUiAction.Back) },
                         modifier = Modifier.testTag("SettingsScreen_BackButton")
                     ) { 
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back)) 
@@ -693,60 +694,40 @@ fun SettingsScreenContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 DisplayAndRecordingSection(
-                    isMaskingEnabled = isMaskingEnabled,
-                    defaultRecorderName = defaultRecorderName,
-                    onMaskingChange = onMaskingChange,
-                    onRecorderNameChange = onRecorderNameChange
+                    uiState = uiState,
+                    onAction = onAction
                 )
 
                 UserManagementSection(
-                    endedUserCount = endedUserCount,
-                    onNavigateToRestore = onNavigateToRestore,
-                    onEraseClick = onEraseClick
+                    uiState = uiState,
+                    onAction = onAction
                 )
 
                 DataManagementSection(
-                    isBackupPasswordEnabled = isBackupPasswordEnabled,
-                    backupPassword = backupPassword,
+                    uiState = uiState,
+                    onAction = onAction,
                     isPasswordValid = isPasswordValid,
-                    isPasswordVisible = isPasswordVisible,
-                    onBackupPasswordEnabledChange = onBackupPasswordEnabledChange,
-                    onBackupPasswordChange = onBackupPasswordChange,
-                    onPasswordVisibilityToggle = onPasswordVisibilityToggle,
-                    onExportClick = onExportClick,
-                    onImportClick = onImportClick,
-                    onUnassignedPhotosClick = onUnassignedPhotosClick
+                    isPasswordVisible = isPasswordVisible
                 )
 
                 SecuritySection(
-                    isBiometricEnabled = isBiometricEnabled,
-                    onBiometricEnabledChange = onBiometricEnabledChange
+                    uiState = uiState,
+                    onAction = onAction
                 )
 
                 ThemeSection(
-                    themeSetting = themeSetting,
-                    onThemeClick = onThemeClick
+                    uiState = uiState,
+                    onAction = onAction
                 )
 
                 OtherSection(
-                    onVersionClick = onVersionClick
+                    onAction = onAction
                 )
 
-                if (isDeveloperModeEnabled) {
+                if (uiState.isDeveloperModeEnabled) {
                     ResetSection(
-                        onClearAllClick = onClearAllClick,
-                        onCheckIntegrity = onCheckIntegrity,
-                        onInsertTestInconsistency = onInsertTestInconsistency,
-                        auditLogRetentionDays = auditLogRetentionDays,
-                        auditLogCount = auditLogCount,
-                        onRetentionClick = onRetentionClick,
-                        onViewLogsClick = onViewLogsClick,
-                        onExportLogsClick = onExportLogsClick,
-                        onRotateLogsClick = onRotateLogsClick,
-                        onClearLogsClick = onClearLogsClick,
-                        onImportSampleDataClick = onImportSampleDataClick,
-                        isForceImportEnabled = isForceImportEnabled,
-                        onForceImportEnabledChange = onForceImportEnabledChange
+                        uiState = uiState,
+                        onAction = onAction
                     )
                 }
 
@@ -757,7 +738,7 @@ fun SettingsScreenContent(
         }
     }
 
-    if (isProcessing) {
+    if (uiState.isProcessing) {
         AppDialog(
             onDismissRequest = { },
             modifier = Modifier.testTag("Settings_ProcessingDialog"),
@@ -774,10 +755,10 @@ fun SettingsScreenContent(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         LinearProgressIndicator(
-                            progress = { processingProgress / 100f },
+                            progress = { uiState.processingProgress / 100f },
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        Text(text = "$processingProgress%")
+                        Text(text = "${uiState.processingProgress}%")
                     }
                 }
             },
@@ -788,10 +769,8 @@ fun SettingsScreenContent(
 
 @Composable
 private fun DisplayAndRecordingSection(
-    isMaskingEnabled: Boolean,
-    defaultRecorderName: String,
-    onMaskingChange: (Boolean) -> Unit,
-    onRecorderNameChange: (String) -> Unit,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_display_record), modifier = modifier) {
@@ -800,21 +779,21 @@ private fun DisplayAndRecordingSection(
             supportingContent = { Text(stringResource(R.string.settings_item_name_masking_desc)) },
             trailingContent = { 
                 Switch(
-                    checked = isMaskingEnabled, 
+                    checked = uiState.isNameMaskingEnabled, 
                     onCheckedChange = null
                 ) 
             },
             modifier = Modifier
                 .testTag("Settings_MaskingRow")
                 .toggleable(
-                    value = isMaskingEnabled,
+                    value = uiState.isNameMaskingEnabled,
                     role = Role.Switch,
-                    onValueChange = onMaskingChange
+                    onValueChange = { onAction(SettingsUiAction.MaskingChanged(it)) }
                 )
         )
         AppTextField(
-            value = defaultRecorderName,
-            onValueChange = onRecorderNameChange,
+            value = uiState.defaultRecorderName,
+            onValueChange = { onAction(SettingsUiAction.RecorderNameChanged(it)) },
             type = AppTextFieldType.TEXT,
             label = { Text(stringResource(R.string.settings_item_default_recorder_title)) },
             placeholder = { Text(stringResource(R.string.settings_item_default_recorder_placeholder)) },
@@ -827,47 +806,40 @@ private fun DisplayAndRecordingSection(
 
 @Composable
 private fun UserManagementSection(
-    endedUserCount: Int,
-    onNavigateToRestore: () -> Unit,
-    onEraseClick: () -> Unit,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_person_management), modifier = modifier) {
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_restore_archived_title)) },
-            supportingContent = { Text(stringResource(R.string.settings_item_restore_archived_desc, endedUserCount)) },
-            trailingContent = { IconButton(onClick = onNavigateToRestore) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
-            modifier = Modifier.clickable { onNavigateToRestore() }.testTag("Settings_RestoreUserButton")
+            supportingContent = { Text(stringResource(R.string.settings_item_restore_archived_desc, uiState.endedUserCount)) },
+            trailingContent = { IconButton(onClick = { onAction(SettingsUiAction.NavigateToRestore) }) { Icon(Icons.Rounded.Restore, contentDescription = null) } },
+            modifier = Modifier.clickable { onAction(SettingsUiAction.NavigateToRestore) }.testTag("Settings_RestoreUserButton")
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_permanent_delete_archived_title), color = MaterialTheme.colorScheme.error) },
             supportingContent = { Text(stringResource(R.string.settings_item_permanent_delete_archived_desc)) },
             trailingContent = { 
-                IconButton(onClick = onEraseClick, enabled = endedUserCount > 0) { 
+                IconButton(onClick = { onAction(SettingsUiAction.EraseArchivedClick) }, enabled = uiState.endedUserCount > 0) { 
                     Icon(
                         Icons.Rounded.DeleteForever, 
                         contentDescription = null, 
-                        tint = if (endedUserCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                        tint = if (uiState.endedUserCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
                     ) 
                 } 
             },
-            modifier = Modifier.clickable(enabled = endedUserCount > 0) { onEraseClick() }.testTag("Settings_PermanentDeleteButton")
+            modifier = Modifier.clickable(enabled = uiState.endedUserCount > 0) { onAction(SettingsUiAction.EraseArchivedClick) }.testTag("Settings_PermanentDeleteButton")
         )
     }
 }
 
 @Composable
 private fun DataManagementSection(
-    isBackupPasswordEnabled: Boolean,
-    backupPassword: String,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     isPasswordValid: Boolean,
     isPasswordVisible: Boolean,
-    onBackupPasswordEnabledChange: (Boolean) -> Unit,
-    onBackupPasswordChange: (String) -> Unit,
-    onPasswordVisibilityToggle: () -> Unit,
-    onExportClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onUnassignedPhotosClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_data_management), modifier = modifier) {
@@ -876,7 +848,7 @@ private fun DataManagementSection(
             supportingContent = { 
                 Column {
                     Text(stringResource(R.string.settings_item_backup_password_desc))
-                    if (!isBackupPasswordEnabled) {
+                    if (!uiState.isBackupPasswordEnabled) {
                         Text(
                             text = stringResource(R.string.settings_item_backup_password_off_warning),
                             color = MaterialTheme.colorScheme.error,
@@ -887,71 +859,71 @@ private fun DataManagementSection(
             },
             trailingContent = { 
                 Switch(
-                    checked = isBackupPasswordEnabled, 
+                    checked = uiState.isBackupPasswordEnabled, 
                     onCheckedChange = null, 
                     modifier = Modifier.testTag("Settings_BackupPasswordSwitch")
                 ) 
             },
             modifier = Modifier.toggleable(
-                value = isBackupPasswordEnabled,
+                value = uiState.isBackupPasswordEnabled,
                 role = Role.Switch,
-                onValueChange = onBackupPasswordEnabledChange
+                onValueChange = { onAction(SettingsUiAction.BackupPasswordEnabledChanged(it)) }
             )
         )
-        if (isBackupPasswordEnabled) {
+        if (uiState.isBackupPasswordEnabled) {
             AppTextField(
-                value = backupPassword,
-                onValueChange = onBackupPasswordChange,
+                value = uiState.backupPassword,
+                onValueChange = { onAction(SettingsUiAction.BackupPasswordChanged(it)) },
                 type = AppTextFieldType.PASSWORD,
                 label = { Text(stringResource(R.string.settings_item_default_password_title)) },
                 placeholder = { Text(stringResource(R.string.settings_item_default_password_placeholder, AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH)) },
                 supportingText = { 
-                    if (!isPasswordValid && backupPassword.isNotEmpty()) 
+                    if (!isPasswordValid && uiState.backupPassword.isNotEmpty()) 
                         Text(stringResource(R.string.settings_item_default_password_error, AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH), color = MaterialTheme.colorScheme.error) 
                     else Text(stringResource(R.string.settings_item_default_password_hint)) 
                 },
-                isError = !isPasswordValid && backupPassword.isNotEmpty(),
+                isError = !isPasswordValid && uiState.backupPassword.isNotEmpty(),
                 maxLength = AppSpecifications.Constraints.System.Security.MAX_PASSWORD_LENGTH,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("Settings_BackupPasswordInput"),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = { 
-                    IconButton(onClick = onPasswordVisibilityToggle, modifier = Modifier.testTag("Settings_PasswordVisibilityToggle")) { 
+                    IconButton(onClick = { onAction(SettingsUiAction.PasswordVisibilityToggle) }, modifier = Modifier.testTag("Settings_PasswordVisibilityToggle")) { 
                         Icon(imageVector = if (isPasswordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, contentDescription = null) 
                     } 
                 }
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-        val canExport = !isBackupPasswordEnabled || isPasswordValid
+        val canExport = !uiState.isBackupPasswordEnabled || isPasswordValid
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_export_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_export_desc)) },
             trailingContent = { 
-                IconButton(onClick = onExportClick, enabled = canExport, modifier = Modifier.testTag("Settings_BackupButton")) { 
+                IconButton(onClick = { onAction(SettingsUiAction.ExportClick) }, enabled = canExport, modifier = Modifier.testTag("Settings_BackupButton")) { 
                     Icon(Icons.Rounded.Output, contentDescription = null, tint = if (canExport) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) 
                 } 
             },
-            modifier = Modifier.clickable(enabled = canExport) { onExportClick() }
+            modifier = Modifier.clickable(enabled = canExport) { onAction(SettingsUiAction.ExportClick) }
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_import_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_import_desc)) },
-            trailingContent = { IconButton(onClick = onImportClick, modifier = Modifier.testTag("Settings_ImportButton")) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } },
-            modifier = Modifier.clickable { onImportClick() }
+            trailingContent = { IconButton(onClick = { onAction(SettingsUiAction.ImportClick) }, modifier = Modifier.testTag("Settings_ImportButton")) { Icon(Icons.AutoMirrored.Rounded.Input, contentDescription = null) } },
+            modifier = Modifier.clickable { onAction(SettingsUiAction.ImportClick) }
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_unassigned_photos_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_unassigned_photos_desc)) },
             leadingContent = { Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null) },
-            modifier = Modifier.clickable { onUnassignedPhotosClick() }.testTag("Settings_UnassignedPhotosButton")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.UnassignedPhotosClick) }.testTag("Settings_UnassignedPhotosButton")
         )
     }
 }
 
 @Composable
 private fun SecuritySection(
-    isBiometricEnabled: Boolean,
-    onBiometricEnabledChange: (Boolean) -> Unit,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_security), modifier = modifier) {
@@ -960,15 +932,15 @@ private fun SecuritySection(
             supportingContent = { Text(stringResource(R.string.settings_item_app_lock_desc)) },
             trailingContent = { 
                 Switch(
-                    checked = isBiometricEnabled, 
+                    checked = uiState.isBiometricEnabled, 
                     onCheckedChange = null, 
                     modifier = Modifier.testTag("Settings_BiometricSwitch")
                 ) 
             },
             modifier = Modifier.toggleable(
-                value = isBiometricEnabled,
+                value = uiState.isBiometricEnabled,
                 role = Role.Switch,
-                onValueChange = onBiometricEnabledChange
+                onValueChange = { onAction(SettingsUiAction.BiometricEnabledChanged(it)) }
             )
         )
     }
@@ -976,14 +948,14 @@ private fun SecuritySection(
 
 @Composable
 private fun ThemeSection(
-    themeSetting: ThemeSetting,
-    onThemeClick: () -> Unit,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_theme), modifier = modifier) {
-        Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onThemeClick() }.testTag("Settings_ThemeRow")) {
+        Box(modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { onAction(SettingsUiAction.ThemeClick) }.testTag("Settings_ThemeRow")) {
             OutlinedTextField(
-                value = stringResource(ThemeDisplayMapper.getLabelRes(themeSetting)),
+                value = stringResource(ThemeDisplayMapper.getLabelRes(uiState.themeSetting)),
                 onValueChange = {},
                 readOnly = true,
                 enabled = false,
@@ -998,45 +970,34 @@ private fun ThemeSection(
                 )
             )
         }
-        Text(text = "※ ${stringResource(ThemeDisplayMapper.getDescriptionRes(themeSetting))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+        Text(text = "※ ${stringResource(ThemeDisplayMapper.getDescriptionRes(uiState.themeSetting))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
     }
 }
 
 @Composable
 private fun OtherSection(
-    onVersionClick: () -> Unit,
+    onAction: (SettingsUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_other), modifier = modifier) {
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_version_title)) },
             leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
-            modifier = Modifier.clickable { onVersionClick() }.testTag("Settings_VersionRow")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.VersionClick) }.testTag("Settings_VersionRow")
         )
     }
 }
 
 @Composable
 private fun ResetSection(
-    onClearAllClick: () -> Unit,
-    onCheckIntegrity: () -> Unit,
-    onInsertTestInconsistency: () -> Unit,
-    auditLogRetentionDays: Int,
-    auditLogCount: Int,
-    onRetentionClick: () -> Unit,
-    onViewLogsClick: () -> Unit,
-    onExportLogsClick: () -> Unit,
-    onRotateLogsClick: () -> Unit,
-    onClearLogsClick: () -> Unit,
-    onImportSampleDataClick: () -> Unit,
-    isForceImportEnabled: Boolean,
-    onForceImportEnabledChange: (Boolean) -> Unit,
+    uiState: SettingsUiState,
+    onAction: (SettingsUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsSection(title = stringResource(R.string.settings_section_dev_tools), modifier = modifier.testTag("Settings_DevSection")) {
         Text(text = stringResource(R.string.settings_dev_audit_log_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         
-        val retentionLabel = when (auditLogRetentionDays) {
+        val retentionLabel = when (uiState.auditLogRetentionDays) {
             0 -> stringResource(R.string.settings_retention_none)
             7 -> stringResource(R.string.settings_retention_one_week)
             14 -> stringResource(R.string.settings_retention_two_weeks)
@@ -1044,42 +1005,42 @@ private fun ResetSection(
             90 -> stringResource(R.string.settings_retention_three_months)
             180 -> stringResource(R.string.settings_retention_half_year)
             365 -> stringResource(R.string.settings_retention_one_year)
-            else -> stringResource(R.string.settings_retention_days, auditLogRetentionDays)
+            else -> stringResource(R.string.settings_retention_days, uiState.auditLogRetentionDays)
         }
         
         ListItem(
             headlineContent = { Text(stringResource(R.string.audit_log_label_retention)) },
             supportingContent = { Text(stringResource(R.string.audit_log_retention_desc)) },
             trailingContent = { Text(text = retentionLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
-            modifier = Modifier.clickable { onRetentionClick() }
+            modifier = Modifier.clickable { onAction(SettingsUiAction.RetentionClick) }
         )
         
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_btn_view_audit_logs)) },
-            supportingContent = { Text(stringResource(R.string.settings_dev_audit_log_count, auditLogCount)) },
+            supportingContent = { Text(stringResource(R.string.settings_dev_audit_log_count, uiState.auditLogCount)) },
             leadingContent = { Icon(Icons.Rounded.History, contentDescription = null) },
-            modifier = Modifier.clickable { onViewLogsClick() }.testTag("Settings_AuditLogButton")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.ViewLogsClick) }.testTag("Settings_AuditLogButton")
         )
 
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_btn_export_audit_logs)) },
             supportingContent = { Text(stringResource(R.string.settings_dev_export_audit_logs_desc)) },
             leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
-            modifier = Modifier.clickable { onExportLogsClick() }.testTag("Settings_AuditLogExportButton")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.ExportLogsClick) }.testTag("Settings_AuditLogExportButton")
         )
 
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_btn_rotate_logs)) },
             supportingContent = { Text(stringResource(R.string.settings_dev_rotate_logs_desc)) },
             leadingContent = { Icon(Icons.Rounded.CleaningServices, contentDescription = null) },
-            modifier = Modifier.clickable { onRotateLogsClick() }
+            modifier = Modifier.clickable { onAction(SettingsUiAction.RotateLogsClick) }
         )
         
         ListItem(
             headlineContent = { Text(stringResource(R.string.audit_log_clear_confirm_title), color = MaterialTheme.colorScheme.error) },
             supportingContent = { Text(stringResource(R.string.settings_dev_clear_logs_desc)) },
             leadingContent = { Icon(Icons.Rounded.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            modifier = Modifier.clickable { onClearLogsClick() }
+            modifier = Modifier.clickable { onAction(SettingsUiAction.ClearLogsClick) }
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
@@ -1090,7 +1051,7 @@ private fun ResetSection(
             headlineContent = { Text(stringResource(R.string.settings_btn_import_sample_data)) },
             supportingContent = { Text(stringResource(R.string.settings_dev_import_sample_desc)) },
             leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
-            modifier = Modifier.clickable { onImportSampleDataClick() }.testTag("Settings_ImportSampleButton")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.ImportSampleDataClick) }.testTag("Settings_ImportSampleButton")
         )
 
         ListItem(
@@ -1099,15 +1060,15 @@ private fun ResetSection(
             leadingContent = { Icon(Icons.Rounded.PublishedWithChanges, contentDescription = null) },
             trailingContent = {
                 Switch(
-                    checked = isForceImportEnabled,
+                    checked = uiState.isForceImportEnabled,
                     onCheckedChange = null,
                     modifier = Modifier.testTag("Settings_ForceImportSwitch")
                 )
             },
             modifier = Modifier.toggleable(
-                value = isForceImportEnabled,
+                value = uiState.isForceImportEnabled,
                 role = Role.Switch,
-                onValueChange = onForceImportEnabledChange
+                onValueChange = { onAction(SettingsUiAction.ForceImportEnabledChanged(it)) }
             )
         )
 
@@ -1115,14 +1076,14 @@ private fun ResetSection(
             headlineContent = { Text(stringResource(R.string.settings_item_integrity_check_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_integrity_check_desc)) },
             leadingContent = { Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null) },
-            modifier = Modifier.clickable { onCheckIntegrity() }.testTag("Settings_IntegrityCheckButton")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.CheckIntegrity) }.testTag("Settings_IntegrityCheckButton")
         )
 
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_insert_inconsistency_title)) },
             supportingContent = { Text(stringResource(R.string.settings_item_insert_inconsistency_desc)) },
             leadingContent = { Icon(Icons.Rounded.BugReport, contentDescription = null) },
-            modifier = Modifier.clickable { onInsertTestInconsistency() }
+            modifier = Modifier.clickable { onAction(SettingsUiAction.InsertTestInconsistency) }
         )
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
@@ -1131,7 +1092,7 @@ private fun ResetSection(
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_item_clear_all_title), color = MaterialTheme.colorScheme.error) },
             leadingContent = { Icon(Icons.Rounded.Dangerous, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            modifier = Modifier.clickable { onClearAllClick() }.testTag("Settings_ClearAllButton")
+            modifier = Modifier.clickable { onAction(SettingsUiAction.ClearAllClick) }.testTag("Settings_ClearAllButton")
         )
     }
 }
@@ -1149,46 +1110,24 @@ private fun SettingsSection(title: String, modifier: Modifier = Modifier, conten
 fun SettingsScreenPreview() {
     CareMemoTheme {
         SettingsScreenContent(
-            snackbarHostState = remember { SnackbarHostState() },
-            isMaskingEnabled = false,
-            defaultRecorderName = "記録者名",
-            onMaskingChange = {},
-            onRecorderNameChange = {},
-            endedUserCount = 2,
-            onNavigateToRestore = {},
-            onEraseClick = {},
-            isBackupPasswordEnabled = true,
-            backupPassword = "password",
+            uiState = SettingsUiState(
+                isNameMaskingEnabled = false,
+                defaultRecorderName = "記録者名",
+                endedUserCount = 2,
+                isBackupPasswordEnabled = true,
+                backupPassword = "password",
+                isBiometricEnabled = true,
+                themeSetting = ThemeSetting.SYSTEM,
+                auditLogRetentionDays = 30,
+                auditLogCount = 120,
+                isDeveloperModeEnabled = true,
+                isProcessing = false,
+                processingProgress = 0,
+            ),
+            onAction = {},
             isPasswordValid = true,
             isPasswordVisible = false,
-            onBackupPasswordEnabledChange = {},
-            onBackupPasswordChange = {},
-            onPasswordVisibilityToggle = {},
-            onExportClick = {},
-            onImportClick = {},
-            onUnassignedPhotosClick = {},
-            isBiometricEnabled = true,
-            onBiometricEnabledChange = {},
-            themeSetting = ThemeSetting.SYSTEM,
-            onThemeClick = {},
-            onVersionClick = {},
-            onClearAllClick = {},
-            onCheckIntegrity = {},
-            onInsertTestInconsistency = {},
-            auditLogRetentionDays = 30,
-            auditLogCount = 120,
-            onRetentionClick = {},
-            onViewLogsClick = {},
-            onExportLogsClick = {},
-            onRotateLogsClick = {},
-            onClearLogsClick = {},
-            onImportSampleDataClick = {},
-            isForceImportEnabled = false,
-            onForceImportEnabledChange = {},
-            isDeveloperModeEnabled = true,
-            isProcessing = false,
-            processingProgress = 0,
-            onBack = {}
+            snackbarHostState = remember { SnackbarHostState() }
         )
     }
 }

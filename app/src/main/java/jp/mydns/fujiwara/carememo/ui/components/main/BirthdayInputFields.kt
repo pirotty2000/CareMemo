@@ -171,6 +171,7 @@ fun BirthdayInputFields(
                                     style = MaterialTheme.typography.bodyMedium
                                 ) 
                             },
+                            modifier = Modifier.testTag("EraItem_${e.name}"),
                             onClick = {
                                 state.era.value = e
                                 eraExpanded = false

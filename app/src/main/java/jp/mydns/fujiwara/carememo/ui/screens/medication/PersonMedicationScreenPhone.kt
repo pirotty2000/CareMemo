@@ -43,19 +43,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
-import jp.mydns.fujiwara.carememo.data.MedicationRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import androidx.compose.ui.tooling.preview.Preview
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import java.time.Instant
-import java.time.LocalDate
 import java.time.YearMonth
 
 /**
@@ -64,29 +61,16 @@ import java.time.YearMonth
  * 【役割】
  * スマートフォン等の狭い画面（WindowWidthSizeClass.Compact/Medium）向けに最適化された服薬記録画面です。
  * カレンダー表示と履歴テーブル表示をタブ形式で切り替えて利用します。
- *
- * 【主な機能】
- * ・シングルペイン制御：カレンダーと履歴を排他的に表示し、限られた画面領域を有効活用。
- * ・モード切り替え：カレンダー ↔ 履歴 の表示モード選択（SegmentedButton）。
- * ・ナビゲーション統合：TopAppBar へのタイトル、戻るボタン、および PDF 出力ボタンの配置。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonMedicationScreenPhone(
+    uiState: PersonMedicationUiState,
     currentPerson: Person?,
-    isNameMaskingEnabled: Boolean,
-    isLoading: Boolean,
-    selectedMonth: YearMonth,
-    recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>>,
     personCategorySummary: PersonCategorySummary?,
+    isNameMaskingEnabled: Boolean,
     isHistoryMode: Boolean,
-    onHistoryModeChange: (Boolean) -> Unit,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onBack: () -> Unit,
-    onNavigateToCategory: (Category) -> Unit,
-    onShowPdfSettings: () -> Unit,
-    onDayClick: (LocalDate) -> Unit,
+    onAction: (PersonMedicationUiAction) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
@@ -106,7 +90,7 @@ fun PersonMedicationScreenPhone(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = onBack,
+                            onClick = { onAction(PersonMedicationUiAction.Back) },
                             modifier = Modifier.testTag("MedicationScreen_BackButton")
                         ) {
                             Icon(
@@ -118,7 +102,7 @@ fun PersonMedicationScreenPhone(
                     colors = appTopAppBarColors(),
                     actions = {
                         IconButton(
-                            onClick = onShowPdfSettings,
+                            onClick = { onAction(PersonMedicationUiAction.ShowPdfSettings) },
                             modifier = Modifier.testTag("MedicationScreen_PdfButton")
                         ) {
                             Icon(
@@ -133,7 +117,7 @@ fun PersonMedicationScreenPhone(
                     personCategorySummary = personCategorySummary,
                     onCategoryClick = { category ->
                         if (category != Category.MEDICATION) {
-                            onNavigateToCategory(category)
+                            onAction(PersonMedicationUiAction.NavigateToCategory(category))
                         }
                     }
                 )
@@ -148,14 +132,9 @@ fun PersonMedicationScreenPhone(
         ) {
             PersonMedicationScreenContent(
                 isExpanded = false,
-                selectedMonth = selectedMonth,
-                isLoading = isLoading,
-                recordsByDate = recordsByDate,
+                uiState = uiState,
                 isHistoryMode = isHistoryMode,
-                onHistoryModeChange = onHistoryModeChange,
-                onPreviousMonth = onPreviousMonth,
-                onNextMonth = onNextMonth,
-                onDayClick = onDayClick
+                onAction = onAction
             )
         }
     }
@@ -166,6 +145,11 @@ fun PersonMedicationScreenPhone(
 fun PersonMedicationScreenPhonePreview() {
     CareMemoTheme {
         PersonMedicationScreenPhone(
+            uiState = PersonMedicationUiState(
+                selectedMonth = YearMonth.now(),
+                isLoading = false,
+                recordsByDate = persistentMapOf()
+            ),
             currentPerson = Person(
                 lastName = "山田",
                 firstName = "太郎",
@@ -174,18 +158,9 @@ fun PersonMedicationScreenPhonePreview() {
                 birthday = Instant.now()
             ),
             isNameMaskingEnabled = false,
-            isLoading = false,
-            selectedMonth = YearMonth.now(),
-            recordsByDate = persistentMapOf(),
             personCategorySummary = null,
             isHistoryMode = false,
-            onHistoryModeChange = {},
-            onPreviousMonth = {},
-            onNextMonth = {},
-            onBack = {},
-            onNavigateToCategory = {},
-            onShowPdfSettings = {},
-            onDayClick = {},
+            onAction = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

@@ -64,27 +64,18 @@ import java.time.ZoneId
  *
  * 【役割】
  * 利用者一覧画面（MainScreen）の主要な UI レイアウト本体を構築します。
- * 検索、五十音インデックス、およびスクロール可能な利用者リストの表示を担当します。
  *
- * 【主な機能】
- * ・検索ボックス：氏名や経過記録キーワードによる動的フィルタリング UI の提供。
- * ・五十音バー：カナ行（あ、か、さ...）によるリストの絞り込み制御。
- * ・利用者リスト：`UserListItem` を用いたカード形式の時系列リスト表示。
- * ・空状態管理：検索結果が 0 件の場合や未登録時のプレースホルダー表示。
- * ・バージョンダイアログ：アプリ情報の表示および更新履歴（change_history.log）の閲覧機能。
- *
- * 【全体像：メインレイアウト構成（Main Layout）】
- *
- * ■ MainScreenContent (★本コンポーネント：表示層)
- * │
- * ├─ [1] Scaffold (基本構造：AppBar, FAB, SnackbarHost)
- * │    └─ TopAppBar (ハンバーガーメニュー) ➔ [2] VersionDialog (内部定義：更新履歴表示)
- * │
- * └─【コンテンツエリア：Column】
- *      ├─ SearchBox (検索バー：ui/components/base/)
- *      ├─ KanaIndexBar (五十音バー：ui/components/main/)
- *      └─ LazyColumn (利用者リスト)
- *           └─ UserListItem (カード：ui/components/main/)
+ * @param userList 利用者リスト
+ * @param isLoading ロード中かどうか
+ * @param isNameMaskingEnabled 氏名マスク有効かどうか
+ * @param searchQuery 検索クエリ
+ * @param selectedSection 五十音選択セクション
+ * @param selectedPersonForQuickMenu クイックメニュー対象
+ * @param isQuickActionMenuExpanded クイックメニュー展開中か
+ * @param onAction アクションハンドラ
+ * @param snackbarHostState スナックバー制御
+ * @param lazyListState リスト状態
+ * @param modifier 修飾子
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,19 +87,9 @@ fun MainScreenContent(
     selectedSection: String,
     selectedPersonForQuickMenu: Person?,
     isQuickActionMenuExpanded: Boolean,
-    onSearchQueryChange: (String) -> Unit,
-    onSectionSelect: (String) -> Unit,
+    onAction: (MainUiAction) -> Unit,
     snackbarHostState: SnackbarHostState,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
-    onUserClick: (Person) -> Unit,
-    onQuickMenuClick: (Person) -> Unit,
-    onEmergencyContactClick: (Person) -> Unit,
-    onEmergencyContactManageClick: (Person) -> Unit,
-    onDismissQuickMenu: () -> Unit,
-    onEditUser: (Person) -> Unit,
-    onAddClick: () -> Unit,
-    onEndUser: (Person) -> Unit,
-    onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -129,7 +110,7 @@ fun MainScreenContent(
         }
     }
 
-    // [6] VersionDialog (アプリ情報・バージョン表示：MainScreenContent内に定義)
+    // [6] VersionDialog
     if (showVersionDialog) {
         AppDialog(
             onDismissRequest = { showVersionDialog = false },
@@ -161,7 +142,7 @@ fun MainScreenContent(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 200.dp) // 最大高さを半分に調整
+                                    .heightIn(max = 200.dp)
                                     .verticalScroll(rememberScrollState())
                                     .padding(vertical = 4.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -169,7 +150,6 @@ fun MainScreenContent(
                                 historyLog.lines().forEach { line ->
                                     val trimmedLine = line.trim()
                                     when {
-                                        // バージョンヘッダー (# Ver.x.x.x)
                                         trimmedLine.startsWith("#") -> {
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
@@ -179,7 +159,6 @@ fun MainScreenContent(
                                                 color = MaterialTheme.colorScheme.primary
                                             )
                                         }
-                                        // 履歴詳細 (- 項目)
                                         trimmedLine.startsWith("-") -> {
                                             Row(modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
                                                 Text("・", style = MaterialTheme.typography.bodySmall)
@@ -190,7 +169,6 @@ fun MainScreenContent(
                                                 )
                                             }
                                         }
-                                        // その他（空行など）
                                         trimmedLine.isBlank() -> {
                                             Spacer(modifier = Modifier.height(4.dp))
                                         }
@@ -229,16 +207,12 @@ fun MainScreenContent(
         )
     }
 
-    // [Scaffold] ----------------------------------------------------------------------------------
     Scaffold(
         modifier = modifier,
         topBar = {
-            // --TopAppBar (アプリタイトル、設定・バージョンメニュー)
             TopAppBar(
-                // アプリタイトル
                 title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },
                 colors = appTopAppBarColors(),
-                // ハンバーガー・メニュー
                 actions = {
                     IconButton(
                         onClick = { showMenu = true },
@@ -250,14 +224,12 @@ fun MainScreenContent(
                         )
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        // 設定
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                            onClick = { showMenu = false; onNavigateToSettings() },
+                            onClick = { showMenu = false; onAction(MainUiAction.NavigateToSettings) },
                             modifier = Modifier.testTag("MainScreen_MenuItem_Settings")
                         )
-                        // バージョン情報
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_version)) },
                             leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
@@ -268,42 +240,38 @@ fun MainScreenContent(
                 }
             )
         },
-        // SnackbarHost (メッセージ通知領域)
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        // FloatingActionButton (利用者の新規追加ボタン)
-        floatingActionButton = { FloatingActionButton(onClick = onAddClick, modifier = Modifier.testTag("MainScreen_AddButton")) { Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.main_user_registration)) } }
-    ) 
-    
-    // --【コンテンツエリア：Column】-------------------------------------------------------------------
-    { paddingValues ->
+        floatingActionButton = { 
+            FloatingActionButton(
+                onClick = { onAction(MainUiAction.AddClick) }, 
+                modifier = Modifier.testTag("MainScreen_AddButton")
+            ) { 
+                Icon(Icons.Rounded.PersonAddAlt1, contentDescription = stringResource(R.string.main_user_registration)) 
+            } 
+        }
+    ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    // 全体の左右の余白
                     .padding(horizontal = 4.dp),
-                // ########## 検索ボックス／五十音かなインデックス／利用者一覧の上下の余白 ##########
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // [1] SearchBox (氏名・所見メモのリアルタイム検索：ui/components/base/SearchBox.kt)
                 SearchBox(
                     query = searchQuery,
-                    onQueryChange = onSearchQueryChange,
+                    onQueryChange = { onAction(MainUiAction.SearchQueryChange(it)) },
                     label = stringResource(R.string.main_search_placeholder),
                     modifier = Modifier.testTag("MainScreen_SearchBox")
                 )
 
-                // [2] KanaIndexBar (五十音インデックスバー：ui/components/main/KanaIndexBar.kt)
                 KanaIndexBar(
                     selectedSection = selectedSection,
-                    onSectionSelect = onSectionSelect,
+                    onSectionSelect = { onAction(MainUiAction.SectionSelect(it)) },
                     modifier = Modifier.testTag("MainScreen_KanaIndexBar")
                 )
 
-                //Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider()
 
-                //  [3] LazyColumn (メインリスト・利用者一覧)
                 if (isLoading) {
                     LoadingScreen(modifier = Modifier.testTag("MainScreen_Loading"))
                 } else if (userList.isEmpty()) {
@@ -323,28 +291,21 @@ fun MainScreenContent(
                     ) {
                         items(userList, key = { it.person.id }) { userUiState ->
                             Box {
-                                // [3-1] UserListItem (利用者カード：ui/components/main/MainComponents.kt)
                                 UserListItem(
                                     person = userUiState.person,
                                     summary = userUiState.summary,
                                     isNameMaskingEnabled = isNameMaskingEnabled,
-                                    onClick = { onUserClick(userUiState.person) },
-                                    onQuickMenuClick = { onQuickMenuClick(userUiState.person) },
-                                    onEmergencyContactManageClick = { onEmergencyContactManageClick(userUiState.person) },
-                                    onEditClick = { onEditUser(userUiState.person) },
-                                    onDeleteClick = { onEndUser(userUiState.person) },
+                                    onAction = onAction,
                                     modifier = Modifier
                                         .animateItem()
                                         .testTag("UserListItem_${userUiState.person.id}")
                                 )
 
-                                // クイックメニュー
                                 QuickActionMenu(
                                     expanded = isQuickActionMenuExpanded && selectedPersonForQuickMenu?.id == userUiState.person.id,
                                     person = userUiState.person,
                                     isNameMaskingEnabled = isNameMaskingEnabled,
-                                    onDismissRequest = onDismissQuickMenu,
-                                    onEmergencyContactClick = { onEmergencyContactClick(userUiState.person) }
+                                    onAction = onAction
                                 )
                             }
                             HorizontalDivider()
@@ -408,24 +369,14 @@ fun MainScreenPreview() {
         MainScreenContent(
             userList = mockUserList, 
             isLoading = false,
+            isNameMaskingEnabled = false,
             searchQuery = "",
             selectedSection = "全",
             selectedPersonForQuickMenu = null,
             isQuickActionMenuExpanded = false,
-            onSearchQueryChange = {},
-            onSectionSelect = {},
-            isNameMaskingEnabled = false,
+            onAction = {},
             snackbarHostState = remember { SnackbarHostState() }, 
-            lazyListState = rememberLazyListState(), 
-            onUserClick = { }, 
-            onQuickMenuClick = { },
-            onEmergencyContactClick = { },
-            onEmergencyContactManageClick = { },
-            onDismissQuickMenu = { },
-            onEditUser = { }, 
-            onAddClick = { }, 
-            onEndUser = { }, 
-            onNavigateToSettings = { }
+            lazyListState = rememberLazyListState()
         ) 
     }
 }

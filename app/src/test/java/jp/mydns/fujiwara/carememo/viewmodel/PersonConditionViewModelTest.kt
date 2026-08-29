@@ -258,5 +258,72 @@ class PersonConditionViewModelTest {
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Save Error") }, "OTHER_ERROR") }
     }
 
+    // region 8. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_restore_input_and_session() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_selected_id" to "c1",
+            "restoration_is_editing" to true,
+            "restoration_in_title" to "復元タイトル",
+            "restoration_in_body" to "復元された本文です。",
+            "restoration_in_time" to 1000L
+        ))
+
+        val viewModel = PersonConditionViewModel(
+            conditionRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("c1", state.selectedConditionId)
+        assertTrue(state.isEditing)
+        assertEquals("復元タイトル", state.editInput.title)
+        assertEquals("復元された本文です。", state.editInput.condition)
+        assertEquals(Instant.ofEpochMilli(1000L), state.editInput.recordTime)
+    }
+
+    @Test
+    fun RST_02_restore_baseline_and_isChanged() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_in_body" to "書き換え後",
+            "restoration_base_body" to "オリジナル",
+            "restoration_base_time" to 1000L
+        ))
+
+        val viewModel = PersonConditionViewModel(
+            conditionRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("書き換え後", state.editInput.condition)
+        assertEquals("オリジナル", state.initialSnapshot?.condition)
+        assertTrue(state.isChanged)
+    }
+
+    @Test
+    fun RST_03_restore_photo_preview_state() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_preview_uri" to "content://test/photo.jpg",
+            "restoration_preview_caption" to "書きかけのキャプション"
+        ))
+
+        val viewModel = PersonConditionViewModel(
+            conditionRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("content://test/photo.jpg", state.previewUri)
+        assertEquals("書きかけのキャプション", state.previewCaption)
+    }
+
     // endregion
 }

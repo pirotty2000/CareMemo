@@ -14,8 +14,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
-import jp.mydns.fujiwara.carememo.data.HistoryRecord
-import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -41,32 +39,17 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
  * ・詳細表示・編集：`HealthRecordDetailPane` による各指標（バイタル、血糖等）の入力・閲覧。
  * ・統計グラフ表示：`HealthGraphView` によるデータの可視化。
  *
- * 【全体像：レイアウト構成（Health Layout）】
- *
- * ■ PersonHealthScreenContent (★本コンポーネント)
- * │
- * ├─ [ Phone版 ] (Column 構成：トグル制御)
- * │    ├─ SegmentedButton (履歴 ↔ グラフ 切り替え)
- * │    └─ Box (コンテンツ：HistoryList または HealthGraphView)
- * │         └─ 編集時は HealthRecordDetailPane が最前面へ
- * │
- * └─ [ Tablet版 ] (Row 構成：2ペイン固定)
- *      ├─ 左側 (weight 1)：HistoryList (履歴リスト)
- *      └─ 右側 (weight 1.5)：HealthGraphView (グラフ) または HealthRecordDetailPane (詳細)
+ * @param isExpanded タブレット版（2カラム）として表示するかどうか
+ * @param uiState UI 状態
+ * @param onAction アクションハンドラ
+ * @param isAnyDialogOpen 他のダイアログが開いているかどうか。スワイプ状態のリセットに使用。
+ * @param modifier 修飾子
  */
 @Composable
 fun PersonHealthScreenContent(
     isExpanded: Boolean,
     uiState: PersonHealthUiState,
-    onPreferredShowHistoryChange: (Boolean) -> Unit,
-    onSelectedRecordIdChange: (String?) -> Unit,
-    onItemClick: (HistoryRecord) -> Unit,
-    onDeleteSwipe: (HistoryRecord) -> Unit,
-    onExpandGraph: (Int) -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
-    onSaveClick: () -> Unit,
-    onCancelEdit: () -> Unit,
+    onAction: (PersonHealthUiAction) -> Unit,
     isAnyDialogOpen: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -82,8 +65,8 @@ fun PersonHealthScreenContent(
                 PersonHistoryList(
                     records = uiState.records,
                     selectedRecordId = uiState.selectedRecordId,
-                    onItemClick = { record -> onSelectedRecordIdChange(record.id) },
-                    onDeleteSwipe = onDeleteSwipe,
+                    onItemClick = { record -> onAction(PersonHealthUiAction.SelectedRecordIdChanged(record.id)) },
+                    onDeleteSwipe = { onAction(PersonHealthUiAction.DeleteRecord(it)) },
                     isAnyDialogOpen = isAnyDialogOpen,
                     lazyListState = historyListState
                 ) { record ->
@@ -97,11 +80,7 @@ fun PersonHealthScreenContent(
                     Box(modifier = Modifier.testTag("HealthScreen_InputForm")) {
                         HealthRecordDetailPane(
                             uiState = uiState,
-                            onCancel = { onSelectedRecordIdChange(null) },
-                            onEditClick = onEditClick,
-                            onEditInputUpdate = onEditInputUpdate,
-                            onSaveClick = onSaveClick,
-                            onCancelEdit = onCancelEdit
+                            onAction = onAction
                         )
                     }
                 } else {
@@ -116,7 +95,7 @@ fun PersonHealthScreenContent(
                             HealthGraphView(
                                 records = uiState.records,
                                 categoryType = uiState.currentCategory,
-                                onExpandGraph = onExpandGraph
+                                onExpandGraph = { onAction(PersonHealthUiAction.ExpandGraph(it)) }
                             )
                         }
                         if (scrollState.maxValue > 0) {
@@ -132,11 +111,7 @@ fun PersonHealthScreenContent(
             Box(modifier = modifier.testTag("HealthScreen_InputForm")) {
                 HealthRecordDetailPane(
                     uiState = uiState,
-                    onCancel = { onSelectedRecordIdChange(null) },
-                    onEditClick = onEditClick,
-                    onEditInputUpdate = onEditInputUpdate,
-                    onSaveClick = onSaveClick,
-                    onCancelEdit = onCancelEdit
+                    onAction = onAction
                 )
             }
         } else {
@@ -150,7 +125,7 @@ fun PersonHealthScreenContent(
                 ) {
                     SegmentedButton(
                         selected = uiState.preferredShowHistory,
-                        onClick = { onPreferredShowHistoryChange(true) },
+                        onClick = { onAction(PersonHealthUiAction.PreferredShowHistoryChanged(true)) },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                         icon = { Icon(Icons.Rounded.History, contentDescription = null) },
                         colors = SegmentedButtonDefaults.colors(
@@ -161,7 +136,7 @@ fun PersonHealthScreenContent(
                     ) { Text(stringResource(R.string.common_tab_history)) }
                     SegmentedButton(
                         selected = !uiState.preferredShowHistory,
-                        onClick = { onPreferredShowHistoryChange(false) },
+                        onClick = { onAction(PersonHealthUiAction.PreferredShowHistoryChanged(false)) },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                         icon = { Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null) },
                         colors = SegmentedButtonDefaults.colors(
@@ -180,8 +155,8 @@ fun PersonHealthScreenContent(
                         Box(modifier = Modifier.testTag("HealthScreen_HistoryList")) {
                             PersonHistoryList(
                                 records = uiState.records,
-                                onItemClick = onItemClick,
-                                onDeleteSwipe = onDeleteSwipe,
+                                onItemClick = { onAction(PersonHealthUiAction.ItemClick(it)) },
+                                onDeleteSwipe = { onAction(PersonHealthUiAction.DeleteRecord(it)) },
                                 isAnyDialogOpen = isAnyDialogOpen,
                                 lazyListState = historyListState
                             ) { record ->
@@ -202,7 +177,7 @@ fun PersonHealthScreenContent(
                                 HealthGraphView(
                                     records = uiState.records,
                                     categoryType = uiState.currentCategory,
-                                    onExpandGraph = onExpandGraph
+                                    onExpandGraph = { onAction(PersonHealthUiAction.ExpandGraph(it)) }
                                 )
                                 Spacer(modifier = Modifier.height(80.dp))
                             }
@@ -236,15 +211,7 @@ private fun PreviewPersonHealthScreenContent(
                 preferredShowHistory = state.preferredShowHistory,
                 selectedRecordId = state.selectedRecordId
             ),
-            onPreferredShowHistoryChange = {},
-            onSelectedRecordIdChange = {},
-            onItemClick = {},
-            onDeleteSwipe = {},
-            onExpandGraph = {},
-            onEditClick = {},
-            onEditInputUpdate = {},
-            onSaveClick = {},
-            onCancelEdit = {},
+            onAction = {},
             isAnyDialogOpen = false
         )
     }

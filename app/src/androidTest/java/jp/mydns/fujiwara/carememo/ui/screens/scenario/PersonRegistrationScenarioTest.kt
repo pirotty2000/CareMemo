@@ -77,14 +77,23 @@ class PersonRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("PersonEdit_LastNameKana").performTextInput("かき")
         composeTestRule.onNodeWithTag("PersonEdit_FirstNameKana").performTextInput("くけこ")
 
+        // キーボードを閉じて画面を安定させる（ドロップダウンが隠れるのを防ぐ）
+        Espresso.closeSoftKeyboard()
+        composeTestRule.waitForIdle()
+
         // 4. 生年月日を入力する
         composeTestRule.onNodeWithTag("PersonEdit_EraSelector").performClick()
-        composeTestRule.onNodeWithText("昭和").performClick()
+        // メニュー項目が表示されるまで待機（セマンティクスツリーを詳細にスキャン）
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithTag("EraItem_SHOWA", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // 元号選択肢（DropdownMenuItem）をクリック
+        composeTestRule.onNodeWithTag("EraItem_SHOWA", useUnmergedTree = true).performClick()
         composeTestRule.onNodeWithTag("PersonEdit_BirthYear").performTextInput("44")
         composeTestRule.onNodeWithTag("PersonEdit_BirthMonth").performTextInput("5")
         composeTestRule.onNodeWithTag("PersonEdit_BirthDay").performTextInput("29")
 
-        // キーボードを閉じる（保存ボタンが隠れるのを防ぐ）
+        // 再度キーボードを閉じる（保存ボタンが隠れるのを防ぐ）
         Espresso.closeSoftKeyboard()
 
         // 5. 「保存」ボタンをタップする（念のためスクロールも行う）

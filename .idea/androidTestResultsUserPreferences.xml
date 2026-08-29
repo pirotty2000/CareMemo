@@ -102,6 +102,7 @@
                 <map>
                   <entry key="Duration" value="90" />
                   <entry key="Pixel_7" value="120" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -362,12 +363,12 @@
             <AndroidTestResultsTableState>
               <option name="preferredColumnWidths">
                 <map>
-                  <entry key="Duration" value="90" />
+                  <entry key="Duration" value="118" />
                   <entry key="KYOCERA KYG03" value="120" />
-                  <entry key="TORQUE_G06" value="120" />
+                  <entry key="TORQUE_G06" value="147" />
                   <entry key="TORQUE_G06_KYG03" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
-                  <entry key="Tests" value="360" />
+                  <entry key="Tests" value="387" />
                 </map>
               </option>
             </AndroidTestResultsTableState>
@@ -406,6 +407,7 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -484,6 +486,7 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -536,6 +539,7 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -674,6 +678,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="1456977889">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="1505834743">
           <value>
             <AndroidTestResultsTableState>
@@ -694,6 +711,7 @@
                 <map>
                   <entry key="Duration" value="90" />
                   <entry key="KYOCERA KYG03" value="120" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -760,6 +778,19 @@
                 <map>
                   <entry key="Duration" value="90" />
                   <entry key="TORQUE_G06_KYG03_2" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="1905447482">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="TORQUE_G06" value="120" />
                   <entry key="Tests" value="360" />
                 </map>
               </option>

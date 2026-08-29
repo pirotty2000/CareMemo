@@ -29,6 +29,17 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 
 /**
+ * UI Action：緊急連絡先編集画面におけるユーザー操作の集約定義
+ */
+sealed interface EmergencyContactEditUiAction {
+    data class UpdateContact(val reducer: (EmergencyContact) -> EmergencyContact) : EmergencyContactEditUiAction
+    data object SaveClick : EmergencyContactEditUiAction
+    data object CancelClick : EmergencyContactEditUiAction
+    data object ConfirmDiscard : EmergencyContactEditUiAction
+    data object DismissDialog : EmergencyContactEditUiAction
+}
+
+/**
  * Screen：EmergencyContactEditScreen
  *
  * 【役割】
@@ -62,13 +73,33 @@ fun EmergencyContactEditScreen(
         }
     }
 
+    val handleAction: (EmergencyContactEditUiAction) -> Unit = remember(viewModel, navController) {
+        { action ->
+            when (action) {
+                is EmergencyContactEditUiAction.UpdateContact -> {
+                    viewModel.updateEditingContact(action.reducer)
+                }
+                EmergencyContactEditUiAction.SaveClick -> {
+                    viewModel.saveContact()
+                }
+                EmergencyContactEditUiAction.CancelClick -> {
+                    navController.popBackStack()
+                }
+                EmergencyContactEditUiAction.ConfirmDiscard -> {
+                    navController.popBackStack()
+                }
+                EmergencyContactEditUiAction.DismissDialog -> {
+                    // ダイアログを閉じる制御は Content 側で行う（または状態を ViewModel へ戻す）
+                    // ここでは ViewModel にダイアログ状態がないため、Content 側のローカル状態で閉じる。
+                    // もし ViewModel で管理するなら、ここで resetDiscardDialogRequest() 等を呼ぶ。
+                }
+            }
+        }
+    }
+
     EmergencyContactEditContent(
         uiState = uiState,
-        onNavigateBack = { navController.popBackStack() },
-        onUpdateContact = { reducer -> viewModel.updateEditingContact(reducer) },
-        onSaveClick = {
-            viewModel.saveContact()
-        },
+        onAction = handleAction,
         modifier = modifier,
     )
 }
@@ -80,9 +111,7 @@ fun EmergencyContactEditScreen(
 @Composable
 fun EmergencyContactEditContent(
     uiState: EmergencyContactUiState,
-    onNavigateBack: () -> Unit,
-    onUpdateContact: ((EmergencyContact) -> EmergencyContact) -> Unit,
-    onSaveClick: () -> Unit,
+    onAction: (EmergencyContactEditUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val contact = uiState.editingContact ?: return
@@ -93,7 +122,7 @@ fun EmergencyContactEditContent(
         if (uiState.isChanged) {
             showDiscardDialog = true
         } else {
-            onNavigateBack()
+            onAction(EmergencyContactEditUiAction.CancelClick)
         }
     }
 
@@ -132,9 +161,7 @@ fun EmergencyContactEditContent(
                 // 種別選択
                 ContactTypeDropdown(
                     selectedType = contact.contactType,
-                    onTypeSelect = { newType ->
-                        onUpdateContact { it.copy(contactType = newType) }
-                    },
+                    onAction = onAction,
                     modifier = Modifier.testTag("EmergencyContact_TypeDropdown")
                 )
 
@@ -142,7 +169,7 @@ fun EmergencyContactEditContent(
                 AppTextField(
                     value = contact.facilityName,
                     onValueChange = { newValue ->
-                        onUpdateContact { it.copy(facilityName = newValue) }
+                        onAction(EmergencyContactEditUiAction.UpdateContact { it.copy(facilityName = newValue) })
                     },
                     label = { Text(stringResource(R.string.medical_contact_facility_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_facility_placeholder)) },
@@ -154,7 +181,7 @@ fun EmergencyContactEditContent(
                 AppTextField(
                     value = contact.personName ?: "",
                     onValueChange = { newValue ->
-                        onUpdateContact { it.copy(personName = newValue) }
+                        onAction(EmergencyContactEditUiAction.UpdateContact { it.copy(personName = newValue) })
                     },
                     label = { Text(stringResource(R.string.medical_contact_person_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
@@ -167,7 +194,7 @@ fun EmergencyContactEditContent(
                 AppTextField(
                     value = contact.phoneNumber ?: "",
                     onValueChange = { newValue ->
-                        onUpdateContact { it.copy(phoneNumber = newValue) }
+                        onAction(EmergencyContactEditUiAction.UpdateContact { it.copy(phoneNumber = newValue) })
                     },
                     type = AppTextFieldType.PHONE,
                     label = { Text(stringResource(R.string.medical_contact_phone_label)) },
@@ -188,7 +215,7 @@ fun EmergencyContactEditContent(
                     value = contact.priority.toString(),
                     onValueChange = { newValue ->
                         val p = newValue.toIntOrNull() ?: AppSpecifications.MedicalContact.Validation.DEFAULT_PRIORITY
-                        onUpdateContact { it.copy(priority = p) }
+                        onAction(EmergencyContactEditUiAction.UpdateContact { it.copy(priority = p) })
                     },
                     type = AppTextFieldType.INTEGER,
                     label = { Text(stringResource(R.string.medical_contact_priority_label)) },
@@ -212,7 +239,7 @@ fun EmergencyContactEditContent(
                         Text(stringResource(R.string.common_cancel))
                     }
                     Button(
-                        onClick = onSaveClick,
+                        onClick = { onAction(EmergencyContactEditUiAction.SaveClick) },
                         enabled = uiState.isValid,
                         modifier = Modifier.weight(1f).testTag("EmergencyContact_SaveButton")
                     ) {
@@ -238,7 +265,7 @@ fun EmergencyContactEditContent(
                     text = stringResource(R.string.common_discard),
                     onClick = {
                         showDiscardDialog = false
-                        onNavigateBack()
+                        onAction(EmergencyContactEditUiAction.ConfirmDiscard)
                     },
                     type = AppDialogActionType.DELETE
                 )
@@ -260,7 +287,7 @@ fun EmergencyContactEditContent(
 @Composable
 fun ContactTypeDropdown(
     selectedType: String,
-    onTypeSelect: (String) -> Unit,
+    onAction: (EmergencyContactEditUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -290,7 +317,7 @@ fun ContactTypeDropdown(
                 DropdownMenuItem(
                     text = { Text(EmergencyContactMapping.getLabel(type)) },
                     onClick = {
-                        onTypeSelect(type)
+                        onAction(EmergencyContactEditUiAction.UpdateContact { it.copy(contactType = type) })
                         expanded = false
                     }
                 )
@@ -308,9 +335,7 @@ fun EmergencyContactEditContentPreview_New() {
     CareMemoTheme {
         EmergencyContactEditContent(
             uiState = EmergencyContactUiState(editingContact = contact, initialContact = contact),
-            onNavigateBack = {},
-            onUpdateContact = {},
-            onSaveClick = {}
+            onAction = {}
         )
     }
 }
@@ -328,9 +353,7 @@ fun EmergencyContactEditContentPreview_Edit() {
     CareMemoTheme {
         EmergencyContactEditContent(
             uiState = EmergencyContactUiState(editingContact = contact, initialContact = contact),
-            onNavigateBack = {},
-            onUpdateContact = {},
-            onSaveClick = {}
+            onAction = {}
         )
     }
 }

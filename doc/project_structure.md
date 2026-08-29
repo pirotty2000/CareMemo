@@ -50,7 +50,7 @@ jp.mydns.fujiwara.carememo
 │   ├── preview/           #  ├─ プレビュー用基盤（MockData, PreviewStates）
 │   ├── theme/             #  ├─ アプリのテーマ設定（Color, Type, カスタムパレット、セマンティック配色）
 │   └── utils/             #  └─ UIユーティリティ（PhoneNumberVisualTransformation 等）
-├── viewmodel/             # UI状態管理と実行制御（BaseUiStateViewModel を基盤とする MVI 構造）
+├── viewmodel/             # UI状態管理と実行制御（BaseUiStateViewModel 基盤、MVI、7原則に基づく State Restoration 対応）
 ├── logic/                 # ドメインロジック（Android API 排除、Pure Kotlin での計算・判定）
 │   ├── common/            #  ├─ アプリ全体で再利用可能な共通計算ロジック
 │   └── feature/           #  └─ 特定画面に密結合したロジック（UiState / ViewEvent 定義を内包）
@@ -129,23 +129,25 @@ jp.mydns.fujiwara.carememo
 
 # ViewModel 一覧
 
+- すべての ViewModel は `SavedStateHandle` を自律的に解析し、遷移引数の抽出とプロセス死からの復元（バックアップの読み込み）を行います。
+
 ```text
 ViewModel (androidx.lifecycle.ViewModel)
 └── BaseUiStateViewModel<S, E> (基盤：UI状態、UIイベント、ロード制御、エラー通知)
-    ├── PersonListViewModel (利用者一覧・フィルタリング)
-    ├── PersonEditViewModel (利用者登録・変更検知)
-    ├── EmergencyContactEditViewModel (緊急連絡先 CRUD)
+    ├── PersonListViewModel (利用者一覧、State Restoration [検索・セクション])
+    ├── PersonEditViewModel (利用者登録、State Restoration [未保存入力・Baseline])
+    ├── EmergencyContactEditViewModel (緊急連絡先 CRUD、State Restoration [入力・Baseline])
     ├── SettingsViewModel (アプリ設定、バックアップ、整合性チェック)
     ├── AuditLogViewModel (監査ログ参照)
     ├── DeleteOrRestorePersonViewModel (アーカイブ利用者操作)
     ├── UnassignedPhotoViewModel (孤立写真管理)
     │
-    └── PersonBaseUiStateViewModel<S, E> (基盤：利用者コンテキストの自動ロード・同期)
+    └── PersonBaseUiStateViewModel<S, E> (基盤：利用者コンテキストの自動ロード・同期、復元ガード)
         ├── PersonDetailUiStateViewModel (詳細共通：ヘッダー、カテゴリ遷移)
-        ├── PersonHealthViewModel (専門：健康データ管理、PDF連携)
-        ├── PersonConditionViewModel (専門：所見メモ、写真連携)
-        ├── PersonMedicationViewModel (専門：服薬同期、カレンダー管理)
-        └── BatchInputViewModel (専門：複数カテゴリ同時入力管理)
+        ├── PersonHealthViewModel (専門：健康データ管理、PDF連携、State Restoration [入力・モード])
+        ├── PersonConditionViewModel (専門：所見メモ、写真連携、State Restoration [本文・プレビュー])
+        ├── PersonMedicationViewModel (専門：服薬同期、カレンダー管理、State Restoration [表示月・ダイアログ])
+        └── BatchInputViewModel (専門：複数カテゴリ同時入力管理、State Restoration [多項目一括復元])
 ```
 
 ---
@@ -261,4 +263,4 @@ Android API を利用する重量級の共通処理をカプセル化してい�
 
 ---
 
-最終更新日: 2026/08/21
+最終更新日: 2026/08/23

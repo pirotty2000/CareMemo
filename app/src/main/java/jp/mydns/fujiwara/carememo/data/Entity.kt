@@ -65,7 +65,7 @@ object InstantSerializer : KSerializer<Instant> {
  * すべての履歴データの基底インターフェース
  */
 @Stable
-interface HistoryRecord {
+interface HistoryRecord : java.io.Serializable {
     val id: String
     val personId: String
     val recordTime: Instant
@@ -90,7 +90,7 @@ data class Person(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-) {
+) : java.io.Serializable {
     /**
      * 伏せ字を適用した氏名を返す（漢字氏名用：交互にマスク）
      */
@@ -162,7 +162,7 @@ data class HeightAndWeight(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-) : HistoryRecord
+) : HistoryRecord, java.io.Serializable
 
 @Serializable
 @Entity(
@@ -195,7 +195,7 @@ data class BpAndPulse(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-) : HistoryRecord
+) : HistoryRecord, java.io.Serializable
 
 @Serializable
 @Entity(
@@ -225,7 +225,7 @@ data class GlucoseAndHbA1c(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-) : HistoryRecord
+) : HistoryRecord, java.io.Serializable
 
 @Serializable
 @Entity(
@@ -256,7 +256,7 @@ data class ConditionAtVisit(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-) : HistoryRecord
+) : HistoryRecord, java.io.Serializable
 
 @Serializable
 @Entity(
@@ -343,7 +343,7 @@ data class MedicationRecord(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-) : HistoryRecord
+) : HistoryRecord, java.io.Serializable
 
 @Serializable
 @Entity(
@@ -379,7 +379,7 @@ data class EmergencyContact(
     @Serializable(with = InstantSerializer::class)
     @ColumnInfo(name = "updated_at") val updatedAt: Instant = Instant.now(),
     @ColumnInfo(name = "is_synced") val isSynced: Boolean = false
-)
+) : java.io.Serializable
 
 /**
  * アプリ全体のバックアップデータを保持するクラス

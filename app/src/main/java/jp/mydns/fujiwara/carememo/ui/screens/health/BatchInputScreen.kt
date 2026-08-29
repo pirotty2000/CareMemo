@@ -1,5 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.screens.health
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,13 +17,44 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BatchInputViewModel
-import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import kotlinx.coroutines.launch
+
+/**
+ * UI Action：一括入力画面におけるユーザー操作の集約定義
+ */
+sealed interface BatchInputUiAction {
+    // 日時更新
+    data class UpdateYear(val value: String) : BatchInputUiAction
+    data class UpdateMonth(val value: String) : BatchInputUiAction
+    data class UpdateDay(val value: String) : BatchInputUiAction
+    data class UpdateHour(val value: String) : BatchInputUiAction
+    data class UpdateMinute(val value: String) : BatchInputUiAction
+
+    // 健康指標更新
+    data class UpdateHeight(val value: String) : BatchInputUiAction
+    data class UpdateWeight(val value: String) : BatchInputUiAction
+    data class UpdateBpSystolic(val value: String) : BatchInputUiAction
+    data class UpdateBpDiastolic(val value: String) : BatchInputUiAction
+    data class UpdateSat(val value: String) : BatchInputUiAction
+    data class UpdatePulse(val value: String) : BatchInputUiAction
+    data class UpdateBodyTemp(val value: String) : BatchInputUiAction
+    data class UpdateGlucose(val value: String) : BatchInputUiAction
+    data class UpdateHbA1c(val value: String) : BatchInputUiAction
+
+    // 画面操作
+    data object SaveClick : BatchInputUiAction
+    data object CancelClick : BatchInputUiAction
+    data object ConfirmDiscard : BatchInputUiAction
+    data object Back : BatchInputUiAction
+    data object DismissDialog : BatchInputUiAction
+}
 
 /**
  * Screen：BatchInputScreen
@@ -59,10 +91,6 @@ fun BatchInputScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by viewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
-    
-    val isChanged = uiState.isChanged
-    val isValid = uiState.isValid
-    val isLoading = uiState.isLoading
 
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
@@ -117,50 +145,86 @@ fun BatchInputScreen(
         }
     }
 
+    // アクションハンドラ
+    val handleAction: (BatchInputUiAction) -> Unit = remember(viewModel, navController, focusManager, uiState.isChanged) {
+        { action ->
+            when (action) {
+                is BatchInputUiAction.UpdateYear -> viewModel.updateYear(action.value)
+                is BatchInputUiAction.UpdateMonth -> viewModel.updateMonth(action.value)
+                is BatchInputUiAction.UpdateDay -> viewModel.updateDay(action.value)
+                is BatchInputUiAction.UpdateHour -> viewModel.updateHour(action.value)
+                is BatchInputUiAction.UpdateMinute -> viewModel.updateMinute(action.value)
+                is BatchInputUiAction.UpdateHeight -> viewModel.updateHeight(action.value)
+                is BatchInputUiAction.UpdateWeight -> viewModel.updateWeight(action.value)
+                is BatchInputUiAction.UpdateBpSystolic -> viewModel.updateBpSystolic(action.value)
+                is BatchInputUiAction.UpdateBpDiastolic -> viewModel.updateBpDiastolic(action.value)
+                is BatchInputUiAction.UpdateSat -> viewModel.updateSat(action.value)
+                is BatchInputUiAction.UpdatePulse -> viewModel.updatePulse(action.value)
+                is BatchInputUiAction.UpdateBodyTemp -> viewModel.updateBodyTemp(action.value)
+                is BatchInputUiAction.UpdateGlucose -> viewModel.updateGlucose(action.value)
+                is BatchInputUiAction.UpdateHbA1c -> viewModel.updateHbA1c(action.value)
+                BatchInputUiAction.SaveClick -> {
+                    focusManager.clearFocus()
+                    viewModel.saveBatch()
+                }
+                BatchInputUiAction.CancelClick -> {
+                    focusManager.clearFocus()
+                    if (uiState.isChanged) showDiscardDialog = true else viewModel.navigateBack()
+                }
+                BatchInputUiAction.ConfirmDiscard -> {
+                    showDiscardDialog = false
+                    viewModel.navigateBack()
+                }
+                BatchInputUiAction.Back -> {
+                    focusManager.clearFocus()
+                    if (uiState.isChanged) showDiscardDialog = true else viewModel.navigateBack()
+                }
+                BatchInputUiAction.DismissDialog -> {
+                    showDiscardDialog = false
+                    dialogMessage = null
+                    dialogTitle = null
+                }
+            }
+        }
+    }
+
     // システム戻るボタンの制御
-    androidx.activity.compose.BackHandler(enabled = isChanged) {
+    androidx.activity.compose.BackHandler(enabled = uiState.isChanged) {
         showDiscardDialog = true
     }
 
-    // 破棄確認ダイアログ
-    if (showDiscardDialog) {
-        AppDialog(
-            onDismissRequest = { showDiscardDialog = false },
-            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
-            text = { AppDialogContent(text = stringResource(R.string.common_confirm_discard_message)) },
-            confirmButton = {
-                AppDialogConfirmButton(
-                    text = stringResource(R.string.common_discard),
-                    type = AppDialogActionType.DELETE,
-                    onClick = {
-                        showDiscardDialog = false
-                        viewModel.navigateBack()
-                    },
-                    modifier = Modifier.testTag("BatchInputScreen_DiscardConfirmButton")
-                )
-            },
-            dismissButton = {
-                AppDialogDismissButton(
-                    text = stringResource(R.string.common_cancel),
-                    onClick = { showDiscardDialog = false },
-                    modifier = Modifier.testTag("BatchInputScreen_DiscardCancelButton")
-                )
-            }
-        )
-    }
+    BatchInputContent(
+        uiState = uiState,
+        isNameMaskingEnabled = isNameMaskingEnabled,
+        onAction = handleAction,
+        showDiscardDialog = showDiscardDialog,
+        dialogTitle = dialogTitle,
+        dialogMessage = dialogMessage,
+        snackbarHostState = snackbarHostState,
+        scrollState = scrollState,
+        modifier = modifier
+    )
+}
 
-    // エラーダイアログ
-    if (dialogMessage != null) {
-        AppInfoDialog(
-            title = dialogTitle,
-            message = dialogMessage!!,
-            onDismiss = {
-                dialogMessage = null
-                dialogTitle = null
-            }
-        )
-    }
-
+/**
+ * Screen：BatchInputContent
+ *
+ * 【役割】
+ * 一括入力画面のレイアウト本体 (Stateless)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BatchInputContent(
+    uiState: BatchInputUiState,
+    isNameMaskingEnabled: Boolean,
+    onAction: (BatchInputUiAction) -> Unit,
+    showDiscardDialog: Boolean,
+    dialogTitle: String?,
+    dialogMessage: String?,
+    snackbarHostState: SnackbarHostState,
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -173,10 +237,7 @@ fun BatchInputScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        focusManager.clearFocus()
-                        if (isChanged) showDiscardDialog = true else viewModel.navigateBack()
-                    }, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
+                    IconButton(onClick = { onAction(BatchInputUiAction.Back) }, modifier = Modifier.testTag("BatchInputScreen_BackButton")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -185,13 +246,13 @@ fun BatchInputScreen(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        if (isLoading && uiState.personId == null) {
+        if (uiState.isLoading && uiState.personId == null) {
             LoadingScreen()
         } else {
             Box(
                 modifier = Modifier
                     .padding(paddingValues)
-                    .imePadding() // キーボード回避
+                    .imePadding()
                     .fillMaxSize()
             ) {
                 Column(
@@ -204,15 +265,15 @@ fun BatchInputScreen(
                     // 記録日時 (Stateless)
                     DateTimeInputFields(
                         year = uiState.year,
-                        onYearChange = viewModel::updateYear,
+                        onYearChange = { onAction(BatchInputUiAction.UpdateYear(it)) },
                         month = uiState.month,
-                        onMonthChange = viewModel::updateMonth,
+                        onMonthChange = { onAction(BatchInputUiAction.UpdateMonth(it)) },
                         day = uiState.day,
-                        onDayChange = viewModel::updateDay,
+                        onDayChange = { onAction(BatchInputUiAction.UpdateDay(it)) },
                         hour = uiState.hour,
-                        onHourChange = viewModel::updateHour,
+                        onHourChange = { onAction(BatchInputUiAction.UpdateHour(it)) },
                         minute = uiState.minute,
-                        onMinuteChange = viewModel::updateMinute,
+                        onMinuteChange = { onAction(BatchInputUiAction.UpdateMinute(it)) },
                         modifier = Modifier.testTag("BatchInputScreen_DateTimeInput")
                     )
 
@@ -223,7 +284,7 @@ fun BatchInputScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppTextField(
                             value = uiState.height,
-                            onValueChange = viewModel::updateHeight,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateHeight(it)) },
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(R.string.health_label_height)) },
                             suffix = { Text("cm") },
@@ -231,7 +292,7 @@ fun BatchInputScreen(
                         )
                         AppTextField(
                             value = uiState.weight,
-                            onValueChange = viewModel::updateWeight,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateWeight(it)) },
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(R.string.health_label_weight)) },
                             suffix = { Text("kg") },
@@ -246,7 +307,7 @@ fun BatchInputScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppTextField(
                             value = uiState.bpSystolic,
-                            onValueChange = viewModel::updateBpSystolic,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateBpSystolic(it)) },
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_bp_systolic)) },
                             suffix = { Text("mmHg") },
@@ -254,7 +315,7 @@ fun BatchInputScreen(
                         )
                         AppTextField(
                             value = uiState.bpDiastolic,
-                            onValueChange = viewModel::updateBpDiastolic,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateBpDiastolic(it)) },
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_bp_diastolic)) },
                             suffix = { Text("mmHg") },
@@ -264,7 +325,7 @@ fun BatchInputScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppTextField(
                             value = uiState.sat,
-                            onValueChange = viewModel::updateSat,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateSat(it)) },
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_sat)) },
                             suffix = { Text("%") },
@@ -272,7 +333,7 @@ fun BatchInputScreen(
                         )
                         AppTextField(
                             value = uiState.pulse,
-                            onValueChange = viewModel::updatePulse,
+                            onValueChange = { onAction(BatchInputUiAction.UpdatePulse(it)) },
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_pulse)) },
                             suffix = { Text("bpm") },
@@ -281,7 +342,7 @@ fun BatchInputScreen(
                     }
                     AppTextField(
                         value = uiState.bodyTemperature,
-                        onValueChange = viewModel::updateBodyTemp,
+                        onValueChange = { onAction(BatchInputUiAction.UpdateBodyTemp(it)) },
                         type = AppTextFieldType.DECIMAL,
                         label = { Text(stringResource(R.string.health_label_body_temp)) },
                         suffix = { Text("℃") },
@@ -295,7 +356,7 @@ fun BatchInputScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppTextField(
                             value = uiState.glucose,
-                            onValueChange = viewModel::updateGlucose,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateGlucose(it)) },
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_glucose)) },
                             suffix = { Text("mg/dL") },
@@ -303,7 +364,7 @@ fun BatchInputScreen(
                         )
                         AppTextField(
                             value = uiState.hba1c,
-                            onValueChange = viewModel::updateHbA1c,
+                            onValueChange = { onAction(BatchInputUiAction.UpdateHbA1c(it)) },
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(R.string.health_label_hba1c)) },
                             suffix = { Text("%") },
@@ -319,23 +380,17 @@ fun BatchInputScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OutlinedButton(
-                            onClick = {
-                                focusManager.clearFocus()
-                                if (isChanged) showDiscardDialog = true else viewModel.navigateBack()
-                            },
+                            onClick = { onAction(BatchInputUiAction.CancelClick) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_CancelButton")
                         ) {
                             Text(stringResource(R.string.common_cancel))
                         }
                         Button(
-                            onClick = {
-                                focusManager.clearFocus()
-                                viewModel.saveBatch()
-                            },
-                            enabled = isValid,
+                            onClick = { onAction(BatchInputUiAction.SaveClick) },
+                            enabled = uiState.isValid,
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_SaveButton")
                         ) {
-                            if (isLoading) {
+                            if (uiState.isLoading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                             } else {
                                 Text(stringResource(R.string.common_save))
@@ -348,5 +403,38 @@ fun BatchInputScreen(
                 VerticalScrollIndicator(scrollState = scrollState)
             }
         }
+    }
+
+    // 破棄確認ダイアログ
+    if (showDiscardDialog) {
+        AppDialog(
+            onDismissRequest = { onAction(BatchInputUiAction.DismissDialog) },
+            title = { Text(stringResource(R.string.common_confirm_discard_title)) },
+            text = { AppDialogContent(text = stringResource(R.string.common_confirm_discard_message)) },
+            confirmButton = {
+                AppDialogConfirmButton(
+                    text = stringResource(R.string.common_discard),
+                    type = AppDialogActionType.DELETE,
+                    onClick = { onAction(BatchInputUiAction.ConfirmDiscard) },
+                    modifier = Modifier.testTag("BatchInputScreen_DiscardConfirmButton")
+                )
+            },
+            dismissButton = {
+                AppDialogDismissButton(
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { onAction(BatchInputUiAction.DismissDialog) },
+                    modifier = Modifier.testTag("BatchInputScreen_DiscardCancelButton")
+                )
+            }
+        )
+    }
+
+    // エラーダイアログ
+    if (dialogMessage != null) {
+        AppInfoDialog(
+            title = dialogTitle,
+            message = dialogMessage,
+            onDismiss = { onAction(BatchInputUiAction.DismissDialog) }
+        )
     }
 }

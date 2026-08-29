@@ -50,6 +50,7 @@ import jp.mydns.fujiwara.carememo.ui.components.common.DateTimeInputFields
 import jp.mydns.fujiwara.carememo.ui.components.common.rememberDateTimeInputState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppTextFieldType
 import jp.mydns.fujiwara.carememo.ui.components.base.AppCompactTextField
+import jp.mydns.fujiwara.carememo.ui.screens.health.PersonHealthUiAction
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 import java.time.Instant
 
@@ -286,21 +287,14 @@ private fun GlucoseRecordItemContent(
  * 健康記録の詳細表示と編集モードを管理する最上位コンポーネント。
  *
  * @param uiState UI 状態
- * @param onCancel 閲覧モードの終了（詳細ペインを閉じる）のコールバック
- * @param onEditClick 編集モードへの移行
- * @param onEditInputUpdate 入力値の更新
- * @param onSaveClick 保存の実行
- * @param onCancelEdit 編集のキャンセル（警告付き）のコールバック
+ * @param onAction アクションハンドラ
+ * @param modifier 修飾子
  */
 @Composable
 fun HealthRecordDetailPane(
     uiState: PersonHealthUiState,
+    onAction: (PersonHealthUiAction) -> Unit,
     modifier: Modifier = Modifier,
-    onCancel: () -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
-    onSaveClick: () -> Unit,
-    onCancelEdit: () -> Unit,
 ) {
     val record = remember(uiState.records, uiState.selectedRecordId) {
         if (uiState.selectedRecordId == null || IdLogic.isNew(uiState.selectedRecordId)) null
@@ -339,7 +333,7 @@ fun HealthRecordDetailPane(
                         type = AppDialogActionType.DELETE,
                         onClick = {
                             showDiscardDialog = false
-                            onCancel()
+                            onAction(PersonHealthUiAction.SelectedRecordIdChanged(null))
                         }
                     )
                 },
@@ -374,15 +368,14 @@ fun HealthRecordDetailPane(
                         editInput = uiState.editInput,
                         initialRecordTime = uiState.initialRecordTime,
                         isSaveEnabled = uiState.isSaveEnabled,
-                        onEditInputUpdate = onEditInputUpdate,
-                        onCancel = {
+                        onAction = onAction,
+                        onCancelRequest = {
                             if (uiState.isChanged) {
                                 showDiscardDialog = true
                             } else {
-                                onCancelEdit()
+                                onAction(PersonHealthUiAction.CancelEdit)
                             }
-                        },
-                        onSave = onSaveClick
+                        }
                     )
                     Spacer(modifier = Modifier.height(80.dp))
                 }
@@ -393,9 +386,8 @@ fun HealthRecordDetailPane(
             HealthRecordDisplayCard(
                 category = uiState.currentCategory,
                 record = record,
-                modifier = modifier,
-                onCancel = onCancel,
-                onEditClick = onEditClick
+                onAction = onAction,
+                modifier = modifier
             )
         }
     }
@@ -412,9 +404,8 @@ private fun HealthRecordEditForm(
     editInput: HealthEditInput,
     initialRecordTime: Instant?,
     isSaveEnabled: Boolean,
-    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
-    onCancel: () -> Unit,
-    onSave: () -> Unit,
+    onAction: (PersonHealthUiAction) -> Unit,
+    onCancelRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dateTimeState = rememberDateTimeInputState(initialInstant = initialRecordTime)
@@ -429,7 +420,7 @@ private fun HealthRecordEditForm(
     ) {
         val nextTime = dateTimeState.toInstant()
         if (nextTime != editInput.recordTime) {
-            onEditInputUpdate { it.copy(recordTime = nextTime) }
+            onAction(PersonHealthUiAction.EditInputUpdate { it.copy(recordTime = nextTime) })
         }
     }
 
@@ -464,7 +455,7 @@ private fun HealthRecordEditForm(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 AppCompactTextField(
                                     value = editInput.heightText,
-                                    onValueChange = { v -> onEditInputUpdate { it.copy(heightText = v) } },
+                                    onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(heightText = v) }) },
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_height)) },
                                     suffix = { Text(AppSpecifications.Health.Height.UNIT) },
@@ -472,7 +463,7 @@ private fun HealthRecordEditForm(
                                 )
                                 AppCompactTextField(
                                     value = editInput.weightText,
-                                    onValueChange = { v -> onEditInputUpdate { it.copy(weightText = v) } },
+                                    onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(weightText = v) }) },
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_weight)) },
                                     suffix = { Text(AppSpecifications.Health.Weight.UNIT) },
@@ -486,14 +477,14 @@ private fun HealthRecordEditForm(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 AppCompactTextField(
                                     value = editInput.bpSystolicText,
-                                    onValueChange = { v -> onEditInputUpdate { it.copy(bpSystolicText = v) } },
+                                    onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(bpSystolicText = v) }) },
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_bp_systolic)) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_BpSystolic")
                                 )
                                 AppCompactTextField(
                                     value = editInput.bpDiastolicText,
-                                    onValueChange = { v -> onEditInputUpdate { it.copy(bpDiastolicText = v) } },
+                                    onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(bpDiastolicText = v) }) },
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_bp_diastolic)) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_BpDiastolic")
@@ -502,7 +493,7 @@ private fun HealthRecordEditForm(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 AppCompactTextField(
                                     value = editInput.satText,
-                                    onValueChange = { v -> onEditInputUpdate { it.copy(satText = v) } },
+                                    onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(satText = v) }) },
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_sat)) },
                                     suffix = { Text(AppSpecifications.Health.OxygenSaturation.UNIT) },
@@ -510,7 +501,7 @@ private fun HealthRecordEditForm(
                                 )
                                 AppCompactTextField(
                                     value = editInput.pulseText,
-                                    onValueChange = { v -> onEditInputUpdate { it.copy(pulseText = v) } },
+                                    onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(pulseText = v) }) },
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_pulse)) },
                                     suffix = { Text(AppSpecifications.Health.Pulse.UNIT) },
@@ -519,7 +510,7 @@ private fun HealthRecordEditForm(
                             }
                             AppCompactTextField(
                                 value = editInput.bodyTemperatureText,
-                                onValueChange = { v -> onEditInputUpdate { it.copy(bodyTemperatureText = v) } },
+                                onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(bodyTemperatureText = v) }) },
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(R.string.health_label_body_temp)) },
                                 suffix = { Text(AppSpecifications.Health.BodyTemperature.UNIT) },
@@ -531,7 +522,7 @@ private fun HealthRecordEditForm(
                         Category.GLUCOSE_AND_HBA1C -> {
                             AppCompactTextField(
                                 value = editInput.glucoseText,
-                                onValueChange = { v -> onEditInputUpdate { it.copy(glucoseText = v) } },
+                                onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(glucoseText = v) }) },
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(R.string.health_label_glucose)) },
                                 suffix = { Text(AppSpecifications.Health.BloodGlucose.UNIT) },
@@ -539,7 +530,7 @@ private fun HealthRecordEditForm(
                             )
                             AppCompactTextField(
                                 value = editInput.hba1cText,
-                                onValueChange = { v -> onEditInputUpdate { it.copy(hba1cText = v) } },
+                                onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(hba1cText = v) }) },
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(R.string.health_label_hba1c)) },
                                 suffix = { Text(AppSpecifications.Health.HbA1c.UNIT) },
@@ -553,11 +544,11 @@ private fun HealthRecordEditForm(
                     // アクションボタン（キャンセル・保存）
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            onClick = onCancel,
+                            onClick = onCancelRequest,
                             modifier = Modifier.weight(1f).testTag("HealthField_CancelButton")
                         ) { Text(stringResource(R.string.common_cancel)) }
                         Button(
-                            onClick = onSave,
+                            onClick = { onAction(PersonHealthUiAction.SaveClick) },
                             modifier = Modifier.weight(1f).testTag("HealthField_SaveButton"),
                             enabled = isSaveEnabled
                         ) {
@@ -578,9 +569,8 @@ private fun HealthRecordEditForm(
 private fun HealthRecordDisplayCard(
     category: Category,
     record: HistoryRecord?,
+    onAction: (PersonHealthUiAction) -> Unit,
     modifier: Modifier = Modifier,
-    onCancel: () -> Unit,
-    onEditClick: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
     Box(
@@ -604,7 +594,7 @@ private fun HealthRecordDisplayCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = onCancel,
+                        onClick = { onAction(PersonHealthUiAction.SelectedRecordIdChanged(null)) },
                         modifier = Modifier.offset(x = (-12).dp)
                     ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "戻る")
@@ -616,7 +606,7 @@ private fun HealthRecordDisplayCard(
                         modifier = Modifier.offset(x = (-8).dp)
                     )
                 }
-                IconButton(onClick = onEditClick) {
+                IconButton(onClick = { onAction(PersonHealthUiAction.EditClick) }) {
                     Icon(Icons.Rounded.EditNote, contentDescription = stringResource(R.string.common_edit))
                 }
             }

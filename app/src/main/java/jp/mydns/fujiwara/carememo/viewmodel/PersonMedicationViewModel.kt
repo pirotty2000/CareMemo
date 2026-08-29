@@ -19,13 +19,18 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import jp.mydns.fujiwara.carememo.logic.common.MedicationValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.SyncAction
+import jp.mydns.fujiwara.carememo.logic.common.MedicationTimeSlot
+import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationLogic
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationViewEvent
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 
 /**
@@ -70,9 +75,17 @@ class PersonMedicationViewModel(
         private const val OP_SYNC = "syncMedicationDay"
         /** 監査ログ用：対象テーブル名 */
         private const val TABLE_MEDICATION = "medication_db"
+
+        // --- Restoration Keys ---
+        private const val KEY_SELECTED_MONTH = "restoration_selected_month"
+        private const val KEY_DIALOG_DATE = "restoration_dialog_date"
+        private const val KEY_DIALOG_RECORDS = "restoration_dialog_records"
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 復元中であることを示すフラグ */
+    private var isRestoring = false
 
     /** 指定月のレコード購読用 Job */
     private var monthlyRecordsJob: Job? = null
@@ -83,6 +96,12 @@ class PersonMedicationViewModel(
     private var syncJob: Job? = null
 
     init {
+        // --- State Restoration ---
+        if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+            isRestoring = true
+            restoreState()
+        }
+
         // 引数（categoryName）の変更を購読
         scope.launch {
             savedStateHandle.getStateFlow<String?>(KEY_CATEGORY_NAME, null).collect { name ->
@@ -100,6 +119,37 @@ class PersonMedicationViewModel(
         startObservePersonId()
     }
 
+    /**
+     * SavedStateHandle から状態を復元します。
+     */
+    private fun restoreState() {
+        val handle = savedStateHandle ?: return
+        val monthStr = handle.get<String>(KEY_SELECTED_MONTH)
+        val selectedMonth = monthStr?.let { YearMonth.parse(it) } ?: YearMonth.now()
+        val dateStr = handle.get<String>(KEY_DIALOG_DATE)
+        val selectedDialogDate = dateStr?.let { LocalDate.parse(it) }
+        val dialogRecords = handle.get<List<MedicationRecord?>>(KEY_DIALOG_RECORDS) ?: persistentListOf(null, null, null, null)
+
+        updateUiState {
+            it.copy(
+                selectedMonth = selectedMonth,
+                selectedDialogDate = selectedDialogDate,
+                dialogTempRecords = dialogRecords.toImmutableList()
+            )
+        }
+    }
+
+    /**
+     * 復元対象の状態をバックアップします。
+     */
+    private fun backupRestorableState(state: PersonMedicationUiState) {
+        val handle = savedStateHandle ?: return
+        handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        handle[KEY_SELECTED_MONTH] = state.selectedMonth.toString()
+        handle[KEY_DIALOG_DATE] = state.selectedDialogDate?.toString()
+        handle[KEY_DIALOG_RECORDS] = state.dialogTempRecords.toList()
+    }
+
     override fun copyWithLoadingState(state: PersonMedicationUiState, isLoading: Boolean): PersonMedicationUiState {
         return state.copy(isLoading = isLoading)
     }
@@ -109,11 +159,20 @@ class PersonMedicationViewModel(
         person: Person,
         summary: PersonCategorySummary?
     ): PersonMedicationUiState {
+        // 復元中の場合は、初期化によるリセットをスキップして現在の状態を維持する
+        if (isRestoring) {
+            isRestoring = false // 復元処理を消費
+            refreshMonthlyRecords(state)
+            refreshAllRecords(state)
+            return state
+        }
+
         // 利用者情報ロード時に、初期表示月（現在月）を設定し購読を開始する
         val next = state.copy(
             personId = person.id,
             selectedMonth = YearMonth.now()
         )
+        backupRestorableState(next)
         refreshMonthlyRecords(next)
         refreshAllRecords(next)
         return next
@@ -179,26 +238,95 @@ class PersonMedicationViewModel(
 
     /** 表示対象月を翌月に進めます。 */
     fun nextMonth() {
-        updateUiState { it.copy(selectedMonth = it.selectedMonth.plusMonths(1)) }
+        updateUiState { 
+            val nextMonth = it.selectedMonth.plusMonths(1)
+            val next = it.copy(selectedMonth = nextMonth)
+            backupRestorableState(next)
+            next
+        }
         refreshMonthlyRecords(currentState)
     }
 
     /** 表示対象月を前月に戻します。 */
     fun previousMonth() {
-        updateUiState { it.copy(selectedMonth = it.selectedMonth.minusMonths(1)) }
+        updateUiState { 
+            val prevMonth = it.selectedMonth.minusMonths(1)
+            val next = it.copy(selectedMonth = prevMonth)
+            backupRestorableState(next)
+            next
+        }
         refreshMonthlyRecords(currentState)
     }
 
     /**
-     * 特定の日の服薬状況を一括同期（保存・削除）します。
-     *
-     * UI 上で各スロット（朝・昼など）のチェック状態が確定した際に呼び出されます。
-     * 既存の DB レコードと入力されたスロットの状態を比較し、必要な差分更新のみを実行します。
-     *
-     * @param date 同期対象の日付 (yyyy-MM-dd)
-     * @param slotRecords 各スロットの服薬記録オブジェクトのリスト（未チェック時は null）
+     * カレンダーの日付がクリックされた際の処理。
+     * ダイアログを表示し、その日の初期データをセットします。
      */
-    fun syncMedicationDay(date: String, slotRecords: List<MedicationRecord?>) {
+    fun onDayClick(date: LocalDate) {
+        updateUiState { current ->
+            val dateStr = date.toString()
+            val initialRecords = MedicationTimeSlot.entries.map { slot ->
+                current.recordsByDate[dateStr]?.find { it.timeSlot == slot.index }
+            }.toImmutableList()
+            
+            val next = current.copy(
+                selectedDialogDate = date,
+                dialogTempRecords = initialRecords
+            )
+            backupRestorableState(next)
+            next
+        }
+    }
+
+    /**
+     * ダイアログを閉じます。
+     */
+    fun dismissDialog() {
+        updateUiState { current ->
+            val next = current.copy(selectedDialogDate = null)
+            clearRestorableState(KEY_DIALOG_DATE, KEY_DIALOG_RECORDS)
+            next
+        }
+    }
+
+    /**
+     * ダイアログ内での服薬ステータスの変更を反映します。
+     */
+    fun updateDialogRecord(slotIndex: Int, status: MedicationStatus, recordTime: Instant) {
+        updateUiState { current ->
+            val date = current.selectedDialogDate ?: return@updateUiState current
+            val existing = current.dialogTempRecords[slotIndex]
+            
+            val nextRecords = current.dialogTempRecords.toMutableList().apply {
+                if (existing?.status == status.code) {
+                    // トグル：同じステータスなら解除
+                    set(slotIndex, null)
+                } else {
+                    set(slotIndex, (existing?.copy(status = status.code, recordTime = recordTime)
+                        ?: MedicationRecord(
+                            id = jp.mydns.fujiwara.carememo.data.AppSpecifications.Id.NEW_RECORD_ID,
+                            personId = requiredPersonId,
+                            dosageDate = date.toString(),
+                            timeSlot = slotIndex,
+                            status = status.code,
+                            recordTime = recordTime
+                        )))
+                }
+            }.toImmutableList()
+            
+            val next = current.copy(dialogTempRecords = nextRecords)
+            backupRestorableState(next)
+            next
+        }
+    }
+
+    /**
+     * 特定の日の服薬状況を一括同期（保存・削除）します。
+     */
+    fun syncMedicationDay() {
+        val date = currentState.selectedDialogDate?.toString() ?: return
+        val slotRecords = currentState.dialogTempRecords
+
         // 二重実行防止
         if (syncJob?.isActive == true) return
 
@@ -237,6 +365,8 @@ class PersonMedicationViewModel(
             if (actions.any { it !is SyncAction.None }) {
                 showSnackbar(R.string.p_med_msg_update_success)
             }
+
+            dismissDialog()
         }
     }
 

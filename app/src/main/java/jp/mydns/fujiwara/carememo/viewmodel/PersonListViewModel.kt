@@ -1,10 +1,13 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
@@ -49,12 +52,15 @@ import kotlinx.coroutines.launch
  *    Compose 側の再描画コストを最適化します。
  * 2. 検索ロジックの統合：氏名検索と経過記録検索の検索結果を ViewModel で統合し、
  *    UI に対しては単一のフィルタリング済みリストとして透過的に提供します。
+ * 3. State Restoration：Process Death 対策として、検索クエリおよびセクション選択状態を 
+ *    SavedStateHandle に保持し、画面復帰時に状態を復元します。
  *
  * 【この ViewModel では行わないこと】
  * ・検索ロジックの具体的な実装（PersonListLogic が担当）。
  * ・個別の健康記録や服薬情報の詳細管理（各専門 ViewModel が担当）。
  */
 class PersonListViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val repository: PersonRepository,
     private val archivedRepository: DeleteOrRestorePersonRepository,
     summaryRepository: PersonSummaryRepository,
@@ -82,6 +88,12 @@ class PersonListViewModel(
         private const val OP_LOAD_CONTACTS = "loadEmergencyContacts"
         /** 監査ログ用：対象テーブル名 */
         private const val TABLE_PERSON = "person_db"
+
+        // --- Restoration State Keys ---
+        private const val KEY_RESTORE_VERSION = "restoration_version"
+        private const val RESTORE_VERSION = 1
+        private const val KEY_SEARCH_QUERY = "search_query"
+        private const val KEY_SELECTED_SECTION = "selected_section"
     }
 
     override val featureName: String = FEATURE_NAME
@@ -94,9 +106,6 @@ class PersonListViewModel(
 
     /**
      * 検索クエリに基づき、経過記録の内容が一致する利用者の ID リストを抽出します。
-     * 
-     * クエリ入力のたびに最新の検索を実行し、ヒットした利用者 ID のリストを返します。
-     * クエリが空の場合は null を返し、フィルタリングを無効にします。
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val personsWithMatchedConditions: StateFlow<List<String>?> = uiState
@@ -123,6 +132,18 @@ class PersonListViewModel(
             showError(title, msg, *args)
         }
 
+        // --- State Restoration ---
+        try {
+            if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+                val restoredQuery = savedStateHandle.get<String>(KEY_SEARCH_QUERY) ?: ""
+                val restoredSection = savedStateHandle.get<String>(KEY_SELECTED_SECTION) ?: AppSpecifications.Search.SECTION_ALL
+                updateUiState { it.copy(searchQuery = restoredQuery, selectedSection = restoredSection) }
+            }
+        } catch (e: Exception) {
+            // 復元失敗時はログを記録して通常起動を継続（クラッシュ防止）
+            android.util.Log.e("PersonListVM", "Failed to restore state", e)
+        }
+
         // 共通設定（氏名マスキング）の変更を購読し、UI 状態へ反映
         scope.launch {
             isNameMaskingEnabled.collect { enabled ->
@@ -138,7 +159,6 @@ class PersonListViewModel(
         }
 
         // 利用者リストの購読と統合フィルタリングフロー
-        // 各種ソース（DB、UIフィルタ、検索結果、サマリー）を統合して表示用リストを作成する
         safeCollect(
             operation = "userListFlow",
             mode = CollectMode.INITIAL,
@@ -151,18 +171,13 @@ class PersonListViewModel(
                     personsWithMatchedConditions,
                     categorySummaries
                 ) { allPersons, state, matchedIds, summaries ->
-                    // 1. ロジック層でセクション・検索条件によるフィルタリングを実行
-                    // matchedIds は経過記録のキーワード検索にヒットした利用者ID群
                     val filtered = PersonListLogic.filterPersons(allPersons, state.selectedSection, matchedIds)
-                    
-                    // 2. 表示用の各 UI State オブジェクト（サマリー込み）へ変換
                     filtered.map { person ->
                         PersonListLogic.createPersonUiState(person, state.isNameMaskingEnabled, summaries[person.id])
                     }
                 }
             }
         ) { newList ->
-            // UI 境界において ImmutableList へ変換し、安定したリスト表示を保証する
             updateUiState { it.copy(userList = newList.toImmutableList()) }
         }
     }
@@ -173,26 +188,29 @@ class PersonListViewModel(
 
     /**
      * 表示対象の五十音セクションを設定します。
-     *
-     * @param section セクション名（"あ", "か", "全" など）
      */
     fun setSelectedSection(section: String) {
         updateUiState { it.copy(selectedSection = section) }
+        // 復元用バックアップの更新
+        savedStateHandle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        savedStateHandle[KEY_SELECTED_SECTION] = section
     }
 
     /**
      * 検索クエリを更新します。
-     * 検索実行時は、自動的にセクションを「全」にリセットして全範囲からのヒットを優先します。
-     *
-     * @param query 検索キーワード
      */
     fun setSearchQuery(query: String) {
+        val nextSection = if (query.isNotBlank()) AppSpecifications.Search.SECTION_ALL else currentState.selectedSection
         updateUiState { 
             it.copy(
                 searchQuery = query,
-                selectedSection = if (query.isNotBlank()) "全" else it.selectedSection
+                selectedSection = nextSection
             )
         }
+        // 復元用バックアップの更新
+        savedStateHandle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        savedStateHandle[KEY_SEARCH_QUERY] = query
+        savedStateHandle[KEY_SELECTED_SECTION] = nextSection
     }
 
     /**
@@ -412,7 +430,9 @@ class PersonListViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+            val savedStateHandle = extras.createSavedStateHandle()
             return PersonListViewModel(
+                savedStateHandle,
                 repository,
                 archivedRepository,
                 summaryRepository,

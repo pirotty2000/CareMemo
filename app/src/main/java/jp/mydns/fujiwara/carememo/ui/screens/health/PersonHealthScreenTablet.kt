@@ -38,10 +38,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
-import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
-import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
@@ -74,16 +72,7 @@ fun PersonHealthScreenTablet(
     currentPerson: Person?,
     personCategorySummary: PersonCategorySummary?,
     isNameMaskingEnabled: Boolean,
-    onSelectedRecordIdChange: (String?) -> Unit,
-    onBack: () -> Unit,
-    onExpandGraph: (Int) -> Unit,
-    onNavigateToCategory: (Category) -> Unit,
-    onShowPdfSettings: () -> Unit,
-    onDeleteRecord: (HistoryRecord) -> Unit,
-    onEditClick: () -> Unit,
-    onEditInputUpdate: ((HealthEditInput) -> HealthEditInput) -> Unit,
-    onSaveClick: () -> Unit,
-    onCancelEdit: () -> Unit,
+    onAction: (PersonHealthUiAction) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
@@ -102,7 +91,7 @@ fun PersonHealthScreenTablet(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = onBack,
+                            onClick = { onAction(PersonHealthUiAction.Back) },
                             modifier = Modifier.testTag("HealthScreen_BackButton")
                         ) {
                             Icon(
@@ -113,11 +102,11 @@ fun PersonHealthScreenTablet(
                     },
                     colors = appTopAppBarColors(),
                     actions = {
-                        IconButton(onClick = { onSelectedRecordIdChange(AppSpecifications.Id.NEW_RECORD_ID) }) {
+                        IconButton(onClick = { onAction(PersonHealthUiAction.SelectedRecordIdChanged(AppSpecifications.Id.NEW_RECORD_ID)) }) {
                             Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.common_create_new))
                         }
                         IconButton(
-                            onClick = onShowPdfSettings,
+                            onClick = { onAction(PersonHealthUiAction.ShowPdfSettings) },
                             modifier = Modifier.testTag("HealthScreen_PdfButton")
                         ) {
                             Icon(
@@ -130,7 +119,7 @@ fun PersonHealthScreenTablet(
                 CategorySelectorBar(
                     currentCategory = uiState.currentCategory,
                     personCategorySummary = personCategorySummary,
-                    onCategoryClick = onNavigateToCategory,
+                    onCategoryClick = { onAction(PersonHealthUiAction.NavigateToCategory(it)) },
                     modifier = Modifier.testTag("CategorySelectorBar")
                 )
             }
@@ -142,9 +131,10 @@ fun PersonHealthScreenTablet(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {
-                        if (uiState.selectedRecordId == it.id) onSelectedRecordIdChange(null)
-                        onDeleteRecord(it)
+                        if (uiState.selectedRecordId == it.id) onAction(PersonHealthUiAction.SelectedRecordIdChanged(null))
+                        onAction(PersonHealthUiAction.DeleteRecord(it))
                     }
+                    recordToDelete = null
                 }
             )
         }
@@ -167,15 +157,7 @@ fun PersonHealthScreenTablet(
                 PersonHealthScreenContent(
                     isExpanded = true,
                     uiState = uiState,
-                    onPreferredShowHistoryChange = {},
-                    onSelectedRecordIdChange = onSelectedRecordIdChange,
-                    onItemClick = { record -> onSelectedRecordIdChange(record.id) },
-                    onDeleteSwipe = { record -> recordToDelete = record },
-                    onExpandGraph = onExpandGraph,
-                    onEditClick = onEditClick,
-                    onEditInputUpdate = onEditInputUpdate,
-                    onSaveClick = onSaveClick,
-                    onCancelEdit = onCancelEdit,
+                    onAction = onAction,
                     isAnyDialogOpen = recordToDelete != null
                 )
             }
@@ -199,16 +181,7 @@ fun PersonHealthScreenTabletPreview(
             currentPerson = state.person,
             personCategorySummary = state.summary,
             isNameMaskingEnabled = false,
-            onSelectedRecordIdChange = {},
-            onBack = {},
-            onExpandGraph = {},
-            onNavigateToCategory = {},
-            onShowPdfSettings = {},
-            onDeleteRecord = {},
-            onEditClick = {},
-            onEditInputUpdate = {},
-            onSaveClick = {},
-            onCancelEdit = {},
+            onAction = {},
             snackbarHostState = remember { SnackbarHostState() }
         )
     }

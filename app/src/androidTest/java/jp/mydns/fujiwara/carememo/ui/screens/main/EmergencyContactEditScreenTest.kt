@@ -172,9 +172,12 @@ class EmergencyContactEditScreenTest {
                 isChanged = EmergencyContactLogic.isChanged(contact, initialContact),
                 isValid = EmergencyContactLogic.isValid(contact)
             ),
-            onNavigateBack = {},
-            onUpdateContact = onUpdateContact,
-            onSaveClick = {}
+            onAction = { action ->
+                when (action) {
+                    is EmergencyContactEditUiAction.UpdateContact -> onUpdateContact(action.reducer)
+                    else -> {}
+                }
+            }
         )
     }
 }

@@ -123,10 +123,13 @@ class EmergencyContactListScreenTest {
                 personName = personName,
                 contacts = contacts.toImmutableList()
             ),
-            onNavigateBack = {},
-            onAddClick = onAddClick,
-            onEditClick = {},
-            onDeleteConfirm = onDeleteConfirm
+            onAction = { action ->
+                when (action) {
+                    EmergencyContactListUiAction.AddClick -> onAddClick()
+                    is EmergencyContactListUiAction.DeleteConfirm -> onDeleteConfirm(action.contact)
+                    else -> {}
+                }
+            }
         )
     }
 }

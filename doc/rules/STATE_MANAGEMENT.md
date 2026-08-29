@@ -17,10 +17,11 @@
 
 ユーザーの意図しないデータ破棄を防ぐため、以下のパターンを標準とします。
 
-- **`initialSnapshot` の保持**: 編集開始時の値を `initialSnapshot` に保持します。
-- **[MUST] `isChanged` の算出**: ViewModel 内で最新入力と `initialSnapshot` を比較し、`UiState.isChanged` を更新します。
-    - **禁止**: `derivedStateOf` による UI 層での変更検知。
-- **一貫性の検証**: 値を初期値に書き戻した際、`isChanged` が正確に `false` に戻ることをユニットテストで検証してください。
+- **`baseline` の保持**: 編集開始時点の比較基準となる原始データを `baseline` として保持します。
+- **[MUST] `isChanged` の算出**: ViewModel内で現在の入力値と `baseline` を比較し、`UiState.isChanged` を更新します。
+- **[MUST] Process Death対策**: Process Death後も編集開始時点の `baseline` を維持する必要がある場合、SavedStateHandleへ必要なフィールドを退避します。
+- **[禁止] UI層での検知**: `derivedStateOf` によるUI層での変更検知は禁止です。
+- **一貫性の検証**: 値をbaselineと同じ状態に戻した際、`isChanged == false` になることをユニットテストで検証してください。
 
 ## 4. 非同期処理の実行と排他制御
 
@@ -112,5 +113,32 @@ fun save() {
     - `CareMemoApplication` でシングルトンとして保持し、ViewModel や Activity へ注入します。
 - **目的**: 不必要な Observable パターンのオーバーヘッドを避け、コードの意図（ワンショットの制御であること）を明確にします。
 
+## 8. プロセス死耐性と状態復元 (State Restoration)
+
+アプリケーションがシステムによってメモリ解放（Process Death）された後、ユーザーが期待する状態を復元するための指針です。
+
+### 8.1. 状態の 4 分類と保存機構
+画面上の全状態を以下の 4 つに分類し、最適な保存機構を選択します。
+
+| 分類                     | SSOT          | 保存機構               | 内容                       |
+|:-----------------------|:--------------|:-------------------|:-------------------------|
+| **UI State**           | ViewModel     | `StateFlow`        | 通常動作時の真実のソース。            |
+| **Restorable State**   | ViewModel     | `SavedStateHandle` | **「復元用のバックアップ」**。未保存入力等。 |
+| **Nav State**          | NavController | `Type-safe Nav`    | 画面のアイデンティティ（ID等）。        |
+| **Transient UI State** | Composable    | `rememberSaveable` | スクロール位置等の純粋な UI 状態。      |
+
+### 8.2. CareMemo 状態管理 7 原則
+1. **SSOT の確立**: `ViewModel.uiState` (StateFlow) を真実のソースとする。
+2. **バックアップ限定**: `SavedStateHandle` は Restorable State のバックアップのみに使用する。
+3. **機械的同期の禁止**: `updateUiState()` と `SavedStateHandle` を連動させない。
+4. **明示的バックアップ**: ビジネスロジック上の状態変更箇所で明示的に SSH を更新する。
+5. **論理的一括復元**: 復元時は SSH から原始データを一括で読み込み、Logic 層を通して `UiState` を再構築する。
+6. **初期化上書きの防止**: 復元データが存在する場合、通常の初期化処理（DBロード等）での上書きを確実に防ぐ。`isRestoring` フラグを用いて、ロード完了後の `uiState` 構築時に復元値を優先するガードを実装してください。
+7. **未保存入力の優先**: ユーザーが入力した情報を失わないことを、復元における最優先事項とする。
+8. **揮発性 UI 状態の ViewModel 昇格**: ダイアログの入力途中、表示モードの切り替え、写真キャプション等の「作業中の一時状態」は Composable の `rememberSaveable` ではなく ViewModel の `uiState` で管理し、プロセス死に備えてバックアップしてください。
+
+### 8.3. 編集基準 (Baseline) の保護
+プロセス死の間に DB の値が変化しても `isChanged` を正確に判定できるよう、編集開始時点の baseline フィールド（または `initialSnapshot`）を個別に `SavedStateHandle` へ退避してください。ID による DB 再取得は baseline の維持には不十分です。
+
 ---
-最終更新日: 2026/08/21
+最終更新日: 2026/08/23

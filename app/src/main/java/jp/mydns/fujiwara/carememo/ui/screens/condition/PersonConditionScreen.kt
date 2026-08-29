@@ -26,9 +26,44 @@ import jp.mydns.fujiwara.carememo.utils.PdfExporter
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailViewEvent
 import kotlinx.coroutines.launch
+
+/**
+ * UI Action：所見記録画面におけるユーザー操作の集約定義
+ */
+sealed interface PersonConditionUiAction {
+    // 検索・選択
+    data class SearchQueryChanged(val query: String) : PersonConditionUiAction
+    data class SelectedIdChanged(val id: String?) : PersonConditionUiAction
+
+    // 編集・保存
+    data object EditClick : PersonConditionUiAction
+    data class EditInputUpdate(val update: (ConditionEditInput) -> ConditionEditInput) : PersonConditionUiAction
+    data class SaveClick(val onSuccess: (String) -> Unit) : PersonConditionUiAction
+    data object CancelEdit : PersonConditionUiAction
+
+    // 削除系
+    data class DeleteRecordRequest(val record: HistoryRecord) : PersonConditionUiAction
+    data object ConfirmDeleteRecord : PersonConditionUiAction
+
+    // 写真関連
+    data object AddPhotoClick : PersonConditionUiAction
+    data object PickPhotoClick : PersonConditionUiAction
+    data class DeletePhoto(val photo: ConditionPhoto) : PersonConditionUiAction
+    data class ReattachPhoto(val info: jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo) : PersonConditionUiAction
+    data class NavigateToPhotoFullScreen(val photoId: String, val conditionId: String) : PersonConditionUiAction
+
+    // ナビゲーション・共通
+    data object Back : PersonConditionUiAction
+    data class NavigateToCategory(val category: Category) : PersonConditionUiAction
+    data object ShowPdfSettings : PersonConditionUiAction
+    data object MicClick : PersonConditionUiAction
+    data object DismissDialog : PersonConditionUiAction
+    data object ConfirmOverwrite : PersonConditionUiAction
+}
 
 /**
  * Screen：PersonConditionScreen
@@ -137,12 +172,8 @@ fun PersonConditionScreen(
     LaunchedEffect(Unit) {
         conditionViewModel.viewEvent.collect { event ->
             when (event) {
-                is PersonConditionViewEvent.LaunchCamera -> {
-                    // ViewModel から直接 Camera 起動を要求する場合に備える (現在は Screen 側で制御)
-                }
-                is PersonConditionViewEvent.OpenPhotoPicker -> {
-                    // ViewModel から直接 Picker 起動を要求する場合に備える (現在は Screen 側で制御)
-                }
+                is PersonConditionViewEvent.LaunchCamera -> {}
+                is PersonConditionViewEvent.OpenPhotoPicker -> {}
                 is PersonConditionViewEvent.NavigateToPhotoPreview -> {
                     detailState.personId?.let { personId ->
                         navController.navigate(
@@ -167,10 +198,8 @@ fun PersonConditionScreen(
     ) { success ->
         if (success && tempPhotoUri != null) {
             conditionViewModel.onPhotoCaptured(tempPhotoUri!!, conditionState.selectedConditionId ?: "")
-        } else {
-            if (!success && tempPhotoUri != null) {
-                conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_photo_capture_failed))
-            }
+        } else if (!success && tempPhotoUri != null) {
+            conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_photo_capture_failed))
         }
     }
 
@@ -183,115 +212,98 @@ fun PersonConditionScreen(
     }
 
     var recordToDelete by remember { mutableStateOf<HistoryRecord?>(null) }
+
+    // アクションハンドラ：UI からの通知を ViewModel や OS連携へ橋渡しする
+    // ダイアログ状態（recordToDelete等）や遷移に必要なIDをキーに含め、状態変更時のみラムダを再生成する
+    val handleAction: (PersonConditionUiAction) -> Unit = remember(conditionViewModel, detailViewModel, navController, cameraLauncher, galleryLauncher, isExpanded, detailState.personId, conditionState.selectedConditionId, recordToDelete, onConfirmOverwrite) {
+        { action ->
+            when (action) {
+                is PersonConditionUiAction.SearchQueryChanged -> conditionViewModel.updateSearchQuery(action.query)
+                is PersonConditionUiAction.SelectedIdChanged -> conditionViewModel.setSelectedConditionId(action.id)
+                is PersonConditionUiAction.DeleteRecordRequest -> recordToDelete = action.record
+                PersonConditionUiAction.ConfirmDeleteRecord -> {
+                    recordToDelete?.let { record ->
+                        if (conditionState.selectedConditionId == record.id) conditionViewModel.setSelectedConditionId(null)
+                        if (record is ConditionAtVisit) {
+                            conditionViewModel.deleteRecord(record)
+                        }
+                    }
+                    recordToDelete = null
+                }
+                PersonConditionUiAction.EditClick -> conditionViewModel.startEditSession()
+                is PersonConditionUiAction.EditInputUpdate -> conditionViewModel.updateEditInput(action.update)
+                is PersonConditionUiAction.SaveClick -> conditionViewModel.saveCurrentEdit(action.onSuccess)
+                PersonConditionUiAction.CancelEdit -> conditionViewModel.cancelEditSession()
+                PersonConditionUiAction.AddPhotoClick -> {
+                    try {
+                        val uri = conditionViewModel.getTempPhotoUri()
+                        tempPhotoUri = uri
+                        conditionViewModel.setLockBypassEnabled(true)
+                        cameraLauncher.launch(uri)
+                    } catch (_: Exception) {
+                        conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_camera_launch_failed))
+                    }
+                }
+                PersonConditionUiAction.PickPhotoClick -> {
+                    conditionViewModel.setLockBypassEnabled(true)
+                    galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+                is PersonConditionUiAction.DeletePhoto -> conditionViewModel.deletePhoto(action.photo)
+                is PersonConditionUiAction.ReattachPhoto -> {
+                    val cid = conditionState.selectedConditionId ?: ""
+                    conditionViewModel.reattachUnassignedPhoto(cid, action.info)
+                }
+                is PersonConditionUiAction.NavigateToPhotoFullScreen -> {
+                    conditionViewModel.navigateToPhotoFullScreen(action.photoId, action.conditionId)
+                }
+                PersonConditionUiAction.MicClick -> conditionViewModel.setLockBypassEnabled(true)
+                PersonConditionUiAction.ShowPdfSettings -> {
+                    if (conditionState.records.isEmpty()) {
+                        scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(conditionCategoryName)) }
+                    } else {
+                        showPdfSettingsDialog = true
+                    }
+                }
+                PersonConditionUiAction.Back -> detailViewModel.navigateBackToMain()
+                is PersonConditionUiAction.NavigateToCategory -> detailViewModel.navigateToCategory(action.category)
+                PersonConditionUiAction.DismissDialog -> {
+                    showPdfSettingsDialog = false
+                    recordToDelete = null
+                    dialogMessage = null
+                    dialogTitle = null
+                    onConfirmOverwrite = null
+                }
+                PersonConditionUiAction.ConfirmOverwrite -> {
+                    onConfirmOverwrite?.invoke()
+                    onConfirmOverwrite = null
+                }
+            }
+        }
+    }
+
     val isAnyDialogOpen = recordToDelete != null || showPdfSettingsDialog || dialogMessage != null
 
     if (isExpanded) {
-        // Tablet
         PersonConditionScreenTablet(
             uiState = conditionState,
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
             isAnyDialogOpen = isAnyDialogOpen,
-            modifier = modifier,
-            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
-            onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
-            onBack = { detailViewModel.navigateBackToMain() },
-            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
-            onAddPhotoClick = {
-                try {
-                    val uri = conditionViewModel.getTempPhotoUri()
-                    tempPhotoUri = uri
-                    conditionViewModel.setLockBypassEnabled(true)
-                    cameraLauncher.launch(uri)
-                } catch (_: Exception) {
-                    conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_camera_launch_failed))
-                }
-            },
-            onPickPhotoClick = {
-                conditionViewModel.setLockBypassEnabled(true)
-                galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            },
-            onNavigateToFullScreen = { photoId, conditionId -> 
-                conditionViewModel.navigateToPhotoFullScreen(photoId, conditionId) 
-            },
-            onShowPdfSettings = {
-                if (conditionState.records.isEmpty()) {
-                    scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(conditionCategoryName)) }
-                } else {
-                    showPdfSettingsDialog = true
-                }
-            },
-            onDeleteRecord = { recordToDelete = it },
-            onEditClick = { conditionViewModel.startEditSession() },
-            onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
-            onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
-            onCancelEdit = { conditionViewModel.cancelEditSession() },
-            onDeletePhoto = { conditionViewModel.deletePhoto(it) },
-            onReattachPhoto = { info ->
-                val cid = conditionState.selectedConditionId ?: ""
-                conditionViewModel.reattachUnassignedPhoto(cid, info)
-            },
-            onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
-            snackbarHostState = snackbarHostState
+            onAction = handleAction,
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     } else {
-        // Phone
         PersonConditionScreenPhone(
             uiState = conditionState,
             currentPerson = detailState.person,
             isNameMaskingEnabled = isNameMaskingEnabled,
             personCategorySummary = detailState.personSummary,
             isAnyDialogOpen = isAnyDialogOpen,
-            modifier = modifier,
-            onSearchQueryChange = { conditionViewModel.updateSearchQuery(it) },
-            onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
-            onBack = { detailViewModel.navigateBackToMain() },
-            onNavigateToCategory = { detailViewModel.navigateToCategory(it) },
-            // カメラ
-            onAddPhotoClick = {
-                try {
-                    val uri = conditionViewModel.getTempPhotoUri()
-                    tempPhotoUri = uri
-                    conditionViewModel.setLockBypassEnabled(true)
-                    cameraLauncher.launch(uri)
-                } catch (_: Exception) {
-                    conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_camera_launch_failed))
-                }
-            },
-            // ギャラリー
-            onPickPhotoClick = {
-                conditionViewModel.setLockBypassEnabled(true)
-                galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            },
-            // 写真のフルスクリーン表示
-            onNavigateToFullScreen = { photoId, conditionId -> 
-                conditionViewModel.navigateToPhotoFullScreen(photoId, conditionId) 
-            },
-            // PDF出力
-            onShowPdfSettings = {
-                if (conditionState.records.isEmpty()) {
-                    scope.launch { snackbarHostState.showSnackbar(noRecordsMsgFormat.format(conditionCategoryName)) }
-                } else {
-                    showPdfSettingsDialog = true
-                }
-            },
-            // 削除
-            onDeleteRecord = { recordToDelete = it },
-            onEditClick = { conditionViewModel.startEditSession() },
-            onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
-            onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
-            onCancelEdit = { conditionViewModel.cancelEditSession() },
-            // サムネイルのごみ箱アイコン
-            onDeletePhoto = { conditionViewModel.deletePhoto(it) },
-            // 未割り当て写真の再アタッチ処理
-            onReattachPhoto = { info ->
-                val cid = conditionState.selectedConditionId ?: ""
-                conditionViewModel.reattachUnassignedPhoto(cid, info)
-            },
-            // マイク
-            onMicClick = { conditionViewModel.setLockBypassEnabled(true) },
-            snackbarHostState = snackbarHostState
+            onAction = handleAction,
+            snackbarHostState = snackbarHostState,
+            modifier = modifier
         )
     }
 
@@ -303,7 +315,7 @@ fun PersonConditionScreen(
         }
         PdfExportActionHandler(
             showDialog = showPdfSettingsDialog,
-            onDismiss = { showPdfSettingsDialog = false },
+            onDismiss = { handleAction(PersonConditionUiAction.DismissDialog) },
             category = Category.CONDITION_AT_VISIT,
             canExport = detailState.person != null,
             onRequireAuthentication = onRequireAuthentication,
@@ -335,15 +347,8 @@ fun PersonConditionScreen(
     // 削除確認ダイアログ
     if (recordToDelete != null) {
         jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog(
-            onDismiss = { recordToDelete = null },
-            onDelete = {
-                recordToDelete?.let { record ->
-                    if (conditionState.selectedConditionId == record.id) conditionViewModel.setSelectedConditionId(null)
-                    if (record is ConditionAtVisit) {
-                        conditionViewModel.deleteRecord(record)
-                    }
-                }
-            }
+            onDismiss = { handleAction(PersonConditionUiAction.DismissDialog) },
+            onDelete = { handleAction(PersonConditionUiAction.ConfirmDeleteRecord) }
         )
     }
 
@@ -351,16 +356,13 @@ fun PersonConditionScreen(
         AppInfoDialog(
             title = dialogTitle,
             message = dialogMessage!!,
-            onDismiss = {
-                dialogMessage = null
-                dialogTitle = null
-            }
+            onDismiss = { handleAction(PersonConditionUiAction.DismissDialog) }
         )
     }
 
     if (onConfirmOverwrite != null) {
         jp.mydns.fujiwara.carememo.ui.components.base.AppDialog(
-            onDismissRequest = { onConfirmOverwrite = null },
+            onDismissRequest = { handleAction(PersonConditionUiAction.DismissDialog) },
             title = { Text(stringResource(R.string.common_confirm_overwrite_title)) },
             text = {
                 jp.mydns.fujiwara.carememo.ui.components.base.AppDialogContent(text = stringResource(R.string.common_confirm_overwrite_message))
@@ -368,16 +370,13 @@ fun PersonConditionScreen(
             confirmButton = {
                 jp.mydns.fujiwara.carememo.ui.components.base.AppDialogConfirmButton(
                     text = stringResource(R.string.common_save),
-                    onClick = {
-                        onConfirmOverwrite?.invoke()
-                        onConfirmOverwrite = null
-                    }
+                    onClick = { handleAction(PersonConditionUiAction.ConfirmOverwrite) }
                 )
             },
             dismissButton = {
                 jp.mydns.fujiwara.carememo.ui.components.base.AppDialogDismissButton(
                     text = stringResource(R.string.common_cancel),
-                    onClick = { onConfirmOverwrite = null }
+                    onClick = { handleAction(PersonConditionUiAction.DismissDialog) }
                 )
             }
         )
@@ -395,35 +394,7 @@ fun PersonConditionScreen(
             ) {
                 jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane(
                     uiState = conditionState,
-                    onDeletePhoto = { conditionViewModel.deletePhoto(it) },
-                    onSelectedIdChange = { conditionViewModel.setSelectedConditionId(it) },
-                    onCancel = { conditionViewModel.setSelectedConditionId(null) },
-                    onEditClick = { conditionViewModel.startEditSession() },
-                    onEditInputUpdate = { conditionViewModel.updateEditInput(it) },
-                    onSaveClick = { onSuccess -> conditionViewModel.saveCurrentEdit(onSuccess) },
-                    onCancelEdit = { conditionViewModel.cancelEditSession() },
-                    onAddPhotoClick = {
-                        try {
-                            val uri = conditionViewModel.getTempPhotoUri()
-                            tempPhotoUri = uri
-                            conditionViewModel.setLockBypassEnabled(true)
-                            cameraLauncher.launch(uri)
-                        } catch (_: Exception) {
-                            conditionViewModel.notifyPhotoError("カメラの起動準備に失敗しました。")
-                        }
-                    },
-                    onPickPhotoClick = {
-                        conditionViewModel.setLockBypassEnabled(true)
-                        galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    },
-                    onReattachPhoto = { info ->
-                        val cid = conditionState.selectedConditionId ?: ""
-                        conditionViewModel.reattachUnassignedPhoto(cid, info)
-                    },
-                    onNavigateToFullScreen = { photoId, condId ->
-                        conditionViewModel.navigateToPhotoFullScreen(photoId, condId)
-                    },
-                    onMicClick = { conditionViewModel.setLockBypassEnabled(true) }
+                    onAction = handleAction
                 )
             }
         }

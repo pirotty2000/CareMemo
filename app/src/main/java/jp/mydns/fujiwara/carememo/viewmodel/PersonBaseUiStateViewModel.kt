@@ -60,8 +60,12 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     companion object {
         private const val OP_LOAD_PERSON = "loadPerson"
         private const val TABLE_PERSON = "person_db"
+        
+        // --- Shared Restoration Keys ---
         protected const val KEY_PERSON_ID = "personId"
         protected const val KEY_CATEGORY_NAME = "categoryName"
+        protected const val KEY_RESTORE_VERSION = "restoration_version"
+        protected const val RESTORE_VERSION = 1
     }
 
     init {
@@ -131,4 +135,13 @@ abstract class PersonBaseUiStateViewModel<S : PersonAwareState, E>(
     protected abstract fun updateWithPersonData(state: S, person: Person, summary: PersonCategorySummary?): S
 
     protected open fun onPrepareLoadPerson(state: S): S = state
+
+    /**
+     * 復元用データを破棄します。
+     * 保存成功時や、明示的なキャンセル時に呼び出してください。
+     */
+    protected fun clearRestorableState(vararg keys: String) {
+        savedStateHandle?.remove<Int>(KEY_RESTORE_VERSION)
+        keys.forEach { savedStateHandle?.remove<Any>(it) }
+    }
 }

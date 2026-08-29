@@ -38,6 +38,7 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
+import jp.mydns.fujiwara.carememo.ui.screens.main.MainUiAction
 import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
 
 /**
@@ -73,26 +74,18 @@ import jp.mydns.fujiwara.carememo.utils.DateTimeUtils
  * 利用者一覧における、1名分の情報を表示するカード型コンポーネント。
  *
  * @param person 利用者情報
+ * @param onAction アクションハンドラ
  * @param modifier 修飾子
  * @param summary カテゴリごとのデータ存在有無サマリー
  * @param isNameMaskingEnabled 氏名・ふりがなを伏せ字にするかどうか
- * @param onClick カード全体（名前エリア）がタップされた際のコールバック（機能選択シートの表示を想定）
- * @param onQuickMenuClick バッジ部分がタップされた際のコールバック（クイックアクションメニュー [3-1-2] の表示を想定）
- * @param onEmergencyContactManageClick 緊急連絡先管理が選択された際のコールバック
- * @param onEditClick 利用者情報の編集が選択された際のコールバック
- * @param onDeleteClick 利用終了（論理削除）が選択された際のコールバック
  */
 @Composable
 fun UserListItem(
     person: Person,
+    onAction: (MainUiAction) -> Unit,
     modifier: Modifier = Modifier,
     summary: PersonCategorySummary? = null,
     isNameMaskingEnabled: Boolean = true,
-    onClick: () -> Unit,
-    onQuickMenuClick: () -> Unit,
-    onEmergencyContactManageClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
 ) {
     // 誕生日の通知判定（本日または近日）
     val isBirthdayToday = remember(person.birthday) {
@@ -116,7 +109,7 @@ fun UserListItem(
                 Box(
                     modifier = Modifier
                         .clip(MaterialTheme.shapes.small)
-                        .clickable(onClick = onQuickMenuClick)
+                        .clickable(onClick = { onAction(MainUiAction.QuickMenuClick(person)) })
                         .padding(4.dp)
                         .testTag("UserListItem_QuickMenuBox")
                 ) {
@@ -144,7 +137,7 @@ fun UserListItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onClick)
+                    .clickable(onClick = { onAction(MainUiAction.UserClick(person)) })
                     .padding(vertical = 4.dp)
             ) {
                 // フリガナ (上段)
@@ -199,21 +192,21 @@ fun UserListItem(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_edit_user_info)) }, 
                         leadingIcon = { Icon(Icons.Rounded.ModeEdit, contentDescription = null) }, 
-                        onClick = { showItemMenu = false; onEditClick() },
+                        onClick = { showItemMenu = false; onAction(MainUiAction.EditUser(person)) },
                         modifier = Modifier.testTag("UserListItem_MenuItem_Edit")
                     )
                     // 緊急連絡先の管理
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.medical_contacts_manage_label)) },
                         leadingIcon = { Icon(Icons.Rounded.Phone, contentDescription = null) },
-                        onClick = { showItemMenu = false; onEmergencyContactManageClick() },
+                        onClick = { showItemMenu = false; onAction(MainUiAction.EmergencyContactManageClick(person)) },
                         modifier = Modifier.testTag("UserListItem_MenuItem_EmergencyContact")
                     )
                     // 利用終了（論理削除）
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.main_end_user_service), color = MaterialTheme.colorScheme.error) }, 
                         leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) }, 
-                        onClick = { showItemMenu = false; onDeleteClick() },
+                        onClick = { showItemMenu = false; onAction(MainUiAction.EndUser(person)) },
                         modifier = Modifier.testTag("UserListItem_MenuItem_Delete")
                     )
                 }
@@ -239,14 +232,13 @@ fun UserListItem(
  * 利用者を選択した際に表示される、各機能への遷移メニュー（ボトムシート）。
  *
  * @param personName 選択された利用者の氏名（表示用）
- * @param onCategorySelect 個別のカテゴリ（健康、服薬等）が選択された際のコールバック
- * @param onBatchInputSelect 健康記録の一括入力が選択された際のコールバック
+ * @param onAction アクションハンドラ
+ * @param modifier 修飾子
  */
 @Composable
 fun CategorySelectionSheet(
     personName: String,
-    onCategorySelect: (Category) -> Unit,
-    onBatchInputSelect: () -> Unit,
+    onAction: (MainUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -269,7 +261,7 @@ fun CategorySelectionSheet(
 
         // 最優先のアクション：健康記録の一括入力
         Button(
-            onClick = onBatchInputSelect,
+            onClick = { onAction(MainUiAction.BatchInputSelect) },
             modifier = Modifier.fillMaxWidth().height(56.dp).testTag("CategorySelectionSheet_BatchInput"),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -286,7 +278,7 @@ fun CategorySelectionSheet(
         // 個別のカテゴリ詳細への遷移ボタン群
         Category.entries.forEach { category ->
             Button(
-                onClick = { onCategorySelect(category) },
+                onClick = { onAction(MainUiAction.CategorySelect(category)) },
                 modifier = Modifier.fillMaxWidth().height(52.dp).testTag("CategorySelectionSheet_Button_${category.name}"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,

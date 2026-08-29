@@ -78,9 +78,38 @@ class PersonHealthViewModel(
         private const val OP_DELETE = "deleteRecord"
         private const val OP_RECORDS_FLOW = "recordsFlow"
         private const val TABLE_HEALTH = "health_db"
+
+        // --- Restoration Keys ---
+        private const val KEY_IS_EDITING = "restoration_is_editing"
+        private const val KEY_SELECTED_ID = "restoration_selected_id"
+        // Input Fields
+        private const val KEY_IN_HEIGHT = "restoration_in_height"
+        private const val KEY_IN_WEIGHT = "restoration_in_weight"
+        private const val KEY_IN_BP_S = "restoration_in_bp_s"
+        private const val KEY_IN_BP_D = "restoration_in_bp_d"
+        private const val KEY_IN_SAT = "restoration_in_sat"
+        private const val KEY_IN_PULSE = "restoration_in_pulse"
+        private const val KEY_IN_TEMP = "restoration_in_temp"
+        private const val KEY_IN_GLUCOSE = "restoration_in_glucose"
+        private const val KEY_IN_HBA1C = "restoration_in_hba1c"
+        private const val KEY_IN_TIME = "restoration_in_time"
+        // Snapshot (Baseline) Fields
+        private const val KEY_BASE_HEIGHT = "restoration_base_height"
+        private const val KEY_BASE_WEIGHT = "restoration_base_weight"
+        private const val KEY_BASE_BP_S = "restoration_base_bp_s"
+        private const val KEY_BASE_BP_D = "restoration_base_bp_d"
+        private const val KEY_BASE_SAT = "restoration_base_sat"
+        private const val KEY_BASE_PULSE = "restoration_base_pulse"
+        private const val KEY_BASE_TEMP = "restoration_base_temp"
+        private const val KEY_BASE_GLUCOSE = "restoration_base_glucose"
+        private const val KEY_BASE_HBA1C = "restoration_base_hba1c"
+        private const val KEY_BASE_TIME = "restoration_base_time"
     }
 
     override val featureName: String = FEATURE_NAME
+
+    /** 復元中であることを示すフラグ */
+    private var isRestoring = false
 
     /** 履歴ロード用の Job */
     private var recordsJob: Job? = null
@@ -92,12 +121,22 @@ class PersonHealthViewModel(
     private var deleteJob: Job? = null
 
     init {
+        // --- State Restoration ---
+        if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
+            isRestoring = true
+            restoreState()
+        }
+
         // 引数（categoryName）の変更を購読
         scope.launch {
             savedStateHandle.getStateFlow<String?>(KEY_CATEGORY_NAME, null).collect { name ->
                 if (name != null) {
                     try {
-                        setCategory(Category.valueOf(name))
+                        val category = Category.valueOf(name)
+                        // 復元中かつ、カテゴリがSSHのものと一致する場合は再セットを避ける
+                        if (!isRestoring || (currentState.currentCategory != category)) {
+                            setCategory(category)
+                        }
                     } catch (_: Exception) {
                         // 無視
                     }
@@ -120,6 +159,93 @@ class PersonHealthViewModel(
         return state.copy(isLoading = isLoading)
     }
 
+    /**
+     * SavedStateHandle から状態を復元します。
+     */
+    private fun restoreState() {
+        val handle = savedStateHandle ?: return
+        val selectedId = handle.get<String>(KEY_SELECTED_ID)
+        val isEditing = handle.get<Boolean>(KEY_IS_EDITING) ?: false
+
+        val input = HealthEditInput(
+            heightText = handle.get<String>(KEY_IN_HEIGHT) ?: "",
+            weightText = handle.get<String>(KEY_IN_WEIGHT) ?: "",
+            bpSystolicText = handle.get<String>(KEY_IN_BP_S) ?: "",
+            bpDiastolicText = handle.get<String>(KEY_IN_BP_D) ?: "",
+            satText = handle.get<String>(KEY_IN_SAT) ?: "",
+            pulseText = handle.get<String>(KEY_IN_PULSE) ?: "",
+            bodyTemperatureText = handle.get<String>(KEY_IN_TEMP) ?: "",
+            glucoseText = handle.get<String>(KEY_IN_GLUCOSE) ?: "",
+            hba1cText = handle.get<String>(KEY_IN_HBA1C) ?: "",
+            recordTime = handle.get<Long>(KEY_IN_TIME)?.let { Instant.ofEpochMilli(it) }
+        )
+
+        val snapshot = if (handle.contains(KEY_BASE_TIME)) {
+            HealthEditInput(
+                heightText = handle.get<String>(KEY_BASE_HEIGHT) ?: "",
+                weightText = handle.get<String>(KEY_BASE_WEIGHT) ?: "",
+                bpSystolicText = handle.get<String>(KEY_BASE_BP_S) ?: "",
+                bpDiastolicText = handle.get<String>(KEY_BASE_BP_D) ?: "",
+                satText = handle.get<String>(KEY_BASE_SAT) ?: "",
+                pulseText = handle.get<String>(KEY_BASE_PULSE) ?: "",
+                bodyTemperatureText = handle.get<String>(KEY_BASE_TEMP) ?: "",
+                glucoseText = handle.get<String>(KEY_BASE_GLUCOSE) ?: "",
+                hba1cText = handle.get<String>(KEY_BASE_HBA1C) ?: "",
+                recordTime = handle.get<Long>(KEY_BASE_TIME)?.let { Instant.ofEpochMilli(it) }
+            )
+        } else null
+
+        val isChanged = (input != snapshot)
+
+        updateUiState { current ->
+            current.copy(
+                selectedRecordId = selectedId,
+                isEditing = isEditing,
+                editInput = input,
+                initialSnapshot = snapshot,
+                isChanged = isChanged,
+                isSaveEnabled = (PersonHealthLogic.validateInputs(current.currentCategory, input.toValidationMap()) == HealthInputValidationResult.SUCCESS) 
+                        && input.recordTime != null && isChanged
+            )
+        }
+    }
+
+    /**
+     * 復元対象の状態をバックアップします。
+     */
+    private fun backupRestorableState(state: PersonHealthUiState) {
+        val handle = savedStateHandle ?: return
+        handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
+        handle[KEY_SELECTED_ID] = state.selectedRecordId
+        handle[KEY_IS_EDITING] = state.isEditing
+
+        // Input
+        handle[KEY_IN_HEIGHT] = state.editInput.heightText
+        handle[KEY_IN_WEIGHT] = state.editInput.weightText
+        handle[KEY_IN_BP_S] = state.editInput.bpSystolicText
+        handle[KEY_IN_BP_D] = state.editInput.bpDiastolicText
+        handle[KEY_IN_SAT] = state.editInput.satText
+        handle[KEY_IN_PULSE] = state.editInput.pulseText
+        handle[KEY_IN_TEMP] = state.editInput.bodyTemperatureText
+        handle[KEY_IN_GLUCOSE] = state.editInput.glucoseText
+        handle[KEY_IN_HBA1C] = state.editInput.hba1cText
+        handle[KEY_IN_TIME] = state.editInput.recordTime?.toEpochMilli()
+
+        // Snapshot
+        state.initialSnapshot?.let { base ->
+            handle[KEY_BASE_HEIGHT] = base.heightText
+            handle[KEY_BASE_WEIGHT] = base.weightText
+            handle[KEY_BASE_BP_S] = base.bpSystolicText
+            handle[KEY_BASE_BP_D] = base.bpDiastolicText
+            handle[KEY_BASE_SAT] = base.satText
+            handle[KEY_BASE_PULSE] = base.pulseText
+            handle[KEY_BASE_TEMP] = base.bodyTemperatureText
+            handle[KEY_BASE_GLUCOSE] = base.glucoseText
+            handle[KEY_BASE_HBA1C] = base.hba1cText
+            handle[KEY_BASE_TIME] = base.recordTime?.toEpochMilli()
+        }
+    }
+
     override fun updateWithPersonData(
         state: PersonHealthUiState,
         person: Person,
@@ -131,6 +257,9 @@ class PersonHealthViewModel(
     }
 
     override fun onPrepareLoadPerson(state: PersonHealthUiState): PersonHealthUiState {
+        // 復元中の場合は、初期化によるリセットをスキップして現在の状態を維持する
+        if (isRestoring) return state
+
         return state.copy(
             personId = null,
             records = persistentListOf(),
@@ -158,7 +287,7 @@ class PersonHealthViewModel(
         updateUiState { state ->
             val next = state.copy(selectedRecordId = id)
             if (id == null) {
-                next.copy(
+                val cleared = next.copy(
                     isEditing = false,
                     editInput = HealthEditInput(),
                     initialRecordTime = null,
@@ -166,30 +295,52 @@ class PersonHealthViewModel(
                     isChanged = false,
                     isSaveEnabled = false
                 )
+                clearRestorableState(
+                    KEY_SELECTED_ID, KEY_IS_EDITING, 
+                    KEY_IN_HEIGHT, KEY_IN_WEIGHT, KEY_IN_BP_S, KEY_IN_BP_D, KEY_IN_SAT, KEY_IN_PULSE, KEY_IN_TEMP, KEY_IN_GLUCOSE, KEY_IN_HBA1C, KEY_IN_TIME,
+                    KEY_BASE_HEIGHT, KEY_BASE_WEIGHT, KEY_BASE_BP_S, KEY_BASE_BP_D, KEY_BASE_SAT, KEY_BASE_PULSE, KEY_BASE_TEMP, KEY_BASE_GLUCOSE, KEY_BASE_HBA1C, KEY_BASE_TIME
+                )
+                cleared
             } else if (IdLogic.isNew(id)) {
-                // 新規作成時は即座に編集セッションを開始
-                val latestHeight = if (state.currentCategory == Category.HEIGHT_AND_WEIGHT) {
-                    state.records.filterIsInstance<HeightAndWeight>()
-                        .filter { it.height != null }
-                        .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
-                } else ""
+                // 復元中の場合は、自動補完ロジックをスキップして SSH からの値を優先する
+                if (isRestoring) {
+                    isRestoring = false // 復元処理を消費
+                    next
+                } else {
+                    // 新規作成時は即座に編集セッションを開始
+                    val latestHeight = if (state.currentCategory == Category.HEIGHT_AND_WEIGHT) {
+                        state.records.filterIsInstance<HeightAndWeight>()
+                            .filter { it.height != null }
+                            .maxByOrNull { it.recordTime }?.height?.toString() ?: ""
+                    } else ""
 
-                val now = Instant.now()
-                val initialInput = HealthEditInput(
-                    heightText = latestHeight,
-                    recordTime = now
-                )
-                next.copy(
-                    isEditing = true,
-                    editInput = initialInput,
-                    initialRecordTime = now,
-                    initialSnapshot = initialInput,
-                    isChanged = false,
-                    isSaveEnabled = false
-                )
+                    val now = Instant.now()
+                    val initialInput = HealthEditInput(
+                        heightText = latestHeight,
+                        recordTime = now
+                    )
+                    val nextWithInput = next.copy(
+                        isEditing = true,
+                        editInput = initialInput,
+                        initialRecordTime = now,
+                        initialSnapshot = initialInput,
+                        isChanged = false,
+                        isSaveEnabled = false
+                    )
+                    backupRestorableState(nextWithInput)
+                    nextWithInput
+                }
             } else {
                 // 既存レコード選択時は閲覧モードから開始
-                next.copy(isEditing = false, initialRecordTime = null)
+                // 復元中の場合は既に state に値が入っているため、そのまま返す
+                if (isRestoring) {
+                    isRestoring = false
+                    next
+                } else {
+                    val nextView = next.copy(isEditing = false, initialRecordTime = null)
+                    backupRestorableState(nextView)
+                    nextView
+                }
             }
         }
     }
@@ -215,7 +366,7 @@ class PersonHealthViewModel(
         )
 
         updateUiState {
-            it.copy(
+            val next = it.copy(
                 isEditing = true,
                 editInput = initialInput,
                 initialRecordTime = record.recordTime,
@@ -223,6 +374,8 @@ class PersonHealthViewModel(
                 isChanged = false,
                 isSaveEnabled = false
             )
+            backupRestorableState(next)
+            next
         }
     }
 
@@ -234,7 +387,11 @@ class PersonHealthViewModel(
         if (recordId != null && IdLogic.isNew(recordId)) {
             setSelectedRecordId(null)
         } else {
-            updateUiState { it.copy(isEditing = false) }
+            updateUiState { 
+                val next = it.copy(isEditing = false)
+                backupRestorableState(next)
+                next
+            }
         }
     }
 
@@ -250,18 +407,20 @@ class PersonHealthViewModel(
     fun updateEditInput(update: (HealthEditInput) -> HealthEditInput) {
         updateUiState { state ->
             val nextInput = update(state.editInput)
-            val isChanged = nextInput != state.initialSnapshot
+            val isChanged = (nextInput != state.initialSnapshot)
 
             // バリデーション
             val validationResult = PersonHealthLogic.validateInputs(state.currentCategory, nextInput.toValidationMap())
             val isDateTimeValid = nextInput.recordTime != null
             val isSaveEnabled = (validationResult == HealthInputValidationResult.SUCCESS) && isDateTimeValid && isChanged
 
-            state.copy(
+            val next = state.copy(
                 editInput = nextInput,
                 isChanged = isChanged,
                 isSaveEnabled = isSaveEnabled
             )
+            backupRestorableState(next)
+            next
         }
     }
 
@@ -359,6 +518,13 @@ class PersonHealthViewModel(
 
             sendUiEvent(UiEvent.SaveSuccess(record.personId))
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
+            
+            // 状態復元データを破棄
+            clearRestorableState(
+                KEY_SELECTED_ID, KEY_IS_EDITING, 
+                KEY_IN_HEIGHT, KEY_IN_WEIGHT, KEY_IN_BP_S, KEY_IN_BP_D, KEY_IN_SAT, KEY_IN_PULSE, KEY_IN_TEMP, KEY_IN_GLUCOSE, KEY_IN_HBA1C, KEY_IN_TIME,
+                KEY_BASE_HEIGHT, KEY_BASE_WEIGHT, KEY_BASE_BP_S, KEY_BASE_BP_D, KEY_BASE_SAT, KEY_BASE_PULSE, KEY_BASE_TEMP, KEY_BASE_GLUCOSE, KEY_BASE_HBA1C, KEY_BASE_TIME
+            )
         }
     }
 

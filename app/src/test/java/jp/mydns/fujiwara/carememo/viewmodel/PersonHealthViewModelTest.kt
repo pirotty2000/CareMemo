@@ -290,5 +290,79 @@ class PersonHealthViewModelTest {
         }
     }
 
+    // region 8. 状態復元テスト (State Restoration)
+
+    @Test
+    fun RST_01_restore_input_and_session() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_selected_id" to "h1",
+            "restoration_is_editing" to true,
+            "restoration_in_weight" to "65.5",
+            "restoration_in_time" to 1000L
+        ))
+
+        val viewModel = PersonHealthViewModel(
+            healthRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("h1", state.selectedRecordId)
+        assertTrue(state.isEditing)
+        assertEquals("65.5", state.editInput.weightText)
+        assertEquals(Instant.ofEpochMilli(1000L), state.editInput.recordTime)
+    }
+
+    @Test
+    fun RST_02_restore_baseline_and_isChanged() = runTest {
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_in_weight" to "70.0", // 変更後
+            "restoration_base_weight" to "65.5", // 基準値
+            "restoration_base_time" to 1000L
+        ))
+
+        val viewModel = PersonHealthViewModel(
+            healthRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("70.0", state.editInput.weightText)
+        assertEquals("65.5", state.initialSnapshot?.weightText)
+        assertTrue(state.isChanged) // 70.0 != 65.5 なので変更あり
+    }
+
+    @Test
+    fun RST_03_restore_skips_height_autocompletion() = runTest {
+        val newId = AppSpecifications.Id.NEW_RECORD_ID
+        // SSH に復元データがある状態
+        val handle = SavedStateHandle(mapOf(
+            "restoration_version" to 1,
+            "restoration_selected_id" to newId,
+            "restoration_in_height" to "180.0" // 復元された値
+        ))
+
+        // DB には別の最新身長がある状態
+        val lastRecord = HeightAndWeight(id = "prev", personId = personId, height = 160.0, weight = 60.0, recordTime = Instant.now())
+        every { healthRepository.getHeightAndWeightByPersonId(personId) } returns flowOf(listOf(lastRecord))
+
+        val viewModel = PersonHealthViewModel(
+            healthRepository, personRepository, summaryRepository,
+            userSettingsRepository, securitySession, auditLogRepository, handle
+        )
+        advanceUntilIdle()
+
+        // 復元後、一旦 setSelectedRecordId が呼ばれても（UI等から）、復元フラグにより DB 値で上書きされない
+        viewModel.setSelectedRecordId(newId)
+        advanceUntilIdle()
+
+        assertEquals("180.0", viewModel.uiState.value.editInput.heightText)
+        assertNotEquals("160.0", viewModel.uiState.value.editInput.heightText)
+    }
+
     // endregion
 }

@@ -86,16 +86,7 @@ class PersonConditionScreenTest {
                         selectedConditionId = "c1", 
                         isEditing = false
                     ),
-                    onDeletePhoto = {},
-                    onSelectedIdChange = {},
-                    onCancel = {},
-                    onEditClick = {},
-                    onEditInputUpdate = {},
-                    onSaveClick = {},
-                    onCancelEdit = {},
-                    onAddPhotoClick = {},
-                    onNavigateToFullScreen = { _: String, _: String -> },
-                    onMicClick = {}
+                    onAction = {}
                 )
             }
         }
