@@ -79,7 +79,10 @@ data class BatchInputUiState(
     val isValid: Boolean = false,
     val isChanged: Boolean = false,
     val isNameMaskingEnabled: Boolean = true,
-    val recordTime: Instant? = null
+    val recordTime: Instant? = null,
+    val fieldErrors: Map<String, Int?> = emptyMap(),
+    val fieldErrorArgs: Map<String, List<String>> = emptyMap(),
+    val touchedFields: Set<String> = emptySet()
 ) : PersonAwareState
 
 /**

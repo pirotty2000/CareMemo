@@ -68,7 +68,9 @@ data class PersonConditionUiState(
     val initialRecordTime: Instant? = null,
     val initialSnapshot: ConditionEditInput? = null,
     val isChanged: Boolean = false,
-    val isSaveEnabled: Boolean = false
+    val isSaveEnabled: Boolean = false,
+    val fieldErrors: Map<String, Int?> = emptyMap(),
+    val touchedFields: Set<String> = emptySet()
 ) : PersonAwareState
 
 /**

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
@@ -276,6 +277,57 @@ class EmergencyContactEditViewModelTest {
 
         assertFalse(viewModel.uiState.value.isLoading)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), any(), any()) }
+    }
+
+    // endregion
+
+    // region 6. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_emptyFacility_feedback_afterTouch() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.startAdd()
+        // 初期状態ではエラーはないはず（touched ではないため）
+        assertNull(viewModel.uiState.value.fieldErrors["facilityName"])
+
+        // 施設名を空のまま touched にする
+        viewModel.markFieldAsTouched("facilityName")
+        advanceUntilIdle()
+
+        assertEquals(R.string.medical_contact_err_empty_facility, viewModel.uiState.value.fieldErrors["facilityName"])
+    }
+
+    @Test
+    fun FBK_02_tooLongPhone_feedback() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.startAdd()
+        // 施設名を入力（バリデーションのショートカット防止）
+        viewModel.updateEditingContact { it.copy(facilityName = "Aクリニック") }
+        
+        // 21文字入力
+        viewModel.updateEditingContact { it.copy(phoneNumber = "0".repeat(21)) }
+        advanceUntilIdle()
+
+        assertEquals(R.string.medical_contact_err_phone_too_long, viewModel.uiState.value.fieldErrors["phoneNumber"])
+    }
+
+    @Test
+    fun FBK_03_errorClears_onCorrectInput() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.startAdd()
+        viewModel.markFieldAsTouched("facilityName")
+        assertNotNull(viewModel.uiState.value.fieldErrors["facilityName"])
+
+        viewModel.updateEditingContact { it.copy(facilityName = "正常なクリニック") }
+        advanceUntilIdle()
+
+        assertNull("Error should be cleared on valid input", viewModel.uiState.value.fieldErrors["facilityName"])
     }
 
     // endregion

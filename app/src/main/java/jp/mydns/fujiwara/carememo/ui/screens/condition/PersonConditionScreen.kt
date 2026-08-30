@@ -42,6 +42,7 @@ sealed interface PersonConditionUiAction {
     // 編集・保存
     data object EditClick : PersonConditionUiAction
     data class EditInputUpdate(val update: (ConditionEditInput) -> ConditionEditInput) : PersonConditionUiAction
+    data class MarkFieldAsTouched(val fieldName: String) : PersonConditionUiAction
     data class SaveClick(val onSuccess: (String) -> Unit) : PersonConditionUiAction
     data object CancelEdit : PersonConditionUiAction
 
@@ -232,6 +233,7 @@ fun PersonConditionScreen(
                 }
                 PersonConditionUiAction.EditClick -> conditionViewModel.startEditSession()
                 is PersonConditionUiAction.EditInputUpdate -> conditionViewModel.updateEditInput(action.update)
+                is PersonConditionUiAction.MarkFieldAsTouched -> conditionViewModel.markFieldAsTouched(action.fieldName)
                 is PersonConditionUiAction.SaveClick -> conditionViewModel.saveCurrentEdit(action.onSuccess)
                 PersonConditionUiAction.CancelEdit -> conditionViewModel.cancelEditSession()
                 PersonConditionUiAction.AddPhotoClick -> {

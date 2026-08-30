@@ -368,6 +368,8 @@ fun HealthRecordDetailPane(
                         editInput = uiState.editInput,
                         initialRecordTime = uiState.initialRecordTime,
                         isSaveEnabled = uiState.isSaveEnabled,
+                        fieldErrors = uiState.fieldErrors,
+                        fieldErrorArgs = uiState.fieldErrorArgs,
                         onAction = onAction,
                         onCancelRequest = {
                             if (uiState.isChanged) {
@@ -404,6 +406,8 @@ private fun HealthRecordEditForm(
     editInput: HealthEditInput,
     initialRecordTime: Instant?,
     isSaveEnabled: Boolean,
+    fieldErrors: Map<String, Int?>,
+    fieldErrorArgs: Map<String, List<String>>,
     onAction: (PersonHealthUiAction) -> Unit,
     onCancelRequest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -443,7 +447,12 @@ private fun HealthRecordEditForm(
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // 入力フォームの記録日時
-                DateTimeInputFields(state = dateTimeState)
+                DateTimeInputFields(
+                    state = dateTimeState,
+                    isError = fieldErrors["recordTime"] != null,
+                    supportingText = fieldErrors["recordTime"]?.let { { Text(stringResource(it)) } },
+                    onFocusChanged = { _, _ -> onAction(PersonHealthUiAction.MarkFieldAsTouched("recordTime")) }
+                )
 
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -459,6 +468,9 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_height)) },
                                     suffix = { Text(AppSpecifications.Health.Height.UNIT) },
+                                    isError = fieldErrors["height"] != null,
+                                    supportingText = fieldErrors["height"]?.let { { Text(stringResource(it, *fieldErrorArgs["height"]?.toTypedArray() ?: emptyArray())) } },
+                                    onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("height")) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_Height")
                                 )
                                 AppCompactTextField(
@@ -467,6 +479,9 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.DECIMAL,
                                     label = { Text(stringResource(R.string.health_label_weight)) },
                                     suffix = { Text(AppSpecifications.Health.Weight.UNIT) },
+                                    isError = fieldErrors["weight"] != null,
+                                    supportingText = fieldErrors["weight"]?.let { { Text(stringResource(it, *fieldErrorArgs["weight"]?.toTypedArray() ?: emptyArray())) } },
+                                    onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("weight")) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_Weight"),
                                     imeAction = ImeAction.Done
                                 )
@@ -480,6 +495,9 @@ private fun HealthRecordEditForm(
                                     onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(bpSystolicText = v) }) },
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_bp_systolic)) },
+                                    isError = fieldErrors["bpSystolic"] != null,
+                                    supportingText = fieldErrors["bpSystolic"]?.let { { Text(stringResource(it, *fieldErrorArgs["bpSystolic"]?.toTypedArray() ?: emptyArray())) } },
+                                    onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("bpSystolic")) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_BpSystolic")
                                 )
                                 AppCompactTextField(
@@ -487,6 +505,9 @@ private fun HealthRecordEditForm(
                                     onValueChange = { v -> onAction(PersonHealthUiAction.EditInputUpdate { it.copy(bpDiastolicText = v) }) },
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_bp_diastolic)) },
+                                    isError = fieldErrors["bpDiastolic"] != null,
+                                    supportingText = fieldErrors["bpDiastolic"]?.let { { Text(stringResource(it, *fieldErrorArgs["bpDiastolic"]?.toTypedArray() ?: emptyArray())) } },
+                                    onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("bpDiastolic")) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_BpDiastolic")
                                 )
                             }
@@ -497,6 +518,9 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_sat)) },
                                     suffix = { Text(AppSpecifications.Health.OxygenSaturation.UNIT) },
+                                    isError = fieldErrors["sat"] != null,
+                                    supportingText = fieldErrors["sat"]?.let { { Text(stringResource(it, *fieldErrorArgs["sat"]?.toTypedArray() ?: emptyArray())) } },
+                                    onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("sat")) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_Sat")
                                 )
                                 AppCompactTextField(
@@ -505,6 +529,9 @@ private fun HealthRecordEditForm(
                                     type = AppTextFieldType.INTEGER,
                                     label = { Text(stringResource(R.string.health_label_pulse)) },
                                     suffix = { Text(AppSpecifications.Health.Pulse.UNIT) },
+                                    isError = fieldErrors["pulse"] != null,
+                                    supportingText = fieldErrors["pulse"]?.let { { Text(stringResource(it, *fieldErrorArgs["pulse"]?.toTypedArray() ?: emptyArray())) } },
+                                    onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("pulse")) },
                                     modifier = Modifier.weight(1f).testTag("HealthField_Pulse")
                                 )
                             }
@@ -514,6 +541,9 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(R.string.health_label_body_temp)) },
                                 suffix = { Text(AppSpecifications.Health.BodyTemperature.UNIT) },
+                                isError = fieldErrors["bodyTemperature"] != null,
+                                supportingText = fieldErrors["bodyTemperature"]?.let { { Text(stringResource(it, *fieldErrorArgs["bodyTemperature"]?.toTypedArray() ?: emptyArray())) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("bodyTemperature")) },
                                 modifier = Modifier.fillMaxWidth().testTag("HealthField_Temp"),
                                 imeAction = ImeAction.Done
                             )
@@ -526,6 +556,9 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.INTEGER,
                                 label = { Text(stringResource(R.string.health_label_glucose)) },
                                 suffix = { Text(AppSpecifications.Health.BloodGlucose.UNIT) },
+                                isError = fieldErrors["glucose"] != null,
+                                supportingText = fieldErrors["glucose"]?.let { { Text(stringResource(it, *fieldErrorArgs["glucose"]?.toTypedArray() ?: emptyArray())) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("glucose")) },
                                 modifier = Modifier.fillMaxWidth().testTag("HealthField_Glucose")
                             )
                             AppCompactTextField(
@@ -534,6 +567,9 @@ private fun HealthRecordEditForm(
                                 type = AppTextFieldType.DECIMAL,
                                 label = { Text(stringResource(R.string.health_label_hba1c)) },
                                 suffix = { Text(AppSpecifications.Health.HbA1c.UNIT) },
+                                isError = fieldErrors["hba1c"] != null,
+                                supportingText = fieldErrors["hba1c"]?.let { { Text(stringResource(it, *fieldErrorArgs["hba1c"]?.toTypedArray() ?: emptyArray())) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonHealthUiAction.MarkFieldAsTouched("hba1c")) },
                                 modifier = Modifier.fillMaxWidth().testTag("HealthField_HbA1c"),
                                 imeAction = ImeAction.Done
                             )

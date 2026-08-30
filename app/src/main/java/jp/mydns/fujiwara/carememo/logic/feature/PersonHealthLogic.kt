@@ -40,7 +40,10 @@ data class PersonHealthUiState(
     val initialRecordTime: Instant? = null,
     val initialSnapshot: HealthEditInput? = null,
     val isChanged: Boolean = false,
-    val isSaveEnabled: Boolean = false
+    val isSaveEnabled: Boolean = false,
+    val fieldErrors: Map<String, Int?> = emptyMap(),
+    val fieldErrorArgs: Map<String, List<String>> = emptyMap(),
+    val touchedFields: Set<String> = emptySet()
 ) : PersonAwareState
 
 /**

@@ -31,6 +31,7 @@ sealed interface PersonHealthUiAction {
     // 編集・保存
     data object EditClick : PersonHealthUiAction
     data class EditInputUpdate(val update: (HealthEditInput) -> HealthEditInput) : PersonHealthUiAction
+    data class MarkFieldAsTouched(val fieldName: String) : PersonHealthUiAction
     data object SaveClick : PersonHealthUiAction
     data object CancelEdit : PersonHealthUiAction
 
@@ -173,6 +174,7 @@ fun PersonHealthScreen(
                 is PersonHealthUiAction.ItemClick -> healthViewModel.setSelectedRecordId(action.record.id)
                 PersonHealthUiAction.EditClick -> healthViewModel.startEditSession()
                 is PersonHealthUiAction.EditInputUpdate -> healthViewModel.updateEditInput(action.update)
+                is PersonHealthUiAction.MarkFieldAsTouched -> healthViewModel.markFieldAsTouched(action.fieldName)
                 PersonHealthUiAction.SaveClick -> healthViewModel.saveCurrentEdit()
                 PersonHealthUiAction.CancelEdit -> healthViewModel.cancelEditSession()
                 is PersonHealthUiAction.DeleteRecord -> healthViewModel.deleteRecord(action.record)

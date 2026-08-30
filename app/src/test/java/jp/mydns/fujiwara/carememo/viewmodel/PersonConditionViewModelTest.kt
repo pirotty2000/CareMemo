@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import io.mockk.*
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
@@ -323,6 +324,60 @@ class PersonConditionViewModelTest {
         val state = viewModel.uiState.value
         assertEquals("content://test/photo.jpg", state.previewUri)
         assertEquals("書きかけのキャプション", state.previewCaption)
+    }
+
+    // endregion
+
+    // region 9. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_emptyCondition_feedback_afterTouch() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        // 本文を空にする
+        viewModel.updateEditInput { it.copy(condition = "") }
+        // フォーカスが外れたとみなす
+        viewModel.markFieldAsTouched("condition")
+        advanceUntilIdle()
+
+        assertEquals(R.string.p_cond_err_empty_condition, viewModel.uiState.value.fieldErrors["condition"])
+    }
+
+    @Test
+    fun FBK_02_futureDate_feedback() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        // 未来日時をセット
+        val future = Instant.now().plusSeconds(3600)
+        viewModel.updateEditInput { it.copy(recordTime = future) }
+        viewModel.markFieldAsTouched("recordTime")
+        advanceUntilIdle()
+
+        assertEquals(R.string.common_err_future_date_not_allowed, viewModel.uiState.value.fieldErrors["recordTime"])
+    }
+
+    @Test
+    fun FBK_03_errorClears_onCorrection() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.setSelectedConditionId(AppSpecifications.Id.NEW_RECORD_ID)
+        // 本文を入力（バリデーションのショートカット防止）
+        viewModel.updateEditInput { it.copy(condition = "状態良好") }
+        
+        viewModel.markFieldAsTouched("author")
+        viewModel.updateEditInput { it.copy(author = "") }
+        assertNotNull(viewModel.uiState.value.fieldErrors["author"])
+
+        // 修正
+        viewModel.updateEditInput { it.copy(author = "山田") }
+        advanceUntilIdle()
+
+        assertNull("Error should be cleared", viewModel.uiState.value.fieldErrors["author"])
     }
 
     // endregion

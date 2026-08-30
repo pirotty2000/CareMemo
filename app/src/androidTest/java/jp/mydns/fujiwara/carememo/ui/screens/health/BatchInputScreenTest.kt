@@ -147,4 +147,20 @@ class BatchInputScreenTest {
     }
 
     //endregion
+
+    //region 7. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_outOfRange_showsErrorMessage() {
+        uiStateFlow.value = uiStateFlow.value.copy(
+            fieldErrors = mapOf("bodyTemperature" to R.string.health_err_range_format),
+            fieldErrorArgs = mapOf("bodyTemperature" to listOf("34.0", "43.0"))
+        )
+        setContent()
+        
+        // 範囲外メッセージが表示されていること
+        composeTestRule.onNodeWithText("34.0 〜 43.0 の範囲で入力してください").assertIsDisplayed()
+    }
+
+    //endregion
 }

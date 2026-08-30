@@ -45,7 +45,9 @@ data class PersonEditUiState(
     val isValid: Boolean = false,
     val isChanged: Boolean = false,
     val isNameMaskingEnabled: Boolean = true,
-    val isNew: Boolean = false
+    val isNew: Boolean = false,
+    val fieldErrors: Map<String, Int?> = emptyMap(),
+    val touchedFields: Set<String> = emptySet()
 )
 
 /**
@@ -131,6 +133,61 @@ object PersonEditLogic {
                 current.year != initialYear.toString() ||
                 current.month != initialDate.monthValue.toString() ||
                 current.day != initialDate.dayOfMonth.toString()
+    }
+
+    /**
+     * 入力内容の妥当性を詳細に判定し、フィールドごとのエラーを返します。
+     *
+     * @param current 検証対象のUI状態
+     * @return フィールド名をキー、バリデーション結果を値とするマップ
+     */
+    fun validateAll(current: PersonEditUiState): Map<String, PersonEditValidationResult> {
+        val errors = mutableMapOf<String, PersonEditValidationResult>()
+        val spec = AppSpecifications.Constraints.Person.Validation
+
+        // 姓
+        if (current.lastName.isBlank()) {
+            errors["lastName"] = PersonEditValidationResult.EMPTY_LAST_NAME
+        } else if (current.lastName.length > spec.MAX_LENGTH_LAST_NAME) {
+            errors["lastName"] = PersonEditValidationResult.NAME_TOO_LONG
+        }
+
+        // 名
+        if (current.firstName.isBlank()) {
+            errors["firstName"] = PersonEditValidationResult.EMPTY_FIRST_NAME
+        } else if (current.firstName.length > spec.MAX_LENGTH_FIRST_NAME) {
+            errors["firstName"] = PersonEditValidationResult.NAME_TOO_LONG
+        }
+
+        // せい
+        if (current.lastNameFurigana.isBlank()) {
+            errors["lastNameFurigana"] = PersonEditValidationResult.EMPTY_LAST_FURIGANA
+        } else if (current.lastNameFurigana.length > spec.MAX_LENGTH_LAST_NAME_FURIGANA) {
+            errors["lastNameFurigana"] = PersonEditValidationResult.FURIGANA_TOO_LONG
+        }
+
+        // めい
+        if (current.firstNameFurigana.isBlank()) {
+            errors["firstNameFurigana"] = PersonEditValidationResult.EMPTY_FIRST_FURIGANA
+        } else if (current.firstNameFurigana.length > spec.MAX_LENGTH_FIRST_NAME_FURIGANA) {
+            errors["firstNameFurigana"] = PersonEditValidationResult.FURIGANA_TOO_LONG
+        }
+
+        // 備考
+        if (current.note.length > spec.MAX_LENGTH_NOTE) {
+            errors["note"] = PersonEditValidationResult.NOTE_TOO_LONG
+        }
+
+        // 生年月日
+        val y = current.year.toIntOrNull()
+        val m = current.month.toIntOrNull()
+        val d = current.day.toIntOrNull()
+
+        if (y == null || m == null || d == null || !JapaneseDateLogic.isValid(current.era, y, m, d)) {
+            errors["birthday"] = PersonEditValidationResult.INVALID_BIRTHDAY
+        }
+
+        return errors
     }
 
     /**

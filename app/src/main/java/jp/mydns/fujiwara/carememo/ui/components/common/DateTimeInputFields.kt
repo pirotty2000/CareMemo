@@ -136,7 +136,10 @@ fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputSt
 fun DateTimeInputFields(
     state: DateTimeInputState,
     modifier: Modifier = Modifier,
-    autoFocusHour: Boolean = true
+    autoFocusHour: Boolean = true,
+    isError: Boolean = false,
+    supportingText: @Composable (() -> Unit)? = null,
+    onFocusChanged: (String, Boolean) -> Unit = { _, _ -> }
 ) {
     DateTimeInputFields(
         year = state.year.value,
@@ -150,7 +153,10 @@ fun DateTimeInputFields(
         minute = state.minute.value,
         onMinuteChange = { state.minute.value = it },
         modifier = modifier,
-        autoFocusHour = autoFocusHour
+        autoFocusHour = autoFocusHour,
+        isError = isError,
+        supportingText = supportingText,
+        onFocusChanged = onFocusChanged
     )
 }
 
@@ -170,24 +176,29 @@ fun DateTimeInputFields(
     minute: String,
     onMinuteChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    autoFocusHour: Boolean = true
+    autoFocusHour: Boolean = true,
+    isError: Boolean = false,
+    supportingText: @Composable (() -> Unit)? = null,
+    onFocusChanged: (String, Boolean) -> Unit = { _, _ -> }
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = stringResource(R.string.common_date_time_label),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             DateTimeUnitField(
                 value = year,
                 onValueChange = onYearChange,
                 maxLength = 4,
                 label = stringResource(R.string.common_year_suffix),
+                isError = isError,
+                onFocusChanged = { onFocusChanged("year", it) },
                 modifier = Modifier.weight(1.3f).testTag("DateTimeUnit_Year")
             )
             DateTimeUnitField(
@@ -195,6 +206,8 @@ fun DateTimeInputFields(
                 onValueChange = onMonthChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_month_suffix),
+                isError = isError,
+                onFocusChanged = { onFocusChanged("month", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Month")
             )
             DateTimeUnitField(
@@ -202,6 +215,8 @@ fun DateTimeInputFields(
                 onValueChange = onDayChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_day_suffix),
+                isError = isError,
+                onFocusChanged = { onFocusChanged("day", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Day"),
                 // 日付までで入力を止める場合は Done、時まで続ける場合は Next を指定
                 imeAction = if (autoFocusHour) ImeAction.Next else ImeAction.Done
@@ -211,6 +226,8 @@ fun DateTimeInputFields(
                 onValueChange = onHourChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_hour_suffix),
+                isError = isError,
+                onFocusChanged = { onFocusChanged("hour", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Hour")
             )
             DateTimeUnitField(
@@ -218,9 +235,21 @@ fun DateTimeInputFields(
                 onValueChange = onMinuteChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_minute_suffix),
+                isError = isError,
+                onFocusChanged = { onFocusChanged("minute", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Minute"),
                 imeAction = ImeAction.Done
             )
+        }
+        
+        if (isError && supportingText != null) {
+            Box(modifier = Modifier.padding(start = 4.dp)) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
+                ) {
+                    supportingText()
+                }
+            }
         }
     }
 }
@@ -236,6 +265,8 @@ private fun DateTimeUnitField(
     label: String,
     modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Next,
+    isError: Boolean = false,
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
     AppCompactTextField(
         value = value,
@@ -244,6 +275,8 @@ private fun DateTimeUnitField(
         type = AppTextFieldType.INTEGER,
         suffix = { Text(label, style = MaterialTheme.typography.bodySmall) },
         maxLength = maxLength,
-        imeAction = imeAction
+        imeAction = imeAction,
+        isError = isError,
+        onFocusChanged = { if (!it.isFocused) onFocusChanged(false) }
     )
 }

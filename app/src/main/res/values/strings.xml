@@ -168,6 +168,8 @@
     <string name="main_msg_user_restored">%1$s さんを利用者一覧に戻しました</string>
     <string name="main_err_edit_empty_last_name">姓を入力してください</string>
     <string name="main_err_edit_empty_first_name">名を入力してください</string>
+    <string name="main_err_edit_empty_last_furigana">せい を入力してください</string>
+    <string name="main_err_edit_empty_first_furigana">めい を入力してください</string>
     <string name="main_err_edit_invalid_birthday">生年月日が正しくありません</string>
     <string name="main_err_name_too_long">姓名はそれぞれ50文字以内で入力してください</string>
     <string name="main_err_furigana_too_long">ふりがなはそれぞれ100文字以内で入力してください</string>
@@ -291,6 +293,9 @@
     <string name="common_error_unknown">予期せぬエラーが発生しました: %1$s</string>
     <string name="common_error_no_space">空き容量が不足しています (%1$s)</string>
     <string name="common_error_invalid_input">入力値が正しくありません</string>
+    <string name="common_err_future_date_not_allowed">未来の日時は設定できません</string>
+    <string name="common_err_invalid_date">正しい日付を入力してください</string>
+    <string name="health_err_range_format">%1$s 〜 %2$s の範囲で入力してください</string>
     <string name="common_error_out_of_range_height_weight">身長・体重が範囲外です</string>
     <string name="common_error_out_of_range_vital">バイタルが範囲外です</string>
     <string name="common_error_out_of_range_glucose">血糖値が範囲外です</string>
@@ -331,6 +336,7 @@
     <string name="settings_item_default_recorder_title">記録者の名前(デフォルト)</string>
     <string name="settings_item_default_recorder_placeholder">例: 山田</string>
     <string name="settings_item_default_recorder_desc">所見メモ作成時に自動入力されます</string>
+    <string name="settings_err_recorder_name_too_long">記録者名は50文字以内で入力してください</string>
 
     <string name="settings_section_person_management">利用者管理</string>
     <string name="settings_item_restore_archived_title">利用終了者の復帰</string>
@@ -565,6 +571,10 @@
     <string name="medical_contact_type_other">その他</string>
     <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
     <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
+    <string name="medical_contact_err_empty_facility">施設名・続柄を入力してください</string>
+    <string name="medical_contact_err_facility_too_long">施設名・続柄は100文字以内で入力してください</string>
+    <string name="medical_contact_err_person_name_too_long">担当者名は50文字以内で入力してください</string>
+    <string name="medical_contact_err_phone_too_long">電話番号は20文字以内で入力してください</string>
 
     <!-- 未割り当て写真タイプ -->
     <string name="unassigned_photo_type_temporary">一時保存中の写真</string>

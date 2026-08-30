@@ -213,4 +213,32 @@ class SettingsViewModelTest {
     }
 
     // endregion
+
+    // region 7. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_recorderNameTooLong_feedback() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // 51文字入力
+        viewModel.setDefaultRecorderName("A".repeat(51))
+        advanceUntilIdle()
+
+        assertEquals(jp.mydns.fujiwara.carememo.R.string.settings_err_recorder_name_too_long, viewModel.uiState.value.fieldErrors["defaultRecorderName"])
+    }
+
+    @Test
+    fun FBK_02_backupPasswordTooShort_feedback() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // 5文字入力
+        viewModel.setBackupPassword("12345")
+        advanceUntilIdle()
+
+        assertEquals(jp.mydns.fujiwara.carememo.R.string.pdf_password_error, viewModel.uiState.value.fieldErrors["backupPassword"])
+    }
+
+    // endregion
 }

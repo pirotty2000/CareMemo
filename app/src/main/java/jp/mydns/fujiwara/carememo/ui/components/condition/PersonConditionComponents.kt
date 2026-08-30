@@ -284,6 +284,7 @@ fun ConditionDetailPane(
             photos = uiState.currentConditionPhotos,
             isProcessing = uiState.isProcessing,
             isSaveEnabled = uiState.isSaveEnabled,
+            fieldErrors = uiState.fieldErrors,
             unassignedPhotoCount = uiState.unassignedPhotoCount,
             onAction = onAction,
             onDeletePhotoRequest = { photoToDelete = it },
@@ -345,6 +346,7 @@ private fun ConditionRecordEditForm(
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isSaveEnabled: Boolean,
+    fieldErrors: Map<String, Int?>,
     onAction: (PersonConditionUiAction) -> Unit,
     onDeletePhotoRequest: (ConditionPhoto) -> Unit,
     onCancelRequest: () -> Unit,
@@ -405,7 +407,12 @@ private fun ConditionRecordEditForm(
             // 入力カード
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DateTimeInputFields(state = dateTimeState)
+                    DateTimeInputFields(
+                        state = dateTimeState,
+                        isError = fieldErrors["recordTime"] != null,
+                        supportingText = fieldErrors["recordTime"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { field, _ -> onAction(PersonConditionUiAction.MarkFieldAsTouched(field)) }
+                    )
                     HorizontalDivider(thickness = 0.5.dp)
                     AppTextField(
                         value = editInput.title,
@@ -413,6 +420,9 @@ private fun ConditionRecordEditForm(
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
+                        isError = fieldErrors["title"] != null,
+                        supportingText = fieldErrors["title"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonConditionUiAction.MarkFieldAsTouched("title")) },
                         modifier = Modifier.fillMaxWidth().testTag("Condition_TitleInput")
                     )
                     AppTextField(
@@ -420,6 +430,9 @@ private fun ConditionRecordEditForm(
                         onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(author = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_author)) },
+                        isError = fieldErrors["author"] != null,
+                        supportingText = fieldErrors["author"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonConditionUiAction.MarkFieldAsTouched("author")) },
                         modifier = Modifier.fillMaxWidth().testTag("Condition_AuthorInput")
                     )
                     AppTextField(
@@ -427,6 +440,9 @@ private fun ConditionRecordEditForm(
                         onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(condition = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_memo)) },
+                        isError = fieldErrors["condition"] != null,
+                        supportingText = fieldErrors["condition"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonConditionUiAction.MarkFieldAsTouched("condition")) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).testTag("Condition_MemoInput"),
                         singleLine = false,
                         trailingIcon = {
@@ -443,7 +459,7 @@ private fun ConditionRecordEditForm(
                             }
                         }
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = onCancelRequest,
                             modifier = Modifier.weight(1f)
@@ -833,6 +849,7 @@ private fun PreviewConditionRecordEditFormDirect() {
             photos = persistentListOf(),
             isProcessing = false,
             isSaveEnabled = true,
+            fieldErrors = emptyMap(),
             unassignedPhotoCount = 0,
             onAction = {},
             onDeletePhotoRequest = {},

@@ -304,6 +304,23 @@ class PersonEditViewModel(
     fun updateMonth(value: String) = updateState { it.copy(month = value) }
     fun updateDay(value: String) = updateState { it.copy(day = value) }
 
+    /** フィールドにフォーカスが当たった、または操作されたことを記録します */
+    fun markFieldAsTouched(fieldName: String) {
+        updateUiState { current ->
+            val nextTouched = current.touchedFields + fieldName
+            val errors = PersonEditLogic.validateAll(current)
+            current.copy(
+                touchedFields = nextTouched,
+                fieldErrors = errors.mapValues { (key, result) ->
+                    // touched なフィールドのみエラーを表示対象とする
+                    if (nextTouched.contains(key) || (key == "birthday" && (nextTouched.contains("year") || nextTouched.contains("month") || nextTouched.contains("day")))) {
+                        translateValidationResult(result)
+                    } else null
+                }
+            )
+        }
+    }
+
     /**
      * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
      * あわせて、復元用のバックアップを SavedStateHandle に同期します。
@@ -311,13 +328,45 @@ class PersonEditViewModel(
     private fun updateState(reducer: (PersonEditUiState) -> PersonEditUiState) {
         updateUiState { current ->
             val next = reducer(current)
+            // 入力があったフィールドを自動的に touched とする（利便性のため）
+            val nextTouched = if (next.lastName != current.lastName) current.touchedFields + "lastName"
+                else if (next.firstName != current.firstName) current.touchedFields + "firstName"
+                else if (next.lastNameFurigana != current.lastNameFurigana) current.touchedFields + "lastNameFurigana"
+                else if (next.firstNameFurigana != current.firstNameFurigana) current.touchedFields + "firstNameFurigana"
+                else if (next.note != current.note) current.touchedFields + "note"
+                else if (next.year != current.year) current.touchedFields + "year"
+                else if (next.month != current.month) current.touchedFields + "month"
+                else if (next.day != current.day) current.touchedFields + "day"
+                else current.touchedFields
+
+            val allErrors = PersonEditLogic.validateAll(next)
             val finalState = next.copy(
                 isValid = PersonEditLogic.isValid(next),
-                isChanged = PersonEditLogic.isChanged(next, initialPerson)
+                isChanged = PersonEditLogic.isChanged(next, initialPerson),
+                touchedFields = nextTouched,
+                fieldErrors = allErrors.mapValues { (key, result) ->
+                    if (nextTouched.contains(key) || (key == "birthday" && (nextTouched.contains("year") || nextTouched.contains("month") || nextTouched.contains("day")))) {
+                        translateValidationResult(result)
+                    } else null
+                }
             )
             // 通常動作中は UiState が SSOT だが、退避用バックアップとして同期
             saveCurrentInput(finalState)
             finalState
+        }
+    }
+
+    private fun translateValidationResult(result: PersonEditValidationResult): Int? {
+        return when (result) {
+            PersonEditValidationResult.EMPTY_LAST_NAME -> R.string.main_err_edit_empty_last_name
+            PersonEditValidationResult.EMPTY_FIRST_NAME -> R.string.main_err_edit_empty_first_name
+            PersonEditValidationResult.EMPTY_LAST_FURIGANA -> R.string.main_err_edit_empty_last_furigana
+            PersonEditValidationResult.EMPTY_FIRST_FURIGANA -> R.string.main_err_edit_empty_first_furigana
+            PersonEditValidationResult.INVALID_BIRTHDAY -> R.string.main_err_edit_invalid_birthday
+            PersonEditValidationResult.NAME_TOO_LONG -> R.string.main_err_name_too_long
+            PersonEditValidationResult.FURIGANA_TOO_LONG -> R.string.main_err_furigana_too_long
+            PersonEditValidationResult.NOTE_TOO_LONG -> R.string.main_err_note_too_long
+            else -> null
         }
     }
 
