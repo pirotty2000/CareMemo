@@ -408,7 +408,7 @@ class PersonHealthViewModel(
             val nextTouched = getNewlyTouchedFields(state.editInput, nextInput, state.touchedFields)
 
             // バリデーションとエラーメッセージの生成
-            val (errors, errorArgs) = calculateFieldErrors(state.currentCategory, nextInput, nextTouched)
+            val (errors, errorArgs) = calculateFieldErrors(nextInput, nextTouched)
 
             val validationResult = PersonHealthLogic.validateInputs(state.currentCategory, nextInput.toValidationMap())
             val isDateTimeValid = nextInput.recordTime != null
@@ -431,7 +431,7 @@ class PersonHealthViewModel(
     fun markFieldAsTouched(fieldName: String) {
         updateUiState { state ->
             val nextTouched = state.touchedFields + fieldName
-            val (errors, errorArgs) = calculateFieldErrors(state.currentCategory, state.editInput, nextTouched)
+            val (errors, errorArgs) = calculateFieldErrors(state.editInput, nextTouched)
             val next = state.copy(
                 touchedFields = nextTouched,
                 fieldErrors = errors,
@@ -458,7 +458,6 @@ class PersonHealthViewModel(
     }
 
     private fun calculateFieldErrors(
-        category: Category,
         input: HealthEditInput,
         touched: Set<String>
     ): Pair<Map<String, Int?>, Map<String, List<String>>> {
@@ -469,11 +468,11 @@ class PersonHealthViewModel(
         
         validationMap.forEach { (field, value) ->
             if (touched.contains(field)) {
-                val result = validateSingleField(category, field, value)
+                val result = validateSingleField(field, value)
                 if (result != HealthInputValidationResult.SUCCESS) {
                     errors[field] = translateHealthValidationResult(result)
                     if (result == HealthInputValidationResult.OUT_OF_RANGE) {
-                        errorArgs[field] = getRangeArgs(category, field)
+                        errorArgs[field] = getRangeArgs(field)
                     }
                 }
             }
@@ -491,13 +490,13 @@ class PersonHealthViewModel(
         return errors to errorArgs
     }
 
-    private fun validateSingleField(category: Category, field: String, value: String): HealthInputValidationResult {
+    private fun validateSingleField(field: String, value: String): HealthInputValidationResult {
         // 体重は必須とするなどの個別ルールがあるため、HealthLogic の各メソッドを部分的に利用する
         if (value.isBlank()) {
             return if (field == "weight") HealthInputValidationResult.EMPTY else HealthInputValidationResult.SUCCESS
         }
         
-        val spec = getSpecForField(category, field) ?: return HealthInputValidationResult.SUCCESS
+        val spec = getSpecForField(field) ?: return HealthInputValidationResult.SUCCESS
         
         // HealthLogic.isWithinFormat は内部で変換も行っている
         val isValid = jp.mydns.fujiwara.carememo.logic.common.HealthLogic.isWithinFormat(
@@ -519,7 +518,7 @@ class PersonHealthViewModel(
 
     private data class FieldSpec(val digitsInt: Int, val digitsDec: Int, val min: Double, val max: Double)
 
-    private fun getSpecForField(category: Category, field: String): FieldSpec? {
+    private fun getSpecForField(field: String): FieldSpec? {
         return when (field) {
             "height" -> AppSpecifications.Health.Height.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
             "weight" -> AppSpecifications.Health.Weight.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
@@ -533,8 +532,8 @@ class PersonHealthViewModel(
         }
     }
 
-    private fun getRangeArgs(category: Category, field: String): List<String> {
-        val spec = getSpecForField(category, field) ?: return emptyList()
+    private fun getRangeArgs(field: String): List<String> {
+        val spec = getSpecForField(field) ?: return emptyList()
         val minStr = if (spec.digitsDec > 0) "%.1f".format(spec.min) else spec.min.toInt().toString()
         val maxStr = if (spec.digitsDec > 0) "%.1f".format(spec.max) else spec.max.toInt().toString()
         return listOf(minStr, maxStr)

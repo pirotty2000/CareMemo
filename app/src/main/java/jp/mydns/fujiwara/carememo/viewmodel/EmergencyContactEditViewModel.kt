@@ -319,8 +319,9 @@ class EmergencyContactEditViewModel(
             val nextEditing = current.editingContact?.let { reducer(it) }
             
             // 操作されたフィールドの追跡
-            val nextTouched = if (nextEditing != null && current.editingContact != null) {
-                getNewlyTouchedFields(current.editingContact, nextEditing, current.touchedFields)
+            //val nextTouched = if (nextEditing != null && current.editingContact != null) {
+            val nextTouched = if (nextEditing != null) {
+                    getNewlyTouchedFields(current.editingContact, nextEditing, current.touchedFields)
             } else current.touchedFields
 
             current.copy(
