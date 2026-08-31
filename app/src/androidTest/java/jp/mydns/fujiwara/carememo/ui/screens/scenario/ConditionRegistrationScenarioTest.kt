@@ -5,6 +5,7 @@ import android.app.Instrumentation
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.content.IntentCompat
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
@@ -108,7 +109,7 @@ class ConditionRegistrationScenarioTest {
         // カメラ起動のインテントをスタブ化
         // 撮影要求が来たら、アプリが指定した出力先にテスト用写真をコピーして RESULT_OK を返す
         intending(hasAction(MediaStore.ACTION_IMAGE_CAPTURE)).respondWithFunction { intent ->
-            val outputUri = intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)
+            val outputUri = IntentCompat.getParcelableExtra(intent, MediaStore.EXTRA_OUTPUT, Uri::class.java)
             if (outputUri != null) {
                 val appContext = InstrumentationRegistry.getInstrumentation().targetContext
                 val cacheFile = File(appContext.cacheDir, "TEST_PHOTO.JPG")
@@ -250,7 +251,7 @@ class ConditionRegistrationScenarioTest {
 
         // カメラ起動のインテントをスタブ化
         intending(hasAction(MediaStore.ACTION_IMAGE_CAPTURE)).respondWithFunction { intent ->
-            val outputUri = intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)
+            val outputUri = IntentCompat.getParcelableExtra(intent, MediaStore.EXTRA_OUTPUT, Uri::class.java)
             if (outputUri != null) {
                 val appContext = InstrumentationRegistry.getInstrumentation().targetContext
                 val cacheFile = File(appContext.cacheDir, "TEST_PHOTO.JPG")
