@@ -284,6 +284,7 @@ fun ConditionDetailPane(
             photos = uiState.currentConditionPhotos,
             isProcessing = uiState.isProcessing,
             isSaveEnabled = uiState.isSaveEnabled,
+            isChanged = uiState.isChanged, // 追加
             fieldErrors = uiState.fieldErrors,
             unassignedPhotoCount = uiState.unassignedPhotoCount,
             onAction = onAction,
@@ -346,6 +347,7 @@ private fun ConditionRecordEditForm(
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isSaveEnabled: Boolean,
+    isChanged: Boolean, // 追加
     fieldErrors: Map<String, Int?>,
     onAction: (PersonConditionUiAction) -> Unit,
     onDeletePhotoRequest: (ConditionPhoto) -> Unit,
@@ -399,11 +401,26 @@ private fun ConditionRecordEditForm(
                 .padding(bottom = 32.dp), // ナビゲーションバー等との重なり防止のため下部余白を拡充
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = if (IdLogic.isNew(conditionId)) stringResource(R.string.common_create_new) else stringResource(R.string.common_edit_record),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            // ヘッダー部：戻るボタン、タイトル
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onCancelRequest,
+                    modifier = Modifier
+                        .offset(x = (-12).dp)
+                        .testTag("Condition_EditBackButton")
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                }
+                Text(
+                    text = if (IdLogic.isNew(conditionId)) stringResource(R.string.common_create_new) else stringResource(R.string.common_edit_record),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.offset(x = (-8).dp)
+                )
+            }
 
             // 入力カード
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -460,11 +477,11 @@ private fun ConditionRecordEditForm(
                             }
                         }
                     )
-                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = onCancelRequest,
                             modifier = Modifier.weight(1f)
-                        ) { Text(stringResource(R.string.common_cancel)) }
+                        ) { Text(stringResource(if (isChanged) R.string.common_cancel else R.string.common_back)) }
                         Button(
                             onClick = { onAction(PersonConditionUiAction.SaveClick { onAction(PersonConditionUiAction.SelectedIdChanged(it)) }) },
                             modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
@@ -654,7 +671,9 @@ private fun ConditionRecordDisplayCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { onAction(PersonConditionUiAction.SelectedIdChanged(null)) },
-                        modifier = Modifier.offset(x = (-12).dp)
+                        modifier = Modifier
+                            .offset(x = (-12).dp)
+                            .testTag("Condition_DisplayBackButton")
                     ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
@@ -851,6 +870,7 @@ private fun PreviewConditionRecordEditFormDirect() {
             photos = persistentListOf(),
             isProcessing = false,
             isSaveEnabled = true,
+            isChanged = false,
             fieldErrors = emptyMap(),
             unassignedPhotoCount = 0,
             onAction = {},

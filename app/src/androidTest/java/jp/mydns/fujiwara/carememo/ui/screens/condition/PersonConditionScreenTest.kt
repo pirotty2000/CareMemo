@@ -219,6 +219,81 @@ class PersonConditionScreenTest {
         verify { conditionViewModel.setSelectedConditionId(null) }
     }
 
+    @Test
+    fun NAV_05_editMode_showsBackButton_and_closesWithoutDialog_whenNoChange() {
+        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
+        val uiStateFlow = MutableStateFlow(PersonConditionUiState(
+            personId = "p1",
+            selectedConditionId = "c1",
+            isEditing = true,
+            isChanged = false,
+            records = persistentListOf(
+                ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
+            )
+        ))
+        every { conditionViewModel.uiState } returns uiStateFlow
+        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
+        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreen(
+                    detailViewModel = createMockDetailViewModel(),
+                    conditionViewModel = conditionViewModel,
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact
+                )
+            }
+        }
+
+        // ボタンの文言が「戻る」であることを確認
+        composeTestRule.onNodeWithText("戻る").assertIsDisplayed()
+        
+        // ヘッダーの「←」ボタンをタップ
+        composeTestRule.onNodeWithTag("Condition_EditBackButton").performClick()
+        
+        // ダイアログが出ず、CancelEdit が発行されることを検証
+        verify { conditionViewModel.cancelEditSession() }
+        composeTestRule.onNodeWithText("破棄して戻る").assertDoesNotExist()
+    }
+
+    @Test
+    fun NAV_06_editMode_showsCancelButton_and_showsDialog_whenChanged() {
+        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
+        val uiStateFlow = MutableStateFlow(PersonConditionUiState(
+            personId = "p1",
+            selectedConditionId = "c1",
+            isEditing = true,
+            isChanged = true,
+            records = persistentListOf(
+                ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
+            )
+        ))
+        every { conditionViewModel.uiState } returns uiStateFlow
+        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
+        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreen(
+                    detailViewModel = createMockDetailViewModel(),
+                    conditionViewModel = conditionViewModel,
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact
+                )
+            }
+        }
+
+        // ボタンの文言が「キャンセル」であることを確認
+        composeTestRule.onNodeWithText("キャンセル").assertIsDisplayed()
+        
+        // 下部の「キャンセル」ボタンをタップ
+        composeTestRule.onNodeWithText("キャンセル").performClick()
+        
+        // 破棄確認ダイアログが表示されることを検証
+        composeTestRule.onNodeWithText("入力途中の内容がありますが、破棄して戻りますか？").assertIsDisplayed()
+    }
+
     //endregion
 
     //region 6. セキュリティ検証 (Security)
