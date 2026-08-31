@@ -181,6 +181,44 @@ class PersonConditionScreenTest {
         verify { detailViewModel.navigateBackToMain() }
     }
 
+    @Test
+    fun NAV_04_systemBack_closesDetailView() {
+        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
+        // Phone版レイアウトでは詳細が Dialog で表示される状態をシミュレート
+        val uiStateFlow = MutableStateFlow(PersonConditionUiState(
+            personId = "p1",
+            selectedConditionId = "c1", 
+            isEditing = false,
+            records = persistentListOf(
+                ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
+            )
+        ))
+        every { conditionViewModel.uiState } returns uiStateFlow
+        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
+        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
+
+        composeTestRule.setContent {
+            CareMemoTheme {
+                PersonConditionScreen(
+                    detailViewModel = createMockDetailViewModel(),
+                    conditionViewModel = conditionViewModel,
+                    navController = mockk(relaxed = true),
+                    widthSizeClass = WindowWidthSizeClass.Compact
+                )
+            }
+        }
+
+        // 詳細（Dialog）が表示されていることを確認
+        composeTestRule.onNodeWithTag("ConditionDetailPane").assertIsDisplayed()
+
+        // システム戻る操作をエミュレート
+        androidx.test.espresso.Espresso.pressBack()
+        composeTestRule.waitForIdle()
+
+        // selectedConditionId を null にするアクション（setSelectedConditionId(null)）が呼ばれたか検証
+        verify { conditionViewModel.setSelectedConditionId(null) }
+    }
+
     //endregion
 
     //region 6. セキュリティ検証 (Security)

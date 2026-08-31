@@ -388,6 +388,7 @@ private fun ConditionRecordEditForm(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
+            .navigationBarsPadding()
             .testTag("ConditionDetailPane")
     ) {
         Column(
@@ -395,7 +396,7 @@ private fun ConditionRecordEditForm(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 32.dp), // ナビゲーションバー等との重なり防止のため下部余白を拡充
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
@@ -633,6 +634,7 @@ private fun ConditionRecordDisplayCard(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
+            .navigationBarsPadding()
             .testTag("ConditionDetailPane")
     ) {
         Column(
@@ -640,7 +642,7 @@ private fun ConditionRecordDisplayCard(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 32.dp), // ナビゲーションバー等との重なり防止のため下部余白を拡充
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ヘッダー部：戻るボタン、タイトル、編集ボタン

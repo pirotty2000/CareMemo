@@ -326,6 +326,19 @@ class PersonConditionViewModelTest {
         assertEquals("書きかけのキャプション", state.previewCaption)
     }
 
+    @Test
+    fun NAV_03_setNavContext_syncs_initialPhotoId() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // 2枚目の写真IDを指定してコンテキストを同期
+        viewModel.setNavContext(personId = personId, conditionId = "c1", initialPhotoId = "p2")
+        advanceUntilIdle()
+
+        assertEquals("p2", viewModel.uiState.value.initialPhotoId)
+        assertEquals("c1", viewModel.uiState.value.selectedConditionId)
+    }
+
     // endregion
 
     // region 9. バリデーション・フィードバックテスト (Validation Feedback)

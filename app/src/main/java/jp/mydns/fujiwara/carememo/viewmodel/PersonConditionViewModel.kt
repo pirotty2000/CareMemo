@@ -650,12 +650,18 @@ class PersonConditionViewModel(
      * ナビゲーション引数から取得したコンテキストを ViewModel の状態に反映します。
      * Shared ViewModel 構成において、個別の Destination から渡された引数を同期するために使用します。
      */
-    fun setNavContext(personId: String, conditionId: String? = null, previewUri: String? = null) {
+    fun setNavContext(
+        personId: String,
+        conditionId: String? = null,
+        previewUri: String? = null,
+        initialPhotoId: String? = null
+    ) {
         updateUiState { current ->
             current.copy(
                 personId = personId,
                 selectedConditionId = conditionId ?: current.selectedConditionId,
-                previewUri = previewUri ?: current.previewUri
+                previewUri = previewUri ?: current.previewUri,
+                initialPhotoId = initialPhotoId ?: current.initialPhotoId
             )
         }
         

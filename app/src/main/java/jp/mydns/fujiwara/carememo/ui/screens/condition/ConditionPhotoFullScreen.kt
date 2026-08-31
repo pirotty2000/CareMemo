@@ -126,62 +126,69 @@ fun ConditionPhotoFullContent(
         if (index != -1) index else 0
     }
 
-    val pagerState = rememberPagerState(initialPage = initialIndex, pageCount = { photos.size })
-    var isAnyImageZoomed by remember { mutableStateOf(false) }
+    key(initialPhotoId) {
+        val pagerState = rememberPagerState(initialPage = initialIndex, pageCount = { photos.size })
+        var isAnyImageZoomed by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize().testTag("PhotoFullScreen_Pager"),
-            pageSpacing = 16.dp,
-            userScrollEnabled = !isAnyImageZoomed
-        ) { page ->
-            val photo = photos[page]
-            ZoomableImage(
-                photo = photo,
-                isCurrentPage = pagerState.currentPage == page,
-                onZoomStateChanged = { zoomed ->
-                    if (pagerState.currentPage == page) {
-                        isAnyImageZoomed = zoomed
-                    }
-                }
-            )
-        }
-        
-        IconButton(
-            onClick = { onAction(ConditionPhotoFullUiAction.Back) },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 32.dp, start = 16.dp)
-                .testTag("PhotoFullScreen_BackButton"),
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = Color.Black.copy(alpha = 0.5f),
-                contentColor = Color.White
-            )
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black)
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-        }
-
-        val currentPhoto = photos.getOrNull(pagerState.currentPage)
-        if (currentPhoto != null && currentPhoto.caption.isNotBlank()) {
-            Surface(
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-                    .testTag("PhotoFullScreen_Caption"),
-                color = Color.Black.copy(alpha = 0.5f),
-                contentColor = Color.White
-            ) {
-                Text(
-                    text = currentPhoto.caption,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                    .fillMaxSize()
+                    .testTag("PhotoFullScreen_Pager"),
+                pageSpacing = 16.dp,
+                userScrollEnabled = !isAnyImageZoomed
+            ) { page ->
+                val photo = photos[page]
+                ZoomableImage(
+                    photo = photo,
+                    isCurrentPage = pagerState.currentPage == page,
+                    onZoomStateChanged = { zoomed ->
+                        if (pagerState.currentPage == page) {
+                            isAnyImageZoomed = zoomed
+                        }
+                    }
                 )
+            }
+
+            IconButton(
+                onClick = { onAction(ConditionPhotoFullUiAction.Back) },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 32.dp, start = 16.dp)
+                    .testTag("PhotoFullScreen_BackButton"),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.Black.copy(alpha = 0.5f),
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.common_back)
+                )
+            }
+
+            val currentPhoto = photos.getOrNull(pagerState.currentPage)
+            if (currentPhoto != null && currentPhoto.caption.isNotBlank()) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                        .testTag("PhotoFullScreen_Caption"),
+                    color = Color.Black.copy(alpha = 0.5f),
+                    contentColor = Color.White
+                ) {
+                    Text(
+                        text = currentPhoto.caption,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     }
