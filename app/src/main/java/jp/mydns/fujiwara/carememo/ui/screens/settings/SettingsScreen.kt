@@ -797,7 +797,14 @@ private fun DisplayAndRecordingSection(
             type = AppTextFieldType.TEXT,
             label = { Text(stringResource(R.string.settings_item_default_recorder_title)) },
             placeholder = { Text(stringResource(R.string.settings_item_default_recorder_placeholder)) },
-            supportingText = { Text(stringResource(R.string.settings_item_default_recorder_desc)) },
+            supportingText = { 
+                if (uiState.fieldErrors["defaultRecorderName"] != null) {
+                    Text(stringResource(uiState.fieldErrors["defaultRecorderName"]!!), color = MaterialTheme.colorScheme.error)
+                } else {
+                    Text(stringResource(R.string.settings_item_default_recorder_desc))
+                }
+            },
+            isError = uiState.fieldErrors["defaultRecorderName"] != null,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("Settings_RecorderName")
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -878,11 +885,11 @@ private fun DataManagementSection(
                 label = { Text(stringResource(R.string.settings_item_default_password_title)) },
                 placeholder = { Text(stringResource(R.string.settings_item_default_password_placeholder, AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH)) },
                 supportingText = { 
-                    if (!isPasswordValid && uiState.backupPassword.isNotEmpty()) 
-                        Text(stringResource(R.string.settings_item_default_password_error, AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH), color = MaterialTheme.colorScheme.error) 
+                    if (uiState.fieldErrors["backupPassword"] != null) 
+                        Text(stringResource(uiState.fieldErrors["backupPassword"]!!), color = MaterialTheme.colorScheme.error) 
                     else Text(stringResource(R.string.settings_item_default_password_hint)) 
                 },
-                isError = !isPasswordValid && uiState.backupPassword.isNotEmpty(),
+                isError = uiState.fieldErrors["backupPassword"] != null,
                 maxLength = AppSpecifications.Constraints.System.Security.MAX_PASSWORD_LENGTH,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("Settings_BackupPasswordInput"),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),

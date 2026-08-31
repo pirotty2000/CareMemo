@@ -193,6 +193,39 @@ class PersonEditScreenTest {
 
     //endregion
 
+    //region 7. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_emptyField_showsErrorMessage() {
+        setContent {
+            PersonEditScreenContent(
+                uiState = PersonEditUiState(
+                    fieldErrors = mapOf("lastName" to R.string.main_err_edit_empty_last_name)
+                ),
+                onAction = {},
+                snackbarHostState = remember { SnackbarHostState() }
+            )
+        }
+        // エラーメッセージが表示されていること
+        composeTestRule.onNodeWithText("姓を入力してください").assertIsDisplayed()
+    }
+
+    @Test
+    fun FBK_02_correctInput_hidesErrorMessage() {
+        setContent {
+            PersonEditScreenContent(
+                uiState = PersonEditUiState(
+                    fieldErrors = emptyMap()
+                ),
+                onAction = {},
+                snackbarHostState = remember { SnackbarHostState() }
+            )
+        }
+        composeTestRule.onNodeWithText("姓を入力してください").assertDoesNotExist()
+    }
+
+    //endregion
+
     private fun setContent(content: @Composable () -> Unit) {
         composeTestRule.setContent {
             CareMemoTheme {

@@ -72,7 +72,8 @@ data class SettingsUiState(
     val processingProgress: Int = 0,
     val isDeveloperModeEnabled: Boolean = false,
     val isForceImportEnabled: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val fieldErrors: Map<String, Int?> = emptyMap()
 )
 
 /**

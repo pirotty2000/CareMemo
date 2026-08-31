@@ -138,9 +138,36 @@ class SettingsViewModel(
         }
     }
 
-    fun setDefaultRecorderName(name: String) { viewModelScope.launch { userSettingsRepository.setDefaultRecorderName(name) } }
+    fun setDefaultRecorderName(name: String) { 
+        viewModelScope.launch { userSettingsRepository.setDefaultRecorderName(name) }
+        validateField("defaultRecorderName", name)
+    }
     fun setBackupPasswordEnabled(enabled: Boolean) { viewModelScope.launch { userSettingsRepository.setBackupPasswordEnabled(enabled) } }
-    fun setBackupPassword(password: String) { viewModelScope.launch { userSettingsRepository.setBackupPassword(password) } }
+    fun setBackupPassword(password: String) { 
+        viewModelScope.launch { userSettingsRepository.setBackupPassword(password) }
+        validateField("backupPassword", password)
+    }
+
+    private fun validateField(fieldName: String, value: String) {
+        val errors = currentState.fieldErrors.toMutableMap()
+        when (fieldName) {
+            "defaultRecorderName" -> {
+                if (value.length > 50) { // Person.MAX_LENGTH_LAST_NAME 相当
+                    errors[fieldName] = R.string.settings_err_recorder_name_too_long
+                } else {
+                    errors.remove(fieldName)
+                }
+            }
+            "backupPassword" -> {
+                if (value.length < AppSpecifications.Constraints.System.Security.MIN_PASSWORD_LENGTH) {
+                    errors[fieldName] = R.string.pdf_password_error
+                } else {
+                    errors.remove(fieldName)
+                }
+            }
+        }
+        updateUiState { it.copy(fieldErrors = errors) }
+    }
     fun setThemeSetting(setting: ThemeSetting) { viewModelScope.launch { userSettingsRepository.setThemeSetting(setting) } }
 
     private var versionTapCount: Int = 0

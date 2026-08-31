@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.SecuritySession
@@ -273,6 +274,21 @@ class BatchInputViewModel(
     fun updateGlucose(v: String) = updateState { it.copy(glucose = v) }
     fun updateHbA1c(v: String) = updateState { it.copy(hba1c = v) }
 
+    /** フィールドにフォーカスが当たったことを記録します */
+    fun markFieldAsTouched(fieldName: String) {
+        updateUiState { state ->
+            val nextTouched = state.touchedFields + fieldName
+            val (errors, errorArgs) = calculateFieldErrors(state, nextTouched)
+            val next = state.copy(
+                touchedFields = nextTouched,
+                fieldErrors = errors,
+                fieldErrorArgs = errorArgs
+            )
+            backupRestorableState(next)
+            next
+        }
+    }
+
     /**
      * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
      *
@@ -283,18 +299,155 @@ class BatchInputViewModel(
     private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
         updateUiState { current ->
             val partialNext = reducer(current)
-            // 論理的なバリデーション結果、変更検知、記録日時を算出し、State に同期反映する
+            
+            // 操作されたフィールドの特定
+            val nextTouched = getNewlyTouchedFields(current, partialNext, current.touchedFields)
+
+            // バリデーション結果、変更検知、記録日時を算出
             val finalIsValid = BatchInputLogic.isValid(partialNext)
             val finalIsChanged = BatchInputLogic.isChanged(partialNext)
             val finalRecordTime = BatchInputLogic.calculateRecordTime(partialNext)
             
+            // フィールドごとのエラーを計算
+            val (errors, errorArgs) = calculateFieldErrors(partialNext, nextTouched)
+
             val next = partialNext.copy(
                 isValid = finalIsValid,
                 isChanged = finalIsChanged,
-                recordTime = finalRecordTime
+                recordTime = finalRecordTime,
+                touchedFields = nextTouched,
+                fieldErrors = errors,
+                fieldErrorArgs = errorArgs
             )
             backupRestorableState(next)
             next
+        }
+    }
+
+    private fun getNewlyTouchedFields(old: BatchInputUiState, next: BatchInputUiState, current: Set<String>): Set<String> {
+        val touched = current.toMutableSet()
+        if (old.height != next.height) touched.add("height")
+        if (old.weight != next.weight) touched.add("weight")
+        if (old.bpSystolic != next.bpSystolic) touched.add("bpSystolic")
+        if (old.bpDiastolic != next.bpDiastolic) touched.add("bpDiastolic")
+        if (old.sat != next.sat) touched.add("sat")
+        if (old.pulse != next.pulse) touched.add("pulse")
+        if (old.bodyTemperature != next.bodyTemperature) touched.add("bodyTemperature")
+        if (old.glucose != next.glucose) touched.add("glucose")
+        if (old.hba1c != next.hba1c) touched.add("hba1c")
+        if (old.year != next.year) touched.add("year")
+        if (old.month != next.month) touched.add("month")
+        if (old.day != next.day) touched.add("day")
+        if (old.hour != next.hour) touched.add("hour")
+        if (old.minute != next.minute) touched.add("minute")
+        return touched
+    }
+
+    private fun calculateFieldErrors(
+        state: BatchInputUiState,
+        touched: Set<String>
+    ): Pair<Map<String, Int?>, Map<String, List<String>>> {
+        val errors = mutableMapOf<String, Int?>()
+        val errorArgs = mutableMapOf<String, List<String>>()
+
+        val fields = listOf(
+            "height", "weight", "bpSystolic", "bpDiastolic", "sat", "pulse", "bodyTemperature", "glucose", "hba1c"
+        )
+
+        fields.forEach { field ->
+            if (touched.contains(field)) {
+                val value = getValueForField(state, field)
+                val result = validateSingleField(field, value)
+                if (result != HealthInputValidationResult.SUCCESS) {
+                    errors[field] = translateHealthValidationResult(result)
+                    if (result == HealthInputValidationResult.OUT_OF_RANGE) {
+                        errorArgs[field] = getRangeArgs(field)
+                    }
+                }
+            }
+        }
+
+        // 記録日時のチェック
+        val timeTouched = touched.intersect(setOf("year", "month", "day", "hour", "minute")).isNotEmpty()
+        if (timeTouched) {
+            val recordTime = BatchInputLogic.calculateRecordTime(state)
+            if (recordTime == null) {
+                errors["recordTime"] = R.string.common_err_invalid_date
+            } else if (recordTime.isAfter(Instant.now())) {
+                errors["recordTime"] = R.string.common_err_future_date_not_allowed
+            }
+        }
+
+        return errors to errorArgs
+    }
+
+    private fun getValueForField(state: BatchInputUiState, field: String): String {
+        return when (field) {
+            "height" -> state.height
+            "weight" -> state.weight
+            "bpSystolic" -> state.bpSystolic
+            "bpDiastolic" -> state.bpDiastolic
+            "sat" -> state.sat
+            "pulse" -> state.pulse
+            "bodyTemperature" -> state.bodyTemperature
+            "glucose" -> state.glucose
+            "hba1c" -> state.hba1c
+            else -> ""
+        }
+    }
+
+    private fun validateSingleField(field: String, value: String): HealthInputValidationResult {
+        if (value.isBlank()) {
+            // 一括入力では全項目任意（何か入力があれば保存）なので、EMPTY は SUCCESS 扱い
+            return HealthInputValidationResult.SUCCESS
+        }
+
+        val spec = getSpecForField(field) ?: return HealthInputValidationResult.SUCCESS
+
+        val isValid = jp.mydns.fujiwara.carememo.logic.common.HealthLogic.isWithinFormat(
+            value, spec.digitsInt, spec.digitsDec, spec.min, spec.max
+        )
+
+        if (!isValid) {
+            val num = value.toDoubleOrNull()
+            return if (num == null || !jp.mydns.fujiwara.carememo.logic.common.HealthLogic.isWithinFormat(value, spec.digitsInt, spec.digitsDec)) {
+                HealthInputValidationResult.INVALID_FORMAT
+            } else {
+                HealthInputValidationResult.OUT_OF_RANGE
+            }
+        }
+
+        return HealthInputValidationResult.SUCCESS
+    }
+
+    private data class FieldSpec(val digitsInt: Int, val digitsDec: Int, val min: Double, val max: Double)
+
+    private fun getSpecForField(field: String): FieldSpec? {
+        return when (field) {
+            "height" -> AppSpecifications.Health.Height.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            "weight" -> AppSpecifications.Health.Weight.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            "bpSystolic", "bpDiastolic" -> AppSpecifications.Health.BloodPressure.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "sat" -> AppSpecifications.Health.OxygenSaturation.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "pulse" -> AppSpecifications.Health.Pulse.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "bodyTemperature" -> AppSpecifications.Health.BodyTemperature.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            "glucose" -> AppSpecifications.Health.BloodGlucose.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "hba1c" -> AppSpecifications.Health.HbA1c.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            else -> null
+        }
+    }
+
+    private fun getRangeArgs(field: String): List<String> {
+        val spec = getSpecForField(field) ?: return emptyList()
+        val minStr = if (spec.digitsDec > 0) "%.1f".format(spec.min) else spec.min.toInt().toString()
+        val maxStr = if (spec.digitsDec > 0) "%.1f".format(spec.max) else spec.max.toInt().toString()
+        return listOf(minStr, maxStr)
+    }
+
+    private fun translateHealthValidationResult(result: HealthInputValidationResult): Int? {
+        return when (result) {
+            HealthInputValidationResult.INVALID_FORMAT -> R.string.common_error_invalid_input
+            HealthInputValidationResult.OUT_OF_RANGE -> R.string.health_err_range_format
+            else -> null
         }
     }
 

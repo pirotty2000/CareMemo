@@ -126,21 +126,26 @@ class BirthdayInputState(
 @Composable
 fun BirthdayInputFields(
     state: BirthdayInputState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    supportingText: @Composable (() -> Unit)? = null,
+    onFocusChanged: (String, Boolean) -> Unit = { _, _ -> }
 ) {
     var eraExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.main_label_birthday),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.main_label_birthday),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+        }
         
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             // --- 元号選択ドロップダウン ---
             ExposedDropdownMenuBox(
@@ -152,6 +157,7 @@ fun BirthdayInputFields(
                     value = stringResource(BirthEraDisplayMapper.getDisplayNameRes(state.era.value)),
                     onValueChange = {},
                     readOnly = true,
+                    isError = isError,
                     suffix = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded)
                     },
@@ -187,9 +193,9 @@ fun BirthdayInputFields(
                 onValueChange = { state.year.value = it },
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthYear"),
                 type = AppTextFieldType.INTEGER,
-                // 西暦の場合は4桁、和暦の場合は2桁を上限とする
                 maxLength = if (state.era.value == BirthEra.AD) 4 else 2,
-                isError = state.isYearError,
+                isError = isError || state.isYearError,
+                onFocusChanged = { if (!it.isFocused) onFocusChanged("year", false) },
                 suffix = { Text(stringResource(R.string.common_year_suffix), style = MaterialTheme.typography.labelSmall) }
             )
         }
@@ -197,7 +203,7 @@ fun BirthdayInputFields(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             // --- 月入力フィールド ---
             AppCompactTextField(
@@ -206,7 +212,8 @@ fun BirthdayInputFields(
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthMonth"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = 2,
-                isError = state.isMonthError,
+                isError = isError || state.isMonthError,
+                onFocusChanged = { if (!it.isFocused) onFocusChanged("month", false) },
                 suffix = { Text(stringResource(R.string.common_month_suffix), style = MaterialTheme.typography.labelSmall) }
             )
 
@@ -217,9 +224,21 @@ fun BirthdayInputFields(
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthDay"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = 2,
-                isError = state.isDayError,
+                isError = isError || state.isDayError,
+                onFocusChanged = { if (!it.isFocused) onFocusChanged("day", false) },
                 suffix = { Text(stringResource(R.string.common_day_suffix), style = MaterialTheme.typography.labelSmall) }
             )
+        }
+        
+        // 全体のエラーメッセージを表示
+        if (isError && supportingText != null) {
+            Box(modifier = Modifier.padding(start = 4.dp)) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error)
+                ) {
+                    supportingText()
+                }
+            }
         }
     }
 }

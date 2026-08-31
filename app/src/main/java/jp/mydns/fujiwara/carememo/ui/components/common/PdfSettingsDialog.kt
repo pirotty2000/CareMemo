@@ -199,6 +199,7 @@ fun PdfSettingsDialog(
                                 }
                             },
                             isError = !isPasswordValid && password.isNotEmpty(),
+                            onFocusChanged = { /* Touched 制御を入れるならここに ViewModel 連携が必要だが、Dialog はステートレスに近いので現状維持 */ },
                             modifier = Modifier.fillMaxWidth(),
                             visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {

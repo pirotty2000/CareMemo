@@ -5,6 +5,7 @@ import android.app.Instrumentation
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.content.IntentCompat
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
@@ -108,7 +109,7 @@ class ConditionRegistrationScenarioTest {
         // カメラ起動のインテントをスタブ化
         // 撮影要求が来たら、アプリが指定した出力先にテスト用写真をコピーして RESULT_OK を返す
         intending(hasAction(MediaStore.ACTION_IMAGE_CAPTURE)).respondWithFunction { intent ->
-            val outputUri = intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)
+            val outputUri = IntentCompat.getParcelableExtra(intent, MediaStore.EXTRA_OUTPUT, Uri::class.java)
             if (outputUri != null) {
                 val appContext = InstrumentationRegistry.getInstrumentation().targetContext
                 val cacheFile = File(appContext.cacheDir, "TEST_PHOTO.JPG")
@@ -237,6 +238,89 @@ class ConditionRegistrationScenarioTest {
         }
         
         composeTestRule.onNodeWithText(newTitle).performScrollTo().assertIsDisplayed()
+    }
+
+    /**
+     * SCN-REG-08: 所見メモの写真追加登録
+     */
+    @Test
+    fun SCN_03_REG_AddPhotoToExistingConditionFlow() {
+        // ターゲットとするレコードID (2023/11/01 のデータ、初期状態で写真2枚)
+        val recordId = "0a711cef-3ffa-4e2a-98d1-76664d8c9d59"
+        val targetDateText = "2023(令和5)年11月1日(水)"
+
+        // カメラ起動のインテントをスタブ化
+        intending(hasAction(MediaStore.ACTION_IMAGE_CAPTURE)).respondWithFunction { intent ->
+            val outputUri = IntentCompat.getParcelableExtra(intent, MediaStore.EXTRA_OUTPUT, Uri::class.java)
+            if (outputUri != null) {
+                val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+                val cacheFile = File(appContext.cacheDir, "TEST_PHOTO.JPG")
+                appContext.contentResolver.openOutputStream(outputUri)?.use { output ->
+                    cacheFile.inputStream().use { input ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+            Instrumentation.ActivityResult(Activity.RESULT_OK, null)
+        }
+
+        // 1. 利用者を選択して所見メモ画面へ遷移
+        composeTestRule.waitUntil(30000) {
+            composeTestRule.onAllNodesWithText(targetPersonName).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText(targetPersonName).performClick()
+        composeTestRule.onNodeWithTag("CategorySelectionSheet_Button_CONDITION_AT_VISIT").performClick()
+
+        // 2. 2023/11/01 のレコードを選択
+        // 日付見出し（Header）ではなく、実際のレコードアイテムをクリックする
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("HistoryItem_$recordId").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
+
+        // 3. 編集アイコンをタップ
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodesWithTag("ConditionDetailPane").fetchSemanticsNodes().isNotEmpty()
+        }
+        val detailPane = hasAnyAncestor(hasTestTag("ConditionDetailPane"))
+        composeTestRule.onNode(hasContentDescription("編集").and(detailPane)).performClick()
+
+        // 4. 写真枚数を確認（初期2枚）
+        composeTestRule.onNodeWithText("写真 (2/3)").assertIsDisplayed()
+
+        // 5. カメラアイコンをタップして写真を撮影（スタブが起動）
+        composeTestRule.onNodeWithTag("Condition_AddPhotoButton").performScrollTo().performClick()
+
+        // 6. 写真のプレビュー画面で「保存」をタップ
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("PhotoPreview_SaveButton").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("PhotoPreview_SaveButton").performClick()
+
+        // 7. 編集画面に戻り、写真が3枚に増えていることを確認
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithText("写真 (3/3)").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("写真 (3/3)").assertIsDisplayed()
+
+        // 8. 下部の「戻る」ボタン（文言が動的に変わっているはず）を確認してタップ
+        // テキストを変更していないため、ボタンは「戻る」になっている
+        composeTestRule.onNodeWithText("戻る").assertIsDisplayed()
+        composeTestRule.onNodeWithText("戻る").performClick()
+
+        // 9. 確認ダイアログが出ず、即座に閲覧モードに戻ることを確認
+        composeTestRule.onNodeWithText("破棄して戻る").assertDoesNotExist()
+        composeTestRule.onNode(hasText("記録の詳細").and(detailPane)).assertIsDisplayed()
+
+        // 10. ヘッダーの戻るボタン（←）をタップして一覧画面へ
+        composeTestRule.onNode(hasTestTag("Condition_DisplayBackButton")).performClick()
+
+        // 11. 一覧画面で写真ありアイコン（カメラ）の存在を確認
+        // このステップでは、一覧に戻ったことを待ち、レコードがカメラアイコンを持つことを目視の代わりにタグやテキストで確認
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodesWithTag("ConditionDetailPane").fetchSemanticsNodes().isEmpty()
+        }
+        composeTestRule.onNodeWithText(targetDateText).performScrollTo().assertIsDisplayed()
     }
 }
 

@@ -33,6 +33,7 @@ import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
  */
 sealed interface EmergencyContactEditUiAction {
     data class UpdateContact(val reducer: (EmergencyContact) -> EmergencyContact) : EmergencyContactEditUiAction
+    data class MarkFieldAsTouched(val fieldName: String) : EmergencyContactEditUiAction
     data object SaveClick : EmergencyContactEditUiAction
     data object CancelClick : EmergencyContactEditUiAction
     data object ConfirmDiscard : EmergencyContactEditUiAction
@@ -78,6 +79,9 @@ fun EmergencyContactEditScreen(
             when (action) {
                 is EmergencyContactEditUiAction.UpdateContact -> {
                     viewModel.updateEditingContact(action.reducer)
+                }
+                is EmergencyContactEditUiAction.MarkFieldAsTouched -> {
+                    viewModel.markFieldAsTouched(action.fieldName)
                 }
                 EmergencyContactEditUiAction.SaveClick -> {
                     viewModel.saveContact()
@@ -174,6 +178,9 @@ fun EmergencyContactEditContent(
                     label = { Text(stringResource(R.string.medical_contact_facility_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_facility_placeholder)) },
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_FACILITY_NAME,
+                    isError = uiState.fieldErrors["facilityName"] != null,
+                    supportingText = uiState.fieldErrors["facilityName"]?.let { { Text(stringResource(it)) } },
+                    onFocusChanged = { if (!it.isFocused) onAction(EmergencyContactEditUiAction.MarkFieldAsTouched("facilityName")) },
                     modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_FacilityField")
                 )
 
@@ -186,6 +193,9 @@ fun EmergencyContactEditContent(
                     label = { Text(stringResource(R.string.medical_contact_person_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PERSON_NAME,
+                    isError = uiState.fieldErrors["personName"] != null,
+                    supportingText = uiState.fieldErrors["personName"]?.let { { Text(stringResource(it)) } },
+                    onFocusChanged = { if (!it.isFocused) onAction(EmergencyContactEditUiAction.MarkFieldAsTouched("personName")) },
                     modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PersonField")
                 )
 
@@ -204,12 +214,19 @@ fun EmergencyContactEditContent(
                     } else {
                         PhoneNumberVisualTransformation()
                     },
-                    supportingText = { Text(stringResource(R.string.medical_contact_phone_note)) },
+                    supportingText = if (uiState.fieldErrors["phoneNumber"] != null) {
+                        { Text(stringResource(uiState.fieldErrors["phoneNumber"]!!), color = MaterialTheme.colorScheme.error) }
+                    } else {
+                        { Text(stringResource(R.string.medical_contact_phone_note)) }
+                    },
+                    isError = uiState.fieldErrors["phoneNumber"] != null,
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PHONE_NUMBER,
-                    onFocusChanged = { isPhoneFocused = it.isFocused },
+                    onFocusChanged = { 
+                        isPhoneFocused = it.isFocused
+                        if (!it.isFocused) onAction(EmergencyContactEditUiAction.MarkFieldAsTouched("phoneNumber"))
+                    },
                     modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PhoneField")
                 )
-
                 // 優先度
                 AppTextField(
                     value = contact.priority.toString(),

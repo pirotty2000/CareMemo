@@ -46,6 +46,9 @@ sealed interface PersonEditUiAction {
     data class MonthChanged(val value: String) : PersonEditUiAction
     data class DayChanged(val value: String) : PersonEditUiAction
 
+    // フィールド操作
+    data class MarkFieldAsTouched(val fieldName: String) : PersonEditUiAction
+
     // ボタン・ナビゲーション操作
     data object Save : PersonEditUiAction
     data object Cancel : PersonEditUiAction
@@ -157,6 +160,7 @@ fun PersonEditScreen(
                 is PersonEditUiAction.YearChanged -> viewModel.updateYear(action.value)
                 is PersonEditUiAction.MonthChanged -> viewModel.updateMonth(action.value)
                 is PersonEditUiAction.DayChanged -> viewModel.updateDay(action.value)
+                is PersonEditUiAction.MarkFieldAsTouched -> viewModel.markFieldAsTouched(action.fieldName)
                 
                 PersonEditUiAction.Save -> {
                     focusManager.clearFocus()
@@ -289,6 +293,9 @@ fun PersonEditScreenContent(
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_last_name)) },
                             maxLength = nameSpec.MAX_LENGTH_LAST_NAME,
+                            isError = uiState.fieldErrors["lastName"] != null,
+                            supportingText = uiState.fieldErrors["lastName"]?.let { { Text(stringResource(it)) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("lastName")) },
                             modifier = Modifier.weight(1f).testTag("PersonEdit_LastName")
                         )
                         AppTextField(
@@ -297,6 +304,9 @@ fun PersonEditScreenContent(
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_first_name)) },
                             maxLength = nameSpec.MAX_LENGTH_FIRST_NAME,
+                            isError = uiState.fieldErrors["firstName"] != null,
+                            supportingText = uiState.fieldErrors["firstName"]?.let { { Text(stringResource(it)) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("firstName")) },
                             modifier = Modifier.weight(1f).testTag("PersonEdit_FirstName")
                         )
                     }
@@ -309,6 +319,9 @@ fun PersonEditScreenContent(
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_last_name_furigana)) },
                             maxLength = kanaSpec.MAX_LENGTH_LAST_NAME_FURIGANA,
+                            isError = uiState.fieldErrors["lastNameFurigana"] != null,
+                            supportingText = uiState.fieldErrors["lastNameFurigana"]?.let { { Text(stringResource(it)) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("lastNameFurigana")) },
                             modifier = Modifier.weight(1f).testTag("PersonEdit_LastNameKana")
                         )
                         AppTextField(
@@ -317,6 +330,9 @@ fun PersonEditScreenContent(
                             type = AppTextFieldType.TEXT,
                             label = { Text(stringResource(R.string.main_label_first_name_furigana)) },
                             maxLength = kanaSpec.MAX_LENGTH_FIRST_NAME_FURIGANA,
+                            isError = uiState.fieldErrors["firstNameFurigana"] != null,
+                            supportingText = uiState.fieldErrors["firstNameFurigana"]?.let { { Text(stringResource(it)) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("firstNameFurigana")) },
                             modifier = Modifier.weight(1f).testTag("PersonEdit_FirstNameKana")
                         )
                     }
@@ -327,6 +343,9 @@ fun PersonEditScreenContent(
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.main_label_note)) },
                         maxLength = AppSpecifications.Constraints.Person.Validation.MAX_LENGTH_NOTE,
+                        isError = uiState.fieldErrors["note"] != null,
+                        supportingText = uiState.fieldErrors["note"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("note")) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(noteFocusRequester)
@@ -341,6 +360,8 @@ fun PersonEditScreenContent(
                         year = uiState.year,
                         month = uiState.month,
                         day = uiState.day,
+                        isError = uiState.fieldErrors["birthday"] != null,
+                        supportingText = uiState.fieldErrors["birthday"]?.let { { Text(stringResource(it)) } },
                         onAction = onAction
                     )
 
@@ -382,6 +403,8 @@ private fun BirthdayInputSection(
     day: String,
     onAction: (PersonEditUiAction) -> Unit,
     modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    supportingText: @Composable (() -> Unit)? = null
 ) {
     // 外部からの値を MutableState インターフェース経由で BirthdayInputFields へ橋渡しする
     // remember でラップしつつ、各セッターで onAction を呼び出す
@@ -422,5 +445,11 @@ private fun BirthdayInputSection(
     // BirthdayInputState 内の getter は引数の era, year 等を直接参照する。
     // (コンポーザブルが再描画される際、引数は最新の値になっているため)
 
-    BirthdayInputFields(state = birthdayState, modifier = modifier)
+    BirthdayInputFields(
+        state = birthdayState,
+        isError = isError,
+        supportingText = supportingText,
+        onFocusChanged = { field, _ -> onAction(PersonEditUiAction.MarkFieldAsTouched(field)) },
+        modifier = modifier
+    )
 }

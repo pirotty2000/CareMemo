@@ -284,6 +284,8 @@ fun ConditionDetailPane(
             photos = uiState.currentConditionPhotos,
             isProcessing = uiState.isProcessing,
             isSaveEnabled = uiState.isSaveEnabled,
+            isChanged = uiState.isChanged, // 追加
+            fieldErrors = uiState.fieldErrors,
             unassignedPhotoCount = uiState.unassignedPhotoCount,
             onAction = onAction,
             onDeletePhotoRequest = { photoToDelete = it },
@@ -345,6 +347,8 @@ private fun ConditionRecordEditForm(
     photos: ImmutableList<ConditionPhoto>,
     isProcessing: Boolean,
     isSaveEnabled: Boolean,
+    isChanged: Boolean, // 追加
+    fieldErrors: Map<String, Int?>,
     onAction: (PersonConditionUiAction) -> Unit,
     onDeletePhotoRequest: (ConditionPhoto) -> Unit,
     onCancelRequest: () -> Unit,
@@ -386,6 +390,7 @@ private fun ConditionRecordEditForm(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
+            .navigationBarsPadding()
             .testTag("ConditionDetailPane")
     ) {
         Column(
@@ -393,19 +398,39 @@ private fun ConditionRecordEditForm(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 32.dp), // ナビゲーションバー等との重なり防止のため下部余白を拡充
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = if (IdLogic.isNew(conditionId)) stringResource(R.string.common_create_new) else stringResource(R.string.common_edit_record),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            // ヘッダー部：戻るボタン、タイトル
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onCancelRequest,
+                    modifier = Modifier
+                        .offset(x = (-12).dp)
+                        .testTag("Condition_EditBackButton")
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                }
+                Text(
+                    text = if (IdLogic.isNew(conditionId)) stringResource(R.string.common_create_new) else stringResource(R.string.common_edit_record),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.offset(x = (-8).dp)
+                )
+            }
 
             // 入力カード
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DateTimeInputFields(state = dateTimeState)
+                    DateTimeInputFields(
+                        state = dateTimeState,
+                        isError = fieldErrors["recordTime"] != null,
+                        supportingText = fieldErrors["recordTime"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { field, _ -> onAction(PersonConditionUiAction.MarkFieldAsTouched(field)) }
+                    )
                     HorizontalDivider(thickness = 0.5.dp)
                     AppTextField(
                         value = editInput.title,
@@ -413,6 +438,9 @@ private fun ConditionRecordEditForm(
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_title_optional)) },
                         maxLength = AppSpecifications.Condition.Validation.MAX_LENGTH_TITLE,
+                        isError = fieldErrors["title"] != null,
+                        supportingText = fieldErrors["title"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonConditionUiAction.MarkFieldAsTouched("title")) },
                         modifier = Modifier.fillMaxWidth().testTag("Condition_TitleInput")
                     )
                     AppTextField(
@@ -420,6 +448,9 @@ private fun ConditionRecordEditForm(
                         onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(author = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_author)) },
+                        isError = fieldErrors["author"] != null,
+                        supportingText = fieldErrors["author"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonConditionUiAction.MarkFieldAsTouched("author")) },
                         modifier = Modifier.fillMaxWidth().testTag("Condition_AuthorInput")
                     )
                     AppTextField(
@@ -427,6 +458,9 @@ private fun ConditionRecordEditForm(
                         onValueChange = { v -> onAction(PersonConditionUiAction.EditInputUpdate { it.copy(condition = v) }) },
                         type = AppTextFieldType.TEXT,
                         label = { Text(stringResource(R.string.condition_label_memo)) },
+                        isError = fieldErrors["condition"] != null,
+                        supportingText = fieldErrors["condition"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(PersonConditionUiAction.MarkFieldAsTouched("condition")) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp).testTag("Condition_MemoInput"),
                         singleLine = false,
                         trailingIcon = {
@@ -447,7 +481,7 @@ private fun ConditionRecordEditForm(
                         OutlinedButton(
                             onClick = onCancelRequest,
                             modifier = Modifier.weight(1f)
-                        ) { Text(stringResource(R.string.common_cancel)) }
+                        ) { Text(stringResource(if (isChanged) R.string.common_cancel else R.string.common_back)) }
                         Button(
                             onClick = { onAction(PersonConditionUiAction.SaveClick { onAction(PersonConditionUiAction.SelectedIdChanged(it)) }) },
                             modifier = Modifier.weight(1f).testTag("Condition_SaveButton"),
@@ -617,6 +651,7 @@ private fun ConditionRecordDisplayCard(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
+            .navigationBarsPadding()
             .testTag("ConditionDetailPane")
     ) {
         Column(
@@ -624,7 +659,7 @@ private fun ConditionRecordDisplayCard(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 32.dp), // ナビゲーションバー等との重なり防止のため下部余白を拡充
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ヘッダー部：戻るボタン、タイトル、編集ボタン
@@ -636,7 +671,9 @@ private fun ConditionRecordDisplayCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { onAction(PersonConditionUiAction.SelectedIdChanged(null)) },
-                        modifier = Modifier.offset(x = (-12).dp)
+                        modifier = Modifier
+                            .offset(x = (-12).dp)
+                            .testTag("Condition_DisplayBackButton")
                     ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
@@ -833,6 +870,8 @@ private fun PreviewConditionRecordEditFormDirect() {
             photos = persistentListOf(),
             isProcessing = false,
             isSaveEnabled = true,
+            isChanged = false,
+            fieldErrors = emptyMap(),
             unassignedPhotoCount = 0,
             onAction = {},
             onDeletePhotoRequest = {},

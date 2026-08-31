@@ -47,6 +47,7 @@ sealed interface BatchInputUiAction {
     data class UpdateBodyTemp(val value: String) : BatchInputUiAction
     data class UpdateGlucose(val value: String) : BatchInputUiAction
     data class UpdateHbA1c(val value: String) : BatchInputUiAction
+    data class MarkFieldAsTouched(val fieldName: String) : BatchInputUiAction
 
     // 画面操作
     data object SaveClick : BatchInputUiAction
@@ -163,6 +164,7 @@ fun BatchInputScreen(
                 is BatchInputUiAction.UpdateBodyTemp -> viewModel.updateBodyTemp(action.value)
                 is BatchInputUiAction.UpdateGlucose -> viewModel.updateGlucose(action.value)
                 is BatchInputUiAction.UpdateHbA1c -> viewModel.updateHbA1c(action.value)
+                is BatchInputUiAction.MarkFieldAsTouched -> viewModel.markFieldAsTouched(action.fieldName)
                 BatchInputUiAction.SaveClick -> {
                     focusManager.clearFocus()
                     viewModel.saveBatch()
@@ -274,6 +276,9 @@ fun BatchInputContent(
                         onHourChange = { onAction(BatchInputUiAction.UpdateHour(it)) },
                         minute = uiState.minute,
                         onMinuteChange = { onAction(BatchInputUiAction.UpdateMinute(it)) },
+                        isError = uiState.fieldErrors["recordTime"] != null,
+                        supportingText = uiState.fieldErrors["recordTime"]?.let { { Text(stringResource(it)) } },
+                        onFocusChanged = { field, _ -> onAction(BatchInputUiAction.MarkFieldAsTouched(field)) },
                         modifier = Modifier.testTag("BatchInputScreen_DateTimeInput")
                     )
 
@@ -288,6 +293,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(R.string.health_label_height)) },
                             suffix = { Text("cm") },
+                            isError = uiState.fieldErrors["height"] != null,
+                            supportingText = uiState.fieldErrors["height"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["height"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("height")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_HeightField")
                         )
                         AppTextField(
@@ -296,6 +304,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(R.string.health_label_weight)) },
                             suffix = { Text("kg") },
+                            isError = uiState.fieldErrors["weight"] != null,
+                            supportingText = uiState.fieldErrors["weight"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["weight"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("weight")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_WeightField")
                         )
                     }
@@ -311,6 +322,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_bp_systolic)) },
                             suffix = { Text("mmHg") },
+                            isError = uiState.fieldErrors["bpSystolic"] != null,
+                            supportingText = uiState.fieldErrors["bpSystolic"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["bpSystolic"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("bpSystolic")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_BpSystolicField")
                         )
                         AppTextField(
@@ -319,6 +333,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_bp_diastolic)) },
                             suffix = { Text("mmHg") },
+                            isError = uiState.fieldErrors["bpDiastolic"] != null,
+                            supportingText = uiState.fieldErrors["bpDiastolic"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["bpDiastolic"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("bpDiastolic")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_BpDiastolicField")
                         )
                     }
@@ -329,6 +346,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_sat)) },
                             suffix = { Text("%") },
+                            isError = uiState.fieldErrors["sat"] != null,
+                            supportingText = uiState.fieldErrors["sat"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["sat"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("sat")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_SatField")
                         )
                         AppTextField(
@@ -337,6 +357,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_pulse)) },
                             suffix = { Text("bpm") },
+                            isError = uiState.fieldErrors["pulse"] != null,
+                            supportingText = uiState.fieldErrors["pulse"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["pulse"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("pulse")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_PulseField")
                         )
                     }
@@ -346,6 +369,9 @@ fun BatchInputContent(
                         type = AppTextFieldType.DECIMAL,
                         label = { Text(stringResource(R.string.health_label_body_temp)) },
                         suffix = { Text("℃") },
+                        isError = uiState.fieldErrors["bodyTemperature"] != null,
+                        supportingText = uiState.fieldErrors["bodyTemperature"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["bodyTemperature"]?.toTypedArray() ?: emptyArray())) } },
+                        onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("bodyTemperature")) },
                         modifier = Modifier.fillMaxWidth().testTag("BatchInputScreen_TempField")
                     )
 
@@ -360,6 +386,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.INTEGER,
                             label = { Text(stringResource(R.string.health_label_glucose)) },
                             suffix = { Text("mg/dL") },
+                            isError = uiState.fieldErrors["glucose"] != null,
+                            supportingText = uiState.fieldErrors["glucose"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["glucose"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("glucose")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_GlucoseField")
                         )
                         AppTextField(
@@ -368,6 +397,9 @@ fun BatchInputContent(
                             type = AppTextFieldType.DECIMAL,
                             label = { Text(stringResource(R.string.health_label_hba1c)) },
                             suffix = { Text("%") },
+                            isError = uiState.fieldErrors["hba1c"] != null,
+                            supportingText = uiState.fieldErrors["hba1c"]?.let { { Text(stringResource(it, *uiState.fieldErrorArgs["hba1c"]?.toTypedArray() ?: emptyArray())) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(BatchInputUiAction.MarkFieldAsTouched("hba1c")) },
                             modifier = Modifier.weight(1f).testTag("BatchInputScreen_Hba1cField")
                         )
                     }

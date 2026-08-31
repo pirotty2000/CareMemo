@@ -364,7 +364,8 @@ class MainActivity : FragmentActivity() {
                                     LaunchedEffect(args) {
                                         conditionViewModel.setNavContext(
                                             personId = args.personId,
-                                            conditionId = args.conditionId
+                                            conditionId = args.conditionId,
+                                            initialPhotoId = args.initialPhotoId
                                         )
                                     }
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.BpAndPulse
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.GlucoseAndHbA1c
@@ -397,19 +398,18 @@ class PersonHealthViewModel(
 
     /**
      * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
-     *
-     * 【設計指針：UI 境界の責務】
-     * 以前は Composable 内の derivedStateOf で行っていた変更検知 (`isChanged`) および
-     * 保存ボタンの活性制御 (`isSaveEnabled`) を ViewModel へ集約しました。
-     * これにより、画面遷移時や編集破棄の判断ロジックを ViewModel 側で一貫して管理し、
-     * 単体テストによる検証を可能にしています。
      */
     fun updateEditInput(update: (HealthEditInput) -> HealthEditInput) {
         updateUiState { state ->
             val nextInput = update(state.editInput)
             val isChanged = (nextInput != state.initialSnapshot)
 
-            // バリデーション
+            // 自動的に touched とするフィールドの特定
+            val nextTouched = getNewlyTouchedFields(state.editInput, nextInput, state.touchedFields)
+
+            // バリデーションとエラーメッセージの生成
+            val (errors, errorArgs) = calculateFieldErrors(nextInput, nextTouched)
+
             val validationResult = PersonHealthLogic.validateInputs(state.currentCategory, nextInput.toValidationMap())
             val isDateTimeValid = nextInput.recordTime != null
             val isSaveEnabled = (validationResult == HealthInputValidationResult.SUCCESS) && isDateTimeValid && isChanged
@@ -417,13 +417,136 @@ class PersonHealthViewModel(
             val next = state.copy(
                 editInput = nextInput,
                 isChanged = isChanged,
-                isSaveEnabled = isSaveEnabled
+                isSaveEnabled = isSaveEnabled,
+                touchedFields = nextTouched,
+                fieldErrors = errors,
+                fieldErrorArgs = errorArgs
             )
             backupRestorableState(next)
             next
         }
     }
 
+    /** フィールドにフォーカスが当たったことを記録します */
+    fun markFieldAsTouched(fieldName: String) {
+        updateUiState { state ->
+            val nextTouched = state.touchedFields + fieldName
+            val (errors, errorArgs) = calculateFieldErrors(state.editInput, nextTouched)
+            val next = state.copy(
+                touchedFields = nextTouched,
+                fieldErrors = errors,
+                fieldErrorArgs = errorArgs
+            )
+            backupRestorableState(next)
+            next
+        }
+    }
+
+    private fun getNewlyTouchedFields(old: HealthEditInput, next: HealthEditInput, current: Set<String>): Set<String> {
+        val touched = current.toMutableSet()
+        if (old.heightText != next.heightText) touched.add("height")
+        if (old.weightText != next.weightText) touched.add("weight")
+        if (old.bpSystolicText != next.bpSystolicText) touched.add("bpSystolic")
+        if (old.bpDiastolicText != next.bpDiastolicText) touched.add("bpDiastolic")
+        if (old.satText != next.satText) touched.add("sat")
+        if (old.pulseText != next.pulseText) touched.add("pulse")
+        if (old.bodyTemperatureText != next.bodyTemperatureText) touched.add("bodyTemperature")
+        if (old.glucoseText != next.glucoseText) touched.add("glucose")
+        if (old.hba1cText != next.hba1cText) touched.add("hba1c")
+        if (old.recordTime != next.recordTime) touched.add("recordTime")
+        return touched
+    }
+
+    private fun calculateFieldErrors(
+        input: HealthEditInput,
+        touched: Set<String>
+    ): Pair<Map<String, Int?>, Map<String, List<String>>> {
+        val errors = mutableMapOf<String, Int?>()
+        val errorArgs = mutableMapOf<String, List<String>>()
+        
+        val validationMap = input.toValidationMap()
+        
+        validationMap.forEach { (field, value) ->
+            if (touched.contains(field)) {
+                val result = validateSingleField(field, value)
+                if (result != HealthInputValidationResult.SUCCESS) {
+                    errors[field] = translateHealthValidationResult(result)
+                    if (result == HealthInputValidationResult.OUT_OF_RANGE) {
+                        errorArgs[field] = getRangeArgs(field)
+                    }
+                }
+            }
+        }
+
+        // 記録日時のチェック
+        if (touched.contains("recordTime")) {
+            if (input.recordTime == null) {
+                errors["recordTime"] = R.string.common_err_invalid_date
+            } else if (input.recordTime.isAfter(Instant.now())) {
+                errors["recordTime"] = R.string.common_err_future_date_not_allowed
+            }
+        }
+
+        return errors to errorArgs
+    }
+
+    private fun validateSingleField(field: String, value: String): HealthInputValidationResult {
+        // 体重は必須とするなどの個別ルールがあるため、HealthLogic の各メソッドを部分的に利用する
+        if (value.isBlank()) {
+            return if (field == "weight") HealthInputValidationResult.EMPTY else HealthInputValidationResult.SUCCESS
+        }
+        
+        val spec = getSpecForField(field) ?: return HealthInputValidationResult.SUCCESS
+        
+        // HealthLogic.isWithinFormat は内部で変換も行っている
+        val isValid = jp.mydns.fujiwara.carememo.logic.common.HealthLogic.isWithinFormat(
+            value, spec.digitsInt, spec.digitsDec, spec.min, spec.max
+        )
+        
+        if (!isValid) {
+            // 形式エラーか範囲エラーかを判定
+            val num = value.toDoubleOrNull()
+            return if (num == null || !jp.mydns.fujiwara.carememo.logic.common.HealthLogic.isWithinFormat(value, spec.digitsInt, spec.digitsDec)) {
+                HealthInputValidationResult.INVALID_FORMAT
+            } else {
+                HealthInputValidationResult.OUT_OF_RANGE
+            }
+        }
+        
+        return HealthInputValidationResult.SUCCESS
+    }
+
+    private data class FieldSpec(val digitsInt: Int, val digitsDec: Int, val min: Double, val max: Double)
+
+    private fun getSpecForField(field: String): FieldSpec? {
+        return when (field) {
+            "height" -> AppSpecifications.Health.Height.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            "weight" -> AppSpecifications.Health.Weight.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            "bpSystolic", "bpDiastolic" -> AppSpecifications.Health.BloodPressure.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "sat" -> AppSpecifications.Health.OxygenSaturation.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "pulse" -> AppSpecifications.Health.Pulse.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "bodyTemperature" -> AppSpecifications.Health.BodyTemperature.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            "glucose" -> AppSpecifications.Health.BloodGlucose.run { FieldSpec(DIGITS_INT, 0, MIN_VALUE, MAX_VALUE) }
+            "hba1c" -> AppSpecifications.Health.HbA1c.run { FieldSpec(DIGITS_INT, DIGITS_DEC, MIN_VALUE, MAX_VALUE) }
+            else -> null
+        }
+    }
+
+    private fun getRangeArgs(field: String): List<String> {
+        val spec = getSpecForField(field) ?: return emptyList()
+        val minStr = if (spec.digitsDec > 0) "%.1f".format(spec.min) else spec.min.toInt().toString()
+        val maxStr = if (spec.digitsDec > 0) "%.1f".format(spec.max) else spec.max.toInt().toString()
+        return listOf(minStr, maxStr)
+    }
+
+    private fun translateHealthValidationResult(result: HealthInputValidationResult): Int? {
+        return when (result) {
+            HealthInputValidationResult.EMPTY -> R.string.p_cond_err_empty_condition // とりあえず既存の "内容を入力してください" 的なものか共通の
+            HealthInputValidationResult.INVALID_FORMAT -> R.string.common_error_invalid_input
+            HealthInputValidationResult.OUT_OF_RANGE -> R.string.health_err_range_format
+            else -> null
+        }
+    }
     /**
      * 現在の入力内容で保存を実行します。
      */

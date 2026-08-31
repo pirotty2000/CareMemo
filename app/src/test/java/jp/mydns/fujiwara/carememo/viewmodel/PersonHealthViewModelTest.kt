@@ -365,4 +365,66 @@ class PersonHealthViewModelTest {
     }
 
     // endregion
+
+    // region 9. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_outOfRange_feedback() = runTest {
+        val viewModel = createViewModel(category = Category.BP_AND_PULSE)
+        advanceUntilIdle()
+
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        // 体温に範囲外（45.1）を入力
+        viewModel.updateEditInput { it.copy(bodyTemperatureText = "45.1") }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(R.string.health_err_range_format, state.fieldErrors["bodyTemperature"])
+        assertEquals(listOf("30.0", "45.0"), state.fieldErrorArgs["bodyTemperature"])
+    }
+
+    @Test
+    fun FBK_02_invalidFormat_feedback() = runTest {
+        val viewModel = createViewModel(category = Category.HEIGHT_AND_WEIGHT)
+        advanceUntilIdle()
+
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        // 身長にドットが2つの不正形式を入力
+        viewModel.updateEditInput { it.copy(heightText = "170.0.0") }
+        advanceUntilIdle()
+
+        assertEquals(R.string.common_error_invalid_input, viewModel.uiState.value.fieldErrors["height"])
+    }
+
+    @Test
+    fun FBK_03_futureDate_feedback() = runTest {
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        // 未来日時をセット
+        val future = Instant.now().plusSeconds(3600)
+        viewModel.updateEditInput { it.copy(recordTime = future) }
+        advanceUntilIdle()
+
+        assertEquals(R.string.common_err_future_date_not_allowed, viewModel.uiState.value.fieldErrors["recordTime"])
+    }
+
+    @Test
+    fun FBK_04_errorClears_onCorrection() = runTest {
+        val viewModel = createViewModel(category = Category.BP_AND_PULSE)
+        advanceUntilIdle()
+
+        viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
+        viewModel.updateEditInput { it.copy(bodyTemperatureText = "45.1") }
+        assertNotNull(viewModel.uiState.value.fieldErrors["bodyTemperature"])
+
+        // 正しい値に修正
+        viewModel.updateEditInput { it.copy(bodyTemperatureText = "36.5") }
+        advanceUntilIdle()
+
+        assertNull("Error should be cleared", viewModel.uiState.value.fieldErrors["bodyTemperature"])
+    }
+
+    // endregion
 }

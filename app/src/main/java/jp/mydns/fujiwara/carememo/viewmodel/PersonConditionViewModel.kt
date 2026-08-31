@@ -458,15 +458,85 @@ class PersonConditionViewModel(
         updateUiState { state ->
             val nextInput = update(state.editInput)
             val isChanged = PersonConditionLogic.isChanged(nextInput, state.initialSnapshot)
+            
+            // 操作されたフィールドの追跡
+            val nextTouched = getNewlyTouchedFields(state.editInput, nextInput, state.touchedFields)
+            
+            // フィールドごとのエラーを計算
+            val errors = calculateFieldErrors(nextInput, nextTouched)
+
             val isSaveEnabled = PersonConditionLogic.isValid(nextInput) && isChanged
 
             val next = state.copy(
                 editInput = nextInput,
                 isChanged = isChanged,
-                isSaveEnabled = isSaveEnabled
+                isSaveEnabled = isSaveEnabled,
+                touchedFields = nextTouched,
+                fieldErrors = errors
             )
             backupRestorableState(next)
             next
+        }
+    }
+
+    /** フィールドにフォーカスが当たったことを記録します */
+    fun markFieldAsTouched(fieldName: String) {
+        updateUiState { state ->
+            val nextTouched = state.touchedFields + fieldName
+            val errors = calculateFieldErrors(state.editInput, nextTouched)
+            val next = state.copy(
+                touchedFields = nextTouched,
+                fieldErrors = errors
+            )
+            backupRestorableState(next)
+            next
+        }
+    }
+
+    private fun getNewlyTouchedFields(old: ConditionEditInput, next: ConditionEditInput, current: Set<String>): Set<String> {
+        val touched = current.toMutableSet()
+        if (old.title != next.title) touched.add("title")
+        if (old.condition != next.condition) touched.add("condition")
+        if (old.author != next.author) touched.add("author")
+        if (old.recordTime != next.recordTime) touched.add("recordTime")
+        return touched
+    }
+
+    private fun calculateFieldErrors(input: ConditionEditInput, touched: Set<String>): Map<String, Int?> {
+        val errors = mutableMapOf<String, Int?>()
+        
+        val result = PersonConditionLogic.validate(input)
+        if (result != PersonConditionValidationResult.SUCCESS) {
+            val resId = translateValidationResultToResId(result)
+            val field = when (result) {
+                PersonConditionValidationResult.EMPTY_CONDITION,
+                PersonConditionValidationResult.CONDITION_TOO_LONG -> "condition"
+                PersonConditionValidationResult.EMPTY_AUTHOR -> "author"
+                PersonConditionValidationResult.TITLE_TOO_LONG -> "title"
+                PersonConditionValidationResult.INVALID_TIME -> "recordTime"
+                else -> null
+            }
+            if (field != null && touched.contains(field)) {
+                errors[field] = resId
+            }
+        }
+
+        // 未来日チェック
+        if (touched.contains("recordTime") && input.recordTime != null && input.recordTime.isAfter(Instant.now())) {
+            errors["recordTime"] = R.string.common_err_future_date_not_allowed
+        }
+
+        return errors
+    }
+
+    private fun translateValidationResultToResId(result: PersonConditionValidationResult): Int? {
+        return when (result) {
+            PersonConditionValidationResult.EMPTY_CONDITION -> R.string.p_cond_err_empty_condition
+            PersonConditionValidationResult.EMPTY_AUTHOR -> R.string.p_cond_err_empty_author
+            PersonConditionValidationResult.CONDITION_TOO_LONG -> R.string.p_cond_err_condition_too_long
+            PersonConditionValidationResult.TITLE_TOO_LONG -> R.string.p_cond_err_title_too_long
+            PersonConditionValidationResult.INVALID_TIME -> R.string.common_err_invalid_date
+            else -> null
         }
     }
 
@@ -580,12 +650,18 @@ class PersonConditionViewModel(
      * ナビゲーション引数から取得したコンテキストを ViewModel の状態に反映します。
      * Shared ViewModel 構成において、個別の Destination から渡された引数を同期するために使用します。
      */
-    fun setNavContext(personId: String, conditionId: String? = null, previewUri: String? = null) {
+    fun setNavContext(
+        personId: String,
+        conditionId: String? = null,
+        previewUri: String? = null,
+        initialPhotoId: String? = null
+    ) {
         updateUiState { current ->
             current.copy(
                 personId = personId,
                 selectedConditionId = conditionId ?: current.selectedConditionId,
-                previewUri = previewUri ?: current.previewUri
+                previewUri = previewUri ?: current.previewUri,
+                initialPhotoId = initialPhotoId ?: current.initialPhotoId
             )
         }
         

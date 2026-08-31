@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.createSavedStateHandle
 import androidx.navigation.toRoute
+import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
@@ -14,6 +15,7 @@ import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import kotlinx.collections.immutable.ImmutableList
@@ -38,7 +40,9 @@ data class EmergencyContactUiState(
     val personName: String = "",
     val isNameMaskingEnabled: Boolean = true,
     val isChanged: Boolean = false,
-    val isValid: Boolean = false
+    val isValid: Boolean = false,
+    val fieldErrors: Map<String, Int?> = emptyMap(),
+    val touchedFields: Set<String> = emptySet()
 )
 
 /**
@@ -312,11 +316,72 @@ class EmergencyContactEditViewModel(
 
     fun updateEditingContact(reducer: (EmergencyContact) -> EmergencyContact) {
         updateState { current ->
-            val next = current.editingContact?.let {
-                current.copy(editingContact = reducer(it))
-            } ?: current
+            val nextEditing = current.editingContact?.let { reducer(it) }
+            
+            // 操作されたフィールドの追跡
+            //val nextTouched = if (nextEditing != null && current.editingContact != null) {
+            val nextTouched = if (nextEditing != null) {
+                    getNewlyTouchedFields(current.editingContact, nextEditing, current.touchedFields)
+            } else current.touchedFields
+
+            current.copy(
+                editingContact = nextEditing,
+                touchedFields = nextTouched
+            )
+        }
+    }
+
+    private fun getNewlyTouchedFields(old: EmergencyContact, next: EmergencyContact, current: Set<String>): Set<String> {
+        val touched = current.toMutableSet()
+        if (old.facilityName != next.facilityName) touched.add("facilityName")
+        if (old.personName != next.personName) touched.add("personName")
+        if (old.phoneNumber != next.phoneNumber) touched.add("phoneNumber")
+        if (old.contactType != next.contactType) touched.add("contactType")
+        if (old.priority != next.priority) touched.add("priority")
+        return touched
+    }
+
+    fun markFieldAsTouched(fieldName: String) {
+        updateUiState { state ->
+            val nextTouched = state.touchedFields + fieldName
+            val errors = calculateFieldErrors(state.editingContact, nextTouched)
+            val next = state.copy(
+                touchedFields = nextTouched,
+                fieldErrors = errors
+            )
             backupRestorableState(next)
             next
+        }
+    }
+
+    private fun calculateFieldErrors(contact: EmergencyContact?, touched: Set<String>): Map<String, Int?> {
+        if (contact == null) return emptyMap()
+        val errors = mutableMapOf<String, Int?>()
+        
+        val result = EmergencyContactLogic.validate(contact)
+        if (result != EmergencyContactValidationResult.SUCCESS) {
+            val resId = translateValidationResult(result)
+            val field = when (result) {
+                EmergencyContactValidationResult.EMPTY_FACILITY_NAME,
+                EmergencyContactValidationResult.FACILITY_NAME_TOO_LONG -> "facilityName"
+                EmergencyContactValidationResult.PERSON_NAME_TOO_LONG -> "personName"
+                EmergencyContactValidationResult.PHONE_NUMBER_TOO_LONG -> "phoneNumber"
+                else -> null
+            }
+            if (field != null && touched.contains(field)) {
+                errors[field] = resId
+            }
+        }
+        return errors
+    }
+
+    private fun translateValidationResult(result: EmergencyContactValidationResult): Int? {
+        return when (result) {
+            EmergencyContactValidationResult.EMPTY_FACILITY_NAME -> R.string.medical_contact_err_empty_facility
+            EmergencyContactValidationResult.FACILITY_NAME_TOO_LONG -> R.string.medical_contact_err_facility_too_long
+            EmergencyContactValidationResult.PERSON_NAME_TOO_LONG -> R.string.medical_contact_err_person_name_too_long
+            EmergencyContactValidationResult.PHONE_NUMBER_TOO_LONG -> R.string.medical_contact_err_phone_too_long
+            else -> null
         }
     }
 
@@ -334,10 +399,13 @@ class EmergencyContactEditViewModel(
     private fun updateState(reducer: (EmergencyContactUiState) -> EmergencyContactUiState) {
         updateUiState { current ->
             val next = reducer(current)
-            next.copy(
+            val finalState = next.copy(
                 isChanged = EmergencyContactLogic.isChanged(next.editingContact, next.initialContact),
-                isValid = EmergencyContactLogic.isValid(next.editingContact)
+                isValid = EmergencyContactLogic.isValid(next.editingContact),
+                fieldErrors = calculateFieldErrors(next.editingContact, next.touchedFields)
             )
+            backupRestorableState(finalState)
+            finalState
         }
     }
 

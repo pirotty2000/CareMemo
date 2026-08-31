@@ -421,4 +421,49 @@ class PersonEditViewModelTest {
     }
 
     // endregion
+
+    // region 7. バリデーション・フィードバックテスト (Validation Feedback)
+
+    @Test
+    fun FBK_01_emptyField_feedback_afterTouch() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        // 初期状態ではエラーはないはず（touched ではないため）
+        assertNull(viewModel.uiState.value.fieldErrors["lastName"])
+
+        // 姓を空のまま touched にする
+        viewModel.markFieldAsTouched("lastName")
+        advanceUntilIdle()
+
+        assertEquals(R.string.main_err_edit_empty_last_name, viewModel.uiState.value.fieldErrors["lastName"])
+    }
+
+    @Test
+    fun FBK_02_tooLongInput_feedback() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        // 51文字入力（上限50）
+        viewModel.updateLastName("A".repeat(51))
+        advanceUntilIdle()
+
+        assertEquals(R.string.main_err_name_too_long, viewModel.uiState.value.fieldErrors["lastName"])
+    }
+
+    @Test
+    fun FBK_03_errorClears_onCorrectInput() = runTest {
+        val viewModel = createViewModel("_new")
+        advanceUntilIdle()
+
+        viewModel.markFieldAsTouched("lastName")
+        assertEquals(R.string.main_err_edit_empty_last_name, viewModel.uiState.value.fieldErrors["lastName"])
+
+        viewModel.updateLastName("山田")
+        advanceUntilIdle()
+
+        assertNull("Error should be cleared on valid input", viewModel.uiState.value.fieldErrors["lastName"])
+    }
+
+    // endregion
 }

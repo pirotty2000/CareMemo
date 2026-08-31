@@ -1,6 +1,7 @@
 package jp.mydns.fujiwara.carememo.ui.screens.condition
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -42,6 +43,7 @@ sealed interface PersonConditionUiAction {
     // 編集・保存
     data object EditClick : PersonConditionUiAction
     data class EditInputUpdate(val update: (ConditionEditInput) -> ConditionEditInput) : PersonConditionUiAction
+    data class MarkFieldAsTouched(val fieldName: String) : PersonConditionUiAction
     data class SaveClick(val onSuccess: (String) -> Unit) : PersonConditionUiAction
     data object CancelEdit : PersonConditionUiAction
 
@@ -232,6 +234,7 @@ fun PersonConditionScreen(
                 }
                 PersonConditionUiAction.EditClick -> conditionViewModel.startEditSession()
                 is PersonConditionUiAction.EditInputUpdate -> conditionViewModel.updateEditInput(action.update)
+                is PersonConditionUiAction.MarkFieldAsTouched -> conditionViewModel.markFieldAsTouched(action.fieldName)
                 is PersonConditionUiAction.SaveClick -> conditionViewModel.saveCurrentEdit(action.onSuccess)
                 PersonConditionUiAction.CancelEdit -> conditionViewModel.cancelEditSession()
                 PersonConditionUiAction.AddPhotoClick -> {
@@ -282,6 +285,16 @@ fun PersonConditionScreen(
     }
 
     val isAnyDialogOpen = recordToDelete != null || showPdfSettingsDialog || dialogMessage != null
+
+    // システム戻るボタンの制御 (詳細閲覧時)
+    BackHandler(enabled = conditionState.selectedConditionId != null) {
+        if (conditionState.isEditing && conditionState.isChanged) {
+            // 編集中の破棄確認は各 Content 内の BackHandler が優先されるが、
+            // 万が一ここに来た場合のために何もしない（各 Content 側でダイアログを出す）
+        } else {
+            handleAction(PersonConditionUiAction.SelectedIdChanged(null))
+        }
+    }
 
     if (isExpanded) {
         PersonConditionScreenTablet(
@@ -385,13 +398,31 @@ fun PersonConditionScreen(
     // 詳細・編集ダイアログ
     if (!isExpanded && conditionState.selectedConditionId != null && detailState.personId != null) {
         Dialog(
-            onDismissRequest = { /* Pane側のキャンセル処理に委ねる */ },
+            onDismissRequest = { 
+                // 編集中で変更がある場合は、詳細ペイン内の BackHandler がダイアログを出して阻止する。
+                // それ以外（閲覧モードや変更なし）の場合は、ここから詳細を閉じる。
+                if (!conditionState.isEditing || !conditionState.isChanged) {
+                    handleAction(PersonConditionUiAction.SelectedIdChanged(null))
+                }
+            },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.surface
             ) {
+                // ダイアログ内でのシステム戻る操作をハンドル
+                BackHandler(enabled = true) {
+                    if (conditionState.isEditing && conditionState.isChanged) {
+                        // 編集中の破棄確認（各 Content 内の BackHandler が優先されることを期待するが、
+                        // ダイアログ最上位でも明示的に閉じるアクションを誘発させる場合はここに書く。
+                        // 現状は Content 側の BackHandler が機能するように、ここでは
+                        // 閲覧モードの場合のみ明示的に閉じる処理を行う）
+                    } else {
+                        handleAction(PersonConditionUiAction.SelectedIdChanged(null))
+                    }
+                }
+
                 jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane(
                     uiState = conditionState,
                     onAction = handleAction
