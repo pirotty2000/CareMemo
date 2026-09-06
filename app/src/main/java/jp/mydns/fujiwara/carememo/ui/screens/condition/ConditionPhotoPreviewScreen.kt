@@ -148,6 +148,8 @@ fun ConditionPhotoPreviewContent(
     val uriString = uiState.previewUri ?: return
     val uri = remember(uriString) { uriString.toUri() }
 
+    val isOperating = uiState.operation is PersonConditionOperation.PhotoProcessing
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -160,10 +162,11 @@ fun ConditionPhotoPreviewContent(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { onAction(ConditionPhotoPreviewUiAction.Back) }) {
+                    IconButton(onClick = { onAction(ConditionPhotoPreviewUiAction.Back) }, enabled = !isOperating) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
-                }
+                },
+                colors = appTopAppBarColors()
             )
         }
     ) { paddingValues ->
@@ -172,10 +175,10 @@ fun ConditionPhotoPreviewContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // エラー表示
-            uiState.errorMessage?.let { msg ->
+            // 構造的エラーの表示
+            (uiState.screenState as? PersonConditionScreenState.Error)?.let { errorState ->
                 Text(
-                    text = msg,
+                    text = errorState.throwable.message ?: stringResource(R.string.common_error_unknown),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(8.dp)
@@ -201,10 +204,10 @@ fun ConditionPhotoPreviewContent(
                 label = { Text(stringResource(R.string.condition_photo_caption_label)) },
                 modifier = Modifier.fillMaxWidth().testTag("PhotoPreview_CaptionInput"),
                 singleLine = true,
-                enabled = !uiState.isProcessing
+                enabled = !isOperating
             )
 
-            if (uiState.isProcessing) {
+            if (isOperating) {
                 LoadingScreen(
                     message = stringResource(R.string.condition_msg_photo_optimizing),
                     modifier = Modifier.testTag("PhotoPreview_Loading")
