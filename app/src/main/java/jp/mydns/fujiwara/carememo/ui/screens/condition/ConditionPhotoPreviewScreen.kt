@@ -21,6 +21,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
