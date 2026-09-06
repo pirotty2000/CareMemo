@@ -4,16 +4,15 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
 import kotlinx.collections.immutable.toImmutableList
 import org.junit.Rule
 import org.junit.Test
 
 /**
  * Instrumented Test: EmergencyContactListScreen (SCR-M-003)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-M-003_EmergencyContactListScreen.md に準拠
  */
 class EmergencyContactListScreenTest {
 
@@ -28,7 +27,6 @@ class EmergencyContactListScreenTest {
         setContent {
             EmergencyContactListContentWrapper(personName = personName)
         }
-        // Check for title (implementation uses format string usually)
         composeTestRule.onNodeWithText(personName, substring = true).assertIsDisplayed()
     }
 
@@ -43,11 +41,9 @@ class EmergencyContactListScreenTest {
             EmergencyContactListContentWrapper(contacts = contacts)
         }
 
-        // Each item tag exists
         composeTestRule.onNodeWithTag("EmergencyContactItem_c1").assertIsDisplayed()
         composeTestRule.onNodeWithTag("EmergencyContactItem_c2").assertIsDisplayed()
 
-        // Content matches
         composeTestRule.onNodeWithText("A病院").assertIsDisplayed()
         composeTestRule.onNodeWithText("03-1234-5678").assertIsDisplayed()
     }
@@ -86,15 +82,16 @@ class EmergencyContactListScreenTest {
             )
         }
 
-        // Open menu and click delete
-        composeTestRule.onNodeWithContentDescription("操作メニュー").performClick()
-        composeTestRule.onNodeWithText("削除").performClick()
+        // Open menu
+        composeTestRule.onNodeWithContentDescription("メニュー", substring = true).performClick()
+        // Click delete in menu (use unmerged tree if necessary, but usually text works)
+        composeTestRule.onNodeWithText("削除", substring = true).performClick()
 
         // Verify dialog displayed
         composeTestRule.onNodeWithText("連絡先の削除").assertIsDisplayed()
         
-        // Confirm delete
-        composeTestRule.onNodeWithText("削除").performClick()
+        // Confirm delete in dialog
+        composeTestRule.onAllNodesWithText("削除").onLast().performClick()
         
         assert(deleteConfirmed)
     }
@@ -109,6 +106,7 @@ class EmergencyContactListScreenTest {
                 content()
             }
         }
+        composeTestRule.waitForIdle()
     }
 
     @androidx.compose.runtime.Composable
@@ -120,6 +118,7 @@ class EmergencyContactListScreenTest {
     ) {
         EmergencyContactListContent(
             uiState = EmergencyContactUiState(
+                screenState = EmergencyContactScreenState.Active,
                 personName = personName,
                 contacts = contacts.toImmutableList()
             ),

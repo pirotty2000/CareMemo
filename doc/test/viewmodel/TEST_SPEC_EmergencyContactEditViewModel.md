@@ -22,10 +22,10 @@
 
 | ID     | テスト項目  | 条件 (操作)                      | 期待結果 (UiState)                                            |
 |:-------|:-------|:-----------------------------|:----------------------------------------------------------|
-| EDT-01 | 新規登録開始 | `startAdd()` を実行             | `editingContact` に初期値が入り、`isEditing` が true になること         |
-| EDT-02 | 編集開始   | `startEdit(contact)` を実行     | 指定した連絡先が `editingContact` にセットされ、`isEditing` が true になること |
-| EDT-03 | 入力更新   | `updateEditingContact` で値を変更 | `editingContact` の各フィールドが更新され、`isChanged` が true になること    |
-| EDT-04 | 編集破棄   | `dismissEdit()` を実行          | `isEditing` が false になり、入力状態がクリアされること                     |
+| EDT-01 | 新規登録開始 | `startAdd()` を実行             | `session.editingContact` に初期値が入り、`session.isEditing` が true になること         |
+| EDT-02 | 編集開始   | `startEdit(contact)` を実行     | 指定した連絡先が `session.editingContact` にセットされ、`session.isEditing` が true になること |
+| EDT-03 | 入力更新   | `updateEditingContact` で値を変更 | `session.editingContact` の各フィールドが更新され、`session.isChanged` が true になること    |
+| EDT-04 | 編集破棄   | `dismissEdit()` を実行          | `session.isEditing` が false になり、入力状態がクリアされること                     |
 
 ## 4. 処理実行テスト (Execution)
 **目的:** 保存・削除の非同期処理がリポジトリと正しく連携し、成功イベントを発行することを検証する。
@@ -41,14 +41,14 @@
 
 | ID     | テスト項目 | 条件             | 期待結果                                     |
 |:-------|:------|:---------------|:-----------------------------------------|
-| ERR-01 | 保存失敗  | リポジトリ保存中に例外が発生 | `isLoading` が解除され、監査ログに `ERROR` が記録されること |
-| ERR-02 | ロード失敗 | 利用者情報取得中に例外が発生 | `isLoading` が解除され、エラーダイアログ通知が行われること      |
+| ERR-01 | 保存失敗  | リポジトリ保存中に例外が発生 | `operation` が `Idle` に戻り、監査ログに `ERROR` が記録されること |
+| ERR-02 | ロード失敗 | 利用者情報取得中に例外が発生 | `screenState` が `Error` になり、エラーダイアログ通知が行われること      |
 
 ## 6. バリデーション・フィードバックテスト (Validation Feedback)
 **目的:** 不正入力時に適切なエラーメッセージがフィールドごとに設定されることを検証する。
 
 | ID     | テスト項目          | 条件                               | 期待結果                                           |
 |:-------|:---------------|:---------------------------------|:-----------------------------------------------|
-| FBK-01 | 施設名未入力フィードバック  | 施設名を空にし `markFieldAsTouched` を実行 | `fieldErrors` に施設名未入力エラーがセットされること              |
-| FBK-02 | 電話番号超過フィードバック  | 電話番号に21文字以上入力                    | `fieldErrors` に電話番号超過エラーがセットされること              |
-| FBK-03 | 未操作フィールドのエラー抑制 | 項目が空だが `touchedFields` に含まれない場合  | `fieldErrors` が null であること（初期表示時にいきなり赤くならないこと） |
+| FBK-01 | 施設名未入力フィードバック  | 施設名を空にし `markFieldAsTouched` を実行 | `session.fieldErrors` に施設名未入力エラーがセットされること              |
+| FBK-02 | 電話番号超過フィードバック  | 電話番号に21文字以上入力                    | `session.fieldErrors` に電話番号超過エラーがセットされること              |
+| FBK-03 | 未操作フィールドのエラー抑制 | 項目が空だが `session.touchedFields` に含まれない場合 | `session.fieldErrors` が空であること（初期表示時にいきなり赤くならないこと） |

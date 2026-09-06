@@ -97,8 +97,14 @@ class PersonEditScreenTest {
     @Test
     fun ACT_04_cancelWithChanges_showsConfirmDialog() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        // Simulate changed state
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isNew = true))
+        // Simulate changed state + Active screenState
+        every { viewModel.uiState } returns MutableStateFlow(
+            PersonEditUiState(
+                screenState = PersonEditScreenState.Active,
+                isChanged = true, 
+                isNew = true
+            )
+        )
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
         every { viewModel.viewEvent } returns MutableSharedFlow()
 
@@ -122,7 +128,7 @@ class PersonEditScreenTest {
         val navController = mockk<NavHostController>(relaxed = true)
         val viewEventFlow = MutableSharedFlow<PersonEditViewEvent>(extraBufferCapacity = 1)
         
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(screenState = PersonEditScreenState.Active))
         every { viewModel.viewEvent } returns viewEventFlow
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
@@ -145,7 +151,7 @@ class PersonEditScreenTest {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
         val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
         
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(screenState = PersonEditScreenState.Active))
         every { viewModel.uiEventFlow } returns uiEventFlow
         every { viewModel.viewEvent } returns MutableSharedFlow()
 
@@ -177,7 +183,7 @@ class PersonEditScreenTest {
         restorationTester.setContent {
             CareMemoTheme {
                 // Content 層での内部状態 (ScrollState) の復元を検証
-                PersonEditScreenContentWrapper(isNew = true)
+                PersonEditScreenContentWrapper(isNew = true, screenState = PersonEditScreenState.Active)
             }
         }
 
@@ -202,6 +208,7 @@ class PersonEditScreenTest {
         setContent {
             PersonEditScreenContent(
                 uiState = PersonEditUiState(
+                    screenState = PersonEditScreenState.Active,
                     fieldErrors = mapOf("lastName" to R.string.main_err_edit_empty_last_name)
                 ),
                 onAction = {},
@@ -217,6 +224,7 @@ class PersonEditScreenTest {
         setContent {
             PersonEditScreenContent(
                 uiState = PersonEditUiState(
+                    screenState = PersonEditScreenState.Active,
                     fieldErrors = emptyMap()
                 ),
                 onAction = {},

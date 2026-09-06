@@ -8,10 +8,12 @@ import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactSession
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactUiState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -126,7 +128,12 @@ class EmergencyContactEditScreenTest {
         val viewEventFlow = MutableSharedFlow<EmergencyContactViewEvent>(extraBufferCapacity = 1)
         
         val contact = EmergencyContact(personId = "p1", facilityName = "A", contactType = "DOCTOR")
-        every { viewModel.uiState } returns MutableStateFlow(EmergencyContactUiState(editingContact = contact))
+        every { viewModel.uiState } returns MutableStateFlow(
+            EmergencyContactUiState(
+                screenState = EmergencyContactScreenState.Active,
+                session = EmergencyContactSession(editingContact = contact)
+            )
+        )
         every { viewModel.viewEvent } returns viewEventFlow
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
@@ -166,11 +173,14 @@ class EmergencyContactEditScreenTest {
         val initialContact = if (isChanged) contact.copy(facilityName = "diff") else contact
         EmergencyContactEditContent(
             uiState = EmergencyContactUiState(
-                editingContact = contact,
-                initialContact = initialContact,
-                isEditing = isEditing,
-                isChanged = EmergencyContactLogic.isChanged(contact, initialContact),
-                isValid = EmergencyContactLogic.isValid(contact)
+                screenState = EmergencyContactScreenState.Active,
+                session = EmergencyContactSession(
+                    editingContact = contact,
+                    initialContact = initialContact,
+                    isEditing = isEditing,
+                    isChanged = EmergencyContactLogic.isChanged(contact, initialContact),
+                    isValid = EmergencyContactLogic.isValid(contact)
+                )
             ),
             onAction = { action ->
                 when (action) {

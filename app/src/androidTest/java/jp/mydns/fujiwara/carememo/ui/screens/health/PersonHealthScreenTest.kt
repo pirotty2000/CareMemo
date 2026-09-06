@@ -215,10 +215,10 @@ class PersonHealthScreenTest {
         composeTestRule.onNodeWithTag("HealthScreen_PdfButton").performClick()
 
         // 2. パスワードを入力
-        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("PDF閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
+        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
 
         // 3. ダイアログ内の「PDFを作成」ボタンをタップ
-        composeTestRule.onNodeWithText("PDFを作成").performClick()
+        composeTestRule.onNodeWithText("PDFを作成", substring = true).performClick()
 
         // 4. 認証要求が正しいパラメータで呼ばれたか検証
         verify(timeout = 5000) {

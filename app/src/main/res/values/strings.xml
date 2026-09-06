@@ -382,7 +382,7 @@
     <string name="pdf_title">CareMemo レポート</string>
     <string name="pdf_user_name">対象利用者: %1$s</string>
     <string name="pdf_output_date">出力日時: %1$s</string>
-    <string name="pdf_page_number">%1$d / %2$d ページ</string>
+    <string name="pdf_page_number">%1$d ページ</string>
     <string name="pdf_label_trend">（推移グラフ）</string>
     <string name="pdf_share_chooser_title">PDFを共有</string>
     <string name="pdf_err_no_app">共有可能なアプリが見つかりません</string>
@@ -408,8 +408,8 @@
     <string name="p_health_msg_save_success">健康記録を保存しました</string>
     <string name="p_health_msg_update_success">健康記録を更新しました</string>
     <string name="p_health_msg_delete_success">健康記録を削除しました</string>
-    <string name="main_msg_user_updated">利用者情報を更新しました</string>
-    <string name="main_msg_user_added">新しい利用者を登録しました</string>
+    <string name="main_msg_user_updated">%1$s さんの情報を更新しました</string>
+    <string name="main_msg_user_added">%1$s さんを登録しました</string>
     <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
     <string name="medical_contacts_title_format">%1$s さんの緊急連絡先</string>
     <string name="medical_contacts_manage_title_format">%1$s さんの連絡先管理</string>

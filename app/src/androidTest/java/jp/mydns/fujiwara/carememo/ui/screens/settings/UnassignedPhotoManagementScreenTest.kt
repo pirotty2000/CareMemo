@@ -6,9 +6,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
+import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoType
+import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoUiState
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewModel
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -55,7 +56,11 @@ class UnassignedPhotoManagementScreenTest {
 
     @Before
     fun setup() {
-        every { viewModel.uiState } returns MutableStateFlow(UnassignedPhotoUiState(unassignedPhotos = mockPhotos.toImmutableList()))
+        val initialState = UnassignedPhotoUiState(
+            screenState = UnassignedPhotoScreenState.Active,
+            unassignedPhotos = mockPhotos.toImmutableList()
+        )
+        every { viewModel.uiState } returns MutableStateFlow(initialState)
         every { viewModel.viewEvent } returns MutableSharedFlow(extraBufferCapacity = 1)
     }
 
@@ -87,15 +92,15 @@ class UnassignedPhotoManagementScreenTest {
 
     @Test
     fun DSP_03_emptyState_isDisplayed_whenNoPhotos() {
-        setContent(UnassignedPhotoUiState(isLoading = false, unassignedPhotos = persistentListOf()))
+        setContent(UnassignedPhotoUiState(screenState = UnassignedPhotoScreenState.Active, unassignedPhotos = persistentListOf()))
         composeTestRule.onNodeWithTag("UnassignedPhoto_EmptyState").assertIsDisplayed()
         // Match string from R.string.unassigned_photo_empty_msg
-        composeTestRule.onNodeWithText("見つかりませんでした", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("整理が必要な写真はありません", substring = true).assertIsDisplayed()
     }
 
     @Test
     fun DSP_04_loadingIndicator_isDisplayed() {
-        setContent(UnassignedPhotoUiState(isLoading = true, unassignedPhotos = persistentListOf()))
+        setContent(UnassignedPhotoUiState(screenState = UnassignedPhotoScreenState.Loading, unassignedPhotos = persistentListOf()))
         composeTestRule.onNodeWithTag("UnassignedPhoto_Loading").assertIsDisplayed()
     }
 
@@ -109,8 +114,8 @@ class UnassignedPhotoManagementScreenTest {
         // Click delete on the first item
         composeTestRule.onAllNodesWithTag("UnassignedPhoto_DeleteButton").onFirst().performClick()
         
-        // Match title from R.string.p_detail_dialog_title_delete ("データの削除")
-        composeTestRule.onNodeWithText("データの削除", substring = true).assertIsDisplayed()
+        // Match title from R.string.p_detail_dialog_title_delete ("記録の削除")
+        composeTestRule.onNodeWithText("記録の削除", substring = true).assertIsDisplayed()
     }
 
     @Test

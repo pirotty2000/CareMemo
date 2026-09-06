@@ -56,13 +56,19 @@ fun AuditLogScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.audit_log_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateBack() }) {
+                    IconButton(
+                        onClick = { viewModel.navigateBack() },
+                        modifier = Modifier.testTag("AuditLogScreen_BackButton")
+                    ) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     // ソート切り替え
-                    IconButton(onClick = { viewModel.toggleSortOrder() }) {
+                    IconButton(
+                        onClick = { viewModel.toggleSortOrder() },
+                        modifier = Modifier.testTag("AuditLog_SortToggle")
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.Sort,
                             contentDescription = "ソート切り替え",
@@ -95,7 +101,7 @@ fun AuditLogScreen(
             Box(modifier = Modifier.weight(1f)) {
                 when (uiState.screenState) {
                     is AuditLogScreenState.Loading -> {
-                        LoadingScreen(modifier = Modifier.fillMaxSize())
+                        LoadingScreen(modifier = Modifier.fillMaxSize().testTag("AuditLog_Loading"))
                     }
                     is AuditLogScreenState.Error -> {
                         ErrorState(
@@ -105,7 +111,7 @@ fun AuditLogScreen(
                     }
                     is AuditLogScreenState.Active -> {
                         if (uiState.filteredLogs.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.fillMaxSize().testTag("AuditLog_EmptyState"), contentAlignment = Alignment.Center) {
                                 Text(
                                     text = if (uiState.selectedFeature != null || uiState.selectedResult != null)
                                         "条件に一致するログがありません" else "ログがありません",
@@ -146,7 +152,7 @@ private fun AuditLogFilterBar(
             items = listOf("すべて") + availableFeatures,
             selectedItem = selectedFeature ?: "すべて",
             onItemSelected = { if (it == "すべて") onFeatureChange(null) else onFeatureChange(it) },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).testTag("AuditLog_FeatureFilter")
         )
         // 結果フィルタ
         FilterChipDropdown(
@@ -192,7 +198,8 @@ private fun FilterChipDropdown(
                     onClick = {
                         onItemSelected(item)
                         expanded = false
-                    }
+                    },
+                    modifier = Modifier.testTag("FeatureFilterItem_$item")
                 )
             }
         }
@@ -205,7 +212,7 @@ private fun FilterChipDropdown(
 @Composable
 private fun AuditLogList(logs: List<AuditLog>) {
     val listState = rememberLazyListState()
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().testTag("AuditLog_LogList")) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -229,7 +236,7 @@ private fun AuditLogItem(log: AuditLog) {
     val timeStr = log.timestamp.atZone(ZoneId.systemDefault()).format(formatter)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("AuditLogItem_${log.id}"),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         )

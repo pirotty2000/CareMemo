@@ -29,13 +29,19 @@ class PersonConditionScreenTest {
 
     @Test
     fun ADP_01_phoneLayout_isUsed_onCompactWidth() {
-        setContent(widthClass = WindowWidthSizeClass.Compact)
+        setContent(
+            widthClass = WindowWidthSizeClass.Compact,
+            conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
+        )
         composeTestRule.onNodeWithTag("ConditionScreen_PhoneContent").assertIsDisplayed()
     }
 
     @Test
     fun ADP_02_tabletLayout_isUsed_onExpandedWidth() {
-        setContent(widthClass = WindowWidthSizeClass.Expanded)
+        setContent(
+            widthClass = WindowWidthSizeClass.Expanded,
+            conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
+        )
         composeTestRule.onNodeWithTag("Condition_TabletLayout").assertIsDisplayed()
     }
 
@@ -63,19 +69,25 @@ class PersonConditionScreenTest {
 
     @Test
     fun ACT_01_searchQuery_triggersViewModel() {
-        val healthViewModel = createMockViewModel()
-        setContent(conditionViewModel = healthViewModel)
+        val conditionViewModel = createMockViewModel()
+        setContent(
+            conditionViewModel = conditionViewModel,
+            conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
+        )
 
-        composeTestRule.onNodeWithTag("ConditionScreen_SearchBox").performTextInput("咳")
-        verify { healthViewModel.updateSearchQuery("咳") }
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodes(hasTestTag("ConditionScreen_SearchBox"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNode(hasTestTag("ConditionScreen_SearchBox"), useUnmergedTree = true).performTextInput("咳")
+        verify { conditionViewModel.updateSearchQuery("咳") }
     }
 
     @Test
     fun ACT_02_itemClick_opensDetail() {
-        val healthViewModel = createMockViewModel()
+        val conditionViewModel = createMockViewModel()
         val record = ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
         
-        every { healthViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
+        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
             screenState = PersonConditionScreenState.Active,
             records = listOf(record).toImmutableList(),
             filteredRecords = listOf(record).toImmutableList()
@@ -85,15 +97,16 @@ class PersonConditionScreenTest {
             CareMemoTheme {
                 PersonConditionScreen(
                     detailViewModel = createMockDetailViewModel(),
-                    conditionViewModel = healthViewModel,
+                    conditionViewModel = conditionViewModel,
                     navController = mockk(relaxed = true),
                     widthSizeClass = WindowWidthSizeClass.Compact
                 )
             }
         }
 
+        // Search for the text "C" which is in the condition field
         composeTestRule.onNodeWithText("C").performClick()
-        verify { healthViewModel.setSelectedConditionId("c1") }
+        verify { conditionViewModel.setSelectedConditionId("c1") }
     }
 
     //endregion
@@ -102,8 +115,9 @@ class PersonConditionScreenTest {
 
     private fun createMockDetailViewModel(): PersonDetailUiStateViewModel {
         return mockk<PersonDetailUiStateViewModel>(relaxed = true).apply {
-            every { uiState } returns MutableStateFlow(PersonDetailUiState())
+            every { uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
             every { viewEvent } returns MutableSharedFlow()
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
         }
     }
 
@@ -118,7 +132,7 @@ class PersonConditionScreenTest {
 
     private fun setContent(
         widthClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
-        conditionState: PersonConditionUiState = PersonConditionUiState(),
+        conditionState: PersonConditionUiState = PersonConditionUiState(screenState = PersonConditionScreenState.Active),
         conditionViewModel: PersonConditionViewModel? = null
     ) {
         val vm = conditionViewModel ?: createMockViewModel()
@@ -136,5 +150,6 @@ class PersonConditionScreenTest {
                 )
             }
         }
+        composeTestRule.waitForIdle()
     }
 }

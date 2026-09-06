@@ -101,12 +101,12 @@ class HealthRegistrationScenarioTest {
 
         // 保存成功スナックバーの出現を待つ
         composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isNotEmpty()
         }
 
         // スナックバーが消えるのを待つ
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isEmpty()
         }
 
         // 検証：身長 180.0, 体重 100.0 (整数入力が Double へ正しく変換されていること)
@@ -161,12 +161,12 @@ class HealthRegistrationScenarioTest {
 
         // 保存成功スナックバーの出現を待つ
         composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isNotEmpty()
         }
 
         // スナックバーが消えるのを待つ
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isEmpty()
         }
 
         // 5. 履歴一覧に戻り、反映を確認 (新しく追加したデータが表示されるのを待つ)
@@ -219,12 +219,12 @@ class HealthRegistrationScenarioTest {
 
         // 保存成功スナックバーの出現を待つ
         composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isNotEmpty()
         }
 
         // スナックバーが消えるのを待つ
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isEmpty()
         }
 
         // 5. 履歴一覧に戻り、反映を確認 (新しく追加したデータが表示されるのを待つ)
@@ -256,7 +256,7 @@ class HealthRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
 
         // 3. 編集ボタンをタップ
-        composeTestRule.onNodeWithContentDescription("編集").performClick()
+        composeTestRule.onNodeWithContentDescription("編集", substring = true).performClick()
 
         // 4. 体重を 100.0 に修正
         composeTestRule.onNodeWithTag("HealthField_Weight").performTextReplacement("100")
@@ -269,7 +269,7 @@ class HealthRegistrationScenarioTest {
 
         // 保存成功を待つ
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithText("記録を保存しました").fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodesWithText("健康記録を保存しました").fetchSemanticsNodes().isEmpty()
         }
 
         // 6. 反映確認
@@ -291,7 +291,7 @@ class HealthRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
 
         // 3. 編集
-        composeTestRule.onNodeWithContentDescription("編集").performClick()
+        composeTestRule.onNodeWithContentDescription("編集", substring = true).performClick()
         composeTestRule.onNodeWithTag("HealthField_BpSystolic").performTextReplacement("200")
         
         Espresso.closeSoftKeyboard()
@@ -319,7 +319,7 @@ class HealthRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
 
         // 3. 編集
-        composeTestRule.onNodeWithContentDescription("編集").performClick()
+        composeTestRule.onNodeWithContentDescription("編集", substring = true).performClick()
         composeTestRule.onNodeWithTag("HealthField_Glucose").performTextReplacement("100")
         
         Espresso.closeSoftKeyboard()

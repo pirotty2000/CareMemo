@@ -30,10 +30,10 @@
 
 | ID     | テスト項目     | 条件 (操作)                             | 期待結果                                                         |
 |:-------|:----------|:------------------------------------|:-------------------------------------------------------------|
-| EDT-01 | 新規セッション開始 | ID="NEW" を `setSelectedConditionId` | 編集モードが開始され、デフォルト記録者がセットされること                                 |
-| EDT-02 | 既存編集開始    | `startEditSession()` を実行            | 選択中のレコード内容が `editInput` にコピーされ、編集モードになること                    |
-| EDT-03 | 入力変更と保存制御 | `updateEditInput` で値を変更             | `isChanged` が true になり、有効な入力時のみ `isSaveEnabled` が true になること |
-| EDT-04 | 編集キャンセル   | `cancelEditSession()` を実行           | 編集モードが終了し、状態が破棄（または閲覧モードへ戻る）されること                            |
+| EDT-01 | 新規セッション開始 | ID="NEW" を `setSelectedConditionId` | `editSession.isEditing` が true になり、デフォルト記録者がセットされること                                 |
+| EDT-02 | 既存編集開始    | `startEditSession()` を実行            | 選択中のレコード内容が `editSession.editInput` にコピーされ、編集モードになること                    |
+| EDT-03 | 入力変更と保存制御 | `updateEditInput` で値を変更             | `editSession.isChanged` が true になり、有効な入力時のみ `editSession.isSaveEnabled` が true になること |
+| EDT-04 | 編集キャンセル   | `cancelEditSession()` を実行           | `editSession.isEditing` が false になり、状態が破棄（または閲覧モードへ戻る）されること                            |
 
 ## 5. 処理実行テスト (Execution)
 **目的:** 保存・削除・写真操作がリポジトリと正しく連携し、成功時に通知が行われることを検証する。
@@ -57,7 +57,7 @@
 
 | ID     | テスト項目        | 検証内容                                                          | 期待結果                                             |
 |:-------|:-------------|:--------------------------------------------------------------|:-------------------------------------------------|
-| RST-01 | 入力値とセッションの復元 | `SavedStateHandle` に本文や編集フラグがある状態で起動                          | `isEditing` が true になり、タイトル・本文・日時が UI 状態に復元されること |
+| RST-01 | 入力値とセッションの復元 | `SavedStateHandle` に本文や編集フラグがある状態で起動                          | `editSession.isEditing` が true になり、タイトル・本文・日時が UI 状態に復元されること |
 | RST-02 | 変更検知基準の復元    | `SavedStateHandle` に `initialSnapshot` がある状態で起動               | 復元された基準値と現在の入力値が比較され、`isChanged` が正しく算出されること     |
 | RST-03 | 写真プレビューの復元   | `SavedStateHandle` に `previewUri` と `previewCaption` がある状態で起動 | 撮影直後の写真と書きかけのキャプションが UI 状態に復元されること               |
 
@@ -66,6 +66,6 @@
 
 | ID     | テスト項目          | 条件                                | 期待結果                             |
 |:-------|:---------------|:----------------------------------|:---------------------------------|
-| FBK-01 | 内容未入力フィードバック   | 所見内容を空にし `markFieldAsTouched` を実行 | `fieldErrors` に内容未入力エラーがセットされること |
-| FBK-02 | 文字数制限超過フィードバック | 本文を1001文字以上入力                     | `fieldErrors` に本文超過エラーがセットされること  |
-| FBK-03 | 未来日時フィードバック    | 記録日時に未来の日時をセット                    | `fieldErrors` に未来日禁止エラーがセットされること |
+| FBK-01 | 内容未入力フィードバック   | 所見内容を空にし `markFieldAsTouched` を実行 | `editSession.fieldErrors` に内容未入力エラーがセットされること |
+| FBK-02 | 文字数制限超過フィードバック | 本文を1001文字以上入力                     | `editSession.fieldErrors` に本文超過エラーがセットされること  |
+| FBK-03 | 未来日時フィードバック    | 記録日時に未来の日時をセット                    | `editSession.fieldErrors` に未来日禁止エラーがセットされること |

@@ -91,7 +91,8 @@ class MainScreenTest {
         setContent {
             MainScreenContentWrapper(userList = mockItems)
         }
-        composeTestRule.onNodeWithContentDescription("所見メモの記録あり", substring = true).assertIsDisplayed()
+        // Match string from R.string.health_badge_desc_condition
+        composeTestRule.onNodeWithContentDescription("経過記録の最終記録", substring = true).assertIsDisplayed()
     }
 
     //endregion
