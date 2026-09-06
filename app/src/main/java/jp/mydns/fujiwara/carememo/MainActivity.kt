@@ -418,7 +418,7 @@ class MainActivity : FragmentActivity() {
                                         auditLogRepository,
                                         userSettingsRepository,
                                         securitySession))
-                                AuditLogScreen(viewModel = auditLogViewModel, navController = navController)
+                                AuditLogScreen(viewModel = auditLogViewModel, onBack = { navController.popBackStack() })
                             }
 
                             composable<Destination.ArchiveManagement> {

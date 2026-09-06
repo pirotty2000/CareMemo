@@ -21,15 +21,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
-import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
-import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
-import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactOperation
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactUiState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactViewEvent
+import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 import kotlinx.collections.immutable.persistentListOf
 
 /**
@@ -47,12 +47,6 @@ sealed interface EmergencyContactListUiAction {
  *
  * 【役割】
  * 特定の利用者に紐付く緊急連絡先（SCR-M-003）の一覧を表示し、各項目の編集・追加・削除操作を統括します。
- *
- * 【主な機能】
- * ・一覧表示：`EmergencyContactItem` を用いた施設名、担当者、電話番号のリスト表示。
- * ・削除確認：破壊的な操作（物理削除）の前に `AppDeleteConfirmDialog` を表示して確認。
- * ・遷移制御：新規追加画面（MedicalContactEdit）や既存項目の編集画面への遷移実行。
- * ・空状態表示：登録がない場合のガイダンス表示。
  */
 @Composable
 fun EmergencyContactListScreen(
@@ -141,30 +135,48 @@ fun EmergencyContactListContent(
             }
         }
     ) { padding ->
-        if (uiState.contacts.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text(stringResource(R.string.medical_contacts_empty))
+        when (uiState.screenState) {
+            is EmergencyContactScreenState.Loading -> {
+                if (uiState.contacts.isEmpty()) {
+                    LoadingScreen(modifier = Modifier.fillMaxSize())
+                }
             }
-        } else {
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("MedicalContactList"),
-                    state = lazyListState,
-                    contentPadding = PaddingValues(bottom = 88.dp)
-                ) {
-                    items(uiState.contacts, key = { it.id }) { contact ->
-                        EmergencyContactItem(
-                            contact = contact,
-                            onAction = onAction,
-                            onDeleteClick = { contactToDelete = contact },
-                            modifier = Modifier.testTag("EmergencyContactItem_${contact.id}")
-                        )
-                        HorizontalDivider()
+            is EmergencyContactScreenState.Error -> {
+                ErrorState(
+                    message = stringResource(R.string.common_error_load_failed),
+                    onRetry = { /* viewModel.loadEmergencyContacts() */ }
+                )
+            }
+            is EmergencyContactScreenState.Active -> {
+                if (uiState.contacts.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                        Text(stringResource(R.string.medical_contacts_empty))
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                        if (uiState.operation is EmergencyContactOperation.Deleting) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
+                        }
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("MedicalContactList"),
+                            state = lazyListState,
+                            contentPadding = PaddingValues(bottom = 88.dp)
+                        ) {
+                            items(uiState.contacts, key = { it.id }) { contact ->
+                                EmergencyContactItem(
+                                    contact = contact,
+                                    onAction = onAction,
+                                    onDeleteClick = { contactToDelete = contact },
+                                    modifier = Modifier.testTag("EmergencyContactItem_${contact.id}")
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+                        VerticalScrollIndicator(lazyListState = lazyListState)
                     }
                 }
-                VerticalScrollIndicator(lazyListState = lazyListState)
             }
         }
     }
@@ -241,6 +253,7 @@ fun EmergencyContactListContentPreview_Normal() {
         EmergencyContactListContent(
             uiState = EmergencyContactUiState(
                 personName = "愛 植○",
+                screenState = EmergencyContactScreenState.Active,
                 contacts = persistentListOf(
                     EmergencyContact(facilityName = "○○クリニック", personName = "○○先生", phoneNumber = "0311111111", contactType = "DOCTOR", personId = "1"),
                     EmergencyContact(facilityName = "長男の妻", personName = "○○さん", phoneNumber = "08011111111", contactType = "FAMILY", personId = "1", priority = 1)

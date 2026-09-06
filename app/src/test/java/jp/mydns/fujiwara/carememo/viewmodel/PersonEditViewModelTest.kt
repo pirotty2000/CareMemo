@@ -13,6 +13,8 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.EditResult
 import kotlinx.coroutines.delay
@@ -91,8 +93,9 @@ class PersonEditViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.isNew)
-        assertEquals("", state.lastName)
+        assertEquals("", state.input.lastName)
         assertFalse(state.isChanged)
+        assertEquals(PersonEditScreenState.Active, state.screenState)
     }
 
     @Test
@@ -105,10 +108,11 @@ class PersonEditViewModelTest {
             
             val loaded = expectMostRecentItem()
             assertFalse(loaded.isNew)
-            assertEquals("山田", loaded.lastName)
-            assertEquals("25", loaded.year) // 1950 is Showa 25
-            assertEquals(BirthEra.SHOWA, loaded.era)
+            assertEquals("山田", loaded.input.lastName)
+            assertEquals("25", loaded.input.year) // 1950 is Showa 25
+            assertEquals(BirthEra.SHOWA, loaded.input.era)
             assertFalse(loaded.isChanged)
+            assertEquals(PersonEditScreenState.Active, loaded.screenState)
         }
     }
 
@@ -135,7 +139,7 @@ class PersonEditViewModelTest {
         viewModel.updateLastName("佐藤")
         
         val state = viewModel.uiState.value
-        assertEquals("佐藤", state.lastName)
+        assertEquals("佐藤", state.input.lastName)
         assertTrue(state.isChanged)
         assertFalse(state.isValid) // Missing other required fields
     }
@@ -305,7 +309,7 @@ class PersonEditViewModelTest {
         val viewModel = createViewModel("u1")
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertTrue(viewModel.uiState.value.screenState is PersonEditScreenState.Error)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", "u1", match { it.contains("Load Error") }, any()) }
     }
 
@@ -343,9 +347,9 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("佐藤", state.lastName)
-        assertEquals("花子", state.firstName)
-        assertEquals(BirthEra.REIWA, state.era)
+        assertEquals("佐藤", state.input.lastName)
+        assertEquals("花子", state.input.firstName)
+        assertEquals(BirthEra.REIWA, state.input.era)
     }
 
     @Test
@@ -378,7 +382,7 @@ class PersonEditViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("佐藤", state.lastName)
+        assertEquals("佐藤", state.input.lastName)
         // baseline が正しく復帰し、現在の入力と比較されて isChanged == true になること
         assertTrue("isChanged should be true when input differs from baseline", state.isChanged)
         

@@ -282,8 +282,9 @@ fun MainScreen(
 
     //-- ui/screens/main/MainScreenContent.kt
     MainScreenContent(
+        screenState = uiState.screenState,
+        operation = uiState.operation,
         userList = uiState.userList,
-        isLoading = uiState.isLoading,
         isNameMaskingEnabled = uiState.isNameMaskingEnabled,
         searchQuery = uiState.searchQuery,
         selectedSection = uiState.selectedSection,

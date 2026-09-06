@@ -1,6 +1,5 @@
 package jp.mydns.fujiwara.carememo.viewmodel
 
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -15,59 +14,26 @@ import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactLogic
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactOperation
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactSession
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactUiState
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactValidationResult
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactViewEvent
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.ui.navigation.Destination
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-
-/**
- * UI State：EmergencyContactUiState
- */
-@Immutable
-data class EmergencyContactUiState(
-    val isLoading: Boolean = false,
-    val personId: String = "",
-    val contacts: ImmutableList<EmergencyContact> = persistentListOf(),
-    val editingContact: EmergencyContact? = null,
-    val initialContact: EmergencyContact? = null,
-    val isEditing: Boolean = false,
-    val personName: String = "",
-    val isNameMaskingEnabled: Boolean = true,
-    val isChanged: Boolean = false,
-    val isValid: Boolean = false,
-    val fieldErrors: Map<String, Int?> = emptyMap(),
-    val touchedFields: Set<String> = emptySet()
-)
-
-/**
- * View Event：EmergencyContactViewEvent
- */
-sealed interface EmergencyContactViewEvent {
-    object NavigateBack : EmergencyContactViewEvent
-    object SaveSuccess : EmergencyContactViewEvent
-    object DeleteSuccess : EmergencyContactViewEvent
-}
 
 /**
  * ViewModel：EmergencyContactEditViewModel
  *
  * 【役割】
  * 特定の利用者に紐付く緊急連絡先の一覧表示、および新規追加・編集画面の状態管理と保存を制御します。
- * 
- * 【設計指針：レイヤー責務】
- * 1. 複数モードの統合：一覧表示と個別の編集セッションを単一の ViewModel でシームレスに切り替えます。
- * 2. 状態管理の標準化: `updateState` ヘルパーを通じて `isChanged` および `isValid` を算出し、
- *    データクラスのプロパティとして保持することで、UI 層への単一方向データフローを維持します。
- *
- * 【この ViewModel では行わないこと】
- * ・緊急連絡先の保存用 Entity の詳細な構築ロジック（EmergencyContactLogic が担当）。
- * ・電話番号の書式整形（Logic または UI 側の VisualTransformation が担当）。
  */
 class EmergencyContactEditViewModel(
     private val savedStateHandle: SavedStateHandle,
@@ -88,14 +54,12 @@ class EmergencyContactEditViewModel(
         private const val OP_DELETE = "deleteContact"
         private const val TABLE_NAME = "emergency_contact_db"
 
-        // --- Shared Keys (Navigation & Restoration) ---
         private const val KEY_PERSON_ID = "personId"
         private const val KEY_CONTACT_ID = "contactId"
         private const val KEY_RESTORE_VERSION = "restoration_version"
         private const val RESTORE_VERSION = 1
         private const val KEY_IS_EDITING = "restoration_is_editing"
         
-        // Input Fields (Current)
         private const val KEY_IN_ID = "restoration_in_id"
         private const val KEY_IN_TYPE = "restoration_in_type"
         private const val KEY_IN_FACILITY = "restoration_in_facility"
@@ -103,7 +67,6 @@ class EmergencyContactEditViewModel(
         private const val KEY_IN_PHONE = "restoration_in_phone"
         private const val KEY_IN_PRIORITY = "restoration_in_priority"
 
-        // Snapshot Fields (Baseline)
         private const val KEY_BASE_ID = "restoration_base_id"
         private const val KEY_BASE_TYPE = "restoration_base_type"
         private const val KEY_BASE_FACILITY = "restoration_base_facility"
@@ -114,13 +77,8 @@ class EmergencyContactEditViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    /** 復元中であることを示すフラグ */
     private var isRestoring = false
-
-    /** 保存処理用の Job */
     private var saveJob: Job? = null
-
-    /** 削除処理用の Job */
     private var deleteJob: Job? = null
 
     init {
@@ -128,7 +86,6 @@ class EmergencyContactEditViewModel(
             showError(title, msg, *args)
         }
 
-        // 1. 引数から personId を先に確定させる（復元の前提条件）
         val personId = savedStateHandle.get<String>(KEY_PERSON_ID) 
             ?: try { savedStateHandle.toRoute<Destination.MedicalContacts>().personId } catch (_: Exception) { null }
             ?: try { savedStateHandle.toRoute<Destination.MedicalContactEdit>().personId } catch (_: Exception) { "" }
@@ -139,18 +96,15 @@ class EmergencyContactEditViewModel(
             loadEmergencyContacts(personId)
         }
 
-        // 2. 状態復元
         if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
             isRestoring = true
             restoreState()
         }
 
-        // 3. ナビゲーション引数に基づく初期化（復元中でない場合のみ）
         if (!isRestoring && personId.isNotBlank()) {
             initializeFromNavigation()
         }
 
-        // 共通設定の変更を購読
         scope.launch {
             isNameMaskingEnabled.collect { enabled ->
                 updateUiState { it.copy(isNameMaskingEnabled = enabled) }
@@ -174,18 +128,14 @@ class EmergencyContactEditViewModel(
         }
     }
 
-    /**
-     * SavedStateHandle から状態を復元します。
-     */
     private fun restoreState() {
         val handle = savedStateHandle
         val isEditing = handle.get<Boolean>(KEY_IS_EDITING) ?: false
         
-        // 1. Current Input の復元
         val input = if (handle.contains(KEY_IN_ID)) {
             EmergencyContact(
                 id = handle.get<String>(KEY_IN_ID) ?: "",
-                personId = currentState.personId, // personId は navArgs から別途復元
+                personId = currentState.personId,
                 contactType = handle.get<String>(KEY_IN_TYPE) ?: "DOCTOR",
                 facilityName = handle.get<String>(KEY_IN_FACILITY) ?: "",
                 personName = handle.get<String>(KEY_IN_PERSON_NAME),
@@ -194,7 +144,6 @@ class EmergencyContactEditViewModel(
             )
         } else null
 
-        // 2. Baseline の復元
         val snapshot = if (handle.contains(KEY_BASE_ID)) {
             EmergencyContact(
                 id = handle.get<String>(KEY_BASE_ID) ?: "",
@@ -209,25 +158,25 @@ class EmergencyContactEditViewModel(
 
         updateUiState { current ->
             current.copy(
-                isEditing = isEditing,
-                editingContact = input,
-                initialContact = snapshot,
-                isChanged = EmergencyContactLogic.isChanged(input, snapshot),
-                isValid = EmergencyContactLogic.isValid(input)
+                screenState = EmergencyContactScreenState.Active,
+                session = EmergencyContactSession(
+                    isEditing = isEditing,
+                    editingContact = input,
+                    initialContact = snapshot,
+                    isChanged = EmergencyContactLogic.isChanged(input, snapshot),
+                    isValid = EmergencyContactLogic.isValid(input)
+                )
             )
         }
     }
 
-    /**
-     * 復元対象の状態をバックアップします。
-     */
     private fun backupRestorableState(state: EmergencyContactUiState) {
         val handle = savedStateHandle
+        val session = state.session
         handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
-        handle[KEY_IS_EDITING] = state.isEditing
+        handle[KEY_IS_EDITING] = session.isEditing
 
-        // Input Backup
-        state.editingContact?.let { contact ->
+        session.editingContact?.let { contact ->
             handle[KEY_IN_ID] = contact.id
             handle[KEY_IN_TYPE] = contact.contactType
             handle[KEY_IN_FACILITY] = contact.facilityName
@@ -236,8 +185,7 @@ class EmergencyContactEditViewModel(
             handle[KEY_IN_PRIORITY] = contact.priority
         }
 
-        // Baseline Backup
-        state.initialContact?.let { base ->
+        session.initialContact?.let { base ->
             handle[KEY_BASE_ID] = base.id
             handle[KEY_BASE_TYPE] = base.contactType
             handle[KEY_BASE_FACILITY] = base.facilityName
@@ -247,9 +195,6 @@ class EmergencyContactEditViewModel(
         }
     }
 
-    /**
-     * 復元用データを破棄します。
-     */
     private fun clearRestorableState() {
         val handle = savedStateHandle
         handle.remove<Int>(KEY_RESTORE_VERSION)
@@ -281,9 +226,14 @@ class EmergencyContactEditViewModel(
         safeCollect(
             operation = "loadEmergencyContacts",
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_NAME; affectedId = id },
-            flowProvider = { emergencyContactRepository.getContactsByPersonId(id) }
+            flowProvider = { 
+                emergencyContactRepository.getContactsByPersonId(id).catch { e ->
+                    updateUiState { it.copy(screenState = EmergencyContactScreenState.Error(e)) }
+                    throw e
+                }
+            }
         ) { contacts ->
             updateUiState { it.copy(contacts = contacts.toImmutableList()) }
         }
@@ -291,35 +241,28 @@ class EmergencyContactEditViewModel(
 
     fun startAdd() {
         val initial = EmergencyContactLogic.createInitialEntity(currentState.personId)
-        updateState {
-            val next = it.copy(
+        updateSession {
+            it.copy(
                 editingContact = initial,
                 initialContact = initial,
                 isEditing = true
             )
-            backupRestorableState(next)
-            next
         }
     }
 
     fun startEdit(contact: EmergencyContact) {
-        updateState {
-            val next = it.copy(
+        updateSession {
+            it.copy(
                 editingContact = contact,
                 initialContact = contact,
                 isEditing = true
             )
-            backupRestorableState(next)
-            next
         }
     }
 
     fun updateEditingContact(reducer: (EmergencyContact) -> EmergencyContact) {
-        updateState { current ->
+        updateSession { current ->
             val nextEditing = current.editingContact?.let { reducer(it) }
-            
-            // 操作されたフィールドの追跡
-            //val nextTouched = if (nextEditing != null && current.editingContact != null) {
             val nextTouched = if (nextEditing != null) {
                     getNewlyTouchedFields(current.editingContact, nextEditing, current.touchedFields)
             } else current.touchedFields
@@ -331,8 +274,9 @@ class EmergencyContactEditViewModel(
         }
     }
 
-    private fun getNewlyTouchedFields(old: EmergencyContact, next: EmergencyContact, current: Set<String>): Set<String> {
+    private fun getNewlyTouchedFields(old: EmergencyContact?, next: EmergencyContact, current: Set<String>): Set<String> {
         val touched = current.toMutableSet()
+        if (old == null) return touched
         if (old.facilityName != next.facilityName) touched.add("facilityName")
         if (old.personName != next.personName) touched.add("personName")
         if (old.phoneNumber != next.phoneNumber) touched.add("phoneNumber")
@@ -342,15 +286,9 @@ class EmergencyContactEditViewModel(
     }
 
     fun markFieldAsTouched(fieldName: String) {
-        updateUiState { state ->
+        updateSession { state ->
             val nextTouched = state.touchedFields + fieldName
-            val errors = calculateFieldErrors(state.editingContact, nextTouched)
-            val next = state.copy(
-                touchedFields = nextTouched,
-                fieldErrors = errors
-            )
-            backupRestorableState(next)
-            next
+            state.copy(touchedFields = nextTouched)
         }
     }
 
@@ -386,38 +324,36 @@ class EmergencyContactEditViewModel(
     }
 
     fun dismissEdit() {
-        updateState { 
-            val next = it.copy(isEditing = false, editingContact = null, initialContact = null)
+        updateUiState { current ->
+            val next = current.copy(session = EmergencyContactSession())
             clearRestorableState()
             next
         }
     }
 
-    /**
-     * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
-     */
-    private fun updateState(reducer: (EmergencyContactUiState) -> EmergencyContactUiState) {
+    private fun updateSession(reducer: (EmergencyContactSession) -> EmergencyContactSession) {
         updateUiState { current ->
-            val next = reducer(current)
-            val finalState = next.copy(
-                isChanged = EmergencyContactLogic.isChanged(next.editingContact, next.initialContact),
-                isValid = EmergencyContactLogic.isValid(next.editingContact),
-                fieldErrors = calculateFieldErrors(next.editingContact, next.touchedFields)
+            val nextSession = reducer(current.session)
+            val finalSession = nextSession.copy(
+                isChanged = EmergencyContactLogic.isChanged(nextSession.editingContact, nextSession.initialContact),
+                isValid = EmergencyContactLogic.isValid(nextSession.editingContact),
+                fieldErrors = calculateFieldErrors(nextSession.editingContact, nextSession.touchedFields)
             )
-            backupRestorableState(finalState)
-            finalState
+            val next = current.copy(session = finalSession)
+            backupRestorableState(next)
+            next
         }
     }
 
     fun saveContact() {
-        // 二重保存防止
         if (saveJob?.isActive == true) return
+        val contact = currentState.session.editingContact ?: return
 
-        val contact = currentState.editingContact ?: return
+        updateUiState { it.copy(operation = EmergencyContactOperation.Saving) }
 
         saveJob = safeLaunch(
             operation = OP_SAVE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_NAME
                 affectedId = contact.id
@@ -425,21 +361,9 @@ class EmergencyContactEditViewModel(
         ) {
             val isUpdate = !IdLogic.isNew(contact.id)
             val normalizedContact = EmergencyContactLogic.createSaveEntity(contact)
+            val contactToSave = if (isUpdate) normalizedContact else normalizedContact.copy(id = java.util.UUID.randomUUID().toString())
 
-            // 新規の場合は ID を確定させる (ADR #8)
-            val contactToSave = if (isUpdate) {
-                normalizedContact
-            } else {
-                normalizedContact.copy(id = java.util.UUID.randomUUID().toString())
-            }
-
-            emergencyContactRepository.saveContact(
-                contact = contactToSave,
-                isUpdate = isUpdate,
-                featureName = featureName,
-                operation = OP_SAVE
-            )
-
+            emergencyContactRepository.saveContact(contactToSave, isUpdate, featureName, OP_SAVE)
             sendViewEvent(EmergencyContactViewEvent.SaveSuccess)
             dismissEdit()
             clearRestorableState()
@@ -447,12 +371,12 @@ class EmergencyContactEditViewModel(
     }
 
     fun deleteContact(contact: EmergencyContact) {
-        // 二重実行防止
         if (deleteJob?.isActive == true) return
+        updateUiState { it.copy(operation = EmergencyContactOperation.Deleting) }
 
         deleteJob = safeLaunch(
             operation = OP_DELETE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_NAME
                 affectedId = contact.id
@@ -463,8 +387,21 @@ class EmergencyContactEditViewModel(
         }
     }
 
-    override fun copyWithLoadingState(state: EmergencyContactUiState, isLoading: Boolean): EmergencyContactUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: EmergencyContactUiState, isLoading: Boolean, category: LoadingCategory): EmergencyContactUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    if (state.screenState is EmergencyContactScreenState.Error) state.screenState else EmergencyContactScreenState.Active
+                } else {
+                    if (state.screenState is EmergencyContactScreenState.Active) state.screenState else EmergencyContactScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = EmergencyContactOperation.Idle) else state
+            }
+            else -> state.copy(isLoading = isLoading)
+        }
     }
 
     class Factory(

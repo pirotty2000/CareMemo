@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -88,7 +90,7 @@ class PersonHealthViewModelTest {
             advanceUntilIdle()
             
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
+            assertTrue(state.screenState is PersonHealthScreenState.Active)
             assertEquals(personId, state.personId)
             assertEquals(Category.HEIGHT_AND_WEIGHT, state.currentCategory)
         }
@@ -155,8 +157,9 @@ class PersonHealthViewModelTest {
         viewModel.setSelectedRecordId(newId)
         
         val state = viewModel.uiState.value
-        assertTrue(state.isEditing)
-        assertNotNull(state.editInput.recordTime)
+        val session = state.editSession
+        assertTrue(session.isEditing)
+        assertNotNull(session.editInput.recordTime)
     }
 
     @Test
@@ -169,7 +172,7 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
 
         viewModel.setSelectedRecordId(newId)
-        assertEquals("165.5", viewModel.uiState.value.editInput.heightText)
+        assertEquals("165.5", viewModel.uiState.value.editSession.editInput.heightText)
     }
 
     @Test
@@ -182,8 +185,9 @@ class PersonHealthViewModelTest {
         viewModel.updateEditInput { it.copy(weightText = "60.0") }
         
         val state = viewModel.uiState.value
-        assertTrue(state.isChanged)
-        assertTrue(state.isSaveEnabled)
+        val session = state.editSession
+        assertTrue(session.isChanged)
+        assertTrue(session.isSaveEnabled)
     }
 
     // endregion
@@ -253,7 +257,7 @@ class PersonHealthViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertTrue(viewModel.uiState.value.screenState is PersonHealthScreenState.Error)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Fetch Error") }, any()) }
     }
 
@@ -271,7 +275,7 @@ class PersonHealthViewModelTest {
         viewModel.saveCurrentEdit()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(PersonHealthOperation.Idle, viewModel.uiState.value.operation)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Save Error") }, any()) }
     }
 
@@ -289,6 +293,8 @@ class PersonHealthViewModelTest {
             assertEquals(personId, (event as PersonHealthViewEvent.NavigateToGraphExpansion).personId)
         }
     }
+
+    // endregion
 
     // region 8. 状態復元テスト (State Restoration)
 
@@ -309,10 +315,11 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("h1", state.selectedRecordId)
-        assertTrue(state.isEditing)
-        assertEquals("65.5", state.editInput.weightText)
-        assertEquals(Instant.ofEpochMilli(1000L), state.editInput.recordTime)
+        val session = state.editSession
+        assertEquals("h1", session.selectedRecordId)
+        assertTrue(session.isEditing)
+        assertEquals("65.5", session.editInput.weightText)
+        assertEquals(Instant.ofEpochMilli(1000L), session.editInput.recordTime)
     }
 
     @Test
@@ -331,9 +338,10 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("70.0", state.editInput.weightText)
-        assertEquals("65.5", state.initialSnapshot?.weightText)
-        assertTrue(state.isChanged) // 70.0 != 65.5 なので変更あり
+        val session = state.editSession
+        assertEquals("70.0", session.editInput.weightText)
+        assertEquals("65.5", session.initialSnapshot?.weightText)
+        assertTrue(session.isChanged) // 70.0 != 65.5 なので変更あり
     }
 
     @Test
@@ -360,8 +368,8 @@ class PersonHealthViewModelTest {
         viewModel.setSelectedRecordId(newId)
         advanceUntilIdle()
 
-        assertEquals("180.0", viewModel.uiState.value.editInput.heightText)
-        assertNotEquals("160.0", viewModel.uiState.value.editInput.heightText)
+        assertEquals("180.0", viewModel.uiState.value.editSession.editInput.heightText)
+        assertNotEquals("160.0", viewModel.uiState.value.editSession.editInput.heightText)
     }
 
     // endregion
@@ -379,8 +387,9 @@ class PersonHealthViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(R.string.health_err_range_format, state.fieldErrors["bodyTemperature"])
-        assertEquals(listOf("30.0", "45.0"), state.fieldErrorArgs["bodyTemperature"])
+        val session = state.editSession
+        assertEquals(R.string.health_err_range_format, session.fieldErrors["bodyTemperature"])
+        assertEquals(listOf("30.0", "45.0"), session.fieldErrorArgs["bodyTemperature"])
     }
 
     @Test
@@ -393,7 +402,7 @@ class PersonHealthViewModelTest {
         viewModel.updateEditInput { it.copy(heightText = "170.0.0") }
         advanceUntilIdle()
 
-        assertEquals(R.string.common_error_invalid_input, viewModel.uiState.value.fieldErrors["height"])
+        assertEquals(R.string.common_error_invalid_input, viewModel.uiState.value.editSession.fieldErrors["height"])
     }
 
     @Test
@@ -407,7 +416,7 @@ class PersonHealthViewModelTest {
         viewModel.updateEditInput { it.copy(recordTime = future) }
         advanceUntilIdle()
 
-        assertEquals(R.string.common_err_future_date_not_allowed, viewModel.uiState.value.fieldErrors["recordTime"])
+        assertEquals(R.string.common_err_future_date_not_allowed, viewModel.uiState.value.editSession.fieldErrors["recordTime"])
     }
 
     @Test
@@ -417,13 +426,13 @@ class PersonHealthViewModelTest {
 
         viewModel.setSelectedRecordId(AppSpecifications.Id.NEW_RECORD_ID)
         viewModel.updateEditInput { it.copy(bodyTemperatureText = "45.1") }
-        assertNotNull(viewModel.uiState.value.fieldErrors["bodyTemperature"])
+        assertNotNull(viewModel.uiState.value.editSession.fieldErrors["bodyTemperature"])
 
         // 正しい値に修正
         viewModel.updateEditInput { it.copy(bodyTemperatureText = "36.5") }
         advanceUntilIdle()
 
-        assertNull("Error should be cleared", viewModel.uiState.value.fieldErrors["bodyTemperature"])
+        assertNull("Error should be cleared", viewModel.uiState.value.editSession.fieldErrors["bodyTemperature"])
     }
 
     // endregion

@@ -7,9 +7,11 @@ import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogLogic
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogUiState
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -20,13 +22,6 @@ import kotlinx.coroutines.launch
  *
  * 【役割】
  * 監査ログ（操作履歴）の表示、フィルタリング、およびソート状態を管理します。
- *
- * 【設計指針：UI 境界の責務】
- * 1. 状態の不変化：Logic 層から提供される標準の List を、UI での安定したレンダリングのために 
- *    `toImmutableList()` を用いて ImmutableList へ変換し、UiState として提供します。
- *
- * 【この ViewModel では行わないこと】
- * ・監査ログのフィルタリングや並び替えの具体的なロジック（AuditLogLogic が担当）。
  */
 class AuditLogViewModel(
     private val auditLogRepository: AuditLogRepository,
@@ -59,7 +54,7 @@ class AuditLogViewModel(
         safeCollect(
             operation = "auditLogsFlow",
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = "audit_log" },
             flowProvider = {
                 val filterParamsFlow = uiState.map {
@@ -74,11 +69,13 @@ class AuditLogViewModel(
                     val features = AuditLogLogic.extractAvailableFeatures(logs)
                     val results = AuditLogLogic.extractAvailableResults(logs)
                     Triple(filtered, features, results)
+                }.catch { e ->
+                    updateUiState { it.copy(screenState = AuditLogScreenState.Error(e)) }
+                    throw e
                 }
             }
         ) { (filtered, features, results) ->
             updateUiState { current ->
-                // UI 境界において ImmutableList へ変換し、不変性を保証する
                 current.copy(
                     filteredLogs = filtered.toImmutableList(),
                     availableFeatures = features.toImmutableList(),
@@ -88,8 +85,18 @@ class AuditLogViewModel(
         }
     }
 
-    override fun copyWithLoadingState(state: AuditLogUiState, isLoading: Boolean): AuditLogUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: AuditLogUiState, isLoading: Boolean, category: LoadingCategory): AuditLogUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    if (state.screenState is AuditLogScreenState.Error) state.screenState else AuditLogScreenState.Active
+                } else {
+                    if (state.screenState is AuditLogScreenState.Active) state.screenState else AuditLogScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            else -> state.copy(isLoading = isLoading)
+        }
     }
 
     fun setFeatureFilter(feature: String?) {

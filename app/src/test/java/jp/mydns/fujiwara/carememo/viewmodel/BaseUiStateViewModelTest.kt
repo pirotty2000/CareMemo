@@ -26,7 +26,7 @@ private class MockViewModel(
     securitySession: SecuritySession
 ) : BaseUiStateViewModel<MockUiState, String>(userSettingsRepository, securitySession, MockUiState()) {
     public override var featureName: String = "Mock"
-    override fun copyWithLoadingState(state: MockUiState, isLoading: Boolean) = state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: MockUiState, isLoading: Boolean, category: LoadingCategory) = state.copy(isLoading = isLoading)
 
     fun testShowSnackbar(msg: String) = showSnackbar(msg)
     fun testSendViewEvent(event: String) = sendViewEvent(event)

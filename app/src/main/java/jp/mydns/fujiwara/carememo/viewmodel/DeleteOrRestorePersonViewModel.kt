@@ -12,12 +12,15 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonLogic
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonOperation
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 /**
@@ -25,14 +28,6 @@ import kotlinx.coroutines.launch
  *
  * 【役割】
  * 利用者の復元（RESTORE）および物理抹消（DELETE）画面の状態管理と実行制御を担当します。
- * アーカイブされた利用者の一覧表示と、複数選択による一括操作機能を提供します。
- *
- * 【設計指針：UI 境界の責務】
- * UI に公開する利用者リスト (`archivedPersons`) および選択 ID セット (`selectedIds`) は、
- * UI 境界において ImmutableList / ImmutableSet へ変換し、不変性を保証します。
- *
- * 【この ViewModel では行わないこと】
- * ・一括選択や選択トグルの具体的な計算ロジック（DeleteOrRestorePersonLogic が担当）。
  */
 class DeleteOrRestorePersonViewModel(
     private val repository: DeleteOrRestorePersonRepository,
@@ -56,7 +51,6 @@ class DeleteOrRestorePersonViewModel(
 
     override val featureName: String = FEATURE_NAME
 
-    /** データ更新処理（復帰・抹消）用の Job */
     private var actionJob: Job? = null
 
     enum class OperationMode {
@@ -83,7 +77,6 @@ class DeleteOrRestorePersonViewModel(
             }
         }
 
-        // 初期化完了後に購読を開始
         scope.launch {
             startArchivedListObservation()
         }
@@ -93,17 +86,34 @@ class DeleteOrRestorePersonViewModel(
         safeCollect(
             operation = "archivedPersonListFlow",
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_PERSON },
-            flowProvider = { repository.getArchivedPersons() }
+            flowProvider = { 
+                repository.getArchivedPersons().catch { e ->
+                    updateUiState { it.copy(screenState = DeleteOrRestorePersonScreenState.Error(e)) }
+                    throw e
+                }
+            }
         ) { newList ->
-            // UI 境界において ImmutableList へ変換し、不変性を保証する
             updateUiState { it.copy(archivedPersons = newList.toImmutableList()) }
         }
     }
 
-    override fun copyWithLoadingState(state: DeleteOrRestorePersonUiState, isLoading: Boolean): DeleteOrRestorePersonUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: DeleteOrRestorePersonUiState, isLoading: Boolean, category: LoadingCategory): DeleteOrRestorePersonUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    if (state.screenState is DeleteOrRestorePersonScreenState.Error) state.screenState else DeleteOrRestorePersonScreenState.Active
+                } else {
+                    if (state.screenState is DeleteOrRestorePersonScreenState.Active) state.screenState else DeleteOrRestorePersonScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = DeleteOrRestorePersonOperation.Idle) else state
+            }
+            else -> state.copy(isLoading = isLoading)
+        }
     }
 
     fun setMode(newMode: OperationMode) {
@@ -127,13 +137,14 @@ class DeleteOrRestorePersonViewModel(
     }
 
     fun restoreSelectedPersons(persons: List<Person>) {
-        // 二重実行防止
         if (actionJob?.isActive == true) return
 
         val selectedIds = currentState.selectedIds
+        updateUiState { it.copy(operation = DeleteOrRestorePersonOperation.Restoring) }
+
         actionJob = safeLaunch(
             operation = OP_RESTORE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = "Count:${selectedIds.size}"
@@ -151,13 +162,14 @@ class DeleteOrRestorePersonViewModel(
     }
 
     fun deleteSelectedPersons(persons: List<Person>) {
-        // 二重実行防止
         if (actionJob?.isActive == true) return
 
         val selectedIds = currentState.selectedIds
+        updateUiState { it.copy(operation = DeleteOrRestorePersonOperation.Deleting) }
+
         actionJob = safeLaunch(
             operation = OP_DELETE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = "Count:${selectedIds.size}"

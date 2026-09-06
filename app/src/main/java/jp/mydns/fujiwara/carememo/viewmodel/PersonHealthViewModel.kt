@@ -23,8 +23,11 @@ import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.HealthEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditSession
 import jp.mydns.fujiwara.carememo.logic.feature.HealthValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthViewEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -33,6 +36,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -44,16 +48,6 @@ import java.time.Instant
  *
  * 【役割】
  * 健康記録（身長体重、バイタル、血糖値等）の表示、入力、保存、削除のライフサイクルを管理します。
- *
- * 【設計指針：UI 境界の責務】
- * 1. 状態の不変化：Repository や Logic から渡される標準の List を、UI での安定したレンダリングのために 
- *    `toImmutableList()` を用いて ImmutableList へ変換し、UiState として公開します。
- * 2. 業務ロジックの集約：変更検知 (`isChanged`) や保存の妥当性判定 (`isSaveEnabled`) を 
- *    Composable から ViewModel へ移行し、純粋な業務判断として集中管理します。
- *
- * 【この ViewModel では行わないこと】
- * ・個別の異常値判定の具体的閾値計算（HealthLogic が担当）。
- * ・グラフ描画用の設定生成（HealthChartHelper が担当）。
  */
 class PersonHealthViewModel(
     private val healthRepository: HealthRepository,
@@ -156,8 +150,26 @@ class PersonHealthViewModel(
         startObservePersonId()
     }
 
-    override fun copyWithLoadingState(state: PersonHealthUiState, isLoading: Boolean): PersonHealthUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: PersonHealthUiState, isLoading: Boolean, category: LoadingCategory): PersonHealthUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    if (state.screenState is PersonHealthScreenState.Error) state.screenState else PersonHealthScreenState.Active
+                } else {
+                    if (state.screenState is PersonHealthScreenState.Active) state.screenState else PersonHealthScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = PersonHealthOperation.Idle) else state
+            }
+            is LoadingCategory.Refresh -> {
+                state.copy(operation = if (isLoading) PersonHealthOperation.Refreshing else PersonHealthOperation.Idle)
+            }
+            is LoadingCategory.Default -> {
+                state.copy(isLoading = isLoading)
+            }
+        }
     }
 
     /**
@@ -200,13 +212,16 @@ class PersonHealthViewModel(
 
         updateUiState { current ->
             current.copy(
-                selectedRecordId = selectedId,
-                isEditing = isEditing,
-                editInput = input,
-                initialSnapshot = snapshot,
-                isChanged = isChanged,
-                isSaveEnabled = (PersonHealthLogic.validateInputs(current.currentCategory, input.toValidationMap()) == HealthInputValidationResult.SUCCESS) 
-                        && input.recordTime != null && isChanged
+                screenState = PersonHealthScreenState.Active,
+                editSession = HealthEditSession(
+                    selectedRecordId = selectedId,
+                    isEditing = isEditing,
+                    editInput = input,
+                    initialSnapshot = snapshot,
+                    isChanged = isChanged,
+                    isSaveEnabled = (PersonHealthLogic.validateInputs(current.currentCategory, input.toValidationMap()) == HealthInputValidationResult.SUCCESS) 
+                            && input.recordTime != null && isChanged
+                )
             )
         }
     }
@@ -216,24 +231,25 @@ class PersonHealthViewModel(
      */
     private fun backupRestorableState(state: PersonHealthUiState) {
         val handle = savedStateHandle ?: return
+        val session = state.editSession
         handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
-        handle[KEY_SELECTED_ID] = state.selectedRecordId
-        handle[KEY_IS_EDITING] = state.isEditing
+        handle[KEY_SELECTED_ID] = session.selectedRecordId
+        handle[KEY_IS_EDITING] = session.isEditing
 
         // Input
-        handle[KEY_IN_HEIGHT] = state.editInput.heightText
-        handle[KEY_IN_WEIGHT] = state.editInput.weightText
-        handle[KEY_IN_BP_S] = state.editInput.bpSystolicText
-        handle[KEY_IN_BP_D] = state.editInput.bpDiastolicText
-        handle[KEY_IN_SAT] = state.editInput.satText
-        handle[KEY_IN_PULSE] = state.editInput.pulseText
-        handle[KEY_IN_TEMP] = state.editInput.bodyTemperatureText
-        handle[KEY_IN_GLUCOSE] = state.editInput.glucoseText
-        handle[KEY_IN_HBA1C] = state.editInput.hba1cText
-        handle[KEY_IN_TIME] = state.editInput.recordTime?.toEpochMilli()
+        handle[KEY_IN_HEIGHT] = session.editInput.heightText
+        handle[KEY_IN_WEIGHT] = session.editInput.weightText
+        handle[KEY_IN_BP_S] = session.editInput.bpSystolicText
+        handle[KEY_IN_BP_D] = session.editInput.bpDiastolicText
+        handle[KEY_IN_SAT] = session.editInput.satText
+        handle[KEY_IN_PULSE] = session.editInput.pulseText
+        handle[KEY_IN_TEMP] = session.editInput.bodyTemperatureText
+        handle[KEY_IN_GLUCOSE] = session.editInput.glucoseText
+        handle[KEY_IN_HBA1C] = session.editInput.hba1cText
+        handle[KEY_IN_TIME] = session.editInput.recordTime?.toEpochMilli()
 
         // Snapshot
-        state.initialSnapshot?.let { base ->
+        session.initialSnapshot?.let { base ->
             handle[KEY_BASE_HEIGHT] = base.heightText
             handle[KEY_BASE_WEIGHT] = base.weightText
             handle[KEY_BASE_BP_S] = base.bpSystolicText
@@ -264,10 +280,8 @@ class PersonHealthViewModel(
         return state.copy(
             personId = null,
             records = persistentListOf(),
-            selectedRecordId = null,
             preferredShowHistory = true,
-            isEditing = false,
-            editInput = HealthEditInput()
+            editSession = HealthEditSession()
         )
     }
 
@@ -279,22 +293,17 @@ class PersonHealthViewModel(
 
     fun setCategory(category: Category) {
         if (currentState.currentCategory != category) {
-            updateUiState { it.copy(currentCategory = category, selectedRecordId = null) }
+            updateUiState { it.copy(currentCategory = category, editSession = it.editSession.copy(selectedRecordId = null)) }
             refreshRecords(currentState.personId, category)
         }
     }
 
     fun setSelectedRecordId(id: String?) {
         updateUiState { state ->
-            val next = state.copy(selectedRecordId = id)
+            val next = state.copy(editSession = state.editSession.copy(selectedRecordId = id))
             if (id == null) {
                 val cleared = next.copy(
-                    isEditing = false,
-                    editInput = HealthEditInput(),
-                    initialRecordTime = null,
-                    initialSnapshot = null,
-                    isChanged = false,
-                    isSaveEnabled = false
+                    editSession = HealthEditSession()
                 )
                 clearRestorableState(
                     KEY_SELECTED_ID, KEY_IS_EDITING, 
@@ -320,16 +329,19 @@ class PersonHealthViewModel(
                         heightText = latestHeight,
                         recordTime = now
                     )
-                    val nextWithInput = next.copy(
-                        isEditing = true,
-                        editInput = initialInput,
-                        initialRecordTime = now,
-                        initialSnapshot = initialInput,
-                        isChanged = false,
-                        isSaveEnabled = false
+                    val nextWithSession = next.copy(
+                        editSession = HealthEditSession(
+                            isEditing = true,
+                            selectedRecordId = id,
+                            editInput = initialInput,
+                            initialRecordTime = now,
+                            initialSnapshot = initialInput,
+                            isChanged = false,
+                            isSaveEnabled = false
+                        )
                     )
-                    backupRestorableState(nextWithInput)
-                    nextWithInput
+                    backupRestorableState(nextWithSession)
+                    nextWithSession
                 }
             } else {
                 // 既存レコード選択時は閲覧モードから開始
@@ -338,7 +350,7 @@ class PersonHealthViewModel(
                     isRestoring = false
                     next
                 } else {
-                    val nextView = next.copy(isEditing = false, initialRecordTime = null)
+                    val nextView = next.copy(editSession = next.editSession.copy(isEditing = false, initialRecordTime = null))
                     backupRestorableState(nextView)
                     nextView
                 }
@@ -350,7 +362,8 @@ class PersonHealthViewModel(
      * 現在選択されているレコードの編集セッションを開始します。
      */
     fun startEditSession() {
-        val recordId = currentState.selectedRecordId ?: return
+        val session = currentState.editSession
+        val recordId = session.selectedRecordId ?: return
         val record = currentState.records.find { it.id == recordId } ?: return
 
         val initialInput = HealthEditInput(
@@ -368,12 +381,14 @@ class PersonHealthViewModel(
 
         updateUiState {
             val next = it.copy(
-                isEditing = true,
-                editInput = initialInput,
-                initialRecordTime = record.recordTime,
-                initialSnapshot = initialInput,
-                isChanged = false,
-                isSaveEnabled = false
+                editSession = session.copy(
+                    isEditing = true,
+                    editInput = initialInput,
+                    initialRecordTime = record.recordTime,
+                    initialSnapshot = initialInput,
+                    isChanged = false,
+                    isSaveEnabled = false
+                )
             )
             backupRestorableState(next)
             next
@@ -384,12 +399,12 @@ class PersonHealthViewModel(
      * 編集をキャンセルします。新規なら閉じ、既存なら閲覧モードに戻ります。
      */
     fun cancelEditSession() {
-        val recordId = currentState.selectedRecordId
+        val recordId = currentState.editSession.selectedRecordId
         if (recordId != null && IdLogic.isNew(recordId)) {
             setSelectedRecordId(null)
         } else {
             updateUiState { 
-                val next = it.copy(isEditing = false)
+                val next = it.copy(editSession = it.editSession.copy(isEditing = false))
                 backupRestorableState(next)
                 next
             }
@@ -401,11 +416,12 @@ class PersonHealthViewModel(
      */
     fun updateEditInput(update: (HealthEditInput) -> HealthEditInput) {
         updateUiState { state ->
-            val nextInput = update(state.editInput)
-            val isChanged = (nextInput != state.initialSnapshot)
+            val session = state.editSession
+            val nextInput = update(session.editInput)
+            val isChanged = (nextInput != session.initialSnapshot)
 
             // 自動的に touched とするフィールドの特定
-            val nextTouched = getNewlyTouchedFields(state.editInput, nextInput, state.touchedFields)
+            val nextTouched = getNewlyTouchedFields(session.editInput, nextInput, session.touchedFields)
 
             // バリデーションとエラーメッセージの生成
             val (errors, errorArgs) = calculateFieldErrors(nextInput, nextTouched)
@@ -415,12 +431,14 @@ class PersonHealthViewModel(
             val isSaveEnabled = (validationResult == HealthInputValidationResult.SUCCESS) && isDateTimeValid && isChanged
 
             val next = state.copy(
-                editInput = nextInput,
-                isChanged = isChanged,
-                isSaveEnabled = isSaveEnabled,
-                touchedFields = nextTouched,
-                fieldErrors = errors,
-                fieldErrorArgs = errorArgs
+                editSession = session.copy(
+                    editInput = nextInput,
+                    isChanged = isChanged,
+                    isSaveEnabled = isSaveEnabled,
+                    touchedFields = nextTouched,
+                    fieldErrors = errors,
+                    fieldErrorArgs = errorArgs
+                )
             )
             backupRestorableState(next)
             next
@@ -430,12 +448,15 @@ class PersonHealthViewModel(
     /** フィールドにフォーカスが当たったことを記録します */
     fun markFieldAsTouched(fieldName: String) {
         updateUiState { state ->
-            val nextTouched = state.touchedFields + fieldName
-            val (errors, errorArgs) = calculateFieldErrors(state.editInput, nextTouched)
+            val session = state.editSession
+            val nextTouched = session.touchedFields + fieldName
+            val (errors, errorArgs) = calculateFieldErrors(session.editInput, nextTouched)
             val next = state.copy(
-                touchedFields = nextTouched,
-                fieldErrors = errors,
-                fieldErrorArgs = errorArgs
+                editSession = session.copy(
+                    touchedFields = nextTouched,
+                    fieldErrors = errors,
+                    fieldErrorArgs = errorArgs
+                )
             )
             backupRestorableState(next)
             next
@@ -551,9 +572,10 @@ class PersonHealthViewModel(
      * 現在の入力内容で保存を実行します。
      */
     fun saveCurrentEdit() {
-        val input = currentState.editInput
+        val session = currentState.editSession
+        val input = session.editInput
         val category = currentState.currentCategory
-        val recordId = currentState.selectedRecordId ?: ""
+        val recordId = session.selectedRecordId ?: ""
         val recordTime = input.recordTime ?: return
 
         val values = input.toValidationMap().mapValues { (_, v) ->
@@ -586,14 +608,18 @@ class PersonHealthViewModel(
         recordsJob = safeCollect(
             operation = OP_RECORDS_FLOW,
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_HEALTH },
             flowProvider = {
-                when (category) {
+                val flow = when (category) {
                     Category.HEIGHT_AND_WEIGHT -> healthRepository.getHeightAndWeightByPersonId(personId)
                     Category.BP_AND_PULSE -> healthRepository.getBpAndPulseByPersonId(personId)
                     Category.GLUCOSE_AND_HBA1C -> healthRepository.getGlucoseAndHbA1cByPersonId(personId)
                     else -> flowOf(emptyList())
+                }
+                flow.catch { e ->
+                    updateUiState { it.copy(screenState = PersonHealthScreenState.Error(e)) }
+                    throw e
                 }
             }
         ) { records ->
@@ -617,9 +643,12 @@ class PersonHealthViewModel(
         // 二重実行防止
         if (saveJob?.isActive == true) return
 
+        // 操作状態を「保存中」に設定
+        updateUiState { it.copy(operation = PersonHealthOperation.Saving) }
+
         saveJob = safeLaunch(
             operation = OP_SAVE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_HEALTH
                 affectedId = recordId
@@ -627,7 +656,9 @@ class PersonHealthViewModel(
         ) {
             val record = PersonHealthLogic.createEntity(category, requiredPersonId, recordId, recordTime, values) as HistoryRecord
             val validationResult = PersonHealthLogic.validate(record)
-            translateValidationResult(validationResult)
+            if (validationResult != HealthValidationResult.SUCCESS) {
+                translateValidationResult(validationResult)
+            }
 
             val isUpdate = !IdLogic.isNew(recordId)
             
@@ -635,7 +666,9 @@ class PersonHealthViewModel(
             val existing = healthRepository.findHistoryRecordAtTime(category, record.personId, record.recordTime)
 
             val duplicateResult = PersonHealthLogic.validateDuplicate(record, existing)
-            translateValidationResult(duplicateResult)
+            if (duplicateResult != HealthValidationResult.SUCCESS) {
+                translateValidationResult(duplicateResult)
+            }
 
             healthRepository.saveHistoryRecord(record, isUpdate, featureName, OP_SAVE)
 
@@ -643,16 +676,11 @@ class PersonHealthViewModel(
             showSnackbar(if (isUpdate) R.string.p_health_msg_update_success else R.string.p_health_msg_save_success)
             
             // 状態復元データを破棄
-            clearRestorableState(
-                KEY_SELECTED_ID, KEY_IS_EDITING, 
-                KEY_IN_HEIGHT, KEY_IN_WEIGHT, KEY_IN_BP_S, KEY_IN_BP_D, KEY_IN_SAT, KEY_IN_PULSE, KEY_IN_TEMP, KEY_IN_GLUCOSE, KEY_IN_HBA1C, KEY_IN_TIME,
-                KEY_BASE_HEIGHT, KEY_BASE_WEIGHT, KEY_BASE_BP_S, KEY_BASE_BP_D, KEY_BASE_SAT, KEY_BASE_PULSE, KEY_BASE_TEMP, KEY_BASE_GLUCOSE, KEY_BASE_HBA1C, KEY_BASE_TIME
-            )
+            setSelectedRecordId(null)
         }
     }
 
     private fun translateValidationResult(result: HealthValidationResult) {
-        if (result == HealthValidationResult.SUCCESS) return
         val messageRes = when (result) {
             HealthValidationResult.INVALID_VALUE -> R.string.common_error_save
             HealthValidationResult.DUPLICATE_TIME -> R.string.common_err_duplicate_blocked_simple
@@ -669,15 +697,19 @@ class PersonHealthViewModel(
         // 二重実行防止
         if (deleteJob?.isActive == true) return
 
+        val historyRecord = record as? HistoryRecord ?: return
+        
+        // 操作状態を「削除中」に設定
+        updateUiState { it.copy(operation = PersonHealthOperation.Deleting(historyRecord.id)) }
+
         deleteJob = safeLaunch(
             operation = OP_DELETE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_HEALTH
-                affectedId = (record as? HistoryRecord)?.id
+                affectedId = historyRecord.id
             }
         ) {
-            val historyRecord = record as? HistoryRecord ?: return@safeLaunch
             healthRepository.deleteHistoryRecord(historyRecord, featureName, OP_DELETE)
             showSnackbar(R.string.p_health_msg_delete_success)
         }

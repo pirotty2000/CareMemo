@@ -113,6 +113,7 @@ fun PersonConditionScreen(
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val conditionState by conditionViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val session = conditionState.editSession
 
     val isExpanded = widthSizeClass == WindowWidthSizeClass.Expanded
     val scope = rememberCoroutineScope()
@@ -199,7 +200,7 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.TakePicture(),
     ) { success ->
         if (success && tempPhotoUri != null) {
-            conditionViewModel.onPhotoCaptured(tempPhotoUri!!, conditionState.selectedConditionId ?: "")
+            conditionViewModel.onPhotoCaptured(tempPhotoUri!!, session.selectedConditionId ?: "")
         } else if (!success && tempPhotoUri != null) {
             conditionViewModel.notifyPhotoError(context.getString(R.string.p_cond_err_photo_capture_failed))
         }
@@ -209,7 +210,7 @@ fun PersonConditionScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            conditionViewModel.onPhotoCaptured(uri, conditionState.selectedConditionId ?: "")
+            conditionViewModel.onPhotoCaptured(uri, session.selectedConditionId ?: "")
         }
     }
 
@@ -217,7 +218,7 @@ fun PersonConditionScreen(
 
     // アクションハンドラ：UI からの通知を ViewModel や OS連携へ橋渡しする
     // ダイアログ状態（recordToDelete等）や遷移に必要なIDをキーに含め、状態変更時のみラムダを再生成する
-    val handleAction: (PersonConditionUiAction) -> Unit = remember(conditionViewModel, detailViewModel, navController, cameraLauncher, galleryLauncher, isExpanded, detailState.personId, conditionState.selectedConditionId, recordToDelete, onConfirmOverwrite) {
+    val handleAction: (PersonConditionUiAction) -> Unit = remember(conditionViewModel, detailViewModel, navController, cameraLauncher, galleryLauncher, isExpanded, detailState.personId, session.selectedConditionId, recordToDelete, onConfirmOverwrite) {
         { action ->
             when (action) {
                 is PersonConditionUiAction.SearchQueryChanged -> conditionViewModel.updateSearchQuery(action.query)
@@ -225,7 +226,7 @@ fun PersonConditionScreen(
                 is PersonConditionUiAction.DeleteRecordRequest -> recordToDelete = action.record
                 PersonConditionUiAction.ConfirmDeleteRecord -> {
                     recordToDelete?.let { record ->
-                        if (conditionState.selectedConditionId == record.id) conditionViewModel.setSelectedConditionId(null)
+                        if (session.selectedConditionId == record.id) conditionViewModel.setSelectedConditionId(null)
                         if (record is ConditionAtVisit) {
                             conditionViewModel.deleteRecord(record)
                         }
@@ -253,7 +254,7 @@ fun PersonConditionScreen(
                 }
                 is PersonConditionUiAction.DeletePhoto -> conditionViewModel.deletePhoto(action.photo)
                 is PersonConditionUiAction.ReattachPhoto -> {
-                    val cid = conditionState.selectedConditionId ?: ""
+                    val cid = session.selectedConditionId ?: ""
                     conditionViewModel.reattachUnassignedPhoto(cid, action.info)
                 }
                 is PersonConditionUiAction.NavigateToPhotoFullScreen -> {
@@ -287,8 +288,8 @@ fun PersonConditionScreen(
     val isAnyDialogOpen = recordToDelete != null || showPdfSettingsDialog || dialogMessage != null
 
     // システム戻るボタンの制御 (詳細閲覧時)
-    BackHandler(enabled = conditionState.selectedConditionId != null) {
-        if (conditionState.isEditing && conditionState.isChanged) {
+    BackHandler(enabled = session.selectedConditionId != null) {
+        if (session.isEditing && session.isChanged) {
             // 編集中の破棄確認は各 Content 内の BackHandler が優先されるが、
             // 万が一ここに来た場合のために何もしない（各 Content 側でダイアログを出す）
         } else {
@@ -396,12 +397,12 @@ fun PersonConditionScreen(
     }
 
     // 詳細・編集ダイアログ
-    if (!isExpanded && conditionState.selectedConditionId != null && detailState.personId != null) {
+    if (!isExpanded && session.selectedConditionId != null && detailState.personId != null) {
         Dialog(
             onDismissRequest = { 
                 // 編集中で変更がある場合は、詳細ペイン内の BackHandler がダイアログを出して阻止する。
                 // それ以外（閲覧モードや変更なし）の場合は、ここから詳細を閉じる。
-                if (!conditionState.isEditing || !conditionState.isChanged) {
+                if (!session.isEditing || !session.isChanged) {
                     handleAction(PersonConditionUiAction.SelectedIdChanged(null))
                 }
             },
@@ -413,7 +414,7 @@ fun PersonConditionScreen(
             ) {
                 // ダイアログ内でのシステム戻る操作をハンドル
                 BackHandler(enabled = true) {
-                    if (conditionState.isEditing && conditionState.isChanged) {
+                    if (session.isEditing && session.isChanged) {
                         // 編集中の破棄確認（各 Content 内の BackHandler が優先されることを期待するが、
                         // ダイアログ最上位でも明示的に閉じるアクションを誘発させる場合はここに書く。
                         // 現状は Content 側の BackHandler が機能するように、ここでは

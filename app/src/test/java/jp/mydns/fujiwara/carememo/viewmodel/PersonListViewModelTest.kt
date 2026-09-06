@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -86,7 +88,7 @@ class PersonListViewModelTest {
             advanceUntilIdle()
             
             val loaded = expectMostRecentItem()
-            assertFalse(loaded.isLoading)
+            assertEquals(PersonListScreenState.Active, loaded.screenState)
             assertEquals(1, loaded.userList.size)
             assertEquals("浅井　太郎", loaded.userList[0].maskedName)
         }
@@ -264,7 +266,7 @@ class PersonListViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertTrue(viewModel.uiState.value.screenState is PersonListScreenState.Error)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("List Error") }, any()) }
     }
 

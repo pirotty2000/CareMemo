@@ -17,39 +17,31 @@ import java.util.UUID
  *
  * 【役割】
  * 所見メモ（カテゴリB）画面における、すべての動的な表示状態を保持します。
- * フォームの入力値、DBから取得したレコードリスト、検索クエリ、および「未割り当て写真」の管理情報を含みます。
- *
+ * 
+ * @param screenState 構造的状態 (Loading / Active / Error)
+ * @param operation 実行中の操作状態 (Idle / Refreshing / Saving / Deleting / PhotoProcessing)
  * @param personId 対象者のID
  * @param currentCategory 現在のカテゴリ（常に CONDITION_AT_VISIT）
- * @param records 全ての所見レコードリスト
- * @param filteredRecords 検索キーワード等で絞り込まれたレコードリスト
- * @param searchQuery 検索キーワード
- * @param selectedConditionId 現在選択（閲覧・編集）されているレコードのID
- * @param initialPhotoId 初期表示する写真のID
- * @param previewUri 撮影後のプレビュー用URI
- * @param currentConditionPhotos 選択されたレコードに紐付く写真リスト
- * @param conditionPhotoMap レコードIDごとの写真有無マップ（履歴リストのアイコン表示に使用）
- * @param unassignedPhotoCount 再紐付け可能な「未割り当て写真」の総数
- * @param availableUnassignedPhotos 再紐付け可能な未割り当て写真情報のリスト
- * @param isProcessing 保存や削除などの非同期処理中フラグ
- * @param errorMessage エラーメッセージ
- * @param isLoading 初期読み込み中フラグ
- * @param isEditing 編集モード中かどうか
- * @param editInput 現在の入力値
- * @param initialRecordTime 編集開始時の記録日時（変更検知用）
- * @param initialSnapshot 編集開始時のスナップショット（変更検知用）
- * @param isChanged 初期状態から変更があるかどうか
- * @param isSaveEnabled 保存ボタンを活性化できる状態（バリデーション成功かつ変更あり）かどうか
+ * @param records 全ての所見レコードリスト (Domain Content)
+ * @param filteredRecords 検索キーワード等で絞り込まれたレコードリスト (Domain Content)
+ * @param searchQuery 検索キーワード (UI Details)
+ * @param editSession 編集セッションの詳細状態 (UI Content Details)
  */
 @Immutable
 data class PersonConditionUiState(
+    val screenState: PersonConditionScreenState = PersonConditionScreenState.Loading,
+    val operation: PersonConditionOperation = PersonConditionOperation.Idle,
+
     override val personId: String? = null,
     override val currentCategory: Category = Category.CONDITION_AT_VISIT,
 
     val records: ImmutableList<ConditionAtVisit> = persistentListOf(),
     val filteredRecords: ImmutableList<ConditionAtVisit> = persistentListOf(),
     val searchQuery: String = "",
-    val selectedConditionId: String? = null,
+    
+    val editSession: ConditionEditSession = ConditionEditSession(),
+
+    // 写真操作関連の一時状態 (UI Details)
     val initialPhotoId: String? = null,
     val previewUri: String? = null,
     val previewCaption: String = "",
@@ -58,12 +50,41 @@ data class PersonConditionUiState(
     val unassignedPhotoCount: Int = 0,
     val availableUnassignedPhotos: ImmutableList<UnassignedPhotoInfo> = persistentListOf(),
 
-    val isProcessing: Boolean = false,
-    val errorMessage: String? = null,
+    @Deprecated("Use screenState and operation")
     override val isLoading: Boolean = false,
+    @Deprecated("Use operation")
+    val isProcessing: Boolean = false,
+    @Deprecated("Use screenState")
+    val errorMessage: String? = null
+) : PersonAwareState
 
-    // --- 編集セッション状態 ---
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface PersonConditionScreenState {
+    data object Loading : PersonConditionScreenState
+    data object Active : PersonConditionScreenState
+    data class Error(val throwable: Throwable) : PersonConditionScreenState
+}
+
+/**
+ * 操作状態 (Operation State)
+ */
+sealed interface PersonConditionOperation {
+    data object Idle : PersonConditionOperation
+    data object Refreshing : PersonConditionOperation
+    data object Saving : PersonConditionOperation
+    data class Deleting(val recordId: String) : PersonConditionOperation
+    data object PhotoProcessing : PersonConditionOperation
+}
+
+/**
+ * 編集セッション状態 (UI Content Details)
+ */
+@Immutable
+data class ConditionEditSession(
     val isEditing: Boolean = false,
+    val selectedConditionId: String? = null,
     val editInput: ConditionEditInput = ConditionEditInput(),
     val initialRecordTime: Instant? = null,
     val initialSnapshot: ConditionEditInput? = null,
@@ -71,7 +92,7 @@ data class PersonConditionUiState(
     val isSaveEnabled: Boolean = false,
     val fieldErrors: Map<String, Int?> = emptyMap(),
     val touchedFields: Set<String> = emptySet()
-) : PersonAwareState
+)
 
 /**
  * UI Input：ConditionEditInput

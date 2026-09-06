@@ -10,6 +10,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -59,7 +61,7 @@ class PersonEditScreenTest {
     @Test
     fun DSP_03_loadingIndicator_isDisplayed() {
         setContent {
-            PersonEditScreenContentWrapper(isLoading = true)
+            PersonEditScreenContentWrapper(screenState = PersonEditScreenState.Loading)
         }
         composeTestRule.onNodeWithTag("PersonEdit_Loading").assertIsDisplayed()
     }
@@ -237,7 +239,7 @@ class PersonEditScreenTest {
     @Composable
     private fun PersonEditScreenContentWrapper(
         isNew: Boolean = true,
-        isLoading: Boolean = false,
+        screenState: PersonEditScreenState = PersonEditScreenState.Active,
         lastName: String = "",
         firstName: String = "",
         isValid: Boolean = false,
@@ -246,9 +248,11 @@ class PersonEditScreenTest {
         PersonEditScreenContent(
             uiState = PersonEditUiState(
                 isNew = isNew,
-                isLoading = isLoading,
-                lastName = lastName,
-                firstName = firstName,
+                screenState = screenState,
+                input = PersonEditInput(
+                    lastName = lastName,
+                    firstName = firstName
+                ),
                 isValid = isValid
             ),
             onAction = onAction,

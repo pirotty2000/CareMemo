@@ -10,6 +10,8 @@ import jp.mydns.fujiwara.carememo.data.repository.AppMaintenanceRepository
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsOperation
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -78,6 +80,7 @@ class SettingsViewModelTest {
         viewModel.uiState.test {
             advanceUntilIdle()
             val state = expectMostRecentItem()
+            assertTrue(state.screenState is SettingsScreenState.Active)
             assertFalse(state.isNameMaskingEnabled)
             assertEquals(10, state.auditLogCount)
             assertEquals(ThemeSetting.SYSTEM, state.themeSetting)
@@ -115,7 +118,7 @@ class SettingsViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Click 7 times (threshold defined in AppSpecifications/SettingsLogic)
+        // Click 7 times
         repeat(7) { viewModel.handleVersionClick() }
         
         assertTrue(viewModel.uiState.value.isDeveloperModeEnabled)
@@ -195,7 +198,7 @@ class SettingsViewModelTest {
         viewModel.exportData(uri)
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isProcessing)
+        assertEquals(SettingsOperation.Idle, viewModel.uiState.value.operation)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Export Error") }, any()) }
     }
 

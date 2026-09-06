@@ -1,19 +1,5 @@
 package jp.mydns.fujiwara.carememo.ui.screens.settings
 
-/**
- * Screen : DeleteOrRestorePerson
- *
- * 【画面名】
- * 利用者の復帰・完全抹消画面
- *
- * 【遷移】
- * ← SettingsScreen（戻るボタン、または操作完了後に自動遷移）
- * 
- * 【遷移】：
- * ViewModel から発行される ViewEvent (DeleteOrRestorePersonViewEvent) に基づき、
- * Composable 側で NavHostController を操作して遷移を行う。
- */
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonOperation
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.*
@@ -64,14 +52,6 @@ sealed interface DeleteOrRestorePersonUiAction {
  * 【役割】
  * アーカイブ済み（論理削除済み）の利用者を、一覧（MainScreen）へ「復帰」させるか、
  * あるいは DB から「完全抹消」するための管理画面（SCR-S-003）です。
- *
- * 【主な機能】
- * ・一括操作：チェックボックスによる複数選択と、復帰・抹消の一括実行。
- * ・モード別 UI：
- *     - RESTORE モード：通常の配色で復帰操作を提供。
- *     - DELETE モード：警告色（赤）と注意喚起バナーによる、破壊的操作への警告。
- * ・安全性：完全抹消前には多段階の確認ダイアログを表示し、誤操作を防止。
- * ・情報提示：生年月日や識別メモを表示し、同姓同名の利用者等の取り違えを防止。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,24 +63,17 @@ fun DeleteOrRestorePersonScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
-    // 操作が行われた場合に、戻り先の画面にリスト更新を促すためのフラグ
     var isRefreshNeeded by rememberSaveable { mutableStateOf(false) }
     
-    // 確認ダイアログの表示制御
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
     
-    // 汎用情報・エラーダイアログ用の状態
     var dialogTitle by remember { mutableStateOf<String?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    /**
-     * 戻る際の処理
-     * 復帰や抹消が一度でも行われていれば、遷移元に更新を通知します。
-     */
     val handleBack: () -> Unit = {
         if (isRefreshNeeded) {
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
@@ -108,12 +81,10 @@ fun DeleteOrRestorePersonScreen(
         navController.popBackStack()
     }
 
-    // ViewModel から発行される一過性のイベント（通知やダイアログ要求）を監視
     LaunchedEffect(Unit) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
                 is BaseUiStateViewModel.UiEvent.ShowSnackbarRes -> {
-                    // 復帰・抹消の成功メッセージを受信した場合、画面更新が必要と判断
                     if (event.resId == R.string.archive_msg_restored || event.resId == R.string.archive_msg_deleted) {
                         isRefreshNeeded = true
                     }
@@ -142,7 +113,6 @@ fun DeleteOrRestorePersonScreen(
         }
     }
 
-    // ViewModel からの画面遷移イベントを監視
     LaunchedEffect(Unit) {
         viewModel.viewEvent.collect { event ->
             when (event) {
@@ -154,8 +124,6 @@ fun DeleteOrRestorePersonScreen(
         }
     }
 
-    // アクションハンドラ：UI からの通知を ViewModel やダイアログ制御へ橋渡しする
-    // 表示モードをキーに含めることで、モード切替時のみラムダを再生成する
     val handleAction: (DeleteOrRestorePersonUiAction) -> Unit = remember(viewModel, uiState.mode) {
         { action ->
             when (action) {
@@ -202,9 +170,6 @@ fun DeleteOrRestorePersonScreen(
 
 /**
  * Screen：DeleteOrRestorePersonContent
- *
- * 【役割】
- * 利用者の復帰・抹消画面のレイアウト本体 (Stateless)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -218,17 +183,20 @@ fun DeleteOrRestorePersonContent(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
-    val (isLoading, mode, archivedPersons, selectedIds, isNameMaskingEnabled) = uiState
-    val isDeleteMode = mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
+    val mode = uiState.mode
+    val archivedPersons = uiState.archivedPersons
+    val selectedIds = uiState.selectedIds
+    val isNameMaskingEnabled = uiState.isNameMaskingEnabled
     
-    // 背景色の決定 (DELETEモード時は、注意を促すために薄いエラー色を適用)
+    val isDeleteMode = mode == DeleteOrRestorePersonViewModel.OperationMode.DELETE
+    val isOperating = uiState.operation != DeleteOrRestorePersonOperation.Idle
+    
     val backgroundColor = if (isDeleteMode) {
         MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
     } else {
         MaterialTheme.colorScheme.background
     }
 
-    // TopBar 配色の決定 (DELETEモード時は、破壊的操作であることを示すためエラー色を適用)
     val topBarColors = if (isDeleteMode) {
         TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.error,
@@ -257,14 +225,13 @@ fun DeleteOrRestorePersonContent(
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = { onAction(DeleteOrRestorePersonUiAction.Back) }, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
+                    IconButton(onClick = { onAction(DeleteOrRestorePersonUiAction.Back) }, enabled = !isOperating, modifier = Modifier.testTag("DeleteOrRestore_BackButton")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 colors = topBarColors,
                 actions = {
-                    // DELETEモード時は「全選択」による誤抹消を防ぐため、アクションを非表示にする
-                    if (!isDeleteMode && archivedPersons.isNotEmpty()) {
+                    if (!isDeleteMode && archivedPersons.isNotEmpty() && !isOperating) {
                         val isAllSelected = selectedIds.size == archivedPersons.size
                         TextButton(
                             onClick = {
@@ -286,7 +253,6 @@ fun DeleteOrRestorePersonContent(
             )
         },
         bottomBar = {
-            // いずれかの利用者が選択されている場合のみ、実行ボタンを表示
             if (selectedIds.isNotEmpty()) {
                 Surface(
                     tonalElevation = 4.dp,
@@ -296,6 +262,7 @@ fun DeleteOrRestorePersonContent(
                 ) {
                     Button(
                         onClick = { onAction(DeleteOrRestorePersonUiAction.ActionClick) },
+                        enabled = !isOperating,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)
@@ -315,102 +282,110 @@ fun DeleteOrRestorePersonContent(
                 .padding(paddingValues)
                 .background(backgroundColor)
         ) {
-            if (archivedPersons.isEmpty()) {
-                // アーカイブ対象がいない場合の表示
-                if (isLoading) {
-                    LoadingScreen(modifier = Modifier.testTag("DeleteOrRestore_Loading"))
-                } else {
-                    EmptyState(
-                        message = stringResource(R.string.archive_empty_msg),
-                        icon = Icons.Outlined.PersonOff,
-                        modifier = Modifier.testTag("DeleteOrRestore_EmptyState")
+            when (uiState.screenState) {
+                is DeleteOrRestorePersonScreenState.Loading -> {
+                    if (archivedPersons.isEmpty()) {
+                        LoadingScreen(modifier = Modifier.testTag("DeleteOrRestore_Loading"))
+                    }
+                }
+                is DeleteOrRestorePersonScreenState.Error -> {
+                    ErrorState(
+                        message = stringResource(R.string.common_error_load_failed),
+                        onRetry = { /* viewModel.startArchivedListObservation() */ }
                     )
                 }
-            } else {
-                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-                Column {
-                    if (isDeleteMode) {
-                        // DELETEモード時の警告バナー
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.testTag("DeleteOrRestore_WarningBanner")
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(Icons.Rounded.Warning, contentDescription = null, modifier = Modifier.size(20.dp))
-                                Text(
-                                    text = stringResource(R.string.archive_permanent_delete_warning),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
+                is DeleteOrRestorePersonScreenState.Active -> {
+                    if (archivedPersons.isEmpty()) {
+                        EmptyState(
+                            message = stringResource(R.string.archive_empty_msg),
+                            icon = Icons.Outlined.PersonOff,
+                            modifier = Modifier.testTag("DeleteOrRestore_EmptyState")
+                        )
+                    } else {
+                        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                        Column {
+                            if (isOperating) {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
                             }
-                        }
-                    }
-
-                    Box(modifier = Modifier.weight(1f)) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize().testTag("DeleteOrRestore_List"),
-                            state = listState
-                        ) {
-                            items(archivedPersons, key = { it.id }) { person ->
-                                val isSelected = selectedIds.contains(person.id)
-                                ListItem(
-                                    headlineContent = { 
+                            if (isDeleteMode) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.testTag("DeleteOrRestore_WarningBanner")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.Warning, contentDescription = null, modifier = Modifier.size(20.dp))
                                         Text(
-                                            text = person.getMaskedName(isNameMaskingEnabled),
-                                            fontWeight = FontWeight.Bold
-                                        ) 
-                                    },
-                                    supportingContent = {
-                                        Column {
-                                            // ふりがな（マスク対応）
-                                            Text(person.getMaskedFurigana(isNameMaskingEnabled))
-                                            // 生年月日、年齢、および識別メモを表示して人違いを防止
-                                            Text(
-                                                text = buildString {
-                                                    append(DateTimeUtils.formatBirthday(person.birthday))
-                                                    append(" (${DateTimeUtils.calculateAge(person.birthday)}歳)")
-                                                    if (person.note.isNotBlank()) {
-                                                        append(" [${person.note}]")
-                                                    }
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    leadingContent = {
-                                        Checkbox(
-                                            checked = isSelected,
-                                            onCheckedChange = { onAction(DeleteOrRestorePersonUiAction.ToggleSelection(person.id)) },
-                                            colors = if (isDeleteMode) {
-                                                // 抹消モード時はチェックボックスも赤色にして警告を強調
-                                                CheckboxDefaults.colors(
-                                                    checkedColor = MaterialTheme.colorScheme.error,
-                                                    uncheckedColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
-                                                )
-                                            } else CheckboxDefaults.colors(),
-                                            modifier = Modifier.testTag("DeleteOrRestore_Checkbox_${person.id}")
+                                            text = stringResource(R.string.archive_permanent_delete_warning),
+                                            style = MaterialTheme.typography.labelSmall
                                         )
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    modifier = Modifier.testTag("DeleteOrRestore_Item_${person.id}")
-                                )
-                                HorizontalDivider(thickness = 0.5.dp)
+                                    }
+                                }
+                            }
+
+                            Box(modifier = Modifier.weight(1f)) {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize().testTag("DeleteOrRestore_List"),
+                                    state = listState
+                                ) {
+                                    items(archivedPersons, key = { it.id }) { person ->
+                                        val isSelected = selectedIds.contains(person.id)
+                                        ListItem(
+                                            headlineContent = { 
+                                                Text(
+                                                    text = person.getMaskedName(isNameMaskingEnabled),
+                                                    fontWeight = FontWeight.Bold
+                                                ) 
+                                            },
+                                            supportingContent = {
+                                                Column {
+                                                    Text(person.getMaskedFurigana(isNameMaskingEnabled))
+                                                    Text(
+                                                        text = buildString {
+                                                            append(DateTimeUtils.formatBirthday(person.birthday))
+                                                            append(" (${DateTimeUtils.calculateAge(person.birthday)}歳)")
+                                                            if (person.note.isNotBlank()) {
+                                                                append(" [${person.note}]")
+                                                            }
+                                                        },
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            },
+                                            leadingContent = {
+                                                Checkbox(
+                                                    checked = isSelected,
+                                                    onCheckedChange = { onAction(DeleteOrRestorePersonUiAction.ToggleSelection(person.id)) },
+                                                    enabled = !isOperating,
+                                                    colors = if (isDeleteMode) {
+                                                        CheckboxDefaults.colors(
+                                                            checkedColor = MaterialTheme.colorScheme.error,
+                                                            uncheckedColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+                                                        )
+                                                    } else CheckboxDefaults.colors(),
+                                                    modifier = Modifier.testTag("DeleteOrRestore_Checkbox_${person.id}")
+                                                )
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            modifier = Modifier.testTag("DeleteOrRestore_Item_${person.id}")
+                                        )
+                                        HorizontalDivider(thickness = 0.5.dp)
+                                    }
+                                }
+                                VerticalScrollIndicator(lazyListState = listState)
                             }
                         }
-                        // 画面右端のスクロール位置インジケータ
-                        VerticalScrollIndicator(lazyListState = listState)
                     }
                 }
             }
         }
     }
 
-    // 復帰実行前の最終確認ダイアログ
     if (showRestoreConfirmDialog) {
         AppDialog(
             onDismissRequest = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) },
@@ -433,7 +408,6 @@ fun DeleteOrRestorePersonContent(
         )
     }
 
-    // 抹消実行前の最終確認ダイアログ（破壊的操作）
     if (showFinalConfirmDialog) {
         AppDialog(
             onDismissRequest = { onAction(DeleteOrRestorePersonUiAction.DismissDialog) },
@@ -458,7 +432,6 @@ fun DeleteOrRestorePersonContent(
         )
     }
 
-    // エラーまたは情報通知用ダイアログ
     if (dialogMessage != null) {
         AppInfoDialog(
             title = dialogTitle,

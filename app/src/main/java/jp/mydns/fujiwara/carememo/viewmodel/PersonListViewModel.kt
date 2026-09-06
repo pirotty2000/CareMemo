@@ -21,8 +21,11 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDuplicateResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -137,7 +140,13 @@ class PersonListViewModel(
             if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
                 val restoredQuery = savedStateHandle.get<String>(KEY_SEARCH_QUERY) ?: ""
                 val restoredSection = savedStateHandle.get<String>(KEY_SELECTED_SECTION) ?: AppSpecifications.Search.SECTION_ALL
-                updateUiState { it.copy(searchQuery = restoredQuery, selectedSection = restoredSection) }
+                updateUiState { 
+                    it.copy(
+                        searchQuery = restoredQuery, 
+                        selectedSection = restoredSection,
+                        screenState = PersonListScreenState.Active // 復元時は Active とみなす（再ロードは別途走る）
+                    ) 
+                }
             }
         } catch (e: Exception) {
             // 復元失敗時はログを記録して通常起動を継続（クラッシュ防止）
@@ -162,7 +171,7 @@ class PersonListViewModel(
         safeCollect(
             operation = "userListFlow",
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_PERSON },
             flowProvider = {
                 combine(
@@ -175,6 +184,10 @@ class PersonListViewModel(
                     filtered.map { person ->
                         PersonListLogic.createPersonUiState(person, state.isNameMaskingEnabled, summaries[person.id])
                     }
+                }.catch { e ->
+                    // 致命的な取得エラー時は Structural Error へ遷移
+                    updateUiState { it.copy(screenState = PersonListScreenState.Error(e)) }
+                    throw e
                 }
             }
         ) { newList ->
@@ -182,8 +195,33 @@ class PersonListViewModel(
         }
     }
 
-    override fun copyWithLoadingState(state: PersonListUiState, isLoading: Boolean): PersonListUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: PersonListUiState, isLoading: Boolean, category: LoadingCategory): PersonListUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                // 初回ロード完了時に Active へ遷移
+                // ただし、既に Error 状態にある場合はそれを維持する
+                val nextScreenState = if (!isLoading) {
+                    if (state.screenState is PersonListScreenState.Error) state.screenState else PersonListScreenState.Active
+                } else {
+                    if (state.screenState is PersonListScreenState.Active) state.screenState else PersonListScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                // 操作完了時に Idle へ戻す
+                if (!isLoading) state.copy(operation = PersonListOperation.Idle) else state
+            }
+            is LoadingCategory.Refresh -> {
+                // リフレッシュ状態の同期
+                state.copy(operation = if (isLoading) PersonListOperation.Refreshing else PersonListOperation.Idle)
+            }
+            is LoadingCategory.Default -> {
+                // 既存の isLoading 相当の処理（PersonList では未使用だが、一貫性のために Idle 復帰のみ定義）
+                if (!isLoading && state.operation != PersonListOperation.Idle) {
+                    state.copy(operation = PersonListOperation.Idle)
+                } else state
+            }
+        }
     }
 
     /**
@@ -222,9 +260,12 @@ class PersonListViewModel(
         // 二重実行防止
         if (actionJob?.isActive == true) return
 
+        // 操作状態を「追加中」に設定
+        updateUiState { it.copy(operation = PersonListOperation.Adding) }
+
         actionJob = safeLaunch(
             operation = OP_ADD,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = person.id
@@ -278,9 +319,12 @@ class PersonListViewModel(
         // 二重実行防止
         if (actionJob?.isActive == true) return
 
+        // 操作状態を「削除中」に設定（IDを保持）
+        updateUiState { it.copy(operation = PersonListOperation.Deleting(person.id)) }
+
         actionJob = safeLaunch(
             operation = OP_DELETE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = person.id
@@ -300,9 +344,12 @@ class PersonListViewModel(
         // 二重実行防止
         if (actionJob?.isActive == true) return
 
+        // 操作状態を「復旧中」に設定（IDを保持）
+        updateUiState { it.copy(operation = PersonListOperation.Restoring(person.id)) }
+
         actionJob = safeLaunch(
             operation = OP_RESTORE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = person.id

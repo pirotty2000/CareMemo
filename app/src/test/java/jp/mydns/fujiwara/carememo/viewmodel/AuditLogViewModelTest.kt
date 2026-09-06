@@ -7,6 +7,7 @@ import jp.mydns.fujiwara.carememo.data.AuditLog
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.AuditLogScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.AuditLogViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,11 +59,10 @@ class AuditLogViewModelTest {
         val viewModel = AuditLogViewModel(auditLogRepository, userSettingsRepository, securitySession)
         
         viewModel.uiState.test {
-            // Skip intermediate loading state transitions
             advanceUntilIdle()
             
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
+            assertTrue(state.screenState is AuditLogScreenState.Active)
             assertEquals(2, state.filteredLogs.size)
             assertTrue(state.availableFeatures.contains("Settings"))
             assertTrue(state.availableResults.contains("DB_ERROR"))
@@ -81,7 +81,7 @@ class AuditLogViewModelTest {
             advanceUntilIdle()
             
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
+            assertTrue(state.screenState is AuditLogScreenState.Error)
             
             coVerify {
                 auditLogRepository.log(any(), any(), any(), "ERROR", any(), any(), "OTHER_ERROR")

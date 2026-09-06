@@ -10,7 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import jp.mydns.fujiwara.carememo.ui.components.base.ErrorState
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +28,8 @@ import jp.mydns.fujiwara.carememo.ui.components.main.KanaIndexBar
 import jp.mydns.fujiwara.carememo.ui.components.main.QuickActionMenu
 import jp.mydns.fujiwara.carememo.ui.components.main.UserListItem
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -65,8 +70,9 @@ import java.time.ZoneId
  * 【役割】
  * 利用者一覧画面（MainScreen）の主要な UI レイアウト本体を構築します。
  *
+ * @param screenState 構造的状態 (Structural State)
+ * @param operation 操作状態 (Operation State)
  * @param userList 利用者リスト
- * @param isLoading ロード中かどうか
  * @param isNameMaskingEnabled 氏名マスク有効かどうか
  * @param searchQuery 検索クエリ
  * @param selectedSection 五十音選択セクション
@@ -80,8 +86,9 @@ import java.time.ZoneId
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
+    screenState: PersonListScreenState,
+    operation: PersonListOperation,
     userList: ImmutableList<PersonUiState>,
-    isLoading: Boolean,
     isNameMaskingEnabled: Boolean,
     searchQuery: String,
     selectedSection: String,
@@ -272,43 +279,80 @@ fun MainScreenContent(
 
                 HorizontalDivider()
 
-                if (isLoading) {
-                    LoadingScreen(modifier = Modifier.testTag("MainScreen_Loading"))
-                } else if (userList.isEmpty()) {
-                    EmptyState(
-                        message = if (searchQuery.isNotEmpty()) stringResource(R.string.main_no_user_found) else stringResource(R.string.main_no_user_registered),
-                        icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1,
-                        modifier = Modifier.testTag("MainScreen_EmptyState")
-                    )
-                } else {
-                    LazyColumn(
+                // Content 表示中のリフレッシュや操作（追加中等）のインジケータ
+                if (operation != PersonListOperation.Idle && screenState is PersonListScreenState.Active) {
+                    LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
-                            .testTag("MainScreen_UserList"),
-                        state = lazyListState,
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(userList, key = { it.person.id }) { userUiState ->
-                            Box {
-                                UserListItem(
-                                    person = userUiState.person,
-                                    summary = userUiState.summary,
-                                    isNameMaskingEnabled = isNameMaskingEnabled,
-                                    onAction = onAction,
-                                    modifier = Modifier
-                                        .animateItem()
-                                        .testTag("UserListItem_${userUiState.person.id}")
-                                )
+                            .height(2.dp)
+                            .testTag("MainScreen_OperationLoading")
+                    )
+                }
 
-                                QuickActionMenu(
-                                    expanded = isQuickActionMenuExpanded && selectedPersonForQuickMenu?.id == userUiState.person.id,
-                                    person = userUiState.person,
-                                    isNameMaskingEnabled = isNameMaskingEnabled,
-                                    onAction = onAction
-                                )
+                when (screenState) {
+                    is PersonListScreenState.Loading -> {
+                        LoadingScreen(modifier = Modifier.testTag("MainScreen_Loading"))
+                    }
+                    is PersonListScreenState.Error -> {
+                        ErrorState(
+                            message = stringResource(R.string.common_error_load_failed),
+                            onRetry = { /* safeCollect は自動再試行されるか、init で再構築される */ },
+                            modifier = Modifier.testTag("MainScreen_ErrorState")
+                        )
+                    }
+                    is PersonListScreenState.Active -> {
+                        if (userList.isEmpty()) {
+                            EmptyState(
+                                message = if (searchQuery.isNotEmpty()) stringResource(R.string.main_no_user_found) else stringResource(R.string.main_no_user_registered),
+                                icon = if (searchQuery.isNotEmpty()) Icons.Rounded.Search else Icons.Rounded.PersonAddAlt1,
+                                modifier = Modifier.testTag("MainScreen_EmptyState")
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .testTag("MainScreen_UserList"),
+                                state = lazyListState,
+                                contentPadding = PaddingValues(bottom = 80.dp)
+                            ) {
+                                items(userList, key = { it.person.id }) { userUiState ->
+                                    val isOperating = when (operation) {
+                                        is PersonListOperation.Deleting -> operation.targetId == userUiState.person.id
+                                        is PersonListOperation.Restoring -> operation.targetId == userUiState.person.id
+                                        else -> false
+                                    }
+
+                                    Box {
+                                        UserListItem(
+                                            person = userUiState.person,
+                                            summary = userUiState.summary,
+                                            isNameMaskingEnabled = isNameMaskingEnabled,
+                                            onAction = onAction,
+                                            modifier = Modifier
+                                                .animateItem()
+                                                .alpha(if (isOperating) 0.5f else 1f) // 操作中は透過させてフィードバック
+                                                .testTag("UserListItem_${userUiState.person.id}")
+                                        )
+
+                                        if (isOperating) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .align(Alignment.Center)
+                                            )
+                                        }
+
+                                        QuickActionMenu(
+                                            expanded = isQuickActionMenuExpanded && selectedPersonForQuickMenu?.id == userUiState.person.id,
+                                            person = userUiState.person,
+                                            isNameMaskingEnabled = isNameMaskingEnabled,
+                                            onAction = onAction
+                                        )
+                                    }
+                                    HorizontalDivider()
+                                }
                             }
-                            HorizontalDivider()
                         }
                     }
                 }
@@ -319,56 +363,17 @@ fun MainScreenContent(
 
 
 /**
- * MainScreenのプレビュー用コンポーザブル。
- * 開発時のUI確認用にモックデータを使用して画面を表示する。
+ * MainScreen のプレビュー (Content)
  */
 @Preview(showBackground = true)
 @Composable
-fun MainScreenPreview() {
-    val zoneId = ZoneId.systemDefault()
-    val today = LocalDate.now(zoneId)
-    
-    // 通常の利用者
-    val person1 = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(zoneId).toInstant())
-    
-    // もうすぐ誕生日の利用者 (明日が誕生日と仮定)
-    val birthdaySoon = today.plusDays(1).minusYears(70)
-    val person2 = Person(id = "2", lastName = "佐藤", firstName = "花子", lastNameFurigana = "サトウ", firstNameFurigana = "ハナコ", birthday = birthdaySoon.atStartOfDay(zoneId).toInstant())
-    
-    // 今日が誕生日の利用者
-    val birthdayToday = today.minusYears(80)
-    val person3 = Person(id = "3", lastName = "田中", firstName = "梅", lastNameFurigana = "タナカ", firstNameFurigana = "ウメ", birthday = birthdayToday.atStartOfDay(zoneId).toInstant())
-
-    val mockUserList = persistentListOf(
-        PersonUiState(
-            person = person1,
-            maskedName = "山○\u3000太○",
-            maskedFurigana = "ヤ○ダ\u3000タ○ウ",
-            age = 75,
-            formattedBirthday = "昭和25年1月1日",
-            summary = PersonCategorySummary(hasBpAndPulse = true)
-        ),
-        PersonUiState(
-            person = person2,
-            maskedName = "佐○\u3000花○",
-            maskedFurigana = "サ○ウ\u3000ハ○コ",
-            age = 70,
-            formattedBirthday = "昭和30年10月10日",
-            summary = PersonCategorySummary(hasCondition = true)
-        ),
-        PersonUiState(
-            person = person3,
-            maskedName = "田○\u3000梅",
-            maskedFurigana = "タ○カ\u3000ウメ",
-            age = 80,
-            formattedBirthday = "昭和20年2月10日",
-            summary = PersonCategorySummary(hasMedication = true)
-        )
-    )
+fun MainScreenContentPreview() {
+    val mockUserList = createMockUserList()
     CareMemoTheme { 
         MainScreenContent(
+            screenState = PersonListScreenState.Active,
+            operation = PersonListOperation.Idle,
             userList = mockUserList, 
-            isLoading = false,
             isNameMaskingEnabled = false,
             searchQuery = "",
             selectedSection = "全",
@@ -379,4 +384,131 @@ fun MainScreenPreview() {
             lazyListState = rememberLazyListState()
         ) 
     }
+}
+
+/**
+ * MainScreen のプレビュー (Loading)
+ */
+@Preview(showBackground = true)
+@Composable
+fun MainScreenLoadingPreview() {
+    CareMemoTheme { 
+        MainScreenContent(
+            screenState = PersonListScreenState.Loading,
+            operation = PersonListOperation.Idle,
+            userList = persistentListOf(), 
+            isNameMaskingEnabled = false,
+            searchQuery = "",
+            selectedSection = "全",
+            selectedPersonForQuickMenu = null,
+            isQuickActionMenuExpanded = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState()
+        ) 
+    }
+}
+
+/**
+ * MainScreen のプレビュー (Empty - 登録なし)
+ */
+@Preview(showBackground = true)
+@Composable
+fun MainScreenEmptyPreview() {
+    CareMemoTheme { 
+        MainScreenContent(
+            screenState = PersonListScreenState.Active,
+            operation = PersonListOperation.Idle,
+            userList = persistentListOf(), 
+            isNameMaskingEnabled = false,
+            searchQuery = "",
+            selectedSection = "全",
+            selectedPersonForQuickMenu = null,
+            isQuickActionMenuExpanded = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState()
+        ) 
+    }
+}
+
+/**
+ * MainScreen のプレビュー (Empty - 検索結果なし)
+ */
+@Preview(showBackground = true)
+@Composable
+fun MainScreenSearchEmptyPreview() {
+    CareMemoTheme { 
+        MainScreenContent(
+            screenState = PersonListScreenState.Active,
+            operation = PersonListOperation.Idle,
+            userList = persistentListOf(), 
+            isNameMaskingEnabled = false,
+            searchQuery = "該当なし",
+            selectedSection = "全",
+            selectedPersonForQuickMenu = null,
+            isQuickActionMenuExpanded = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState()
+        ) 
+    }
+}
+
+/**
+ * MainScreen のプレビュー (Error)
+ */
+@Preview(showBackground = true)
+@Composable
+fun MainScreenErrorPreview() {
+    CareMemoTheme { 
+        MainScreenContent(
+            screenState = PersonListScreenState.Error(Exception("Load failed")),
+            operation = PersonListOperation.Idle,
+            userList = persistentListOf(), 
+            isNameMaskingEnabled = false,
+            searchQuery = "",
+            selectedSection = "全",
+            selectedPersonForQuickMenu = null,
+            isQuickActionMenuExpanded = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState()
+        ) 
+    }
+}
+
+/**
+ * MainScreen のプレビュー (Operation - 削除中)
+ */
+@Preview(showBackground = true)
+@Composable
+fun MainScreenDeletingPreview() {
+    val mockUserList = createMockUserList()
+    CareMemoTheme { 
+        MainScreenContent(
+            screenState = PersonListScreenState.Active,
+            operation = PersonListOperation.Deleting("1"),
+            userList = mockUserList, 
+            isNameMaskingEnabled = false,
+            searchQuery = "",
+            selectedSection = "全",
+            selectedPersonForQuickMenu = null,
+            isQuickActionMenuExpanded = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }, 
+            lazyListState = rememberLazyListState()
+        ) 
+    }
+}
+
+private fun createMockUserList(): ImmutableList<PersonUiState> {
+    val zoneId = ZoneId.systemDefault()
+    val person1 = Person(id = "1", lastName = "山田", firstName = "太郎", lastNameFurigana = "ヤマダ", firstNameFurigana = "タロウ", birthday = LocalDate.of(1950, 1, 1).atStartOfDay(zoneId).toInstant())
+    val person2 = Person(id = "2", lastName = "佐藤", firstName = "花子", lastNameFurigana = "サトウ", firstNameFurigana = "ハナコ", birthday = LocalDate.of(1955, 5, 5).atStartOfDay(zoneId).toInstant())
+    
+    return persistentListOf(
+        PersonUiState(person1, "山○\u3000太○", "ヤ○ダ\u3000タ○ウ", 75, "昭和25年1月1日", PersonCategorySummary(hasBpAndPulse = true)),
+        PersonUiState(person2, "佐○\u3000花○", "サ○ウ\u3000ハ○コ", 70, "昭和30年5月5日", PersonCategorySummary(hasCondition = true))
+    )
 }

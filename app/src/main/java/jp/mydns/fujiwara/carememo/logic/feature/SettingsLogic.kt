@@ -33,6 +33,8 @@ enum class StorageValidationResult {
  * 設定画面全体の表示状態。
  * ユーザー設定、システム統計、および内部の処理状態を一括管理します。
  *
+ * @param screenState 構造的状態 (Loading / Active / Error)
+ * @param operation 実行中の操作状態 (Idle / Exporting / Importing / Cleaning / Checking)
  * @param isNameMaskingEnabled 氏名のマスキング設定
  * @param defaultRecorderName デフォルトの記録者名
  * @param isBiometricEnabled 生体認証の利用設定
@@ -43,15 +45,15 @@ enum class StorageValidationResult {
  * @param auditLogCount 現在の総ログ数
  * @param endedUserCount 利用終了済みの利用者数
  * @param inconsistencies 検出されたデータベースの不整合リスト
- * @param isLoading 初期ロード中フラグ
- * @param isProcessing バックアップ・復元等の実行中フラグ
  * @param processingProgress 実行中の進捗率 (0-100)
  * @param isDeveloperModeEnabled 開発者モードが有効かどうか
  * @param isForceImportEnabled バージョン互換性を無視した強制インポートを許可するか
- * @param errorMessage 画面に表示するエラーメッセージ
  */
 @Immutable
 data class SettingsUiState(
+    val screenState: SettingsScreenState = SettingsScreenState.Loading,
+    val operation: SettingsOperation = SettingsOperation.Idle,
+
     // 1. 基本設定（UserSettingsRepository 由来）
     val isNameMaskingEnabled: Boolean = true,
     val defaultRecorderName: String = "",
@@ -67,14 +69,38 @@ data class SettingsUiState(
     val inconsistencies: ImmutableList<DatabaseInconsistency> = persistentListOf(),
 
     // 3. 制御状態
-    val isLoading: Boolean = false,
-    val isProcessing: Boolean = false,
     val processingProgress: Int = 0,
     val isDeveloperModeEnabled: Boolean = false,
     val isForceImportEnabled: Boolean = false,
-    val errorMessage: String? = null,
-    val fieldErrors: Map<String, Int?> = emptyMap()
+    val fieldErrors: Map<String, Int?> = emptyMap(),
+
+    @Deprecated("Use screenState")
+    val isLoading: Boolean = false,
+    @Deprecated("Use operation")
+    val isProcessing: Boolean = false,
+    @Deprecated("Use screenState")
+    val errorMessage: String? = null
 )
+
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface SettingsScreenState {
+    data object Loading : SettingsScreenState
+    data object Active : SettingsScreenState
+    data class Error(val throwable: Throwable) : SettingsScreenState
+}
+
+/**
+ * 操作状態 (Operation State)
+ */
+sealed interface SettingsOperation {
+    data object Idle : SettingsOperation
+    data object Exporting : SettingsOperation
+    data object Importing : SettingsOperation
+    data object Cleaning : SettingsOperation
+    data object Checking : SettingsOperation
+}
 
 /**
  * 設定画面固有の一過性イベント。

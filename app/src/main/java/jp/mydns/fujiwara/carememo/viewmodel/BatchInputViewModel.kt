@@ -17,6 +17,9 @@ import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.common.HealthInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputLogic
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputOperation
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputSession
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
@@ -31,17 +34,6 @@ import java.time.ZoneId
  *
  * 【役割】
  * 健康記録の一括入力画面（SCR-PH-002）における状態管理と保存実行を制御します。
- * 身長体重、バイタル（血圧・脈拍等）、血糖値の複数カテゴリにわたる入力内容を同時に扱い、
- * 一つの画面で効率的に記録できる機能を提供します。
- *
- * 【設計指針：UI 境界の責務】
- * 1. 状態の統合管理：複数の健康カテゴリにまたがる広範な入力状態を一元管理し、整合性を保ちます。
- * 2. リアルタイム・バリデーション：ユーザーの入力ごとに、保存の妥当性 (`isValid`) および
- *    初期状態からの変更の有無 (`isChanged`) を ViewModel 側で即座に判定し、UI のボタン活性制御などに反映します。
- *
- * 【この ViewModel では行わないこと】
- * ・各カテゴリ固有の Entity 生成ロジック（BatchInputLogic が担当）。
- * ・複数カテゴリを跨いだ詳細な入力相関チェック（BatchInputLogic が担当）。
  */
 class BatchInputViewModel(
     private val healthRepository: HealthRepository,
@@ -62,11 +54,8 @@ class BatchInputViewModel(
 ) {
 
     companion object {
-        /** 監査ログ・例外用：機能名 */
         private const val FEATURE_NAME = "BatchInput"
-        /** 監査ログ用：一括保存操作名 */
-        private const val OP_SAVE_BATCH = "OP_SAVE_BATCH"
-        /** 監査ログ用：対象概念テーブル名 */
+        private const val OP_SAVE_BATCH = "saveBatch"
         private const val TABLE_HEALTH = "health_db"
 
         // --- Restoration Keys ---
@@ -125,33 +114,37 @@ class BatchInputViewModel(
     private fun restoreState() {
         val handle = savedStateHandle ?: return
         updateUiState { current ->
+            val input = current.input
             current.copy(
-                height = handle.get<String>(KEY_IN_HEIGHT) ?: "",
-                weight = handle.get<String>(KEY_IN_WEIGHT) ?: "",
-                bpSystolic = handle.get<String>(KEY_IN_BP_S) ?: "",
-                bpDiastolic = handle.get<String>(KEY_IN_BP_D) ?: "",
-                sat = handle.get<String>(KEY_IN_SAT) ?: "",
-                pulse = handle.get<String>(KEY_IN_PULSE) ?: "",
-                bodyTemperature = handle.get<String>(KEY_IN_TEMP) ?: "",
-                glucose = handle.get<String>(KEY_IN_GLUCOSE) ?: "",
-                hba1c = handle.get<String>(KEY_IN_HBA1C) ?: "",
-                year = handle.get<String>(KEY_IN_YEAR) ?: current.year,
-                month = handle.get<String>(KEY_IN_MONTH) ?: current.month,
-                day = handle.get<String>(KEY_IN_DAY) ?: current.day,
-                hour = handle.get<String>(KEY_IN_HOUR) ?: current.hour,
-                minute = handle.get<String>(KEY_IN_MINUTE) ?: current.minute,
-                initialYear = handle.get<String>(KEY_BASE_YEAR) ?: current.initialYear,
-                initialMonth = handle.get<String>(KEY_BASE_MONTH) ?: current.initialMonth,
-                initialDay = handle.get<String>(KEY_BASE_DAY) ?: current.initialDay,
-                initialHour = handle.get<String>(KEY_BASE_HOUR) ?: current.initialHour,
-                initialMinute = handle.get<String>(KEY_BASE_MINUTE) ?: current.initialMinute
-            ).let { next ->
-                next.copy(
-                    isValid = BatchInputLogic.isValid(next),
-                    isChanged = BatchInputLogic.isChanged(next),
-                    recordTime = BatchInputLogic.calculateRecordTime(next)
-                )
-            }
+                screenState = BatchInputScreenState.Active,
+                input = input.copy(
+                    height = handle.get<String>(KEY_IN_HEIGHT) ?: "",
+                    weight = handle.get<String>(KEY_IN_WEIGHT) ?: "",
+                    bpSystolic = handle.get<String>(KEY_IN_BP_S) ?: "",
+                    bpDiastolic = handle.get<String>(KEY_IN_BP_D) ?: "",
+                    sat = handle.get<String>(KEY_IN_SAT) ?: "",
+                    pulse = handle.get<String>(KEY_IN_PULSE) ?: "",
+                    bodyTemperature = handle.get<String>(KEY_IN_TEMP) ?: "",
+                    glucose = handle.get<String>(KEY_IN_GLUCOSE) ?: "",
+                    hba1c = handle.get<String>(KEY_IN_HBA1C) ?: "",
+                    year = handle.get<String>(KEY_IN_YEAR) ?: input.year,
+                    month = handle.get<String>(KEY_IN_MONTH) ?: input.month,
+                    day = handle.get<String>(KEY_IN_DAY) ?: input.day,
+                    hour = handle.get<String>(KEY_IN_HOUR) ?: input.hour,
+                    minute = handle.get<String>(KEY_IN_MINUTE) ?: input.minute,
+                    initialYear = handle.get<String>(KEY_BASE_YEAR) ?: input.initialYear,
+                    initialMonth = handle.get<String>(KEY_BASE_MONTH) ?: input.initialMonth,
+                    initialDay = handle.get<String>(KEY_BASE_DAY) ?: input.initialDay,
+                    initialHour = handle.get<String>(KEY_BASE_HOUR) ?: input.initialHour,
+                    initialMinute = handle.get<String>(KEY_BASE_MINUTE) ?: input.initialMinute
+                ).let { nextInput ->
+                    nextInput.copy(
+                        isValid = BatchInputLogic.isValid(nextInput),
+                        isChanged = BatchInputLogic.isChanged(nextInput),
+                        recordTime = BatchInputLogic.calculateRecordTime(nextInput)
+                    )
+                }
+            )
         }
     }
 
@@ -160,26 +153,27 @@ class BatchInputViewModel(
      */
     private fun backupRestorableState(state: BatchInputUiState) {
         val handle = savedStateHandle ?: return
+        val input = state.input
         handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
-        handle[KEY_IN_HEIGHT] = state.height
-        handle[KEY_IN_WEIGHT] = state.weight
-        handle[KEY_IN_BP_S] = state.bpSystolic
-        handle[KEY_IN_BP_D] = state.bpDiastolic
-        handle[KEY_IN_SAT] = state.sat
-        handle[KEY_IN_PULSE] = state.pulse
-        handle[KEY_IN_TEMP] = state.bodyTemperature
-        handle[KEY_IN_GLUCOSE] = state.glucose
-        handle[KEY_IN_HBA1C] = state.hba1c
-        handle[KEY_IN_YEAR] = state.year
-        handle[KEY_IN_MONTH] = state.month
-        handle[KEY_IN_DAY] = state.day
-        handle[KEY_IN_HOUR] = state.hour
-        handle[KEY_IN_MINUTE] = state.minute
-        handle[KEY_BASE_YEAR] = state.initialYear
-        handle[KEY_BASE_MONTH] = state.initialMonth
-        handle[KEY_BASE_DAY] = state.initialDay
-        handle[KEY_BASE_HOUR] = state.initialHour
-        handle[KEY_BASE_MINUTE] = state.initialMinute
+        handle[KEY_IN_HEIGHT] = input.height
+        handle[KEY_IN_WEIGHT] = input.weight
+        handle[KEY_IN_BP_S] = input.bpSystolic
+        handle[KEY_IN_BP_D] = input.bpDiastolic
+        handle[KEY_IN_SAT] = input.sat
+        handle[KEY_IN_PULSE] = input.pulse
+        handle[KEY_IN_TEMP] = input.bodyTemperature
+        handle[KEY_IN_GLUCOSE] = input.glucose
+        handle[KEY_IN_HBA1C] = input.hba1c
+        handle[KEY_IN_YEAR] = input.year
+        handle[KEY_IN_MONTH] = input.month
+        handle[KEY_IN_DAY] = input.day
+        handle[KEY_IN_HOUR] = input.hour
+        handle[KEY_IN_MINUTE] = input.minute
+        handle[KEY_BASE_YEAR] = input.initialYear
+        handle[KEY_BASE_MONTH] = input.initialMonth
+        handle[KEY_BASE_DAY] = input.initialDay
+        handle[KEY_BASE_HOUR] = input.initialHour
+        handle[KEY_BASE_MINUTE] = input.initialMinute
     }
 
     /**
@@ -193,10 +187,21 @@ class BatchInputViewModel(
         )
     }
 
-    // --- 基底クラスの抽象メソッド実装 ---
-
-    override fun copyWithLoadingState(state: BatchInputUiState, isLoading: Boolean): BatchInputUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: BatchInputUiState, isLoading: Boolean, category: LoadingCategory): BatchInputUiState {
+        return when (category) {
+            is LoadingCategory.Structural, is LoadingCategory.Default -> {
+                val nextScreenState = if (!isLoading) {
+                    if (state.screenState is BatchInputScreenState.Error) state.screenState else BatchInputScreenState.Active
+                } else {
+                    if (state.screenState is BatchInputScreenState.Active) state.screenState else BatchInputScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState, isLoading = isLoading)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = BatchInputOperation.Idle) else state
+            }
+            else -> state.copy(isLoading = isLoading)
+        }
     }
 
     override fun updateWithPersonData(
@@ -210,7 +215,6 @@ class BatchInputViewModel(
             return state.copy(
                 personId = person.id,
                 person = person,
-                currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
                 personSummary = summary
             )
         }
@@ -218,6 +222,7 @@ class BatchInputViewModel(
         // 利用者が切り替わった場合、または初回ロード時は、入力をリセットし、記録日時を現在時刻に設定する
         val isFirstLoad = state.personId == null
         val isDifferentPerson = state.personId != person.id
+        val input = state.input
         
         val next = if (isFirstLoad || isDifferentPerson) {
             val now = Instant.now().atZone(ZoneId.systemDefault())
@@ -230,101 +235,101 @@ class BatchInputViewModel(
             state.copy(
                 personId = person.id,
                 person = person,
-                currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
                 personSummary = summary,
-                height = "", weight = "", bpSystolic = "", bpDiastolic = "",
-                sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
-                year = y, month = m, day = d, hour = h, minute = min,
-                initialYear = y, initialMonth = m, initialDay = d, initialHour = h, initialMinute = min
+                input = input.copy(
+                    height = "", weight = "", bpSystolic = "", bpDiastolic = "",
+                    sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
+                    year = y, month = m, day = d, hour = h, minute = min,
+                    initialYear = y, initialMonth = m, initialDay = d, initialHour = h, initialMinute = min
+                )
             )
         } else {
             // 同一利用者の再ロード時は、基本情報とサマリーのみ更新し、入力中の日時は維持する
             state.copy(
                 personId = person.id,
                 person = person,
-                currentPersonName = person.getMaskedName(state.isNameMaskingEnabled),
                 personSummary = summary
             )
         }
         
         // 最新の状態に基づき、バリデーションと変更有無、記録日時を再計算して返す
         return next.copy(
-            isValid = BatchInputLogic.isValid(next),
-            isChanged = BatchInputLogic.isChanged(next),
-            recordTime = BatchInputLogic.calculateRecordTime(next)
+            input = next.input.copy(
+                isValid = BatchInputLogic.isValid(next.input),
+                isChanged = BatchInputLogic.isChanged(next.input),
+                recordTime = BatchInputLogic.calculateRecordTime(next.input)
+            )
         )
     }
 
     // --- UI 入力更新用メソッド群 ---
-    // 各項目の更新は updateState ヘルパーを介して原子的に行われ、派生状態も同時に更新されます。
 
-    fun updateYear(v: String) = updateState { it.copy(year = v) }
-    fun updateMonth(v: String) = updateState { it.copy(month = v) }
-    fun updateDay(v: String) = updateState { it.copy(day = v) }
-    fun updateHour(v: String) = updateState { it.copy(hour = v) }
-    fun updateMinute(v: String) = updateState { it.copy(minute = v) }
+    fun updateYear(v: String) = updateInput { it.copy(year = v) }
+    fun updateMonth(v: String) = updateInput { it.copy(month = v) }
+    fun updateDay(v: String) = updateInput { it.copy(day = v) }
+    fun updateHour(v: String) = updateInput { it.copy(hour = v) }
+    fun updateMinute(v: String) = updateInput { it.copy(minute = v) }
 
-    fun updateHeight(v: String) = updateState { it.copy(height = v) }
-    fun updateWeight(v: String) = updateState { it.copy(weight = v) }
-    fun updateBpSystolic(v: String) = updateState { it.copy(bpSystolic = v) }
-    fun updateBpDiastolic(v: String) = updateState { it.copy(bpDiastolic = v) }
-    fun updateSat(v: String) = updateState { it.copy(sat = v) }
-    fun updatePulse(v: String) = updateState { it.copy(pulse = v) }
-    fun updateBodyTemp(v: String) = updateState { it.copy(bodyTemperature = v) }
-    fun updateGlucose(v: String) = updateState { it.copy(glucose = v) }
-    fun updateHbA1c(v: String) = updateState { it.copy(hba1c = v) }
+    fun updateHeight(v: String) = updateInput { it.copy(height = v) }
+    fun updateWeight(v: String) = updateInput { it.copy(weight = v) }
+    fun updateBpSystolic(v: String) = updateInput { it.copy(bpSystolic = v) }
+    fun updateBpDiastolic(v: String) = updateInput { it.copy(bpDiastolic = v) }
+    fun updateSat(v: String) = updateInput { it.copy(sat = v) }
+    fun updatePulse(v: String) = updateInput { it.copy(pulse = v) }
+    fun updateBodyTemp(v: String) = updateInput { it.copy(bodyTemperature = v) }
+    fun updateGlucose(v: String) = updateInput { it.copy(glucose = v) }
+    fun updateHbA1c(v: String) = updateInput { it.copy(hba1c = v) }
 
     /** フィールドにフォーカスが当たったことを記録します */
     fun markFieldAsTouched(fieldName: String) {
         updateUiState { state ->
-            val nextTouched = state.touchedFields + fieldName
-            val (errors, errorArgs) = calculateFieldErrors(state, nextTouched)
+            val input = state.input
+            val nextTouched = input.touchedFields + fieldName
+            val (errors, errorArgs) = calculateFieldErrors(input, nextTouched)
             val next = state.copy(
-                touchedFields = nextTouched,
-                fieldErrors = errors,
-                fieldErrorArgs = errorArgs
+                input = input.copy(
+                    touchedFields = nextTouched,
+                    fieldErrors = errors,
+                    fieldErrorArgs = errorArgs
+                )
             )
             backupRestorableState(next)
             next
         }
     }
 
-    /**
-     * UiState の更新と同時に、バリデーション (isValid) および 変更検知 (isChanged) を実行するヘルパー。
-     *
-     * 【設計指針：UI 境界の責務】
-     * 以前は UI コンポーネント側で行っていた複雑な相関バリデーションや変更状態の判定を、
-     * ここで一括して行い、UiState を通じて Composable に伝えます。
-     */
-    private fun updateState(reducer: (BatchInputUiState) -> BatchInputUiState) {
+    private fun updateInput(reducer: (BatchInputSession) -> BatchInputSession) {
         updateUiState { current ->
-            val partialNext = reducer(current)
+            val oldInput = current.input
+            val partialNextInput = reducer(oldInput)
             
             // 操作されたフィールドの特定
-            val nextTouched = getNewlyTouchedFields(current, partialNext, current.touchedFields)
+            val nextTouched = getNewlyTouchedFields(oldInput, partialNextInput, oldInput.touchedFields)
 
             // バリデーション結果、変更検知、記録日時を算出
-            val finalIsValid = BatchInputLogic.isValid(partialNext)
-            val finalIsChanged = BatchInputLogic.isChanged(partialNext)
-            val finalRecordTime = BatchInputLogic.calculateRecordTime(partialNext)
+            val finalIsValid = BatchInputLogic.isValid(partialNextInput)
+            val finalIsChanged = BatchInputLogic.isChanged(partialNextInput)
+            val finalRecordTime = BatchInputLogic.calculateRecordTime(partialNextInput)
             
             // フィールドごとのエラーを計算
-            val (errors, errorArgs) = calculateFieldErrors(partialNext, nextTouched)
+            val (errors, errorArgs) = calculateFieldErrors(partialNextInput, nextTouched)
 
-            val next = partialNext.copy(
-                isValid = finalIsValid,
-                isChanged = finalIsChanged,
-                recordTime = finalRecordTime,
-                touchedFields = nextTouched,
-                fieldErrors = errors,
-                fieldErrorArgs = errorArgs
+            val next = current.copy(
+                input = partialNextInput.copy(
+                    isValid = finalIsValid,
+                    isChanged = finalIsChanged,
+                    recordTime = finalRecordTime,
+                    touchedFields = nextTouched,
+                    fieldErrors = errors,
+                    fieldErrorArgs = errorArgs
+                )
             )
             backupRestorableState(next)
             next
         }
     }
 
-    private fun getNewlyTouchedFields(old: BatchInputUiState, next: BatchInputUiState, current: Set<String>): Set<String> {
+    private fun getNewlyTouchedFields(old: BatchInputSession, next: BatchInputSession, current: Set<String>): Set<String> {
         val touched = current.toMutableSet()
         if (old.height != next.height) touched.add("height")
         if (old.weight != next.weight) touched.add("weight")
@@ -344,7 +349,7 @@ class BatchInputViewModel(
     }
 
     private fun calculateFieldErrors(
-        state: BatchInputUiState,
+        input: BatchInputSession,
         touched: Set<String>
     ): Pair<Map<String, Int?>, Map<String, List<String>>> {
         val errors = mutableMapOf<String, Int?>()
@@ -356,7 +361,7 @@ class BatchInputViewModel(
 
         fields.forEach { field ->
             if (touched.contains(field)) {
-                val value = getValueForField(state, field)
+                val value = getValueForField(input, field)
                 val result = validateSingleField(field, value)
                 if (result != HealthInputValidationResult.SUCCESS) {
                     errors[field] = translateHealthValidationResult(result)
@@ -370,7 +375,7 @@ class BatchInputViewModel(
         // 記録日時のチェック
         val timeTouched = touched.intersect(setOf("year", "month", "day", "hour", "minute")).isNotEmpty()
         if (timeTouched) {
-            val recordTime = BatchInputLogic.calculateRecordTime(state)
+            val recordTime = BatchInputLogic.calculateRecordTime(input)
             if (recordTime == null) {
                 errors["recordTime"] = R.string.common_err_invalid_date
             } else if (recordTime.isAfter(Instant.now())) {
@@ -381,27 +386,23 @@ class BatchInputViewModel(
         return errors to errorArgs
     }
 
-    private fun getValueForField(state: BatchInputUiState, field: String): String {
+    private fun getValueForField(input: BatchInputSession, field: String): String {
         return when (field) {
-            "height" -> state.height
-            "weight" -> state.weight
-            "bpSystolic" -> state.bpSystolic
-            "bpDiastolic" -> state.bpDiastolic
-            "sat" -> state.sat
-            "pulse" -> state.pulse
-            "bodyTemperature" -> state.bodyTemperature
-            "glucose" -> state.glucose
-            "hba1c" -> state.hba1c
+            "height" -> input.height
+            "weight" -> input.weight
+            "bpSystolic" -> input.bpSystolic
+            "bpDiastolic" -> input.bpDiastolic
+            "sat" -> input.sat
+            "pulse" -> input.pulse
+            "bodyTemperature" -> input.bodyTemperature
+            "glucose" -> input.glucose
+            "hba1c" -> input.hba1c
             else -> ""
         }
     }
 
     private fun validateSingleField(field: String, value: String): HealthInputValidationResult {
-        if (value.isBlank()) {
-            // 一括入力では全項目任意（何か入力があれば保存）なので、EMPTY は SUCCESS 扱い
-            return HealthInputValidationResult.SUCCESS
-        }
-
+        if (value.isBlank()) return HealthInputValidationResult.SUCCESS
         val spec = getSpecForField(field) ?: return HealthInputValidationResult.SUCCESS
 
         val isValid = jp.mydns.fujiwara.carememo.logic.common.HealthLogic.isWithinFormat(
@@ -416,7 +417,6 @@ class BatchInputViewModel(
                 HealthInputValidationResult.OUT_OF_RANGE
             }
         }
-
         return HealthInputValidationResult.SUCCESS
     }
 
@@ -453,87 +453,72 @@ class BatchInputViewModel(
 
     /**
      * 入力された全カテゴリのデータを一括保存します。
-     * 
-     * 処理フロー：
-     * 1. 入力値の形式・範囲バリデーションの実施。
-     * 2. 指定された記録日時における既存データの重複チェック（上書き防止）。
-     * 3. ロジック層での各カテゴリ Entity の生成。
-     * 4. 各カテゴリのリポジトリメソッドを順次呼び出して保存を実行。
-     * 5. 成功時の UI 通知（エフェクト送出・スナックバー表示）および入力値のクリア。
      */
     fun saveBatch() {
-        // 二重保存防止：既に保存処理が実行中の場合は何もしない
         if (saveJob?.isActive == true) return
 
-        val state = currentState
-        val time = state.recordTime ?: return
+        val input = currentState.input
+        val time = input.recordTime ?: return
+
+        updateUiState { it.copy(operation = BatchInputOperation.Saving) }
 
         saveJob = safeLaunch(
             operation = OP_SAVE_BATCH,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_HEALTH
                 affectedId = requiredPersonId
             }
         ) {
-            // 1. 全体バリデーション実行
-            val validationResult = BatchInputLogic.validate(state)
-
-            // 2. バリデーションエラーがある場合は例外を送出（ハンドラで UI 通知される）
+            val validationResult = BatchInputLogic.validate(input)
             if (validationResult != BatchInputValidationResult.SUCCESS) {
-                translateValidationResult(validationResult, state)
+                translateValidationResult(validationResult, input)
             }
 
-            // 3. 重複チェック：同一日時の既存レコードがあるカテゴリを特定する
             val duplicateResIds = HealthProcessorRegistry.getAll()
-                .filter { !it.isEmpty(state) }
+                .filter { !it.isEmpty(input) }
                 .filter { healthRepository.findHistoryRecordAtTime(it.generalCategory, requiredPersonId, time) != null }
                 .map { it.categoryNameResId }
 
-            // 重複がある場合は保存をブロックし、重複カテゴリ名をメッセージに含めて通知する
             if (duplicateResIds.isNotEmpty()) {
                 val categoryNames = duplicateResIds.joinToString("、") { "__RES__$it" }
                 throw AppValidationException(
                     titleResId = R.string.common_error_title_save,
                     messageResId = R.string.batch_err_duplicate_blocked,
                     args = listOf(categoryNames),
-                    logMessage = "Duplicate detected in categories index: $duplicateResIds"
+                    logMessage = "Duplicate detected in categories: $duplicateResIds"
                 )
             }
             
-            // 4. 保存の実行：入力のあるカテゴリの Entity を作成し、一括で保存する（トランザクション対応）
-            val entities = BatchInputLogic.createEntities(requiredPersonId, time, state)
+            val entities = BatchInputLogic.createEntities(requiredPersonId, time, input)
             healthRepository.saveHealthDataBatch(entities, featureName, OP_SAVE_BATCH)
 
-            // 全保存成功時のイベント通知
             sendViewEvent(BatchInputViewEvent.SaveSuccessEffects)
             sendUiEvent(UiEvent.SaveSuccess())
             showSnackbar(R.string.batch_msg_save_success)
             
-            // 入力値をクリアし、変更基準点を現在の入力値（保存に成功した日時）に更新して次の入力に備える
             updateUiState { current ->
-                val next = current.copy(
+                val session = current.input
+                val nextSession = session.copy(
                     height = "", weight = "", bpSystolic = "", bpDiastolic = "",
                     sat = "", pulse = "", bodyTemperature = "", glucose = "", hba1c = "",
-                    initialYear = current.year,
-                    initialMonth = current.month,
-                    initialDay = current.day,
-                    initialHour = current.hour,
-                    initialMinute = current.minute,
+                    initialYear = session.year,
+                    initialMonth = session.month,
+                    initialDay = session.day,
+                    initialHour = session.hour,
+                    initialMinute = session.minute,
                     isChanged = false,
                     isValid = false
                 )
-                val final = next.copy(recordTime = BatchInputLogic.calculateRecordTime(next))
-                clearRestorableState() // 保存成功時にクリア
-                final
+                current.copy(
+                    input = nextSession.copy(recordTime = BatchInputLogic.calculateRecordTime(nextSession))
+                )
             }
+            clearRestorableState()
         }
     }
 
-    /**
-     * 一括入力特有のバリデーション結果を、適切なリソース ID と引数に翻訳して例外を送出します。
-     */
-    private fun translateValidationResult(result: BatchInputValidationResult, state: BatchInputUiState) {
+    private fun translateValidationResult(result: BatchInputValidationResult, input: BatchInputSession) {
         val messageRes = when (result) {
             BatchInputValidationResult.EMPTY_ALL -> R.string.p_detail_empty_records
             else -> R.string.common_error_save
@@ -541,7 +526,7 @@ class BatchInputViewModel(
 
         val args = if (result == BatchInputValidationResult.INVALID_VALUE) {
             val details = HealthProcessorRegistry.getAll()
-                .filter { !it.isEmpty(state) && (it.validate(state) == HealthInputValidationResult.OUT_OF_RANGE) }
+                .filter { !it.isEmpty(input) && (it.validate(input) == HealthInputValidationResult.OUT_OF_RANGE) }
                 .map { "__RES__${it.outOfRangeErrorResId}" }
             
             if (details.isEmpty()) listOf("__RES__${R.string.common_error_invalid_input}") else listOf(details.joinToString("、"))
@@ -557,16 +542,10 @@ class BatchInputViewModel(
         )
     }
 
-    /**
-     * 前の画面に戻ります。
-     */
     fun navigateBack() {
         sendViewEvent(BatchInputViewEvent.NavigateBack)
     }
 
-    /**
-     * BatchInputViewModel を生成するための Factory クラス。
-     */
     class Factory(
         private val personRepository: PersonRepository,
         private val summaryRepository: PersonSummaryRepository,

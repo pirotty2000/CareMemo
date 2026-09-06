@@ -53,6 +53,8 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditSession
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
@@ -90,6 +92,8 @@ fun PersonHealthScreenPhone(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
+    val session = uiState.editSession
+
     Scaffold(
         modifier = modifier.testTag("HealthScreen_PhoneContent"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -109,7 +113,7 @@ fun PersonHealthScreenPhone(
                     navigationIcon = {
                         IconButton(
                             onClick = { 
-                                if (uiState.selectedRecordId != null) onAction(PersonHealthUiAction.CancelEdit) 
+                                if (session.selectedRecordId != null) onAction(PersonHealthUiAction.CancelEdit) 
                                 else onAction(PersonHealthUiAction.Back) 
                             },
                             modifier = Modifier.testTag("HealthScreen_BackButton")
@@ -123,7 +127,7 @@ fun PersonHealthScreenPhone(
                     colors = appTopAppBarColors(),
                     // PDF出力
                     actions = {
-                        if (uiState.selectedRecordId == null) {
+                        if (session.selectedRecordId == null) {
                             IconButton(
                                 onClick = { onAction(PersonHealthUiAction.ShowPdfSettings) },
                                 modifier = Modifier.testTag("HealthScreen_PdfButton")
@@ -147,7 +151,7 @@ fun PersonHealthScreenPhone(
         },
         // 右下のFAB
         floatingActionButton = {
-            if (uiState.selectedRecordId == null) {
+            if (session.selectedRecordId == null) {
                 FloatingActionButton(
                     onClick = {
                         onAction(PersonHealthUiAction.SelectedRecordIdChanged(AppSpecifications.Id.NEW_RECORD_ID))
@@ -175,9 +179,12 @@ fun PersonHealthScreenPhone(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = if (uiState.selectedRecordId == null) 16.dp else 0.dp)
+                .padding(horizontal = if (session.selectedRecordId == null) 16.dp else 0.dp)
         ) {
-            if ((uiState.records.isEmpty() && uiState.selectedRecordId == null && !uiState.isLoading)) {
+            val isEmpty = uiState.screenState is PersonHealthScreenState.Active && 
+                         uiState.records.isEmpty() && session.selectedRecordId == null
+
+            if (isEmpty) {
                 EmptyState(
                     message = stringResource(R.string.p_detail_empty_records),
                     description = stringResource(R.string.p_detail_empty_records_desc),
@@ -206,9 +213,9 @@ fun PersonHealthScreenPhonePreview(
             uiState = PersonHealthUiState(
                 currentCategory = state.category,
                 records = state.records,
-                isLoading = state.isLoading,
+                screenState = if (state.isLoading) PersonHealthScreenState.Loading else PersonHealthScreenState.Active,
                 preferredShowHistory = state.preferredShowHistory,
-                selectedRecordId = state.selectedRecordId
+                editSession = HealthEditSession(selectedRecordId = state.selectedRecordId)
             ),
             currentPerson = state.person,
             personCategorySummary = state.summary,

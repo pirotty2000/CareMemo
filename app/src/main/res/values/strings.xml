@@ -1,5 +1,8 @@
 <resources>
     <string name="common_loading">読み込み中…</string>
+    <string name="common_processing">処理中…</string>
+    <string name="common_exporting">エクスポート中…</string>
+    <string name="common_importing">復元中…</string>
     <string name="common_close">閉じる</string>
     <string name="common_save">保存</string>
     <string name="common_cancel">キャンセル</string>
@@ -8,15 +11,82 @@
     <string name="common_back">戻る</string>
     <string name="common_delete">削除</string>
     <string name="common_add">追加</string>
-    <string name="common_edit">編集</string>
+    <string name="common_discard">破棄</string>
     <string name="common_preview">プレビュー</string>
+    <string name="common_edit">編集</string>
     <string name="common_undo">元に戻す</string>
     <string name="common_pdf_export">PDF出力</string>
+    <string name="common_tab_history">履歴</string>
+    <string name="common_tab_graph">グラフ</string>
+    <string name="common_title_separator"> - </string>
+    <string name="main_menu_help">ヘルプ</string>
+
+    <string name="security_auth_title">認証が必要です</string>
+    <string name="security_auth_reason_change_settings">セキュリティ設定を変更するために認証を行ってください</string>
+    <string name="security_auth_reason_show_password">パスワードを表示するために認証を行ってください</string>
+    <string name="security_auth_reason_pdf_export">PDFを出力するために認証を行ってください</string>
 
     <!-- 変更の破棄確認 -->
     <string name="common_confirm_discard_title">変更の破棄</string>
-    <string name="common_confirm_discard_message">入力途中の内容がありますが、破棄して戻りますか？</string>
-    <string name="common_discard">破棄して戻る</string>
+    <string name="common_confirm_discard_message">入力途中の内容がありますが、破棄してもよろしいですか？</string>
+    <string name="common_discard_and_back">破棄して戻る</string>
+
+    <string name="common_confirm_overwrite_title">データの上書き確認</string>
+    <string name="common_confirm_overwrite_message">指定された日時のデータが既に登録されています。既存のデータを上書きして更新しますか？</string>
+    <string name="common_err_duplicate_blocked_simple">指定された日時には既にデータが存在するため、保存できません。日時を変更するか、既存のデータを履歴から編集してください。</string>
+
+    <string name="main_snackbar_user_ended">%1$s さんの利用を終了しました</string>
+    <string name="common_tab_calendar">カレンダー</string>
+
+    <string name="archive_msg_restored">%1$d 名の利用者を一覧に戻しました</string>
+    <string name="archive_msg_deleted">%1$d 名の利用者を完全に抹消しました</string>
+    <string name="archive_title_delete">利用者の完全抹消</string>
+    <string name="archive_title_restore">利用者の復帰</string>
+    <string name="archive_btn_deselect_all">全解除</string>
+    <string name="archive_btn_select_all">全選択</string>
+    <string name="archive_action_delete_label">完全に抹消する</string>
+    <string name="archive_action_restore_label">復帰させる</string>
+    <string name="archive_action_confirm_btn_format">選択した利用者 (%1$d名) を%2$s</string>
+    <string name="archive_empty_msg">終了した利用者はいません</string>
+    <string name="archive_permanent_delete_warning">抹消した利用者のデータ（記録、写真）は二度と復元できません。一人ずつ慎重に選択してください。</string>
+    <string name="archive_dialog_restore_confirm_msg">選択された %1$d 名の利用者を利用者一覧（アクティブ）に戻します。よろしいですか？</string>
+    <string name="archive_dialog_restore_confirm_btn">復帰を実行する</string>
+    <string name="archive_dialog_delete_confirm_title">データの完全抹消</string>
+    <string name="archive_dialog_delete_confirm_msg">選択された %1$d 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？</string>
+    <string name="archive_dialog_delete_confirm_btn">抹消を実行する</string>
+    <string name="archive_err_no_selection">対象となる利用者が選択されていません</string>
+
+    <string name="medical_contact_facility_label">施設名・続柄など</string>
+    <string name="medical_contact_facility_placeholder">○○病院、長男など</string>
+    <string name="medical_contact_person_label">担当者・氏名</string>
+    <string name="medical_contact_person_placeholder">山田 太郎 など（任意）</string>
+    <string name="medical_contact_phone_label">電話番号</string>
+    <string name="medical_contact_phone_placeholder">09012345678 など（任意）</string>
+    <string name="medical_contact_phone_note">※ハイフンなしの数字のみで保存されます</string>
+    <string name="medical_contact_priority_label">優先順位 (数値が小さいほど優先)</string>
+    <string name="medical_contact_type_label">連絡先種別</string>
+    <string name="medical_contacts_empty">連絡先が登録されていません</string>
+
+    <string name="settings_import_sample_confirm_title">サンプルデータの取り込み</string>
+    <string name="settings_import_sample_confirm_msg">現在のデータはすべて消去され、12名分のサンプルデータに置き換わります（※写真は含まれません）。よろしいですか？</string>
+    <string name="settings_btn_import_sample_data">サンプルデータを取り込む</string>
+    <string name="settings_msg_import_sample_success">12名分のサンプルデータの取り込みが完了しました。</string>
+
+    <string name="main_dialog_version_title">バージョン情報</string>
+    <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n&#169; 2025&#8211;2026 pirotty.galaxy</string>
+
+    <string name="batch_err_duplicate_blocked">指定された日時には、既に以下のデータが登録されています：\n・%1$s\n\n一括入力画面では既存データの更新はできません。内容を修正する場合は履歴画面から行ってください。または、記録日時を変更してください。</string>
+    <string name="batch_msg_save_success">健康記録を一括保存しました</string>
+
+    <string name="settings_msg_audit_log_cleared">操作ログをすべて消去しました。</string>
+    <string name="settings_msg_rotate_success">古い操作ログを削除しました。</string>
+    <string name="settings_msg_delete_ended_success">利用終了者のデータを一括で完全に抹消しました。</string>
+    <string name="settings_msg_export_success">データと写真のエクスポートが完了しました。</string>
+    <string name="settings_msg_import_success">データと写真の復元が完了しました。</string>
+    <string name="settings_msg_clear_all_success">全てのデータと写真を削除しました。アプリを初期状態に戻しました。</string>
+    <string name="settings_msg_integrity_ok">不整合なデータは見つかりませんでした。</string>
+    <string name="settings_msg_fix_success">%1$d件の孤立したデータを削除しました。</string>
+    <string name="settings_msg_test_inconsistency_added">テスト用不整合データを1件挿入しました。</string>
 
     <!-- 共通タイトル・アクション -->
     <string name="common_record_detail_title">記録の詳細</string>
@@ -31,86 +101,224 @@
 
     <!-- 健康記録用 -->
     <string name="health_title">健康記録</string>
-    <string name="health_batch_input_title">健康一括入力</string>
-    <string name="health_graph_help_desc">目安の表示</string>
-    <string name="health_graph_expand_desc">拡大表示</string>
-    <string name="health_item_bmi_format">%1$s (%2$s)</string>
-
-    <!-- 所見メモ用 -->
-    <string name="condition_title">所見記録</string>
-    <string name="condition_label_title_optional">タイトル (任意)</string>
-    <string name="condition_label_author">記録者</string>
-    <string name="condition_label_memo">所見メモ</string>
-    <string name="condition_btn_mic_desc">音声入力</string>
-    <string name="condition_btn_gallery_desc">ギャラリーから追加</string>
-    <string name="condition_btn_camera_desc">写真を撮影</string>
-    <string name="condition_btn_capture">撮影</string>
-    <string name="condition_photo_preview_title">写真の確認</string>
-    <string name="condition_photo_caption_label">キャプション</string>
-    <string name="condition_msg_photo_optimizing">画像を保存用に最適化しています&#8230;</string>
-    <string name="condition_msg_no_photos_to_show">表示できる写真がありません</string>
-    <string name="condition_photo_delete_confirm_title">写真の削除</string>
-    <string name="condition_photo_delete_confirm_msg">この写真を削除してもよろしいですか？</string>
-
-    <!-- 服薬管理用 -->
-    <string name="medication_title">服薬管理</string>
-    <string name="medication_btn_prev_month">前月</string>
-    <string name="medication_btn_next_month">次月</string>
-    <string name="medication_history_day_format">%1$d(%2$s)</string>
-
-    <!-- 共通サフィックス -->
-    <string name="common_honorific_san_suffix">%1$s さん</string>
-    <string name="common_note_bracket_format"> [%1$s]</string>
-    <string name="common_identifier_suffix"> [識別子:%1$s]</string>
-
-    <!-- MainScreen 詳細 -->
-    <string name="main_dialog_version_build_time">ビルド日時: %1$s</string>
-    <string name="main_dialog_version_optimized_device">KYOCERA TORQUE G06 最適化済</string>
-    <string name="main_dialog_version_copyright">&#169; 2026 pirotty.galaxy</string>
-    <string name="main_category_selection_batch_input">健康記録の一括入力</string>
-    <string name="main_desc_birthday_alert">誕生日通知</string>
-    <string name="main_desc_op_menu">操作メニュー</string>
-
-    <!-- カテゴリバッジアクセシビリティ -->
-    <string name="health_badge_desc_height_weight">身長・体重の記録あり</string>
-    <string name="health_badge_desc_vital">バイタルの記録あり</string>
-    <string name="health_badge_desc_glucose">血糖値の記録あり</string>
-    <string name="health_badge_desc_condition">所見メモの記録あり</string>
-    <string name="health_badge_desc_medication">服薬管理の記録あり</string>
-
-    <!-- セキュリティ警告 -->
-    <string name="security_warning_title">セキュリティ設定が必要です</string>
-    <string name="security_warning_message">このアプリは機密性の高い介護情報を扱うため、端末のセキュリティ設定（PIN、パターン、または生体認証）が必須です。\n\n端末の設定画面からセキュリティ設定を有効にした後、アプリを再起動してください。</string>
-
-    <!-- 日付・単位関連 -->
-    <string name="common_era_ad">西暦</string>
-    <string name="common_era_showa">昭和</string>
-    <string name="common_era_heisei">平成</string>
-    <string name="common_era_reiwa">令和</string>
-    <string name="common_year_suffix">年</string>
-    <string name="common_month_suffix">月</string>
-    <string name="common_day_suffix">日</string>
-    <string name="common_hour_suffix">時</string>
-    <string name="common_minute_suffix">分</string>
-    <string name="common_date_label">日付</string>
-    <string name="common_date_time_label">記録日時</string>
-    <string name="common_age_suffix">%1$d 歳</string>
-    <string name="common_birthday_format">%1$s生　%2$s</string>
-    <string name="common_honorific_suffix">様</string>
-    <string name="common_title_separator"> - </string>
-
-    <!-- カテゴリ名 -->
     <string name="common_category_height_weight">身長・体重</string>
     <string name="common_category_vital">バイタル</string>
     <string name="common_category_glucose">血糖値・HbA1c</string>
     <string name="common_category_condition">所見メモ</string>
     <string name="common_category_medication">服薬管理</string>
+    <string name="health_label_height">身長</string>
+    <string name="health_label_weight">体重</string>
+    <string name="health_label_bmi">BMI</string>
+    <string name="health_label_bp_systolic">最高血圧</string>
+    <string name="health_label_bp_diastolic">最低血圧</string>
+    <string name="health_label_sat">酸素飽和度</string>
+    <string name="health_label_pulse">脈拍</string>
+    <string name="health_label_body_temp">体温</string>
+    <string name="health_label_glucose">血糖値</string>
+    <string name="health_label_hba1c">HbA1c</string>
 
-    <!-- タブ名 -->
-    <string name="common_tab_history">履歴</string>
-    <string name="common_tab_graph">グラフ</string>
+    <string name="health_status_normal">正常</string>
+    <string name="health_status_underweight">低体重</string>
+    <string name="health_status_overweight">過体重</string>
+    <string name="health_status_obesity_1">肥満(1度)</string>
+    <string name="health_status_obesity_2">肥満(2度)</string>
+    <string name="health_status_obesity_3">肥満(3度)</string>
+    <string name="health_status_obesity_4">肥満(4度)</string>
 
-    <!-- テーマ設定 -->
+    <string name="health_item_bmi_format">%1$s (%2$s)</string>
+    <string name="health_err_range_format">%1$s 〜 %2$s の範囲で入力してください</string>
+
+    <string name="health_vital_status_high_bp">高血圧</string>
+    <string name="health_vital_status_low_bp">低血圧</string>
+    <string name="health_vital_status_low_sat">低酸素</string>
+    <string name="health_vital_status_tachycardia">頻脈</string>
+    <string name="health_vital_status_bradycardia">徐脈</string>
+    <string name="health_vital_status_fever">発熱</string>
+    <string name="health_vital_status_hypothermia">低体温</string>
+
+    <string name="health_glucose_status_normal">正常範囲</string>
+    <string name="health_glucose_status_high">高め</string>
+    <string name="health_glucose_status_very_high">非常に高い</string>
+    <string name="health_glucose_status_low">低め</string>
+    <string name="health_glucose_status_very_low">低血糖注意</string>
+
+    <string name="health_hba1c_status_normal">正常</string>
+    <string name="health_hba1c_status_caution">要注意</string>
+    <string name="health_hba1c_status_high">高値</string>
+
+    <!-- 経過記録用 (所見メモ) -->
+    <string name="condition_title">経過記録</string>
+    <string name="condition_label_title_optional">タイトル（任意）</string>
+    <string name="condition_label_memo">状態・変化のメモ</string>
+    <string name="condition_label_author">記録者</string>
+    <string name="condition_btn_capture">カメラを起動</string>
+    <string name="condition_btn_mic_desc">音声で入力する</string>
+    <string name="condition_btn_camera_desc">写真を撮る</string>
+    <string name="condition_btn_gallery_desc">ギャラリーから選ぶ</string>
+    <string name="condition_photo_add_guide">写真は保存後に撮影・追加できます</string>
+    <string name="condition_photo_preview_title">写真の確認</string>
+    <string name="condition_photo_caption_label">写真の説明（キャプション）</string>
+    <string name="condition_photo_delete_confirm_title">写真の削除</string>
+    <string name="condition_photo_delete_confirm_msg">この写真を削除します。よろしいですか？</string>
+    <string name="condition_msg_photo_optimizing">写真を最適化中…</string>
+
+    <string name="p_cond_err_empty_condition">メモを入力してください</string>
+    <string name="p_cond_err_empty_author">記録者名を入力してください</string>
+    <string name="p_cond_err_condition_too_long">メモが長すぎます</string>
+    <string name="p_cond_err_title_too_long">タイトルが長すぎます</string>
+    <string name="p_cond_msg_save_success">所見メモを保存しました</string>
+    <string name="p_cond_msg_update_success">所見メモを更新しました</string>
+    <string name="p_cond_msg_delete_success">所見メモを削除しました</string>
+    <string name="p_cond_msg_photo_save_success">写真を保存しました</string>
+    <string name="p_cond_msg_photo_delete_success">写真を削除しました</string>
+    <string name="p_cond_err_photo_capture_failed">写真の撮影に失敗しました</string>
+    <string name="p_cond_err_camera_launch_failed">カメラの起動に失敗しました</string>
+    <string name="p_cond_err_photo_process_failure">写真の処理に失敗しました</string>
+
+    <!-- 服薬管理用 -->
+    <string name="medication_title">服薬管理</string>
+    <string name="medication_btn_prev_month">前の月</string>
+    <string name="medication_btn_next_month">次の月</string>
+    <string name="medication_header_morning">朝</string>
+    <string name="medication_header_noon">昼</string>
+    <string name="medication_header_evening">夕</string>
+    <string name="medication_header_night">寝前</string>
+    <string name="medication_status_taken">服用</string>
+    <string name="medication_status_not_taken">未服用</string>
+    <string name="medication_status_skipped">欠食・自己判断</string>
+    <string name="medication_status_none">記録なし</string>
+
+    <string name="p_med_msg_update_success">服薬状況を更新しました</string>
+    <string name="p_med_msg_tap_to_edit">日付をタップして服薬状況を記録できます</string>
+    <string name="p_med_msg_no_edit_in_history">※履歴表示モードでは編集できません</string>
+
+    <string name="main_label_last_name">姓</string>
+    <string name="main_label_first_name">名</string>
+    <string name="main_label_last_name_furigana">せい</string>
+    <string name="main_label_first_name_furigana">めい</string>
+    <string name="main_label_note">備考</string>
+    <string name="main_user_registration">利用者登録</string>
+    <string name="main_user_edit">登録情報の編集</string>
+
+    <string name="main_lock_title">セキュリティロック</string>
+    <string name="main_lock_unlock_button">アンロック</string>
+
+    <string name="security_warning_title">セキュリティ設定が必要です</string>
+    <string name="security_warning_message">このアプリを利用するには、端末の生体認証（指紋、顔認証等）または画面ロック（パスコード等）の設定が必要です。端末の「設定」アプリから登録を行ってください。</string>
+
+    <string name="main_label_birthday">生年月日</string>
+    <string name="main_desc_birthday_alert">近日誕生日の利用者がいます</string>
+    <string name="common_note_bracket_format">（%1$s）</string>
+    <string name="common_birthday_format">%1$s 生まれ</string>
+    <string name="common_age_suffix"> 歳</string>
+    <string name="main_desc_op_menu">操作メニューを表示</string>
+    <string name="medical_contacts_manage_label">緊急連絡先の管理</string>
+    <string name="main_category_selection_batch_input">健康記録を一括入力</string>
+    <string name="common_honorific_san_suffix">さん</string>
+    <string name="p_med_history_table_day">%1$d日</string>
+    <string name="medication_history_day_format">%1$d日(%2$s)</string>
+    <string name="p_med_dialog_title">服薬状況の記録</string>
+    <string name="p_med_status_assist">介助・促し</string>
+    <string name="p_med_label_check_time">確認時刻</string>
+
+    <string name="audit_action_insert">登録</string>
+    <string name="audit_action_update">更新</string>
+    <string name="audit_action_delete">削除</string>
+    <string name="audit_action_logical_delete">利用終了</string>
+    <string name="audit_action_restore">復帰</string>
+    <string name="audit_action_permanent_delete">抹消</string>
+    <string name="audit_action_clear_all">初期化</string>
+    <string name="audit_action_info">情報</string>
+    <string name="audit_action_error">エラー</string>
+
+    <string name="common_era_ad">西暦</string>
+    <string name="common_era_showa">昭和</string>
+    <string name="common_era_heisei">平成</string>
+    <string name="common_era_reiwa">令和</string>
+
+    <string name="bmi_label_underweight">低体重</string>
+    <string name="bmi_label_normal">普通体重</string>
+    <string name="bmi_label_obesity_1">肥満(1度)</string>
+    <string name="bmi_label_obesity_2">肥満(2度)</string>
+    <string name="bmi_label_obesity_3">肥満(3度)</string>
+    <string name="bmi_label_obesity_4">肥満(4度)</string>
+
+    <string name="vital_label_normal">正常</string>
+    <string name="vital_label_high_bp">高血圧</string>
+    <string name="vital_label_low_bp">低血圧</string>
+    <string name="vital_label_tachycardia">頻脈</string>
+    <string name="vital_label_bradycardia">徐脈</string>
+    <string name="vital_label_low_sat">低酸素</string>
+    <string name="vital_label_fever">発熱</string>
+    <string name="vital_label_hypothermia">低体温</string>
+
+    <string name="glucose_label_low">低め</string>
+    <string name="glucose_label_normal">正常</string>
+    <string name="glucose_label_normal_high">正常高値</string>
+    <string name="glucose_label_prediabetes">境界型</string>
+    <string name="glucose_label_diabetes">糖尿病域</string>
+
+    <string name="hba1c_label_normal">正常</string>
+    <string name="hba1c_label_prediabetes">境界型</string>
+    <string name="hba1c_label_diabetes">糖尿病域</string>
+
+    <string name="bp_explanation">血圧の基準値</string>
+    <string name="sat_explanation">酸素飽和度の基準値</string>
+    <string name="pulse_explanation">脈拍の基準値</string>
+    <string name="temp_explanation">体温の基準値</string>
+    <string name="glucose_explanation">血糖値の基準値</string>
+    <string name="hba1c_explanation">HbA1cの基準値</string>
+    <string name="bmi_explanation">BMIの判定基準</string>
+
+    <string name="maintenance_err_unassigned_height_weight">利用者のいない身長体重記録</string>
+    <string name="maintenance_err_unassigned_vital">利用者のいないバイタル記録</string>
+    <string name="maintenance_err_unassigned_glucose">利用者のいない血糖値記録</string>
+    <string name="maintenance_err_unassigned_condition">利用者のいない経過記録</string>
+    <string name="maintenance_err_unassigned_medication">利用者のいない服薬記録</string>
+    <string name="maintenance_err_unassigned_contact">利用者のいない連絡先</string>
+    <string name="maintenance_err_unassigned_photo">記録に関連付けられていない写真</string>
+
+    <string name="slot_morning">朝</string>
+    <string name="slot_lunch">昼</string>
+    <string name="slot_dinner">夕</string>
+    <string name="slot_bedtime">寝る前</string>
+    <string name="slot_bedtime_short">寝前</string>
+
+    <string name="audit_result_db_error">DBエラー</string>
+    <string name="audit_result_io_error">ファイルエラー</string>
+    <string name="audit_result_format_error">形式エラー</string>
+    <string name="audit_result_validation_error">入力エラー</string>
+    <string name="audit_result_other_error">その他エラー</string>
+    <string name="audit_result_security_error">セキュリティエラー</string>
+    <string name="audit_result_external_error">外部エラー</string>
+    <string name="audit_result_guard_skipped">二重実行ガード</string>
+
+    <string name="main_err_edit_empty_last_name">姓を入力してください</string>
+    <string name="main_err_edit_empty_first_name">名を入力してください</string>
+    <string name="main_err_edit_empty_last_furigana">姓（ふりがな）を入力してください</string>
+    <string name="main_err_edit_empty_first_furigana">名（ふりがな）を入力してください</string>
+    <string name="main_err_name_too_long">氏名が長すぎます</string>
+    <string name="main_err_furigana_too_long">ふりがなが長すぎます</string>
+    <string name="main_err_note_too_long">備考が長すぎます</string>
+
+    <string name="main_msg_user_archived">%1$s さんの利用を終了しました</string>
+    <string name="main_msg_user_restored">%1$s さんを一覧に戻しました</string>
+    <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
+    <string name="common_error_out_of_range_height_weight">身長・体重の入力値が範囲外です</string>
+    <string name="common_error_out_of_range_vital">バイタルの入力値が範囲外です</string>
+    <string name="common_error_out_of_range_glucose">血糖値・HbA1cの入力値が範囲外です</string>
+
+    <string name="main_edit_user_info">利用者情報を編集</string>
+    <string name="main_end_user_service">利用を終了する</string>
+    <string name="main_category_selection_title">%1$s さんの記録を選択</string>
+    <string name="main_quick_action_emergency_contact">医師・看護師・家族に連絡</string>
+
+    <string name="p_med_status_none">記録なし</string>
+    <string name="p_med_status_taken">服用</string>
+
+    <string name="health_graph_limit_lower">正常(下限)</string>
+    <string name="health_graph_limit_upper">正常(上限)</string>
+
     <string name="theme_system_label">システムの設定に従う</string>
     <string name="theme_system_desc">端末の設定に合わせて自動で切り替わります。</string>
     <string name="theme_light_label">ライトモード (標準)</string>
@@ -128,284 +336,269 @@
     <string name="theme_classic_sand_label">クラシック・サンド</string>
     <string name="theme_classic_sand_desc">紙のような質感で、目が疲れにくい茶系の配色です。</string>
 
-    <!-- グラフ境界線ラベル -->
-    <string name="health_graph_limit_upper">正常(上限)</string>
-    <string name="health_graph_limit_lower">正常(下限)</string>
+    <string name="audit_feature_person_list">利用者一覧</string>
+    <string name="audit_feature_person_edit">利用者編集</string>
+    <string name="audit_feature_person_archive">アーカイブ管理</string>
+    <string name="audit_feature_person_base">利用者共通処理</string>
+    <string name="audit_feature_health">健康記録</string>
+    <string name="audit_feature_batch_input">一括入力</string>
+    <string name="audit_feature_detail_height_weight">身長・体重詳細</string>
+    <string name="audit_feature_detail_vital">バイタル詳細</string>
+    <string name="audit_feature_detail_glucose">血糖値詳細</string>
+    <string name="audit_feature_condition">経過記録</string>
+    <string name="audit_feature_detail_condition">経過記録詳細</string>
+    <string name="audit_feature_medication">服薬管理</string>
+    <string name="audit_feature_detail_medication">服薬詳細</string>
+    <string name="audit_feature_medical_contact">緊急連絡先</string>
+    <string name="audit_feature_person_detail">利用者詳細</string>
+    <string name="audit_feature_unassigned_photo">未割り当て写真管理</string>
+    <string name="audit_feature_detail_base">詳細画面基盤</string>
+    <string name="audit_feature_maintenance">システム保守</string>
+    <string name="audit_feature_system">システム全般</string>
 
-    <!-- MainScreen / PersonList -->
-    <string name="main_title">利用者一覧</string>
-    <string name="main_no_user_found">検索条件に一致する利用者は見つかりませんでした</string>
-    <string name="main_no_user_registered">利用者が登録されていません。\n右下のボタンから登録してください。</string>
-    <string name="main_menu_settings">設定</string>
-    <string name="main_menu_help">ヘルプ</string>
-    <string name="main_menu_version">バージョン情報</string>
-    <string name="main_quick_action_emergency_contact">医師・看護師・家族に連絡</string>
-    <string name="main_dialog_version_title">バージョン情報</string>
-    <string name="main_edit_user_info">利用者情報を編集</string>
-    <string name="main_end_user_service">利用を終了する</string>
-    <string name="main_snackbar_user_ended">%1$s さんの利用を終了しました</string>
-    <string name="main_category_selection_title">%1$s さんの記録を選択</string>
-    <string name="main_user_registration">利用者登録</string>
-    <string name="main_user_edit">登録情報の編集</string>
-    <string name="main_label_last_name">姓</string>
-    <string name="main_label_first_name">名</string>
-    <string name="main_label_last_name_furigana">せい</string>
-    <string name="main_label_first_name_furigana">めい</string>
-    <string name="main_label_birthday">生年月日</string>
-    <string name="main_label_note">同姓同名識別用メモ</string>
-    <string name="main_search_placeholder">所見メモ検索</string>
-    <string name="main_search_hint">特定の症状や出来事を入力…</string>
-    <string name="main_search_hint_short">検索…</string>
-    <string name="main_btn_add_new">新規追加</string>
-
-    <!-- アプリロック -->
-    <string name="main_lock_title">アプリがロックされています</string>
-    <string name="main_lock_unlock_button">解除する</string>
-
-    <string name="main_msg_user_added">%1$s さんを登録しました</string>
-    <string name="main_msg_user_updated">%1$s さんの情報を更新しました</string>
-    <string name="main_msg_user_archived">%1$s さんをアーカイブに移動しました</string>
-    <string name="main_msg_user_restored">%1$s さんを利用者一覧に戻しました</string>
-    <string name="main_err_edit_empty_last_name">姓を入力してください</string>
-    <string name="main_err_edit_empty_first_name">名を入力してください</string>
-    <string name="main_err_edit_empty_last_furigana">せい を入力してください</string>
-    <string name="main_err_edit_empty_first_furigana">めい を入力してください</string>
-    <string name="main_err_edit_invalid_birthday">生年月日が正しくありません</string>
-    <string name="main_err_name_too_long">姓名はそれぞれ50文字以内で入力してください</string>
-    <string name="main_err_furigana_too_long">ふりがなはそれぞれ100文字以内で入力してください</string>
-    <string name="main_err_note_too_long">同姓同名識別用メモは255文字以内で入力してください</string>
-    <string name="main_err_duplicate_active">既に同じ内容の利用者が登録されています。別人として登録したい場合は「同姓同名識別用メモ」の内容を変更して区別してください。</string>
-    <string name="main_err_duplicate_archived">入力された内容（%1$s 様）は、現在「利用修了者（アーカイブ）」の中に存在します。\n\n●その方を復帰させたい場合：\nこの画面を閉じ、設定メニューの「利用終了者の復帰」から操作してください。\n\n●別人として新規登録／更新したい場合：\n「同姓同名識別用メモ」を別の内容に変更してから再度保存してください。</string>
-    <string name="main_err_title_duplicate_archived_add">登録エラー（利用修了者に存在）</string>
-    <string name="main_err_title_duplicate_archived_update">更新エラー（利用修了者と重複）</string>
-
-    <!-- PersonHealthScreen / PersonConditionScreen 共通 -->
-    <string name="p_detail_dialog_title_delete">データの削除</string>
-    <string name="p_detail_dialog_msg_delete_confirm">この記録を削除してもよろしいですか？\n削除されたデータは元に戻せません。</string>
-    <string name="p_detail_empty_records">記録がありません</string>
-    <string name="p_detail_empty_records_desc">右下の ＋ ボタンをタップして、\n記録を追加しましょう</string>
-    <string name="p_detail_error_no_records_for_pdf">%1$sの記録がないため出力できません</string>
-
-    <!-- PersonHealthScreen -->
-    <string name="p_health_msg_save_success">記録を保存しました</string>
-    <string name="p_health_msg_update_success">記録を更新しました</string>
-    <string name="p_health_msg_delete_success">記録を削除しました</string>
-
-    <!-- Health Labels -->
-    <string name="health_label_height">身長</string>
-    <string name="health_label_weight">体重</string>
-    <string name="health_label_bmi">BMI</string>
-    <string name="health_label_bp">血圧</string>
-    <string name="health_label_bp_systolic">血圧(上)</string>
-    <string name="health_label_bp_diastolic">血圧(下)</string>
-    <string name="health_label_systolic_short">上</string>
-    <string name="health_label_diastolic_short">下</string>
-    <string name="health_label_pulse">脈拍</string>
-    <string name="health_label_pulse_short">脈</string>
-    <string name="health_label_sat">酸素飽和度</string>
-    <string name="health_label_body_temp">体温</string>
-    <string name="health_label_glucose">血糖値</string>
-    <string name="health_label_hba1c">HbA1c</string>
-    <string name="health_label_status">判定</string>
-
-    <!-- Vital Status Labels -->
-    <string name="vital_label_normal">正常</string>
-    <string name="vital_label_high_bp">高血圧</string>
-    <string name="vital_label_low_bp">低血圧</string>
-    <string name="vital_label_tachycardia">頻脈</string>
-    <string name="vital_label_bradycardia">徐脈</string>
-    <string name="vital_label_low_sat">呼吸不全</string>
-    <string name="vital_label_fever">発熱</string>
-    <string name="vital_label_hypothermia">低体温</string>
-
-    <!-- Glucose Labels -->
-    <string name="glucose_label_low">低血糖</string>
-    <string name="glucose_label_normal">正常型</string>
-    <string name="glucose_label_normal_high">正常高値</string>
-    <string name="glucose_label_prediabetes">予備群</string>
-    <string name="glucose_label_diabetes">糖尿病型</string>
-    <!-- HbA1c Labels -->
-    <string name="hba1c_label_normal">正常</string>
-    <string name="hba1c_label_prediabetes">予備軍</string>
-    <string name="hba1c_label_diabetes">糖尿病型</string>
-
-    <!-- BMI Labels -->
-    <string name="bmi_label_underweight">低体重</string>
-    <string name="bmi_label_normal">普通体重</string>
-    <string name="bmi_label_obesity_1">肥満(1度)</string>
-    <string name="bmi_label_obesity_2">肥満(2度)</string>
-    <string name="bmi_label_obesity_3">肥満(3度)</string>
-    <string name="bmi_label_obesity_4">肥満(4度)</string>
-
-    <!-- Explanations -->
-    <string name="bp_explanation">血圧グラフの見方：\n・%2$d/%4$d以上：高血圧\n・%1$d〜%2$d/%3$d〜%4$d：正常\n・%1$d/%3$d未満：低血圧\n※「上/下」のいずれかが基準値を超えると判定されます。</string>
-    <string name="sat_explanation">酸素飽和度(SAT)グラフの見方：\n・%1$d%%以下で異常（呼吸不全）と判定されます。\n※正常範囲は個人差があるため、あえて定義していません。</string>
-    <string name="pulse_explanation">脈拍グラフの見方：\n・%1$d〜%2$d が正常範囲です。</string>
-    <string name="temp_explanation">体温グラフの見方：\n・%1$.1f〜%2$.1f が平熱の目安です。</string>
-    <string name="glucose_explanation">血糖値グラフの見方：\n・%4$d mg/dL以上：糖尿病型\n・%3$d〜%4$d mg/dL未満：予備群\n・%2$d〜%3$d mg/dL未満：正常高値\n・%1$d〜%2$d mg/dL未満：正常型\n・%1$d mg/dL未満：低血糖</string>
-    <string name="hba1c_explanation">HbA1cグラフの見方：\n・6.5%%以上：糖尿病型（高血糖）\n・5.6〜6.4%%：予備群\n・%1$.1f%%以下：正常</string>
-    <string name="bmi_explanation">BMIグラフの見方：\n・40.0以上：肥満(4度)\n・35.0〜39.9：肥満(3度)\n・30.0〜34.9：肥満(2度)\n・%2$.1f〜29.9：肥満(1度)\n・%1$.1f〜%2$.1f：普通体重\n・%1$.1f未満：低体重</string>
-    <string name="pdf_title">利用者記録 (%1$s)</string>
-    <string name="pdf_user_name">利用者名: %1$s 様</string>
-    <string name="pdf_output_date">出力日時: %1$s</string>
-    <string name="pdf_page_number">ページ: %1$d</string>
-    <string name="pdf_share_chooser_title">PDFを共有</string>
-    <string name="slot_morning">朝</string>
-    <string name="slot_lunch">昼</string>
-    <string name="slot_dinner">夕</string>
-    <string name="slot_bedtime">寝る前</string>
-    <string name="slot_bedtime_short">寝</string>
-    <string name="export_range_all">全ての記録</string>
-    <string name="export_range_latest">最新の1件のみ</string>
-    <string name="export_range_one_month">当月</string>
-    <string name="export_range_three_months">過去3ヶ月</string>
-    <string name="export_range_six_months">過去6ヶ月</string>
-    <string name="export_range_custom">期間を指定する</string>
+    <string name="export_range_all">全期間</string>
+    <string name="export_range_latest">直近 10 件</string>
+    <string name="export_range_one_month">直近 1 ヶ月</string>
+    <string name="export_range_three_months">直近 3 ヶ月</string>
+    <string name="export_range_six_months">直近 6 ヶ月</string>
+    <string name="export_range_custom">期間指定</string>
     <string name="export_order_newest">新しい順</string>
     <string name="export_order_oldest">古い順</string>
-    <string name="pdf_settings_title">PDF出力設定 (%1$s)</string>
+    <string name="pdf_settings_title">PDF出力設定</string>
     <string name="security">セキュリティ</string>
     <string name="protect_pdf_with_password">PDFをパスワードで保護する</string>
-    <string name="pdf_password_label">PDF閲覧用パスワード</string>
-    <string name="pdf_password_placeholder">6桁以上の数字を推奨</string>
-    <string name="pdf_password_error">パスワードは6文字以上で入力してください</string>
-    <string name="pdf_password_hint">PDFを開く際に必要になります</string>
-    <string name="extract_range">抽出範囲</string>
+    <string name="pdf_password_label">閲覧用パスワード</string>
+    <string name="pdf_password_placeholder">4桁以上の数字を推奨</string>
+    <string name="pdf_password_hint">PDFを開く際に必要になります。共有相手に別途伝えてください。</string>
+    <string name="hide_password">パスワードを隠す</string>
+    <string name="show_password">パスワードを表示</string>
+    <string name="extract_range">出力範囲</string>
     <string name="start_date">開始日</string>
     <string name="end_date">終了日</string>
-    <string name="include_photos">写真を印刷に含める</string>
-    <string name="export_order">並び順</string>
-    <string name="create_pdf">PDFを作成</string>
-    <string name="show_password">表示</string>
-    <string name="hide_password">非表示</string>
-    <string name="decision">決定</string>
-    <string name="condition_photo_add_guide">写真は保存後に詳細画面から追加できます</string>
+    <string name="include_photos">経過記録の写真を含める</string>
+    <string name="export_order">出力順序</string>
+    <string name="create_pdf">PDFを作成して共有</string>
+    <string name="pdf_err_no_data">出力対象のデータがありません</string>
+    <string name="pdf_title">CareMemo レポート</string>
+    <string name="pdf_user_name">対象利用者: %1$s</string>
+    <string name="pdf_output_date">出力日時: %1$s</string>
+    <string name="pdf_page_number">%1$d / %2$d ページ</string>
+    <string name="pdf_label_trend">（推移グラフ）</string>
+    <string name="pdf_share_chooser_title">PDFを共有</string>
+    <string name="pdf_err_no_app">共有可能なアプリが見つかりません</string>
 
-    <!-- Common Messages -->
-    <string name="common_error_title_save">保存エラー</string>
-    <string name="common_error_title_update">更新エラー</string>
-    <string name="common_error_title_delete">削除エラー</string>
-    <string name="common_error_title_info">完了</string>
-    <string name="common_error_title_error">エラー</string>
-    <string name="common_error_save">データの保存に失敗しました: %1$s</string>
-    <string name="common_error_update">情報の更新に失敗しました: %1$s</string>
-    <string name="common_error_delete">データの削除に失敗しました: %1$s</string>
-    <string name="common_error_unknown">予期せぬエラーが発生しました: %1$s</string>
-    <string name="common_error_no_space">空き容量が不足しています (%1$s)</string>
-    <string name="common_error_invalid_input">入力値が正しくありません</string>
-    <string name="common_err_future_date_not_allowed">未来の日時は設定できません</string>
+    <string name="health_label_bp">血圧</string>
+    <string name="health_label_systolic_short">最高</string>
+    <string name="health_label_diastolic_short">最低</string>
+    <string name="health_label_pulse_short">脈拍</string>
+    <string name="health_label_status">判定</string>
+    <string name="health_graph_help_desc">グラフの操作：\n・左右フリックで期間移動\n・ピンチ操作で拡大縮小\n・点をタップで詳細表示</string>
+    <string name="health_graph_expand_desc">全画面でグラフを表示します</string>
+
+    <string name="unassigned_photo_type_temporary">一時保存中</string>
+    <string name="unassigned_photo_type_unassigned">紐付けなし</string>
+    <string name="unassigned_photo_db_unregistered">未登録の写真</string>
+    <string name="unassigned_photo_empty_msg">整理が必要な写真はありません</string>
+    <string name="unassigned_photo_title">未割り当て写真の管理</string>
+    <string name="condition_msg_no_photos_to_show">表示できる写真がありません</string>
+    <string name="condition_msg_no_photos_yet">写真はまだありません</string>
+
+    <string name="p_detail_dialog_title_delete">記録の削除</string>
+    <string name="p_detail_dialog_msg_delete_confirm">この記録を削除します。よろしいですか？</string>
+    <string name="p_health_msg_save_success">健康記録を保存しました</string>
+    <string name="p_health_msg_update_success">健康記録を更新しました</string>
+    <string name="p_health_msg_delete_success">健康記録を削除しました</string>
+    <string name="main_msg_user_updated">利用者情報を更新しました</string>
+    <string name="main_msg_user_added">新しい利用者を登録しました</string>
+    <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
+    <string name="medical_contacts_title_format">%1$s さんの緊急連絡先</string>
+    <string name="medical_contacts_manage_title_format">%1$s さんの連絡先管理</string>
+    <string name="medical_contact_add_title">連絡先の追加</string>
+    <string name="medical_contact_edit_title">連絡先の編集</string>
+    <string name="main_dialog_version_build_time">ビルド日時: %1$s</string>
+    <string name="main_dialog_version_optimized_device">最適化済みデバイス: Android Phone/Tablet</string>
+    <string name="main_dialog_version_copyright">&#169; 2025&#8211;2026 pirotty.galaxy</string>
+    <string name="main_search_placeholder">名前またはふりがな</string>
+    <string name="main_err_duplicate_active">既に同じ氏名・生年月日の利用者が登録されています</string>
+    <string name="main_err_duplicate_archived">既に同じ氏名・生年月日の利用者が「終了した利用者」の中に存在します。復帰させて利用を再開しますか？</string>
+    <string name="main_err_title_duplicate_archived_add">登録済みの可能性があります</string>
+    <string name="main_err_title_duplicate_archived_update">重複する利用者が存在します</string>
+
+    <string name="health_badge_desc_height_weight">身長・体重の最終記録</string>
+    <string name="health_badge_desc_vital">バイタルの最終記録</string>
+    <string name="health_badge_desc_glucose">血糖値の最終記録</string>
+    <string name="health_badge_desc_condition">経過記録の最終記録</string>
+    <string name="health_badge_desc_medication">本日の服薬状況</string>
+
+    <string name="common_date_label">日付</string>
+
+    <!-- 検索・共通 -->
+    <string name="main_search_hint">名前、ふりがな、備考で検索</string>
+    <string name="main_search_hint_short">キーワード検索</string>
+    <string name="main_btn_add_new">新規登録</string>
+    <string name="main_label_age_format">%1$d 歳</string>
+    <string name="main_btn_batch_input">一括入力</string>
+
+    <string name="decision">確定</string>
+    <string name="ignore">無視</string>
+
+    <!-- エラー・警告 -->
+    <string name="common_error_invalid_input">入力内容に誤りがあります</string>
+    <string name="common_error_load_failed">データの読み込みに失敗しました</string>
+    <string name="common_error_save">保存中にエラーが発生しました</string>
+    <string name="common_err_future_date_not_allowed">未来の日付は指定できません</string>
     <string name="common_err_invalid_date">正しい日付を入力してください</string>
-    <string name="health_err_range_format">%1$s 〜 %2$s の範囲で入力してください</string>
-    <string name="common_error_out_of_range_height_weight">身長・体重が範囲外です</string>
-    <string name="common_error_out_of_range_vital">バイタルが範囲外です</string>
-    <string name="common_error_out_of_range_glucose">血糖値が範囲外です</string>
+    <string name="common_error_title_save">保存エラー</string>
+    <string name="common_error_title_info">お知らせ</string>
+    <string name="common_error_title_error">エラー</string>
+    <string name="common_error_unknown">予期せぬエラーが発生しました</string>
 
-    <!-- PersonConditionScreen -->
-    <string name="p_cond_msg_save_success">記録を保存しました</string>
-    <string name="p_cond_msg_update_success">記録を更新しました</string>
-    <string name="p_cond_msg_delete_success">記録を削除しました</string>
-    <string name="p_cond_msg_photo_save_success">写真を保存しました</string>
-    <string name="p_cond_msg_photo_delete_success">写真を削除しました</string>
-    <string name="p_cond_err_title_photo">写真の取得に失敗</string>
-    <string name="p_cond_err_photo_capture_failed">写真の取得または読み込みに失敗しました。</string>
-    <string name="p_cond_err_camera_launch_failed">カメラの起動準備に失敗しました。</string>
-    <string name="p_cond_err_photo_process_failure">画像の処理に失敗しました。空き容量を確認してください。</string>
-    <string name="p_cond_err_title_too_long">タイトルは50文字以内で入力してください</string>
-    <string name="p_cond_err_empty_condition">内容を入力してください</string>
-    <string name="p_cond_err_empty_author">記録者を入力してください</string>
-    <string name="p_cond_err_condition_too_long">内容は1000文字以内で入力してください</string>
+    <string name="main_menu_settings">設定</string>
+    <string name="main_menu_version">バージョン情報</string>
+    <string name="main_no_user_found">検索条件に一致する利用者は見つかりませんでした</string>
+    <string name="main_no_user_registered">利用者が登録されていません。\n右下のボタンから登録してください。</string>
 
-    <!-- PersonMedicationScreen -->
-    <string name="p_med_msg_update_success">服薬状況を更新しました</string>
-    <string name="p_med_err_update_failure">服薬状況の更新に失敗しました: %1$s</string>
-    <string name="common_tab_calendar">カレンダー</string>
-    <string name="p_med_msg_no_edit_in_history">※ ここでは記録の編集はできません</string>
-    <string name="p_med_msg_tap_to_edit">※ 日付のセルをタップして記録を追加／編集しましょう</string>
-    <string name="p_med_history_table_day">日</string>
-    <string name="p_med_dialog_title">%1$s の服薬状況</string>
-    <string name="p_med_status_none">未</string>
-    <string name="p_med_status_assist">介助</string>
-    <string name="p_med_status_taken">服用</string>
-    <string name="p_med_label_check_time">確認日時: %1$s</string>
+    <string name="p_detail_empty_records">記録がありません</string>
+    <string name="p_detail_empty_records_desc">右下のボタンから新しい記録を追加できます</string>
+    <string name="p_detail_error_no_records_for_pdf">%1$s の記録がないため、PDFを出力できません</string>
 
-    <!-- SettingsScreen -->
+    <!-- 一括入力画面 (BatchInput) -->
+    <string name="health_batch_input_title">一括入力</string>
+    <string name="health_item_no_input">（未入力）</string>
+
+    <!-- 緊急連絡先 (EmergencyContact) -->
+    <string name="medical_contact_title">緊急連絡先</string>
+    <string name="medical_contact_empty">連絡先が登録されていません</string>
+    <string name="medical_contact_label_facility">施設名・続柄など</string>
+    <string name="medical_contact_label_person_name">担当者・氏名</string>
+    <string name="medical_contact_label_phone">電話番号</string>
+    <string name="medical_contact_label_type">連絡先種別</string>
+    <string name="medical_contact_label_priority">優先順位 (数値が小さいほど優先)</string>
+    <string name="medical_contact_btn_add">連絡先を追加</string>
+    <string name="medical_contact_type_doctor">病院・主治医</string>
+    <string name="medical_contact_type_nursing">訪問看護</string>
+    <string name="medical_contact_type_support">地域包括・居宅</string>
+    <string name="medical_contact_type_caseworker">ケースワーカー</string>
+    <string name="medical_contact_type_family">家族・親族</string>
+    <string name="medical_contact_type_other">その他</string>
+
+    <string name="medical_contact_err_empty_facility">名称を入力してください</string>
+    <string name="medical_contact_err_facility_too_long">名称が長すぎます</string>
+    <string name="medical_contact_err_person_name_too_long">氏名が長すぎます</string>
+    <string name="medical_contact_err_phone_too_long">電話番号が長すぎます</string>
+    <string name="medical_contact_msg_save_success">連絡先を保存しました</string>
+    <string name="medical_contact_msg_delete_success">連絡先を削除しました</string>
+
+    <string name="medical_contact_delete_confirm_title">連絡先の削除</string>
+    <string name="medical_contact_delete_confirm_msg">この連絡先を削除します。よろしいですか？</string>
+
+    <!-- 設定・保守 (Settings) -->
     <string name="settings_title">設定</string>
     <string name="settings_section_display_record">表示・記録設定</string>
     <string name="settings_item_name_masking_title">氏名の伏せ字表示</string>
-    <string name="settings_item_name_masking_desc">一覧などの画面で氏名の一部を「○」で表示します</string>
-    <string name="settings_item_default_recorder_title">記録者の名前(デフォルト)</string>
-    <string name="settings_item_default_recorder_placeholder">例: 山田</string>
-    <string name="settings_item_default_recorder_desc">所見メモ作成時に自動入力されます</string>
-    <string name="settings_err_recorder_name_too_long">記録者名は50文字以内で入力してください</string>
+    <string name="settings_item_name_masking_desc">利用者一覧などで氏名の一部を隠します</string>
+    <string name="settings_item_default_recorder_title">標準の記録者名</string>
+    <string name="settings_item_default_recorder_placeholder">あなたの名前など</string>
+    <string name="settings_item_default_recorder_desc">新規記録時の初期値として使用されます</string>
+    <string name="settings_err_recorder_name_too_long">記録者名が長すぎます</string>
 
     <string name="settings_section_person_management">利用者管理</string>
-    <string name="settings_item_restore_archived_title">利用終了者の復帰</string>
-    <string name="settings_item_restore_archived_desc">現在 %1$d 名が利用終了となっています</string>
-    <string name="settings_item_permanent_delete_archived_title">利用修了者の完全抹消</string>
-    <string name="settings_item_permanent_delete_archived_desc">「利用終了」の方のデータを個別に選択して物理削除します</string>
+    <string name="settings_item_restore_archived_title">利用終了者の管理</string>
+    <string name="settings_item_restore_archived_desc">終了した利用者の復帰や抹消を行います（現在 %1$d 名）</string>
+    <string name="settings_item_permanent_delete_archived_title">利用終了者のデータを抹消</string>
+    <string name="settings_item_permanent_delete_archived_desc">終了した全ての利用者のデータを完全に削除します</string>
+    <string name="settings_dialog_permanent_delete_confirm_title">データの完全抹消</string>
+    <string name="settings_dialog_permanent_delete_confirm_msg">利用を終了している %1$d 名のすべての記録と写真を完全に削除します。この操作は取り消せません。よろしいですか？</string>
+    <string name="settings_dialog_permanent_delete_confirm_btn">%1$d 名分を削除する</string>
 
     <string name="settings_section_data_management">データ管理</string>
-    <string name="settings_item_backup_password_title">バックアップにパスワードを設定</string>
-    <string name="settings_item_backup_password_desc">Zipファイルを暗号化して保護します</string>
-    <string name="settings_item_backup_password_off_warning">※OFFの場合、別の端末では復元できない可能性があります</string>
-    <string name="settings_item_default_password_title">デフォルトのパスワード</string>
-    <string name="settings_item_default_password_placeholder">%1$d桁以上の数字を推奨</string>
-    <string name="settings_item_default_password_error">%1$d文字以上で入力してください</string>
-    <string name="settings_item_default_password_hint">バックアップ作成時に使用されます</string>
-    <string name="settings_item_export_title">データのバックアップ (保存)</string>
-    <string name="settings_item_export_desc">全データと写真をZip書き出しします</string>
-    <string name="settings_item_import_title">データの復元 (読込)</string>
-    <string name="settings_item_import_desc">バックアップからデータを読み込みます</string>
+    <string name="settings_item_backup_password_title">バックアップの保護</string>
+    <string name="settings_item_backup_password_desc">バックアップファイルにパスワードを設定します</string>
+    <string name="settings_item_backup_password_off_warning">※現在、バックアップは保護されていません</string>
+    <string name="settings_item_default_password_title">保護パスワード</string>
+    <string name="settings_item_default_password_placeholder">%1$d 文字以上</string>
+    <string name="settings_item_default_password_hint">復元時に必要になります。忘れないようにしてください。</string>
+    <string name="pdf_password_error">パスワードが短すぎます</string>
+
+    <string name="settings_item_export_title">バックアップを作成 (エクスポート)</string>
+    <string name="settings_item_export_desc">全データと写真を ZIP ファイルにまとめて保存します</string>
+    <string name="settings_item_import_title">バックアップから復元 (インポート)</string>
+    <string name="settings_item_import_desc">ZIP ファイルを選択して、データと写真を復元します</string>
+    <string name="settings_item_unassigned_photos_title">未割り当て写真の管理</string>
+    <string name="settings_item_unassigned_photos_desc">記録との紐付けが失われた写真を整理します</string>
+
+    <string name="settings_dialog_restore_confirm_title">データの復元確認</string>
+    <string name="settings_dialog_restore_confirm_msg">選択されたファイルからデータを復元します。現在のデータに上書き、または追加されます。よろしいですか？</string>
+    <string name="settings_dialog_restore_confirm_btn">復元を開始する</string>
 
     <string name="settings_section_security">セキュリティ</string>
-    <string name="settings_item_app_lock_title">アプリのロック</string>
-    <string name="settings_item_app_lock_desc">起動時・復帰時に認証を求めます</string>
-    <string name="settings_section_theme">テーマ</string>
-    <string name="settings_item_theme_selection_title">配色とモード</string>
+    <string name="settings_item_app_lock_title">生体認証でロック</string>
+    <string name="settings_item_app_lock_desc">アプリ起動時に指紋や顔認証を要求します</string>
+
+    <string name="settings_section_theme">テーマ設定</string>
+    <string name="settings_item_theme_selection_title">アプリの配色</string>
+    <string name="settings_dialog_theme_title">テーマの選択</string>
 
     <string name="settings_section_other">その他</string>
-    <string name="settings_item_version_title">バージョン情報</string>
+    <string name="settings_item_version_title">バージョン</string>
+    <string name="settings_item_version_format">バージョン %1$s</string>
 
     <string name="settings_section_dev_tools">管理者向けツール</string>
     <string name="settings_dev_audit_log_desc">※ 操作ログの管理を行います。</string>
-    <string name="settings_dev_audit_log_count">現在の記録件数: %1$d 件</string>
-    <string name="settings_dev_rotate_logs_desc">即座に古いログを消去して整理します</string>
-    <string name="settings_dev_clear_logs_desc">全ての操作ログを物理削除します</string>
-    <string name="settings_dev_data_maintenance_desc">※ データメンテナンスを行います。</string>
-    <string name="settings_dev_import_sample_desc">12名分のサンプルデータを生成して取り込みます</string>
-    <string name="settings_item_unassigned_photos_title">未割り当て写真の確認</string>
-    <string name="settings_item_unassigned_photos_desc">紐付けが途切れた写真の確認と削除</string>
-    <string name="settings_item_force_import_title">バージョン不一致を無視してインポート</string>
-    <string name="settings_item_force_import_desc">インポート元のバックアップデータが、現在のアプリより新しいバージョンであっても強制的に取り込みます。スキーマの不整合によりアプリが起動できなくなる恐れがあります。</string>
-    <string name="settings_item_integrity_check_title">データベース整合性チェック</string>
-    <string name="settings_item_integrity_check_desc">孤立したデータの検出とレポート作成</string>
-    <string name="settings_item_insert_inconsistency_title">[テスト] 不整合データを挿入</string>
-    <string name="settings_item_insert_inconsistency_desc">検証用の孤立レコード(バイタル)を1件作成します</string>
-    <string name="settings_dev_clear_all_warning">※ 全データと写真が完全に消去されます。</string>
-    <string name="settings_item_clear_all_title">■要注意■ 全データ消去</string>
+    <string name="settings_dev_rotate_logs_desc">保持期間を過ぎた古いログを手動で削除します</string>
+    <string name="settings_dev_clear_logs_desc">すべての操作ログを即座に消去します</string>
+    <string name="settings_dev_data_maintenance_desc">※ データベースの整合性チェックと修復を行います。</string>
+    <string name="settings_dev_import_sample_desc">デバッグ用に12名分のテストデータを生成します</string>
+    <string name="settings_dev_clear_all_warning">【注意】以下の操作は全てのデータを物理的に削除します。</string>
 
-    <!-- Settings Dialogs -->
-    <string name="settings_dialog_theme_title">配色とモードの選択</string>
-    <string name="settings_dialog_restore_confirm_title">データの復元</string>
-    <string name="settings_dialog_restore_confirm_msg">現在のデータはすべて削除され、選択したバックアップファイルの内容に置き換わります。よろしいですか？</string>
-    <string name="settings_dialog_restore_confirm_btn">復元を実行</string>
-    <string name="settings_dialog_permanent_delete_confirm_title">個人情報の完全抹消</string>
-    <string name="settings_dialog_permanent_delete_confirm_msg">現在「利用終了」となっている %1$d 名分のデータを完全に抹消します。記録は復旧できません。よろしいですか？</string>
-    <string name="settings_dialog_permanent_delete_confirm_btn">対象者 (%1$d名) を抹消する</string>
-    <string name="settings_dialog_clear_all_confirm_title">(管理者) 全データ消去</string>
-    <string name="settings_dialog_clear_all_confirm_msg">全データの消去を実行します。取り消せません。</string>
-    <string name="settings_dialog_inconsistency_report_title">データベース不整合レポート</string>
-    <string name="settings_dialog_inconsistency_report_intro">以下の %1$d 件の孤立したデータが見つかりました：</string>
+    <string name="settings_item_force_import_title">強制インポート</string>
+    <string name="settings_item_force_import_desc">バージョン不一致の警告を無視してインポートします</string>
+    <string name="settings_item_integrity_check_title">整合性チェック</string>
+    <string name="settings_item_integrity_check_desc">孤立した記録や写真がないかスキャンします</string>
+    <string name="settings_item_insert_inconsistency_title">テスト不整合の挿入</string>
+    <string name="settings_item_insert_inconsistency_desc">デバッグ用に不整合データを1件作成します</string>
+    <string name="settings_item_clear_all_title">アプリの初期化 (全データ削除)</string>
+    <string name="settings_dialog_clear_all_confirm_title">全データの完全削除</string>
+    <string name="settings_dialog_clear_all_confirm_msg">アプリ内のすべての利用者、記録、写真を完全に削除し、初期状態に戻します。この操作は取り消せません。本当によろしいですか？</string>
+
+    <string name="common_date_time_label">記録日時</string>
+    <string name="common_year_suffix">年</string>
+    <string name="common_month_suffix">月</string>
+    <string name="common_day_suffix">日</string>
+    <string name="common_hour_suffix">時</string>
+    <string name="common_minute_suffix">分</string>
+    <string name="common_honorific_suffix"> さん</string>
+    <string name="common_identifier_suffix">（復元-%1$s）</string>
+
+    <string name="main_err_edit_invalid_birthday">生年月日が正しくありません</string>
+    <string name="maintenance_err_newer_version">このバックアップは新しいバージョンのアプリで作成されています。アプリを更新してください。</string>
+
+    <string name="settings_btn_export_audit_logs">監査ログをエクスポート</string>
+    <string name="settings_dev_export_audit_logs_desc">全期間の監査ログを ZIP 形式で保存します。</string>
+    <string name="settings_btn_rotate_logs">ログの手動ローテーション</string>
+    <string name="settings_dev_audit_log_count">現在の記録件数: %1$d 件</string>
+    <string name="audit_feature_settings">設定</string>
+    <string name="audit_result_unknown">不明</string>
+    <string name="settings_dialog_import_password_title">パスワードの入力</string>
+    <string name="settings_dialog_import_password_msg">このファイルはパスワード保護されています。入力してください。</string>
+    <string name="settings_dialog_import_password_label">パスワード</string>
+    <string name="settings_dialog_inconsistency_report_title">整合性スキャン結果</string>
+    <string name="settings_dialog_inconsistency_report_intro">%1$d 件の不整合が見つかりました。</string>
     <string name="settings_dialog_inconsistency_person_id">元利用者ID: %1$s</string>
     <string name="settings_dialog_inconsistency_table">テーブル: %1$s</string>
     <string name="settings_dialog_inconsistency_record_time">記録日時: %1$s</string>
     <string name="settings_dialog_inconsistency_summary">これらは親データ（利用者）が存在しない無効な記録です。クリーンアップを実行して削除することをお勧めします。</string>
     <string name="settings_dialog_inconsistency_cleanup_btn">クリーンアップ実行</string>
-    <string name="settings_dialog_import_password_title">パスワードの入力</string>
-    <string name="settings_dialog_import_password_msg">このファイルはパスワード保護されています。入力してください。</string>
-    <string name="settings_dialog_import_password_label">パスワード</string>
-    <string name="settings_version_msg">CareMemo\nバージョン %1$s\n\n&#169; 2025&#8211;2026 pirotty.galaxy</string>
 
+    <string name="audit_log_label_retention">ログの保持期間</string>
+    <string name="audit_log_retention_desc">指定した日数より前のログを自動的に削除します</string>
+    <string name="audit_log_clear_confirm_title">操作ログの全消去</string>
+    <string name="audit_log_clear_confirm_msg">記録されているすべての操作ログを消去します。よろしいですか？</string>
+    <string name="settings_btn_view_audit_logs">操作ログを参照</string>
+
+    <string name="audit_log_title">操作ログ</string>
+
+    <!-- Time Unit Labels for Settings -->
     <string name="settings_retention_none">残さない</string>
     <string name="settings_retention_one_week">1週間</string>
     <string name="settings_retention_two_weeks">2週間</string>
@@ -415,191 +608,12 @@
     <string name="settings_retention_one_year">1年</string>
     <string name="settings_retention_days">%1$d日間</string>
 
-    <string name="settings_err_title_biometric">設定できません</string>
-    <string name="settings_err_biometric_unsupported">このデバイスは生体認証または画面ロック設定に対応していないか、認証情報が登録されていません。</string>
-
-    <!-- Security Authentication -->
-    <string name="security_auth_title">認証が必要です</string>
-    <string name="security_auth_reason_change_settings">セキュリティ設定を変更するために認証を行ってください</string>
-    <string name="security_auth_reason_show_password">パスワードを表示するために認証を行ってください</string>
-    <string name="security_auth_reason_unlock">アプリをアンロックするために認証を行ってください</string>
-    <string name="security_auth_reason_pdf_export">PDFを出力するために認証を行ってください</string>
-    <string name="settings_msg_delete_ended_success">利用終了者のデータを一括で完全に抹消しました。</string>
-    <string name="settings_msg_export_success">データと写真のエクスポートが完了しました。</string>
-    <string name="settings_msg_import_success">データと写真の復元が完了しました。</string>
-    <string name="settings_msg_import_success_data_only">データの復元が完了しました。</string>
-    <string name="settings_err_import_no_json">バックアップファイル(backup.json)が見つかりません。</string>
-    <string name="settings_err_import_version_mismatch">このバックアップは新しいバージョンのCareMemoで作成されています。アプリを更新してください。</string>
-    <string name="settings_err_import_wrong_password">パスワードが違います。</string>
-    <string name="settings_msg_clear_all_success">全てのデータと写真を削除しました。アプリを初期状態に戻しました。</string>
-    <string name="settings_msg_integrity_ok">不整合なデータは見つかりませんでした。</string>
-    <string name="settings_msg_fix_success">%1$d件の孤立したデータを削除しました。</string>
-    <string name="settings_msg_test_inconsistency_added">テスト用不整合データを1件挿入しました。</string>
-    <string name="settings_msg_dev_mode_enabled">管理者向け設定が有効になりました</string>
-
-    <!-- サンプルデータ取り込み -->
-    <string name="settings_btn_import_sample_data">サンプルデータを取り込む</string>
-    <string name="settings_msg_import_sample_success">12名分のサンプルデータの取り込みが完了しました。</string>
-    <string name="settings_import_sample_confirm_title">サンプルデータの取り込み</string>
-    <string name="settings_import_sample_confirm_msg">現在のデータはすべて消去され、12名分のサンプルデータに置き換わります（※写真は含まれません）。よろしいですか？</string>
-
-    <!-- Archive (DeleteOrRestorePerson) -->
-    <string name="archive_title_restore">利用者の復帰</string>
-    <string name="archive_title_delete">利用者の完全抹消</string>
-    <string name="archive_btn_select_all">全選択</string>
-    <string name="archive_btn_deselect_all">全解除</string>
-    <string name="archive_action_restore_label">復帰させる</string>
-    <string name="archive_action_delete_label">完全に抹消する</string>
-    <string name="archive_action_confirm_btn_format">選択した利用者 (%1$d名) を%2$s</string>
-    <string name="archive_empty_msg">終了した利用者はいません</string>
-    <string name="archive_permanent_delete_warning">抹消した利用者のデータ（記録、写真）は二度と復元できません。一人ずつ慎重に選択してください。</string>
-    <string name="archive_dialog_restore_confirm_msg">選択された %1$d 名の利用者を利用者一覧（アクティブ）に戻します。よろしいですか？</string>
-    <string name="archive_dialog_restore_confirm_btn">復帰を実行する</string>
-    <string name="archive_dialog_delete_confirm_title">データの完全抹消</string>
-    <string name="archive_dialog_delete_confirm_msg">選択された %1$d 名の利用者のすべてのデータを完全に消去します。この操作は取り消せません。本当によろしいですか？</string>
-    <string name="archive_dialog_delete_confirm_btn">抹消を実行する</string>
-
-    <string name="archive_msg_restored">%1$d 名の利用者を一覧に戻しました</string>
-    <string name="archive_msg_deleted">%1$d 名の利用者を完全に抹消しました</string>
-    <string name="archive_err_restore_failure">利用者の復帰に失敗しました: %1$s</string>
-    <string name="archive_err_delete_failure">データの抹消に失敗しました: %1$s</string>
-    <string name="archive_err_no_selection">対象となる利用者が選択されていません</string>
-
-    <!-- BatchInputScreen -->
-    <string name="batch_msg_save_success">健康記録を一括保存しました</string>
-    <string name="batch_err_save_failure">一括保存に失敗しました: %1$s</string>
-    <string name="batch_err_duplicate_blocked">指定された日時には、既に以下のデータが登録されています：\n・%1$s\n\n一括入力画面では既存データの更新はできません。内容を修正する場合は履歴画面から行ってください。または、記録日時を変更してください。</string>
-
-    <!-- Overwrite Confirm -->
-    <string name="common_confirm_overwrite_title">データの上書き確認</string>
-    <string name="common_confirm_overwrite_message">指定された日時のデータが既に登録されています。既存のデータを上書きして更新しますか？</string>
-    <string name="common_err_duplicate_blocked_simple">指定された日時には既にデータが存在するため、保存できません。日時を変更するか、既存のデータを履歴から編集してください。</string>
-
-    <!-- Audit Log -->
-    <string name="audit_log_title">操作ログ</string>
-    <string name="settings_msg_audit_log_cleared">操作ログをすべて消去しました。</string>
-    <string name="settings_msg_rotate_success">古い操作ログを削除しました。</string>
-    <string name="audit_log_empty">ログはありません</string>
-    <string name="audit_log_empty_filtered_msg">条件に合うログはありません</string>
-    <string name="audit_log_empty_filtered_desc">フィルター設定を変更してください</string>
-    <string name="audit_log_empty_desc">操作を行うとここに履歴が記録されます</string>
-    <string name="audit_log_filter_all">全て</string>
-    <string name="audit_log_filter_result_prefix">結果: %1$s</string>
-    <string name="audit_log_filter_feature_prefix">機能: %1$s</string>
-    <string name="audit_log_sort_asc">古い順</string>
-    <string name="audit_log_sort_desc">新しい順</string>
-    <string name="audit_log_filter_clear">フィルター解除</string>
-
-    <string name="audit_log_label_retention">ログの保持期間</string>
-    <string name="audit_log_retention_desc">指定した日数より前のログを自動的に削除します</string>
-    <string name="audit_log_clear_confirm_title">操作ログの全消去</string>
-    <string name="audit_log_clear_confirm_msg">記録されているすべての操作ログを消去します。よろしいですか？</string>
-    <string name="settings_btn_view_audit_logs">操作ログを参照</string>
-    <string name="settings_btn_rotate_logs">ログの手動ローテーション</string>
-
-    <!-- 監査ログ 識別子 -->
-    <string name="audit_feature_person_list">利用者：一覧</string>
-    <string name="audit_feature_person_edit">利用者：新規登録・編集</string>
-    <string name="audit_feature_person_archive">利用者：利用終了</string>
-    <string name="audit_feature_person_base">利用者：基底</string>
-    <string name="audit_feature_health">健康記録</string>
-    <string name="audit_feature_batch_input">一括入力</string>
-    <string name="audit_feature_detail_height_weight">詳細/身長体重</string>
-    <string name="audit_feature_detail_vital">詳細/バイタル</string>
-    <string name="audit_feature_detail_glucose">詳細/血糖値</string>
-    <string name="audit_feature_condition">所見メモ</string>
-    <string name="audit_feature_detail_condition">詳細/所見メモ</string>
-    <string name="audit_feature_medication">服薬管理</string>
-    <string name="audit_feature_detail_medication">詳細/服薬管理</string>
-    <string name="audit_feature_settings">設定・管理</string>
+    <!-- Audit Feature Labels -->
     <string name="audit_feature_audit_log">操作ログ管理</string>
-    <string name="audit_feature_medical_contact">緊急連絡先管理</string>
-    <string name="audit_feature_person_detail">利用者詳細</string>
-    <string name="audit_feature_unassigned_photo">未割り当て写真管理</string>
-    <string name="audit_feature_detail_base">詳細/基底</string>
-    <string name="audit_feature_maintenance">データメンテナンス</string>
-    <string name="audit_feature_system">システム</string>
 
-    <string name="audit_action_insert">追加 (INSERT)</string>
-    <string name="audit_action_update">更新 (UPDATE)</string>
-    <string name="audit_action_delete">削除 (DELETE)</string>
-    <string name="audit_action_logical_delete">利用終了</string>
-    <string name="audit_action_restore">利用復帰</string>
-    <string name="audit_action_permanent_delete">利用抹消</string>
-    <string name="audit_action_clear_all">一括抹消</string>
-    <string name="audit_action_info">情報 (INFO)</string>
-    <string name="audit_action_error">エラー (ERROR)</string>
-
+    <!-- Audit Result Labels -->
     <string name="audit_result_success">成功</string>
-    <string name="audit_result_db_error">DBエラー</string>
-    <string name="audit_result_io_error">入出力エラー</string>
-    <string name="audit_result_format_error">形式エラー</string>
-    <string name="audit_result_validation_error">検証エラー</string>
-    <string name="audit_result_other_error">その他エラー</string>
-    <string name="audit_result_security_error">セキュリティエラー</string>
-    <string name="audit_result_external_error">外部エラー</string>
-    <string name="audit_result_guard_skipped">ガード回避</string>
-    <string name="audit_result_unknown">不明</string>
+    <string name="audit_result_failure">失敗</string>
+    <string name="audit_result_error">エラー</string>
 
-    <!-- 設定画面 監査ログエクスポート -->
-    <string name="settings_btn_export_audit_logs">監査ログをエクスポート</string>
-    <string name="settings_dev_export_audit_logs_desc">全期間の監査ログを ZIP 形式で保存します。</string>
-
-    <!-- 緊急連絡先 (MedicalContact) -->
-    <string name="medical_contacts_title_format">%1$s さんの緊急連絡先</string>
-    <string name="medical_contacts_manage_label">連絡先の管理・編集</string>
-    <string name="medical_contacts_manage_title_format">%1$s さんの連絡先管理</string>
-    <string name="medical_contacts_empty">連絡先が登録されていません</string>
-    <string name="medical_contact_delete_confirm_title">連絡先の削除</string>
-    <string name="medical_contact_delete_confirm_msg">%1$s を削除しますか？</string>
-    <string name="medical_contact_add_title">緊急連絡先の登録</string>
-    <string name="medical_contact_edit_title">緊急連絡先の編集</string>
-    <string name="medical_contact_facility_label">施設名・事業所名・続柄</string>
-    <string name="medical_contact_facility_placeholder">例：○○クリニック、長男 など</string>
-    <string name="medical_contact_person_label">担当者名・個人名 (任意)</string>
-    <string name="medical_contact_person_placeholder">例：田中先生、佐藤太郎 など</string>
-    <string name="medical_contact_phone_label">電話番号 (任意)</string>
-    <string name="medical_contact_phone_placeholder">ハイフンなしで入力してください</string>
-    <string name="medical_contact_phone_note">ハイフンなしで入力してください</string>
-    <string name="medical_contact_priority_label">表示順序 (小さいほど上)</string>
-    <string name="medical_contact_type_label">種別</string>
-    <string name="medical_contact_type_doctor">病院・主治医</string>
-    <string name="medical_contact_type_nursing">訪問看護ステーション</string>
-    <string name="medical_contact_type_support">地域包括支援センター</string>
-    <string name="medical_contact_type_caseworker">ケースワーカー</string>
-    <string name="medical_contact_type_family">家族</string>
-    <string name="medical_contact_type_other">その他</string>
-    <string name="medical_msg_no_contacts">連絡先が登録されていません</string>
-    <string name="medical_msg_no_phone_number">電話番号が登録されていません</string>
-    <string name="medical_contact_err_empty_facility">施設名・続柄を入力してください</string>
-    <string name="medical_contact_err_facility_too_long">施設名・続柄は100文字以内で入力してください</string>
-    <string name="medical_contact_err_person_name_too_long">担当者名は50文字以内で入力してください</string>
-    <string name="medical_contact_err_phone_too_long">電話番号は20文字以内で入力してください</string>
-
-    <!-- 未割り当て写真タイプ -->
-    <string name="unassigned_photo_type_temporary">一時保存中の写真</string>
-    <string name="unassigned_photo_type_unassigned">紐付け先が消失した写真</string>
-    <string name="unassigned_photo_db_unregistered">DB未登録の画像ファイル</string>
-
-    <!-- メンテナンス・不整合レポート用 -->
-    <string name="maintenance_err_unassigned_height_weight">利用者が存在しない身長・体重データ</string>
-    <string name="maintenance_err_unassigned_vital">利用者が存在しないバイタルデータ</string>
-    <string name="maintenance_err_unassigned_glucose">利用者が存在しない血糖値・HbA1cデータ</string>
-    <string name="maintenance_err_unassigned_condition">利用者が存在しない所見メモ</string>
-    <string name="maintenance_err_unassigned_medication">利用者が存在しない服薬記録</string>
-    <string name="maintenance_err_unassigned_contact">利用者が存在しない緊急連絡先</string>
-    <string name="maintenance_err_unassigned_photo">所見メモが存在しない写真データ</string>
-    <string name="maintenance_err_file_read">ファイルの読み込みに失敗しました。</string>
-    <string name="maintenance_err_no_json">バックアップデータ(backup.json)が見つかりません。</string>
-    <string name="maintenance_err_json_parse">データの解析に失敗しました。ファイルが破損しているか、形式が異なります。</string>
-    <string name="maintenance_err_newer_version">バックアップの作成バージョン(%1$d)が現在のアプリ(%2$d)より新しいです。アプリを更新してください。</string>
-
-    <!-- PDF 出力詳細 -->
-    <string name="pdf_err_no_data">出力対象のデータが存在しません。</string>
-    <string name="pdf_err_no_app">PDFファイルを共有できるアプリが見つかりません。</string>
-    <string name="pdf_label_trend">%1$s 推移</string>
-
-    <!-- Unassigned Photo -->
-    <string name="unassigned_photo_title">未割り当て写真の確認</string>
-    <string name="unassigned_photo_empty_msg">未割り当て写真は見つかりませんでした。</string>
 </resources>

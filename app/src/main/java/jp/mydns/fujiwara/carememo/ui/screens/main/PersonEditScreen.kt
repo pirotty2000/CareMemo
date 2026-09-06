@@ -22,6 +22,8 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.logic.common.BirthEra
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.navigation.NavigationKeys
@@ -244,6 +246,8 @@ fun PersonEditScreenContent(
     modifier: Modifier = Modifier,
     noteFocusRequester: FocusRequester = remember { FocusRequester() }
 ) {
+    val input = uiState.input
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -264,132 +268,166 @@ fun PersonEditScreenContent(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        if (uiState.isLoading) {
-            LoadingScreen(modifier = Modifier.testTag("PersonEdit_Loading"))
-        } else {
-            val scrollState = rememberScrollState()
-            // 状態復元のための Saver 対応：rememberSaveable を使用
-            val scrollStateRestorable = rememberSaveable(saver = ScrollState.Saver) {
-                scrollState
+        when (uiState.screenState) {
+            is PersonEditScreenState.Loading -> {
+                LoadingScreen(modifier = Modifier.testTag("PersonEdit_Loading"))
             }
-            Box(
-                modifier = Modifier
-                    .padding(paddingValues)
-                    .imePadding() // キーボード回避
-                    .fillMaxSize()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .verticalScroll(scrollStateRestorable)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // --- 入力フィールド群 ---
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val nameSpec = AppSpecifications.Constraints.Person.Validation
-                        AppTextField(
-                            value = uiState.lastName,
-                            onValueChange = { onAction(PersonEditUiAction.LastNameChanged(it)) },
-                            type = AppTextFieldType.TEXT,
-                            label = { Text(stringResource(R.string.main_label_last_name)) },
-                            maxLength = nameSpec.MAX_LENGTH_LAST_NAME,
-                            isError = uiState.fieldErrors["lastName"] != null,
-                            supportingText = uiState.fieldErrors["lastName"]?.let { { Text(stringResource(it)) } },
-                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("lastName")) },
-                            modifier = Modifier.weight(1f).testTag("PersonEdit_LastName")
-                        )
-                        AppTextField(
-                            value = uiState.firstName,
-                            onValueChange = { onAction(PersonEditUiAction.FirstNameChanged(it)) },
-                            type = AppTextFieldType.TEXT,
-                            label = { Text(stringResource(R.string.main_label_first_name)) },
-                            maxLength = nameSpec.MAX_LENGTH_FIRST_NAME,
-                            isError = uiState.fieldErrors["firstName"] != null,
-                            supportingText = uiState.fieldErrors["firstName"]?.let { { Text(stringResource(it)) } },
-                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("firstName")) },
-                            modifier = Modifier.weight(1f).testTag("PersonEdit_FirstName")
-                        )
-                    }
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val kanaSpec = AppSpecifications.Constraints.Person.Validation
-                        AppTextField(
-                            value = uiState.lastNameFurigana,
-                            onValueChange = { onAction(PersonEditUiAction.LastNameFuriganaChanged(it)) },
-                            type = AppTextFieldType.TEXT,
-                            label = { Text(stringResource(R.string.main_label_last_name_furigana)) },
-                            maxLength = kanaSpec.MAX_LENGTH_LAST_NAME_FURIGANA,
-                            isError = uiState.fieldErrors["lastNameFurigana"] != null,
-                            supportingText = uiState.fieldErrors["lastNameFurigana"]?.let { { Text(stringResource(it)) } },
-                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("lastNameFurigana")) },
-                            modifier = Modifier.weight(1f).testTag("PersonEdit_LastNameKana")
-                        )
-                        AppTextField(
-                            value = uiState.firstNameFurigana,
-                            onValueChange = { onAction(PersonEditUiAction.FirstNameFuriganaChanged(it)) },
-                            type = AppTextFieldType.TEXT,
-                            label = { Text(stringResource(R.string.main_label_first_name_furigana)) },
-                            maxLength = kanaSpec.MAX_LENGTH_FIRST_NAME_FURIGANA,
-                            isError = uiState.fieldErrors["firstNameFurigana"] != null,
-                            supportingText = uiState.fieldErrors["firstNameFurigana"]?.let { { Text(stringResource(it)) } },
-                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("firstNameFurigana")) },
-                            modifier = Modifier.weight(1f).testTag("PersonEdit_FirstNameKana")
-                        )
-                    }
-
-                    AppTextField(
-                        value = uiState.note,
-                        onValueChange = { onAction(PersonEditUiAction.NoteChanged(it)) },
-                        type = AppTextFieldType.TEXT,
-                        label = { Text(stringResource(R.string.main_label_note)) },
-                        maxLength = AppSpecifications.Constraints.Person.Validation.MAX_LENGTH_NOTE,
-                        isError = uiState.fieldErrors["note"] != null,
-                        supportingText = uiState.fieldErrors["note"]?.let { { Text(stringResource(it)) } },
-                        onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("note")) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(noteFocusRequester)
-                            .testTag("PersonEdit_Memo")
-                    )
-
-                    HorizontalDivider()
-
-                    // 生年月日
-                    BirthdayInputSection(
-                        era = uiState.era,
-                        year = uiState.year,
-                        month = uiState.month,
-                        day = uiState.day,
-                        isError = uiState.fieldErrors["birthday"] != null,
-                        supportingText = uiState.fieldErrors["birthday"]?.let { { Text(stringResource(it)) } },
-                        onAction = onAction
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // --- 下部アクションボタン ---
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { onAction(PersonEditUiAction.Cancel) },
-                            modifier = Modifier.weight(1f).testTag("PersonEdit_CancelButton")
-                        ) {
-                            Text(stringResource(R.string.common_cancel))
-                        }
-                        Button(
-                            onClick = { onAction(PersonEditUiAction.Save) },
-                            enabled = uiState.isValid,
-                            modifier = Modifier.weight(1f).testTag("PersonEdit_SaveButton")
-                        ) {
-                            Text(stringResource(R.string.common_save))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(40.dp))
+            is PersonEditScreenState.Error -> {
+                ErrorState(
+                    message = stringResource(R.string.common_error_load_failed),
+                    onRetry = { /* ViewModel の init または navigation から再試行されることを期待 */ },
+                    modifier = Modifier.testTag("PersonEdit_ErrorState")
+                )
+            }
+            is PersonEditScreenState.Active -> {
+                val scrollState = rememberScrollState()
+                val scrollStateRestorable = rememberSaveable(saver = ScrollState.Saver) {
+                    scrollState
                 }
-                VerticalScrollIndicator(scrollState = scrollState)
+                Box(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .imePadding()
+                        .fillMaxSize()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(scrollStateRestorable)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // 保存処理中のインジケータ（上部に表示）
+                        if (uiState.operation is PersonEditOperation.Saving) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(2.dp)
+                                    .testTag("PersonEdit_SavingIndicator")
+                            )
+                        }
+
+                        // --- 入力フィールド群 ---
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val nameSpec = AppSpecifications.Constraints.Person.Validation
+                            AppTextField(
+                                value = input.lastName,
+                                onValueChange = { onAction(PersonEditUiAction.LastNameChanged(it)) },
+                                type = AppTextFieldType.TEXT,
+                                label = { Text(stringResource(R.string.main_label_last_name)) },
+                                maxLength = nameSpec.MAX_LENGTH_LAST_NAME,
+                                isError = uiState.fieldErrors["lastName"] != null,
+                                supportingText = uiState.fieldErrors["lastName"]?.let { { Text(stringResource(it)) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("lastName")) },
+                                enabled = uiState.operation == PersonEditOperation.Idle,
+                                modifier = Modifier.weight(1f).testTag("PersonEdit_LastName")
+                            )
+                            AppTextField(
+                                value = input.firstName,
+                                onValueChange = { onAction(PersonEditUiAction.FirstNameChanged(it)) },
+                                type = AppTextFieldType.TEXT,
+                                label = { Text(stringResource(R.string.main_label_first_name)) },
+                                maxLength = nameSpec.MAX_LENGTH_FIRST_NAME,
+                                isError = uiState.fieldErrors["firstName"] != null,
+                                supportingText = uiState.fieldErrors["firstName"]?.let { { Text(stringResource(it)) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("firstName")) },
+                                enabled = uiState.operation == PersonEditOperation.Idle,
+                                modifier = Modifier.weight(1f).testTag("PersonEdit_FirstName")
+                            )
+                        }
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val kanaSpec = AppSpecifications.Constraints.Person.Validation
+                            AppTextField(
+                                value = input.lastNameFurigana,
+                                onValueChange = { onAction(PersonEditUiAction.LastNameFuriganaChanged(it)) },
+                                type = AppTextFieldType.TEXT,
+                                label = { Text(stringResource(R.string.main_label_last_name_furigana)) },
+                                maxLength = kanaSpec.MAX_LENGTH_LAST_NAME_FURIGANA,
+                                isError = uiState.fieldErrors["lastNameFurigana"] != null,
+                                supportingText = uiState.fieldErrors["lastNameFurigana"]?.let { { Text(stringResource(it)) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("lastNameFurigana")) },
+                                enabled = uiState.operation == PersonEditOperation.Idle,
+                                modifier = Modifier.weight(1f).testTag("PersonEdit_LastNameKana")
+                            )
+                            AppTextField(
+                                value = input.firstNameFurigana,
+                                onValueChange = { onAction(PersonEditUiAction.FirstNameFuriganaChanged(it)) },
+                                type = AppTextFieldType.TEXT,
+                                label = { Text(stringResource(R.string.main_label_first_name_furigana)) },
+                                maxLength = kanaSpec.MAX_LENGTH_FIRST_NAME_FURIGANA,
+                                isError = uiState.fieldErrors["firstNameFurigana"] != null,
+                                supportingText = uiState.fieldErrors["firstNameFurigana"]?.let { { Text(stringResource(it)) } },
+                                onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("firstNameFurigana")) },
+                                enabled = uiState.operation == PersonEditOperation.Idle,
+                                modifier = Modifier.weight(1f).testTag("PersonEdit_FirstNameKana")
+                            )
+                        }
+
+                        AppTextField(
+                            value = input.note,
+                            onValueChange = { onAction(PersonEditUiAction.NoteChanged(it)) },
+                            type = AppTextFieldType.TEXT,
+                            label = { Text(stringResource(R.string.main_label_note)) },
+                            maxLength = AppSpecifications.Constraints.Person.Validation.MAX_LENGTH_NOTE,
+                            isError = uiState.fieldErrors["note"] != null,
+                            supportingText = uiState.fieldErrors["note"]?.let { { Text(stringResource(it)) } },
+                            onFocusChanged = { if (!it.isFocused) onAction(PersonEditUiAction.MarkFieldAsTouched("note")) },
+                            enabled = uiState.operation == PersonEditOperation.Idle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(noteFocusRequester)
+                                .testTag("PersonEdit_Memo")
+                        )
+
+                        HorizontalDivider()
+
+                        // 生年月日
+                        BirthdayInputSection(
+                            era = input.era,
+                            year = input.year,
+                            month = input.month,
+                            day = input.day,
+                            isError = uiState.fieldErrors["birthday"] != null,
+                            supportingText = uiState.fieldErrors["birthday"]?.let { { Text(stringResource(it)) } },
+                            enabled = uiState.operation == PersonEditOperation.Idle,
+                            onAction = onAction
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // --- 下部アクションボタン ---
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { onAction(PersonEditUiAction.Cancel) },
+                                enabled = uiState.operation == PersonEditOperation.Idle,
+                                modifier = Modifier.weight(1f).testTag("PersonEdit_CancelButton")
+                            ) {
+                                Text(stringResource(R.string.common_cancel))
+                            }
+                            Button(
+                                onClick = { onAction(PersonEditUiAction.Save) },
+                                enabled = uiState.isValid && uiState.operation == PersonEditOperation.Idle,
+                                modifier = Modifier.weight(1f).testTag("PersonEdit_SaveButton")
+                            ) {
+                                if (uiState.operation is PersonEditOperation.Saving) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text(stringResource(R.string.common_save))
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(40.dp))
+                    }
+                    VerticalScrollIndicator(scrollState = scrollState)
+                }
             }
         }
     }
@@ -403,6 +441,7 @@ private fun BirthdayInputSection(
     day: String,
     onAction: (PersonEditUiAction) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null
 ) {
@@ -448,6 +487,7 @@ private fun BirthdayInputSection(
     BirthdayInputFields(
         state = birthdayState,
         isError = isError,
+        enabled = enabled,
         supportingText = supportingText,
         onFocusChanged = { field, _ -> onAction(PersonEditUiAction.MarkFieldAsTouched(field)) },
         modifier = modifier

@@ -68,7 +68,8 @@ fun ConditionPhotoPreviewScreen(
     
     val uriString = conditionState.previewUri ?: return
     val uri = remember(uriString) { uriString.toUri() }
-    val conditionId = conditionState.selectedConditionId ?: ""
+    val session = conditionState.editSession
+    val conditionId = session.selectedConditionId ?: ""
 
     // 初期キャプションの決定ロジック
     LaunchedEffect(uri) {

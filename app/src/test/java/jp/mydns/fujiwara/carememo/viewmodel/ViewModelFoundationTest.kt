@@ -32,7 +32,7 @@ private class FoundationViewModel(
 ) : BaseUiStateViewModel<FoundationUiState, Unit>(userSettingsRepository, securitySession, FoundationUiState()) {
     override val featureName: String = "FoundationTest"
     
-    override fun copyWithLoadingState(state: FoundationUiState, isLoading: Boolean): FoundationUiState {
+    override fun copyWithLoadingState(state: FoundationUiState, isLoading: Boolean, category: LoadingCategory): FoundationUiState {
         return state.copy(isLoading = isLoading)
     }
 

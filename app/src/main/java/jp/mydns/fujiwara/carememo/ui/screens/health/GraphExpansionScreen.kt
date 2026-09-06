@@ -27,13 +27,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.base.ErrorState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.health.HealthChartHelper
 import jp.mydns.fujiwara.carememo.ui.components.health.LineChart
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonHealthViewModel
-import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -49,27 +51,6 @@ sealed interface GraphExpansionUiAction {
  *
  * 【役割】
  * 健康記録の各グラフ（血圧、血糖、BMI 等）を全画面かつ横向き（ランドスケープ）で詳細に閲覧するための画面です。
- * 時間軸を広く取ることで、長期的な推移や微妙な変化を捉えやすくします。
- *
- * 【主な機能】
- * ・ランドスケープ固定：`DisposableEffect` を使用し、画面表示中のみ強制的に横画面へ切り替え。
- * ・初期位置へのスクロール：遷移元のグラフインデックスに基づき、対象グラフを自動的にフォーカス。
- * ・ハイライト表示：対象グラフに一時的な枠線アニメーションを適用し、視認性を向上。
- * ・詳細閲覧：`LineChart` エンジンによる詳細な推移表示（ズーム・ツールチップ対応）。
- *
- * 【全体像：グラフ拡大構成（Graph Expansion）】
- *
- * ■ GraphExpansionScreen (★本コンポーネント)
- * │
- * ├─ TopAppBar (利用者名 ＋ 戻るボタン)
- * └─ LazyColumn (グラフリスト)
- *      └─ Card (各グラフの器)
- *           └─ [1] SingleGraphInLandscape (横画面用描画コンテナ)
- *                └─ LineChart (描画エンジン：ui/components/health/LineChart.kt)
- *
- * 【このコンポーネントでは行わないこと】
- * ・データの保存や削除操作。
- * ・詳細入力画面（ScreenContent）との共有状態管理（拡大表示に特化）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,9 +104,6 @@ fun GraphExpansionScreen(
 
 /**
  * Screen：GraphExpansionScreenContent
- *
- * 【役割】
- * グラフ拡大画面のレイアウト本体 (Stateless)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,48 +163,62 @@ fun GraphExpansionScreenContent(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            if (uiState.isLoading && records.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_Loading")) {
-                    LoadingScreen()
+            when (uiState.screenState) {
+                is PersonHealthScreenState.Loading -> {
+                    if (records.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_Loading")) {
+                            LoadingScreen()
+                        }
+                    }
                 }
-            } else if (records.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_EmptyState")) {
-                    EmptyState(
-                        message = stringResource(R.string.p_detail_empty_records),
-                        icon = Icons.AutoMirrored.Rounded.ShowChart
+                is PersonHealthScreenState.Error -> {
+                    ErrorState(
+                        message = stringResource(R.string.common_error_load_failed),
+                        onRetry = { /* 画面を戻ってやり直してもらう */ },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize().testTag("GraphExpansion_GraphList"),
-                    contentPadding = PaddingValues(2.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    val graphCount = HealthChartHelper.getGraphCount(category)
-
-                    items(graphCount) { index ->
-                        val isHighlighted = index == initialGraphIndex && highlightedIndex == index
-                        val borderColor by animateColorAsState(
-                            targetValue = if (isHighlighted) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            animationSpec = tween(durationMillis = 1000),
-                            label = "Highlight"
-                        )
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, borderColor, MaterialTheme.shapes.medium)
-                                .testTag("GraphExpansion_GraphCard_$index"),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                is PersonHealthScreenState.Active -> {
+                    if (records.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize().testTag("GraphExpansion_EmptyState")) {
+                            EmptyState(
+                                message = stringResource(R.string.p_detail_empty_records),
+                                icon = Icons.AutoMirrored.Rounded.ShowChart
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize().testTag("GraphExpansion_GraphList"),
+                            contentPadding = PaddingValues(2.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Box(modifier = Modifier.padding(4.dp).height(210.dp)) {
-                                SingleGraphInLandscape(
-                                    records = records,
-                                    category = category,
-                                    index = index,
-                                    modifier = Modifier.testTag("GraphExpansion_ChartView_$index")
+                            val graphCount = HealthChartHelper.getGraphCount(category)
+
+                            items(graphCount) { index ->
+                                val isHighlighted = index == initialGraphIndex && highlightedIndex == index
+                                val borderColor by animateColorAsState(
+                                    targetValue = if (isHighlighted) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    animationSpec = tween(durationMillis = 1000),
+                                    label = "Highlight"
                                 )
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, borderColor, MaterialTheme.shapes.medium)
+                                        .testTag("GraphExpansion_GraphCard_$index"),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                ) {
+                                    Box(modifier = Modifier.padding(4.dp).height(210.dp)) {
+                                        SingleGraphInLandscape(
+                                            records = records,
+                                            category = category,
+                                            index = index,
+                                            modifier = Modifier.testTag("GraphExpansion_ChartView_$index")
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

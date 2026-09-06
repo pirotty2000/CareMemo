@@ -13,6 +13,8 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonListViewModel
@@ -38,7 +40,7 @@ class MainScreenTest {
     @Test
     fun DSP_01_loadingIndicator_isDisplayed() {
         setContent {
-            MainScreenContentWrapper(isLoading = true)
+            MainScreenContentWrapper(screenState = PersonListScreenState.Loading)
         }
         composeTestRule.onNodeWithTag("MainScreen_Loading").assertIsDisplayed()
     }
@@ -142,7 +144,7 @@ class MainScreenTest {
         // Use extraBufferCapacity to ensure tryEmit succeeds
         val viewEventFlow = MutableSharedFlow<PersonListViewEvent>(extraBufferCapacity = 1)
         
-        every { viewModel.uiState } returns MutableStateFlow(jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState(isLoading = false))
+        every { viewModel.uiState } returns MutableStateFlow(jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState(screenState = PersonListScreenState.Active))
         every { viewModel.viewEvent } returns viewEventFlow
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
@@ -219,7 +221,8 @@ class MainScreenTest {
     @Composable
     private fun MainScreenContentWrapper(
         userList: List<PersonUiState> = emptyList(),
-        isLoading: Boolean = false,
+        screenState: PersonListScreenState = PersonListScreenState.Active,
+        operation: PersonListOperation = PersonListOperation.Idle,
         isNameMaskingEnabled: Boolean = false,
         searchQuery: String = "",
         selectedSection: String = "全",
@@ -228,8 +231,9 @@ class MainScreenTest {
         onQuickMenuClick: (Person) -> Unit = {}
     ) {
         MainScreenContent(
+            screenState = screenState,
+            operation = operation,
             userList = userList.toImmutableList(),
-            isLoading = isLoading,
             isNameMaskingEnabled = isNameMaskingEnabled,
             searchQuery = searchQuery,
             selectedSection = selectedSection,

@@ -6,13 +6,22 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditSession
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
+import jp.mydns.fujiwara.carememo.ui.preview.MockData
+import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
+import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionPreviewParameterProvider
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.toImmutableList
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
@@ -40,6 +49,7 @@ fun PersonConditionScreenPhone(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
+    val session = uiState.editSession
     Scaffold(
         modifier = modifier.testTag("ConditionScreen_PhoneContent"),
         topBar = {
@@ -56,7 +66,7 @@ fun PersonConditionScreenPhone(
                     navigationIcon = {
                         IconButton(
                             onClick = { 
-                                if (uiState.selectedConditionId != null) onAction(PersonConditionUiAction.CancelEdit) 
+                                if (session.selectedConditionId != null) onAction(PersonConditionUiAction.CancelEdit) 
                                 else onAction(PersonConditionUiAction.Back) 
                             },
                             modifier = Modifier.testTag("ConditionScreen_BackButton")
@@ -68,7 +78,7 @@ fun PersonConditionScreenPhone(
                         }
                     },
                     actions = {
-                        if (uiState.selectedConditionId == null) {
+                        if (session.selectedConditionId == null) {
                             IconButton(
                                 onClick = { onAction(PersonConditionUiAction.ShowPdfSettings) },
                                 modifier = Modifier.testTag("ConditionScreen_PdfButton")
@@ -88,7 +98,7 @@ fun PersonConditionScreenPhone(
             }
         },
         floatingActionButton = {
-            if (uiState.selectedConditionId == null) {
+            if (session.selectedConditionId == null) {
                 FloatingActionButton(
                     onClick = { onAction(PersonConditionUiAction.SelectedIdChanged(AppSpecifications.Id.NEW_RECORD_ID)) },
                     modifier = Modifier.testTag("ConditionScreen_AddButton")
@@ -99,7 +109,7 @@ fun PersonConditionScreenPhone(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        if (uiState.isLoading && uiState.records.isEmpty()) {
+        if (uiState.screenState is PersonConditionScreenState.Loading && uiState.records.isEmpty()) {
             LoadingScreen(modifier = Modifier.padding(padding))
         } else {
             Box(modifier = Modifier.padding(padding)) {
@@ -111,5 +121,29 @@ fun PersonConditionScreenPhone(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun PersonConditionScreenPhonePreview(
+    @PreviewParameter(PersonConditionPreviewParameterProvider::class) state: PersonConditionPreviewState
+) {
+    CareMemoTheme {
+        PersonConditionScreenPhone(
+            uiState = PersonConditionUiState(
+                screenState = if (state.isLoading) PersonConditionScreenState.Loading else PersonConditionScreenState.Active,
+                records = state.records.toImmutableList(),
+                editSession = ConditionEditSession(
+                    selectedConditionId = state.selectedRecordId
+                )
+            ),
+            currentPerson = MockData.person,
+            isNameMaskingEnabled = false,
+            personCategorySummary = null,
+            isAnyDialogOpen = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

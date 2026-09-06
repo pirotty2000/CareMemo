@@ -68,7 +68,7 @@ class PersonDetailUiStateViewModel(
         startObservePersonId()
     }
 
-    override fun copyWithLoadingState(state: PersonDetailUiState, isLoading: Boolean): PersonDetailUiState {
+    override fun copyWithLoadingState(state: PersonDetailUiState, isLoading: Boolean, category: LoadingCategory): PersonDetailUiState {
         return state.copy(isLoading = isLoading)
     }
 

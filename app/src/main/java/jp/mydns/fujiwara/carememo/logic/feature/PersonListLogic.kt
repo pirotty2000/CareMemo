@@ -15,28 +15,57 @@ import kotlinx.collections.immutable.persistentListOf
  * 【役割】
  * 利用者一覧画面（MainScreen）全体の表示状態を保持します。
  * 
- * @param isLoading 全体の読み込み中フラグ
- * @param selectedSection 現在選択されている五十音セクション
- * @param searchQuery 検索キーワード
+ * @param screenState 構造的状態（Loading / Active / Error）
  * @param userList 画面に表示される加工済みの利用者リスト
+ * @param emergencyContactsForSheet ボトムシート用連絡先リスト
+ * @param searchQuery 検索キーワード
+ * @param selectedSection 現在選択されている五十音セクション
  * @param isNameMaskingEnabled 氏名のマスキング（伏せ字）が有効か
- * @param selectedPersonForQuickMenu クイックメニュー対象の利用者 (develop追加分)
- * @param isQuickActionMenuExpanded クイックメニュー表示フラグ (develop追加分)
- * @param emergencyContactsForSheet ボトムシート用連絡先リスト (develop追加分)
- * @param isEmergencyContactLoading 連絡先読み込み中フラグ (develop追加分)
+ * @param selectedPersonForQuickMenu クイックメニュー対象の利用者
+ * @param isQuickActionMenuExpanded クイックメニュー表示フラグ
+ * @param operation 実行中の操作状態
+ * @param isEmergencyContactLoading 連絡先読み込み中フラグ（局所制御用）
  */
 data class PersonListUiState(
-    val isLoading: Boolean = true,
-    val selectedSection: String = AppSpecifications.Search.SECTION_ALL,
-    val searchQuery: String = "",
+    val screenState: PersonListScreenState = PersonListScreenState.Loading,
     val userList: ImmutableList<PersonUiState> = persistentListOf(),
+    val emergencyContactsForSheet: ImmutableList<EmergencyContact>? = null,
+    val searchQuery: String = "",
+    val selectedSection: String = AppSpecifications.Search.SECTION_ALL,
     val isNameMaskingEnabled: Boolean = true,
-    // --- 緊急連絡先機能の実装に伴う追加フィールド ---
     val selectedPersonForQuickMenu: Person? = null,
     val isQuickActionMenuExpanded: Boolean = false,
-    val emergencyContactsForSheet: ImmutableList<EmergencyContact>? = null,
+    val operation: PersonListOperation = PersonListOperation.Idle,
     val isEmergencyContactLoading: Boolean = false
 )
+
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface PersonListScreenState {
+    /** 画面構築に必要なデータが揃っておらず、取得中の状態（全画面シマー等） */
+    data object Loading : PersonListScreenState
+    /** データ取得に成功し、表示可能な Content (Empty含む) が存在する状態 */
+    data object Active : PersonListScreenState
+    /** 画面構築に必要なデータを取得できず、Content を構築できない致命的状態 */
+    data class Error(val throwable: Throwable) : PersonListScreenState
+}
+
+/**
+ * 操作状態 (Operation State)
+ */
+sealed interface PersonListOperation {
+    /** 待機状態 */
+    data object Idle : PersonListOperation
+    /** Content 表示中におけるバックグラウンド再取得中 */
+    data object Refreshing : PersonListOperation
+    /** 利用者追加処理中 */
+    data object Adding : PersonListOperation
+    /** 特定利用者の削除処理中 */
+    data class Deleting(val targetId: String) : PersonListOperation
+    /** 特定利用者の復旧処理中 */
+    data class Restoring(val targetId: String) : PersonListOperation
+}
 
 /**
  * View Event：PersonListViewEvent

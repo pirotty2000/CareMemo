@@ -17,26 +17,26 @@ object VitalProcessor : HealthCategoryProcessor {
     override val categoryNameResId: Int = R.string.common_category_vital
     override val outOfRangeErrorResId: Int = R.string.common_error_out_of_range_vital
 
-    override fun isEmpty(state: BatchInputUiState): Boolean {
-        return state.bpSystolic.isBlank() && state.bpDiastolic.isBlank() &&
-                state.sat.isBlank() && state.pulse.isBlank() && state.bodyTemperature.isBlank()
+    override fun isEmpty(input: BatchInputSession): Boolean {
+        return input.bpSystolic.isBlank() && input.bpDiastolic.isBlank() &&
+                input.sat.isBlank() && input.pulse.isBlank() && input.bodyTemperature.isBlank()
     }
 
-    override fun validate(state: BatchInputUiState): HealthInputValidationResult {
+    override fun validate(input: BatchInputSession): HealthInputValidationResult {
         return HealthLogic.validateBpAndPulse(
-            state.bpSystolic, state.bpDiastolic, state.sat, state.pulse, state.bodyTemperature
+            input.bpSystolic, input.bpDiastolic, input.sat, input.pulse, input.bodyTemperature
         )
     }
 
-    override fun createEntity(personId: String, time: Instant, state: BatchInputUiState): Any? {
-        if (isEmpty(state)) return null
+    override fun createEntity(personId: String, time: Instant, input: BatchInputSession): Any? {
+        if (isEmpty(input)) return null
         return BpAndPulse(
             personId = personId,
-            bpSystolic = state.bpSystolic.toIntOrNull(),
-            bpDiastolic = state.bpDiastolic.toIntOrNull(),
-            sat = state.sat.toIntOrNull(),
-            pulse = state.pulse.toIntOrNull(),
-            bodyTemperature = state.bodyTemperature.toDoubleOrNull(),
+            bpSystolic = input.bpSystolic.toIntOrNull(),
+            bpDiastolic = input.bpDiastolic.toIntOrNull(),
+            sat = input.sat.toIntOrNull(),
+            pulse = input.pulse.toIntOrNull(),
+            bodyTemperature = input.bodyTemperature.toDoubleOrNull(),
             recordTime = time
         )
     }

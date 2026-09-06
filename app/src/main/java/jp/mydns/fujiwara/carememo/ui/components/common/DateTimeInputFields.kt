@@ -131,11 +131,13 @@ fun rememberDateTimeInputState(initialInstant: Instant? = null): DateTimeInputSt
  * @param state 日時入力の状態管理オブジェクト
  * @param modifier 修飾子
  * @param autoFocusHour 日の入力完了後、自動で時へフォーカスを移すか（日付のみの入力時は false を推奨）
+ * @param enabled 入力の有効・無効状態
  */
 @Composable
 fun DateTimeInputFields(
     state: DateTimeInputState,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     autoFocusHour: Boolean = true,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
@@ -153,6 +155,7 @@ fun DateTimeInputFields(
         minute = state.minute.value,
         onMinuteChange = { state.minute.value = it },
         modifier = modifier,
+        enabled = enabled,
         autoFocusHour = autoFocusHour,
         isError = isError,
         supportingText = supportingText,
@@ -176,6 +179,7 @@ fun DateTimeInputFields(
     minute: String,
     onMinuteChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     autoFocusHour: Boolean = true,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
@@ -197,6 +201,7 @@ fun DateTimeInputFields(
                 onValueChange = onYearChange,
                 maxLength = 4,
                 label = stringResource(R.string.common_year_suffix),
+                enabled = enabled,
                 isError = isError,
                 onFocusChanged = { onFocusChanged("year", it) },
                 modifier = Modifier.weight(1.3f).testTag("DateTimeUnit_Year")
@@ -206,6 +211,7 @@ fun DateTimeInputFields(
                 onValueChange = onMonthChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_month_suffix),
+                enabled = enabled,
                 isError = isError,
                 onFocusChanged = { onFocusChanged("month", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Month")
@@ -215,6 +221,7 @@ fun DateTimeInputFields(
                 onValueChange = onDayChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_day_suffix),
+                enabled = enabled,
                 isError = isError,
                 onFocusChanged = { onFocusChanged("day", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Day"),
@@ -226,6 +233,7 @@ fun DateTimeInputFields(
                 onValueChange = onHourChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_hour_suffix),
+                enabled = enabled,
                 isError = isError,
                 onFocusChanged = { onFocusChanged("hour", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Hour")
@@ -235,6 +243,7 @@ fun DateTimeInputFields(
                 onValueChange = onMinuteChange,
                 maxLength = 2,
                 label = stringResource(R.string.common_minute_suffix),
+                enabled = enabled,
                 isError = isError,
                 onFocusChanged = { onFocusChanged("minute", it) },
                 modifier = Modifier.weight(1f).testTag("DateTimeUnit_Minute"),
@@ -264,6 +273,7 @@ private fun DateTimeUnitField(
     maxLength: Int,
     label: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     imeAction: ImeAction = ImeAction.Next,
     isError: Boolean = false,
     onFocusChanged: (Boolean) -> Unit = {}
@@ -272,6 +282,7 @@ private fun DateTimeUnitField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
+        enabled = enabled,
         type = AppTextFieldType.INTEGER,
         suffix = { Text(label, style = MaterialTheme.typography.bodySmall) },
         maxLength = maxLength,
