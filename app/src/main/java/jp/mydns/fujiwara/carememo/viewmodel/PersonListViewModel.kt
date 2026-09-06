@@ -25,7 +25,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
-import jp.mydns.fujiwara.carememo.logic.feature.PersonUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

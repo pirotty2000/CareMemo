@@ -8,12 +8,9 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionOperation
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After

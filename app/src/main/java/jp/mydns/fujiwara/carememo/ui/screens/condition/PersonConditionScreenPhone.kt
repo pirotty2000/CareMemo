@@ -19,7 +19,6 @@ import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.preview.MockData
 import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
-import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionPreviewParameterProvider
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import kotlinx.collections.immutable.toImmutableList
 import jp.mydns.fujiwara.carememo.ui.components.base.*

@@ -22,7 +22,6 @@ import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import kotlinx.collections.immutable.toImmutableList
 import androidx.compose.runtime.*
-import jp.mydns.fujiwara.carememo.ui.screens.condition.PersonConditionPreviewParameterProvider
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors

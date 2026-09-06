@@ -10,7 +10,6 @@ import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationOperation
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationScreenState
-import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow

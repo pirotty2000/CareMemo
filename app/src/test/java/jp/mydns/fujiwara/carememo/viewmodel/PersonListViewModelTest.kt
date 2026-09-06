@@ -8,7 +8,6 @@ import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
-import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
