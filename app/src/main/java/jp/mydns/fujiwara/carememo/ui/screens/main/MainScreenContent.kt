@@ -215,7 +215,7 @@ fun MainScreenContent(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag("MainScreen"),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold) },

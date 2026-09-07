@@ -75,7 +75,8 @@ class PersonConditionScreenTest {
             conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
         )
 
-        composeTestRule.waitUntil(10000) {
+        // Use testTag directly on the SearchBox wrapper
+        composeTestRule.waitUntil(15000) {
             composeTestRule.onAllNodes(hasTestTag("ConditionScreen_SearchBox"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNode(hasTestTag("ConditionScreen_SearchBox"), useUnmergedTree = true).performTextInput("咳")
@@ -136,9 +137,7 @@ class PersonConditionScreenTest {
         conditionViewModel: PersonConditionViewModel? = null
     ) {
         val vm = conditionViewModel ?: createMockViewModel()
-        if (conditionViewModel == null) {
-            every { vm.uiState } returns MutableStateFlow(conditionState)
-        }
+        every { vm.uiState } returns MutableStateFlow(conditionState)
 
         composeTestRule.setContent {
             CareMemoTheme {

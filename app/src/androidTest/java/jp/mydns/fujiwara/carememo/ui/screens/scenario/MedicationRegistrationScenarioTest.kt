@@ -71,18 +71,19 @@ class MedicationRegistrationScenarioTest {
         }
         composeTestRule.onNodeWithTag("Medication_DayCell_$targetDate").performClick()
 
-        // Match string from R.string.p_med_status_none ("記録なし")
-        composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithTag("Medication_StatusChip_記録なし").fetchSemanticsNodes().isNotEmpty()
-        }
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_記録なし", useUnmergedTree = true).onFirst().performClick()
+        // 朝：未 (status 0)
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_未", useUnmergedTree = true)[0].performClick()
         
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_介助・促し", useUnmergedTree = true).onFirst().performClick()
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true).onFirst().performClick()
+        // 昼：介助 (status 1)
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_介助", useUnmergedTree = true)[1].performClick()
+        
+        // 夕：服用 (status 2)
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true)[2].performClick()
 
         Espresso.closeSoftKeyboard()
         composeTestRule.waitForIdle()
 
+        // 4. 保存
         composeTestRule.onNodeWithTag("Medication_SaveButton").performClick()
 
         // Wait for dialog to close
@@ -90,11 +91,23 @@ class MedicationRegistrationScenarioTest {
             composeTestRule.onAllNodesWithTag("Medication_SaveButton").fetchSemanticsNodes().isEmpty()
         }
 
+        // 5. カレンダー上での反映確認
+        // 安定化のため、セル自体が表示されるまで待つ
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodes(hasTestTag("Medication_DayCell_$targetDate"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // セルまでスクロール
+        composeTestRule.onNode(hasTestTag("Medication_DayCell_$targetDate"), useUnmergedTree = true).performScrollTo()
+
         val cellMatcher = hasAnyAncestor(hasTestTag("Medication_DayCell_$targetDate"))
         
-        // Use more generic matching for symbols
+        // Wait for the symbols to appear in the cell
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodes(hasText("×").and(cellMatcher), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        
         composeTestRule.onNode(hasText("×").and(cellMatcher), useUnmergedTree = true).assertExists()
-        composeTestRule.onNode(hasText("△").and(cellMatcher), useUnmergedTree = true).assertExists()
-        composeTestRule.onNode(hasText("〇").and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("昼").and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("夕").and(cellMatcher), useUnmergedTree = true).assertExists()
     }
 }

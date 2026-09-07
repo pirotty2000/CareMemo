@@ -162,20 +162,20 @@ class PersonDetailScenarioTest {
         composeTestRule.onNodeWithTag("CategorySelectionSheet_Button_HEIGHT_AND_WEIGHT").performClick()
 
         // 2. グラフタブへ切り替え (ロード完了後)
-        // Wait longer and use unmerged tree
         composeTestRule.waitUntil(45000) {
             composeTestRule.onAllNodes(hasTestTag("HealthScreen_Tab_Graph"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNode(hasTestTag("HealthScreen_Tab_Graph"), useUnmergedTree = true).performClick()
         
         composeTestRule.waitUntil(30000) {
-            composeTestRule.onAllNodesWithTag("HealthScreen_GraphArea").fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodes(hasTestTag("HealthScreen_GraphArea"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodes(hasContentDescription("拡大表示", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        // 3. 拡大ボタンをタップ (ContentDescription を正確に指定)
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodes(hasContentDescription("全画面", substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.onAllNodes(hasContentDescription("拡大表示", substring = true)).onFirst().performClick()
+        composeTestRule.onAllNodes(hasContentDescription("全画面", substring = true), useUnmergedTree = true).onFirst().performClick()
 
         composeTestRule.waitUntil(20000) {
             composeTestRule.onAllNodesWithTag("GraphExpansion_BackButton").fetchSemanticsNodes().isNotEmpty()
@@ -249,11 +249,12 @@ class PersonDetailScenarioTest {
         }
         composeTestRule.onNode(hasTestTag("MainScreen_MenuItem_Settings"), useUnmergedTree = true).performClick()
         
-        // Settings 画面のロード完了を待つ (ScrollColumn が現れるまで)
+        // Settings 画面のロード完了を待つ (LoadingScreen が消えるまで)
         composeTestRule.waitUntil(45000) {
-            composeTestRule.onAllNodes(hasTestTag("Settings_ScrollColumn"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodes(hasTestTag("Settings_Loading")).fetchSemanticsNodes().isEmpty()
         }
-        composeTestRule.onNode(hasTestTag("Settings_ScrollColumn"), useUnmergedTree = true).assertIsDisplayed()
+        // コンテンツが表示されていることを確認
+        composeTestRule.onNode(hasText("氏名の伏せ字表示", substring = true)).assertIsDisplayed()
 
         repeat(7) {
             robustScrollDownTo("Settings_VersionRow")

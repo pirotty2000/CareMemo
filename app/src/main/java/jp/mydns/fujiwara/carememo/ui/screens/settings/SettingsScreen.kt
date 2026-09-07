@@ -669,7 +669,7 @@ fun SettingsScreenContent(
         ) {
             when (uiState.screenState) {
                 is SettingsScreenState.Loading -> {
-                    LoadingScreen(modifier = Modifier.fillMaxSize())
+                    LoadingScreen(modifier = Modifier.fillMaxSize().testTag("Settings_Loading"))
                 }
                 is SettingsScreenState.Error -> {
                     ErrorState(

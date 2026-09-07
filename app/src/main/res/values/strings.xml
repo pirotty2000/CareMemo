@@ -184,9 +184,9 @@
     <string name="medication_header_evening">夕</string>
     <string name="medication_header_night">寝前</string>
     <string name="medication_status_taken">服用</string>
-    <string name="medication_status_not_taken">未服用</string>
+    <string name="medication_status_not_taken">未</string>
     <string name="medication_status_skipped">欠食・自己判断</string>
-    <string name="medication_status_none">記録なし</string>
+    <string name="medication_status_none">未</string>
 
     <string name="p_med_msg_update_success">服薬状況を更新しました</string>
     <string name="p_med_msg_tap_to_edit">日付をタップして服薬状況を記録できます</string>
@@ -218,7 +218,7 @@
     <string name="p_med_history_table_day">%1$d日</string>
     <string name="medication_history_day_format">%1$d日(%2$s)</string>
     <string name="p_med_dialog_title">服薬状況の記録</string>
-    <string name="p_med_status_assist">介助・促し</string>
+    <string name="p_med_status_assist">介助</string>
     <string name="p_med_label_check_time">確認時刻</string>
 
     <string name="audit_action_insert">登録</string>
@@ -313,7 +313,7 @@
     <string name="main_category_selection_title">%1$s さんの記録を選択</string>
     <string name="main_quick_action_emergency_contact">医師・看護師・家族に連絡</string>
 
-    <string name="p_med_status_none">記録なし</string>
+    <string name="p_med_status_none">未</string>
     <string name="p_med_status_taken">服用</string>
 
     <string name="health_graph_limit_lower">正常(下限)</string>

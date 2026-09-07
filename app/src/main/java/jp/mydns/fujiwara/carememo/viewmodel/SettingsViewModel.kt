@@ -96,26 +96,30 @@ class SettingsViewModel(
                     auditLogRepository.getAuditLogCountFlow(),
                     archivedPersonRepository.getArchivedPersons()
                 ) { values ->
-                    @Suppress("UNCHECKED_CAST")
-                    val archived = values[8] as List<Person>
-                    currentState.copy(
-                        isNameMaskingEnabled = values[0] as Boolean,
-                        isBiometricEnabled = values[1] as Boolean,
-                        defaultRecorderName = values[2] as String,
-                        isBackupPasswordEnabled = values[3] as Boolean,
-                        backupPassword = values[4] as String,
-                        themeSetting = values[5] as ThemeSetting,
-                        auditLogRetentionDays = values[6] as Int,
-                        auditLogCount = values[7] as Int,
-                        endedUserCount = archived.size
-                    )
+                    // 状態全体を返すのではなく、値の配列（または専用の型）を流す
+                    values
                 }.catch { e ->
                     updateUiState { it.copy(screenState = SettingsScreenState.Error(e)) }
                     throw e
                 }
             }
-        ) { nextState ->
-            updateUiState { nextState }
+        ) { values ->
+            // 受け取った最新の値を、現在の状態にマージする
+            updateUiState { state ->
+                @Suppress("UNCHECKED_CAST")
+                val archived = values[8] as List<Person>
+                state.copy(
+                    isNameMaskingEnabled = values[0] as Boolean,
+                    isBiometricEnabled = values[1] as Boolean,
+                    defaultRecorderName = values[2] as String,
+                    isBackupPasswordEnabled = values[3] as Boolean,
+                    backupPassword = values[4] as String,
+                    themeSetting = values[5] as ThemeSetting,
+                    auditLogRetentionDays = values[6] as Int,
+                    auditLogCount = values[7] as Int,
+                    endedUserCount = archived.size
+                )
+            }
         }
     }
 

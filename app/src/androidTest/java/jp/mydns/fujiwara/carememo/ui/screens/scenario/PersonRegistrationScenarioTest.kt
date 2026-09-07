@@ -80,16 +80,16 @@ class PersonRegistrationScenarioTest {
 
         composeTestRule.onNodeWithTag("PersonEdit_SaveButton").performScrollTo().performClick()
 
-        // 6. 一覧画面に戻り、新規登録した名前が表示されるのを待つ (タグを指定して重複を避ける)
+        // 6. 一覧画面に戻り、新規登録した名前が表示されるのを待つ (一覧リスト内の項目を特定)
         composeTestRule.waitUntil(30000) {
             composeTestRule.onAllNodes(hasText(fullName).and(hasAnyAncestor(hasTestTag("MainScreen_UserList")))).fetchSemanticsNodes().isNotEmpty()
         }
 
         // 7. スナックバーの表示を確認する
-        composeTestRule.onNodeWithText("登録しました", substring = true).assertIsDisplayed()
+        composeTestRule.onNode(hasText("登録しました", substring = true)).assertIsDisplayed()
         
-        // 8. 最終確認
-        composeTestRule.onNode(hasText(fullName).and(hasAnyAncestor(hasTestTag("MainScreen_UserList")))).assertIsDisplayed()
+        // 8. 最終確認 (一覧リスト内の項目を特定)
+        composeTestRule.onAllNodes(hasText(fullName).and(hasAnyAncestor(hasTestTag("MainScreen_UserList")))).onFirst().assertIsDisplayed()
     }
 
     @Test

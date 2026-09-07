@@ -114,14 +114,14 @@ when (category) {
 
 プロジェクト内の主要画面における、3 層構造の適用例です。
 
-| 画面カテゴリ | 代表画面 | Structural (screenState) | Operation (operation) | Domain / UI Details の特徴 |
-|:---|:---|:---|:---|:---|
-| **一覧表示型** | `PersonList` | `Loading / Active / Error` | `Adding`, `Deleting(id)` | `userList` を外部に持ち、`searchQuery` でフィルタ。 |
-| **単一入力型** | `PersonEdit` | `Loading / Active / Error` | `Saving` | `input: PersonEditInput` に未保存状態を隔離。 |
-| **セッション型** | `BatchInput` | `Loading / Active / Error` | `Saving` | `session: BatchInputSession` に多項目状態を集約。 |
-| **表示切替型** | `PersonHealth` | `Loading / Active / Error` | `Saving` | `records` (Domain) と `displayMode` (UI) の組合せ。 |
-| **アクション型** | `Settings` | `Loading / Active / Error` | `Exporting`, `Resetting` | 多数の独立した副作用を `operation` で排他制御。 |
-| **一括選択型** | `DeleteOrRestore` | `Loading / Active / Error` | `Restoring`, `Deleting` | `selectedIds` (UI) と `archivedPersons` (Domain)。 |
+| 画面カテゴリ     | 代表画面              | Structural (screenState)   | Operation (operation)    | Domain / UI Details の特徴                          |
+|:-----------|:------------------|:---------------------------|:-------------------------|:-------------------------------------------------|
+| **一覧表示型**  | `PersonList`      | `Loading / Active / Error` | `Adding`, `Deleting(id)` | `userList` を外部に持ち、`searchQuery` でフィルタ。           |
+| **単一入力型**  | `PersonEdit`      | `Loading / Active / Error` | `Saving`                 | `input: PersonEditInput` に未保存状態を隔離。              |
+| **セッション型** | `BatchInput`      | `Loading / Active / Error` | `Saving`                 | `session: BatchInputSession` に多項目状態を集約。          |
+| **表示切替型**  | `PersonHealth`    | `Loading / Active / Error` | `Saving`                 | `records` (Domain) と `displayMode` (UI) の組合せ。    |
+| **アクション型** | `Settings`        | `Loading / Active / Error` | `Exporting`, `Resetting` | 多数の独立した副作用を `operation` で排他制御。                   |
+| **一括選択型**  | `DeleteOrRestore` | `Loading / Active / Error` | `Restoring`, `Deleting`  | `selectedIds` (UI) と `archivedPersons` (Domain)。 |
 
 ---
 

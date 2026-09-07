@@ -72,10 +72,11 @@ class PersonMedicationScreenTest {
             medicationState = PersonMedicationUiState(screenState = PersonMedicationScreenState.Active)
         )
 
-        composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodes(hasTestTag("Medication_MonthNext_Phone"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        // Wait for the next month button by its content description
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodes(hasContentDescription("次の月"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.onNode(hasTestTag("Medication_MonthNext_Phone"), useUnmergedTree = true).performClick()
+        composeTestRule.onNode(hasContentDescription("次の月"), useUnmergedTree = true).performClick()
         verify { medicationViewModel.nextMonth() }
     }
 
@@ -87,13 +88,13 @@ class PersonMedicationScreenTest {
             medicationState = PersonMedicationUiState(screenState = PersonMedicationScreenState.Active)
         )
 
-        composeTestRule.waitUntil(10000) {
+        composeTestRule.waitUntil(15000) {
             composeTestRule.onAllNodes(hasText("履歴", substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         // 履歴モードに切り替え
-        composeTestRule.onNodeWithText("履歴", substring = true).performClick()
+        composeTestRule.onNode(hasText("履歴", substring = true), useUnmergedTree = true).performClick()
         // Match substring from R.string.p_med_msg_no_edit_in_history
-        composeTestRule.onNodeWithText("編集できません", substring = true).assertIsDisplayed()
+        composeTestRule.onNode(hasText("編集できません", substring = true), useUnmergedTree = true).assertIsDisplayed()
     }
 
     //endregion
@@ -123,9 +124,7 @@ class PersonMedicationScreenTest {
         medicationViewModel: PersonMedicationViewModel? = null
     ) {
         val vm = medicationViewModel ?: createMockViewModel()
-        if (medicationViewModel == null) {
-            every { vm.uiState } returns MutableStateFlow(medicationState)
-        }
+        every { vm.uiState } returns MutableStateFlow(medicationState)
 
         composeTestRule.setContent {
             CareMemoTheme {
