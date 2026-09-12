@@ -154,9 +154,9 @@ class PersonHealthViewModel(
         return when (category) {
             is LoadingCategory.Structural -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is PersonHealthScreenState.Error) state.screenState else PersonHealthScreenState.Active
+                    (state.screenState as? PersonHealthScreenState.Error) ?: PersonHealthScreenState.Active
                 } else {
-                    if (state.screenState is PersonHealthScreenState.Active) state.screenState else PersonHealthScreenState.Loading
+                    (state.screenState as? PersonHealthScreenState.Active) ?: PersonHealthScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

@@ -103,9 +103,9 @@ class DeleteOrRestorePersonViewModel(
         return when (category) {
             is LoadingCategory.Structural -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is DeleteOrRestorePersonScreenState.Error) state.screenState else DeleteOrRestorePersonScreenState.Active
+                    (state.screenState as? DeleteOrRestorePersonScreenState.Error) ?: DeleteOrRestorePersonScreenState.Active
                 } else {
-                    if (state.screenState is DeleteOrRestorePersonScreenState.Active) state.screenState else DeleteOrRestorePersonScreenState.Loading
+                    (state.screenState as? DeleteOrRestorePersonScreenState.Active) ?: DeleteOrRestorePersonScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

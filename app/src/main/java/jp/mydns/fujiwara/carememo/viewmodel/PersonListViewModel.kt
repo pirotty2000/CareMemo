@@ -200,9 +200,9 @@ class PersonListViewModel(
                 // 初回ロード完了時に Active へ遷移
                 // ただし、既に Error 状態にある場合はそれを維持する
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is PersonListScreenState.Error) state.screenState else PersonListScreenState.Active
+                    (state.screenState as? PersonListScreenState.Error) ?: PersonListScreenState.Active
                 } else {
-                    if (state.screenState is PersonListScreenState.Active) state.screenState else PersonListScreenState.Loading
+                    (state.screenState as? PersonListScreenState.Active) ?: PersonListScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

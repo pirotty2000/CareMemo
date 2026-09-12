@@ -191,9 +191,9 @@ class BatchInputViewModel(
         return when (category) {
             is LoadingCategory.Structural, is LoadingCategory.Default -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is BatchInputScreenState.Error) state.screenState else BatchInputScreenState.Active
+                    (state.screenState as? BatchInputScreenState.Error) ?: BatchInputScreenState.Active
                 } else {
-                    if (state.screenState is BatchInputScreenState.Active) state.screenState else BatchInputScreenState.Loading
+                    (state.screenState as? BatchInputScreenState.Active) ?: BatchInputScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState, isLoading = isLoading)
             }

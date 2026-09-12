@@ -1,8 +1,6 @@
 package jp.mydns.fujiwara.carememo.ui.screens.scenario
 
 import android.content.Intent
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
@@ -41,12 +39,6 @@ class PersonDetailScenarioTest {
         ActivityScenario.launch<MainActivity>(intent)
     }
 
-    @Suppress("SameParameterValue")
-    private fun hasTestTagPrefix(prefix: String): SemanticsMatcher {
-        return SemanticsMatcher("Matches test tag starting with $prefix") {
-            it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith(prefix) == true
-        }
-    }
 
     private fun robustScrollDownTo(tag: String) {
         val scrollColumn = composeTestRule.onNodeWithTag("Settings_ScrollColumn")

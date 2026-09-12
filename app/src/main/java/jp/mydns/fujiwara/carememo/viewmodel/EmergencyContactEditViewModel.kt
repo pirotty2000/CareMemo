@@ -391,9 +391,9 @@ class EmergencyContactEditViewModel(
         return when (category) {
             is LoadingCategory.Structural -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is EmergencyContactScreenState.Error) state.screenState else EmergencyContactScreenState.Active
+                    (state.screenState as? EmergencyContactScreenState.Error) ?: EmergencyContactScreenState.Active
                 } else {
-                    if (state.screenState is EmergencyContactScreenState.Active) state.screenState else EmergencyContactScreenState.Loading
+                    (state.screenState as? EmergencyContactScreenState.Active) ?: EmergencyContactScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

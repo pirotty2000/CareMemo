@@ -89,9 +89,9 @@ class AuditLogViewModel(
         return when (category) {
             is LoadingCategory.Structural -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is AuditLogScreenState.Error) state.screenState else AuditLogScreenState.Active
+                    (state.screenState as? AuditLogScreenState.Error) ?: AuditLogScreenState.Active
                 } else {
-                    if (state.screenState is AuditLogScreenState.Active) state.screenState else AuditLogScreenState.Loading
+                    (state.screenState as? AuditLogScreenState.Active) ?: AuditLogScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

@@ -40,9 +40,9 @@ class UnassignedPhotoViewModel(
         return when (category) {
             is LoadingCategory.Structural -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is UnassignedPhotoScreenState.Error) state.screenState else UnassignedPhotoScreenState.Active
+                    (state.screenState as? UnassignedPhotoScreenState.Error) ?: UnassignedPhotoScreenState.Active
                 } else {
-                    if (state.screenState is UnassignedPhotoScreenState.Active) state.screenState else UnassignedPhotoScreenState.Loading
+                    (state.screenState as? UnassignedPhotoScreenState.Active) ?: UnassignedPhotoScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

@@ -127,9 +127,9 @@ class SettingsViewModel(
         return when (category) {
             is LoadingCategory.Structural -> {
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is SettingsScreenState.Error) state.screenState else SettingsScreenState.Active
+                    (state.screenState as? SettingsScreenState.Error) ?: SettingsScreenState.Active
                 } else {
-                    if (state.screenState is SettingsScreenState.Active) state.screenState else SettingsScreenState.Loading
+                    (state.screenState as? SettingsScreenState.Active) ?: SettingsScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }

@@ -201,10 +201,10 @@ class PersonEditViewModel(
             is LoadingCategory.Structural -> {
                 // ロード終了時に Active へ遷移。ただし、既に Error 状態にある場合は維持する
                 val nextScreenState = if (!isLoading) {
-                    if (state.screenState is PersonEditScreenState.Error) state.screenState else PersonEditScreenState.Active
+                    (state.screenState as? PersonEditScreenState.Error) ?: PersonEditScreenState.Active
                 } else {
                     // ロード開始時は Loading へ（既に Active の場合は維持してチラつき防止）
-                    if (state.screenState is PersonEditScreenState.Active) state.screenState else PersonEditScreenState.Loading
+                    (state.screenState as? PersonEditScreenState.Active) ?: PersonEditScreenState.Loading
                 }
                 state.copy(screenState = nextScreenState)
             }
