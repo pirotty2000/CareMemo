@@ -114,7 +114,7 @@ fun AuditLogScreen(
                             Box(modifier = Modifier.fillMaxSize().testTag("AuditLog_EmptyState"), contentAlignment = Alignment.Center) {
                                 Text(
                                     text = if (uiState.selectedFeature != null || uiState.selectedResult != null)
-                                        "条件に一致するログがありません" else "ログがありません",
+                                        stringResource(R.string.audit_log_empty_filtered_msg) else stringResource(R.string.audit_log_empty),
                                     color = MaterialTheme.colorScheme.outline
                                 )
                             }

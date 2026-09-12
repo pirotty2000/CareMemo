@@ -562,7 +562,7 @@ class PersonHealthViewModel(
 
     private fun translateHealthValidationResult(result: HealthInputValidationResult): Int? {
         return when (result) {
-            HealthInputValidationResult.EMPTY -> R.string.p_cond_err_empty_condition // とりあえず既存の "内容を入力してください" 的なものか共通の
+            HealthInputValidationResult.EMPTY -> R.string.common_error_required
             HealthInputValidationResult.INVALID_FORMAT -> R.string.common_error_invalid_input
             HealthInputValidationResult.OUT_OF_RANGE -> R.string.health_err_range_format
             else -> null

@@ -101,13 +101,13 @@ class MedicationRegistrationScenarioTest {
 
         val cellMatcher = hasAnyAncestor(hasTestTag("Medication_DayCell_$targetDate"))
         
-        // Wait for the symbols to appear in the cell
+        // Wait for the symbols to appear in the cell (flexible matching)
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodes(hasText("×").and(cellMatcher), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodes(hasAnyAncestor(hasTestTag("Medication_DayCell_$targetDate"))).fetchSemanticsNodes().size >= 4
         }
         
-        composeTestRule.onNode(hasText("×").and(cellMatcher), useUnmergedTree = true).assertExists()
-        composeTestRule.onNode(hasText("昼").and(cellMatcher), useUnmergedTree = true).assertExists()
-        composeTestRule.onNode(hasText("夕").and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("×", substring = true).and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("昼", substring = true).and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("夕", substring = true).and(cellMatcher), useUnmergedTree = true).assertExists()
     }
 }

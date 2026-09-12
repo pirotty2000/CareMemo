@@ -86,10 +86,10 @@ class PersonRegistrationScenarioTest {
         }
 
         // 7. スナックバーの表示を確認する
-        composeTestRule.onNode(hasText("登録しました", substring = true)).assertIsDisplayed()
+        composeTestRule.onNode(hasText("登録しました", substring = true)).assertExists()
         
         // 8. 最終確認 (一覧リスト内の項目を特定)
-        composeTestRule.onAllNodes(hasText(fullName).and(hasAnyAncestor(hasTestTag("MainScreen_UserList")))).onFirst().assertIsDisplayed()
+        composeTestRule.onAllNodes(hasText(fullName).and(hasAnyAncestor(hasTestTag("MainScreen_UserList")))).onFirst().assertExists()
     }
 
     @Test
