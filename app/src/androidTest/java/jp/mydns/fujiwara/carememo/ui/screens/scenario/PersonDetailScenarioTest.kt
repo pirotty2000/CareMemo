@@ -163,11 +163,11 @@ class PersonDetailScenarioTest {
             composeTestRule.onAllNodes(hasTestTag("HealthScreen_GraphArea"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // 3. 拡大ボタンをタップ (ContentDescription を正確に指定)
+        // 3. 拡大ボタンをタップ (ContentDescription を正確に指定: R.string.health_graph_expand_desc)
         composeTestRule.waitUntil(20000) {
-            composeTestRule.onAllNodes(hasContentDescription("全画面", substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodes(hasContentDescription("拡大表示", substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.onAllNodes(hasContentDescription("全画面", substring = true), useUnmergedTree = true).onFirst().performClick()
+        composeTestRule.onAllNodes(hasContentDescription("拡大表示", substring = true), useUnmergedTree = true).onFirst().performClick()
 
         composeTestRule.waitUntil(20000) {
             composeTestRule.onAllNodesWithTag("GraphExpansion_BackButton").fetchSemanticsNodes().isNotEmpty()

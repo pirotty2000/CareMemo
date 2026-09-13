@@ -114,8 +114,8 @@ class UnassignedPhotoManagementScreenTest {
         // Click delete on the first item
         composeTestRule.onAllNodesWithTag("UnassignedPhoto_DeleteButton").onFirst().performClick()
         
-        // Match title from R.string.p_detail_dialog_title_delete ("記録の削除")
-        composeTestRule.onNodeWithText("記録の削除", substring = true).assertIsDisplayed()
+        // Match title from R.string.p_detail_dialog_title_delete ("データの削除")
+        composeTestRule.onNodeWithText("データの削除", substring = true).assertIsDisplayed()
     }
 
     @Test

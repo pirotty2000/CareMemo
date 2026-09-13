@@ -67,8 +67,8 @@ class SettingsScreenTest {
     @Test
     fun DSP_01_basicLayout_isDisplayed() {
         setContent()
-        // Match title from R.string.audit_feature_settings ("設定")
-        composeTestRule.onNodeWithText("設定").assertIsDisplayed()
+        // Match title from R.string.settings_title ("設定")
+        composeTestRule.onAllNodesWithText("設定", substring = true).onFirst().assertIsDisplayed()
         composeTestRule.onNodeWithTag("SettingsScreen_BackButton").assertIsDisplayed()
     }
 

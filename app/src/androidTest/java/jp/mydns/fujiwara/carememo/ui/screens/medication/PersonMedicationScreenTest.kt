@@ -72,11 +72,11 @@ class PersonMedicationScreenTest {
             medicationState = PersonMedicationUiState(screenState = PersonMedicationScreenState.Active)
         )
 
-        // Wait for the next month button by its content description
+        // Wait for the next month button by its content description (Match string from R.string.medication_btn_next_month)
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodes(hasContentDescription("次の月"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodes(hasContentDescription("次月"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.onNode(hasContentDescription("次の月"), useUnmergedTree = true).performClick()
+        composeTestRule.onNode(hasContentDescription("次月"), useUnmergedTree = true).performClick()
         verify { medicationViewModel.nextMonth() }
     }
 
