@@ -232,6 +232,12 @@ fun MainScreenContent(
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
+                            text = { Text(stringResource(R.string.main_menu_alert_report)) },
+                            leadingIcon = { Icon(Icons.Rounded.NotificationsActive, contentDescription = null) },
+                            onClick = { showMenu = false; onAction(MainUiAction.NavigateToAlertReport()) },
+                            modifier = Modifier.testTag("MainScreen_MenuItem_AlertReport")
+                        )
+                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.main_menu_settings)) },
                             leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                             onClick = { showMenu = false; onAction(MainUiAction.NavigateToSettings) },

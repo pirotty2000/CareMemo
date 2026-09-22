@@ -132,6 +132,10 @@ sealed interface Destination {
     /** 未割り当て写真の確認・管理画面 */
     @Serializable
     object UnassignedPhotos : Destination
+
+    /** アラート・レポート画面 (personId が null なら全利用者) */
+    @Serializable
+    data class AlertReport(val personId: String? = null) : Destination
 }
 
 

@@ -212,14 +212,15 @@ fun UserListItem(
                 }
             }
         },
-        // 誕生日かどうかに応じた背景色の切り替え
+        // 異常値や誕生日に応じた背景色の切り替え
         colors = ListItemDefaults.colors(
             containerColor = when {
+                summary?.hasAlert == true -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
                 isBirthdayToday -> MaterialTheme.colorScheme.tertiaryContainer
-                isBirthdaySoon -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                 else -> MaterialTheme.colorScheme.surface
             },
             headlineColor = when {
+                summary?.hasAlert == true -> MaterialTheme.colorScheme.onErrorContainer
                 isBirthdayToday -> MaterialTheme.colorScheme.onTertiaryContainer
                 else -> MaterialTheme.colorScheme.onSurface
             }

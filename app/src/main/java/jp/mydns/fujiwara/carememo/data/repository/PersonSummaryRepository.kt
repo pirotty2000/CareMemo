@@ -43,7 +43,8 @@ class PersonSummaryRepository(
                 hasBpAndPulse = bp,
                 hasGlucoseAndHbA1c = glucose,
                 hasCondition = condition,
-                hasMedication = medication
+                hasMedication = medication,
+                hasAlert = false // 個別取得時は一旦 false (後で拡張可能)
             )
         }
     }
@@ -63,7 +64,8 @@ class PersonSummaryRepository(
                     hasBpAndPulse = result.hasBpAndPulse,
                     hasGlucoseAndHbA1c = result.hasGlucoseAndHbA1c,
                     hasCondition = result.hasCondition,
-                    hasMedication = result.hasMedication
+                    hasMedication = result.hasMedication,
+                    hasAlert = result.hasAlert
                 )
             }
         }

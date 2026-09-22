@@ -45,6 +45,7 @@ import jp.mydns.fujiwara.carememo.ui.screens.health.*
 import jp.mydns.fujiwara.carememo.ui.screens.condition.*
 import jp.mydns.fujiwara.carememo.ui.screens.medication.*
 import jp.mydns.fujiwara.carememo.ui.screens.settings.*
+import jp.mydns.fujiwara.carememo.ui.screens.report.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.*
 
@@ -177,7 +178,8 @@ class MainActivity : FragmentActivity() {
                                         application.emergencyContactRepository,
                                         userSettingsRepository,
                                         securitySession,
-                                        auditLogRepository))
+                                        auditLogRepository,
+                                        healthRepository))
                                 MainScreen(viewModel = listViewModel, navController = navController)
                             }
 
@@ -438,6 +440,17 @@ class MainActivity : FragmentActivity() {
                                         securitySession,
                                         conditionRepository))
                                 UnassignedPhotoManagementScreen(viewModel = unassignedViewModel, navController = navController)
+                            }
+
+                            composable<Destination.AlertReport> {
+                                val alertViewModel: AlertReportViewModel =
+                                    viewModel(factory = AlertReportViewModel.Factory(
+                                        personRepository,
+                                        healthRepository,
+                                        userSettingsRepository,
+                                        securitySession,
+                                        auditLogRepository))
+                                AlertReportScreen(viewModel = alertViewModel, navController = navController)
                             }
                         }
                     }

@@ -468,7 +468,8 @@ data class PersonCategorySummary(
     val hasBpAndPulse: Boolean = false,
     val hasGlucoseAndHbA1c: Boolean = false,
     val hasCondition: Boolean = false,
-    val hasMedication: Boolean = false
+    val hasMedication: Boolean = false,
+    val hasAlert: Boolean = false
 )
 
 /**
@@ -480,7 +481,8 @@ data class PersonSummaryQueryResult(
     val hasBpAndPulse: Boolean,
     val hasGlucoseAndHbA1c: Boolean,
     val hasCondition: Boolean,
-    val hasMedication: Boolean
+    val hasMedication: Boolean,
+    val hasAlert: Boolean = false
 )
 
 /**

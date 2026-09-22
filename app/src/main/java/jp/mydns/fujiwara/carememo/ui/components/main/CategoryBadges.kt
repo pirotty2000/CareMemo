@@ -78,6 +78,9 @@ fun CategoryBadges(
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             // 薬 -> 服薬
             BadgeChar(text = "薬", isActive = summary.hasMedication, color = Color(0xFF673AB7), contentDescription = stringResource(R.string.health_badge_desc_medication))
+            
+            // ！ -> アラート (異常あり)
+            BadgeChar(text = "！", isActive = summary.hasAlert, color = MaterialTheme.colorScheme.error, contentDescription = stringResource(R.string.alert_report_badge_desc))
         }
     }
 }

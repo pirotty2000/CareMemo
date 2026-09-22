@@ -55,7 +55,8 @@ class PersonDetailScenarioTest {
         }
     }
 
-    private fun robustScrollUpTo(tag: String) {
+    private fun robustScrollUpToRestoreUserButton() {
+        val tag = "Settings_RestoreUserButton"
         val scrollColumn = composeTestRule.onNodeWithTag("Settings_ScrollColumn")
         repeat(20) {
             try {
@@ -269,7 +270,7 @@ class PersonDetailScenarioTest {
         composeTestRule.onNodeWithTag("AuditLogScreen_BackButton").performClick()
         composeTestRule.waitForIdle()
 
-        robustScrollUpTo("Settings_RestoreUserButton")
+        robustScrollUpToRestoreUserButton()
         composeTestRule.onNodeWithTag("Settings_RestoreUserButton").performClick()
         composeTestRule.waitUntil(30000) { composeTestRule.onAllNodesWithText("利用者の復帰").fetchSemanticsNodes().isNotEmpty() }
         composeTestRule.onNodeWithTag("DeleteOrRestore_BackButton").performClick()
@@ -283,8 +284,115 @@ class PersonDetailScenarioTest {
         composeTestRule.onNodeWithTag("UnassignedPhoto_BackButton").performClick()
         composeTestRule.waitForIdle()
 
-        robustScrollUpTo("SettingsScreen_BackButton")
         composeTestRule.onNodeWithTag("SettingsScreen_BackButton").performClick()
         composeTestRule.onNodeWithTag("MainScreen_UserList").assertIsDisplayed()
+    }
+
+    @Test
+    fun SCN_REP_01_AlertReportGeneralOperation() {
+        // 1. メイン画面でハンバーガーメニューを開き「アラート・レポート」を選択する。
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("MainScreen_MenuButton").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("MainScreen_MenuButton").performClick()
+        
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithTag("MainScreen_MenuItem_AlertReport", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("MainScreen_MenuItem_AlertReport", useUnmergedTree = true).performClick()
+
+        // SCR-R-001 が表示され、フィルタが「すべて」になっている。
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("AlertReportScreen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("AlertFilter_ALL").assertIsSelected()
+
+        // 2. フィルタタブの「バイタル」をタップする。
+        composeTestRule.onNodeWithTag("AlertFilter_VITAL").performClick()
+        composeTestRule.onNodeWithTag("AlertFilter_VITAL").assertIsSelected()
+
+        // 3. フィルタタブの「体重」をタップする。
+        composeTestRule.onNodeWithTag("AlertFilter_WEIGHT").performClick()
+        composeTestRule.onNodeWithTag("AlertFilter_WEIGHT").assertIsSelected()
+
+        // 4. フィルタタブの「血糖」をタップする。
+        composeTestRule.onNodeWithTag("AlertFilter_GLUCOSE").performClick()
+        composeTestRule.onNodeWithTag("AlertFilter_GLUCOSE").assertIsSelected()
+
+        // 5. 戻る（左矢印）アイコンをタップする。
+        composeTestRule.onNodeWithTag("AlertReportScreen_BackButton").performClick()
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodesWithTag("MainScreen_UserList").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
+    fun SCN_REP_02_AlertReportSpecificPersonAndNavigation() {
+        // 1. 利用者一覧で「愛 植夫」のバッジ（！）をタップし、クイックメニューを開く。
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodes(hasText("愛", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        
+        // バッジ部分 (UserListItem_QuickMenuBox) を特定してタップ
+        // UserListItem_${id} は backup.json の "愛 植夫" の ID: "92eef07d-7175-4339-b059-a9e28b1a1876"
+        val targetPersonId = "92eef07d-7175-4339-b059-a9e28b1a1876"
+        
+        // ListItem の中のバッジ領域を特定
+        composeTestRule.onNode(
+            hasTestTag("UserListItem_QuickMenuBox").and(hasAnyAncestor(hasTestTag("UserListItem_$targetPersonId"))),
+            useUnmergedTree = true
+        ).performClick()
+
+        // 2. メニューから「この利用者のアラートを確認」を選択する。
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithTag("QuickActionMenu_AlertReport", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithTag("QuickActionMenu_AlertReport", useUnmergedTree = true).performClick()
+
+        // SCR-R-001 が表示されるのを待つ
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("AlertReportScreen").fetchSemanticsNodes().isNotEmpty()
+        }
+        // ロード完了を待つ (LoadingScreen が消えるまで)
+        composeTestRule.waitUntil(30000) {
+            composeTestRule.onAllNodes(hasTestTag("AlertReport_Loading")).fetchSemanticsNodes().isEmpty()
+        }
+
+        // SCR-R-001 が「愛 植夫」のデータのみで絞り込まれて表示される。
+        // 名前が表示されていることを確認（複数ある場合は最初の一つ）
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodes(hasText("愛", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onAllNodes(hasText("愛", substring = true)).onFirst().assertIsDisplayed()
+
+        // 3. リスト内の特定のカード（例：「体重」）をタップする。
+        // バックアップデータの値に基づき特定 (50.0kg) - 実際には "体重: 50.0 kg" のような形式
+        composeTestRule.onNode(hasText("50.0", substring = true))
+            .performScrollTo()
+            .performClick()
+
+        // SCR-PH-001（健康管理）に遷移し、対象の履歴が表示されている。
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("HealthScreen_BackButton").fetchSemanticsNodes().isNotEmpty()
+        }
+        // 身長・体重カテゴリが選択されていることを確認
+        composeTestRule.onNodeWithTag("CategoryChip_HEIGHT_AND_WEIGHT").assertIsSelected()
+        // 利用者名がヘッダーにあることを確認（部分一致、無名ツリーを使用）
+        composeTestRule.onNode(hasText("愛", substring = true).and(hasAnyAncestor(hasTestTag("PersonHeader_Title"))), useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        // 4. 「戻る」アイコンをタップする。
+        composeTestRule.onNodeWithTag("HealthScreen_BackButton").performClick()
+
+        // SCR-R-001 に戻る。
+        composeTestRule.waitUntil(20000) {
+            composeTestRule.onAllNodesWithTag("AlertReportScreen").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // 5. 再度「戻る」アイコンをタップする。
+        composeTestRule.onNodeWithTag("AlertReportScreen_BackButton").performClick()
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodesWithTag("MainScreen_UserList").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }

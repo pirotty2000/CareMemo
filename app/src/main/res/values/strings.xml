@@ -14,6 +14,7 @@
     <string name="common_edit">編集</string>
     <string name="common_preview">プレビュー</string>
     <string name="common_undo">元に戻す</string>
+    <string name="common_refresh">再取得</string>
     <string name="common_pdf_export">PDF出力</string>
     <string name="common_error_title_save">保存エラー</string>
     <string name="common_error_title_info">お知らせ</string>
@@ -191,10 +192,12 @@
     <string name="main_title">利用者一覧</string>
     <string name="main_no_user_found">検索条件に一致する利用者は見つかりませんでした</string>
     <string name="main_no_user_registered">利用者が登録されていません。\n右下のボタンから登録してください。</string>
+    <string name="main_menu_alert_report">アラート・レポート</string>
     <string name="main_menu_settings">設定</string>
     <string name="main_menu_help">ヘルプ</string>
     <string name="main_menu_version">バージョン情報</string>
     <string name="main_quick_action_emergency_contact">医師・看護師・家族に連絡</string>
+    <string name="main_quick_action_alert_report">この利用者のアラートを確認</string>
     <string name="main_dialog_version_title">バージョン情報</string>
     <string name="main_edit_user_info">利用者情報を編集</string>
     <string name="main_end_user_service">利用を終了する</string>
@@ -208,6 +211,17 @@
     <string name="main_label_first_name_furigana">めい</string>
     <string name="main_label_birthday">生年月日</string>
     <string name="main_label_note">同姓同名識別用メモ</string>
+
+    <!-- アラート・レポート用 -->
+    <string name="alert_report_title">アラート・レポート</string>
+    <string name="alert_report_empty">異常は検出されていません</string>
+    <string name="alert_report_desc">全期間の健康データから最新の異常値や急激な変化を抽出しています。</string>
+    <string name="alert_report_filter_all">すべて</string>
+    <string name="alert_report_filter_vital">バイタル</string>
+    <string name="alert_report_filter_weight">体重</string>
+    <string name="alert_report_filter_glucose">血糖</string>
+    <string name="alert_report_badge_desc">異常あり</string>
+    <string name="alert_report_weight_loss">急激な体重減少 (%1$s kg)</string>
     <string name="main_search_placeholder">所見メモ検索</string>
     <string name="main_search_hint">特定の症状や出来事を入力…</string>
     <string name="main_search_hint_short">検索…</string>

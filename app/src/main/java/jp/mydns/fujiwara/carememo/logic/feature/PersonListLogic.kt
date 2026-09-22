@@ -85,6 +85,8 @@ sealed interface PersonListViewEvent {
     data class NavigateToEditPerson(val personId: String) : PersonListViewEvent
     /** 設定画面へ遷移 */
     object NavigateToSettings : PersonListViewEvent
+    /** アラート・レポート画面へ遷移 */
+    data class NavigateToAlertReport(val personId: String? = null) : PersonListViewEvent
     /** 緊急連絡先画面へ遷移 */
     data class NavigateToMedicalContacts(val personId: String) : PersonListViewEvent
 }

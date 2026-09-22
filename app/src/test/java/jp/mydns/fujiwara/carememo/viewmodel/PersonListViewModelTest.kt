@@ -34,6 +34,7 @@ class PersonListViewModelTest {
     private val summaryRepository = mockk<PersonSummaryRepository>(relaxed = true)
     private val conditionRepository = mockk<ConditionRepository>(relaxed = true)
     private val emergencyContactRepository = mockk<EmergencyContactRepository>(relaxed = true)
+    private val healthRepository = mockk<HealthRepository>(relaxed = true)
     private val userSettingsRepository = mockk<UserSettingsRepository>(relaxed = true)
     private val securitySession = SecuritySession()
     private val auditLogRepository = mockk<AuditLogRepository>(relaxed = true)
@@ -72,6 +73,7 @@ class PersonListViewModelTest {
             savedStateHandle,
             personRepository, archivedRepository, summaryRepository,
             conditionRepository, emergencyContactRepository,
+            healthRepository,
             userSettingsRepository, securitySession, auditLogRepository
         )
     }

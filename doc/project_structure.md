@@ -38,6 +38,7 @@ jp.mydns.fujiwara.carememo
 │   │   ├── health/        #  │   ├─ (A)健康記録・一括入力・グラフ拡大
 │   │   ├── condition/     #  │   ├─ (B)所見メモ・写真関連
 │   │   ├── medication/    #  │   ├─ (C)服薬管理
+│   │   ├── report/        #  │   ├─ (D)アラート・レポート
 │   │   └── settings/      #  │   └─ アプリ設定、操作ログ、アーカイブ管理、未割り当て写真
 │   ├── components/        #  ├─ 再利用可能なUIコンポーネント（階層管理）
 │   │   ├── base/          #  │   ├─ 【汎用基盤】ドメイン非依存（例: AppTextField, LoadingScreen）
@@ -120,6 +121,7 @@ jp.mydns.fujiwara.carememo
 | SCR-PC-002 | Condition  | ConditionPhotoPreviewScreen     | `condition/ConditionPhotoPreviewScreen.kt`    | 写真撮影直後の確認・キャプション編集         |
 | SCR-PC-003 | Condition  | ConditionPhotoFullScreen        | `condition/ConditionPhotoFullScreen.kt`       | 添付写真の拡大閲覧、カルーセル表示          |
 | SCR-PM-001 | Medication | PersonMedicationScreen          | `medication/PersonMedicationScreen.kt`        | 服薬管理（Phone/Tablet/Content） |
+| SCR-R-001  | Report     | AlertReportScreen               | `report/AlertReportScreen.kt`                 | 健康データの異常値スキャン結果一覧          |
 | SCR-S-001  | Settings   | SettingsScreen                  | `settings/SettingsScreen.kt`                  | アプリ設定、バックアップ、保守ツール         |
 | SCR-S-002  | Settings   | AuditLogScreen                  | `settings/AuditLogScreen.kt`                  | 操作履歴のフィルタ・ソート・詳細参照         |
 | SCR-S-003  | Settings   | DeleteOrRestorePerson           | `settings/DeleteOrRestorePerson.kt`           | 利用終了者の復帰・物理削除管理            |
@@ -147,6 +149,7 @@ jp.mydns.fujiwara.carememo
 | **利用者管理**    | `DeleteOrRestorePerson`                                      | `DeleteOrRestorePersonViewModel`                              | `DeleteOrRestorePersonLogic`                                    | `DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                                                             |
 | **アプリ設定**    | `SettingsScreen`                                             | `SettingsViewModel`                                           | `SettingsLogic`                                                 | `AppMaintenanceRepository`<br>`DeleteOrRestorePersonRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                               |
 | **操作ログ**     | `AuditLogScreen`                                             | `AuditLogViewModel`                                           | `AuditLogLogic`                                                 | `AuditLogRepository`<br>`UserSettingsRepository`                                                                                                                                                  |
+| **アラート**     | `AlertReportScreen`                                          | `AlertReportViewModel`                                        | `AlertReportLogic`                                              | `PersonRepository`<br>`HealthRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                                                      |
 | **共通基盤**     | (詳細画面全体)                                                     | `PersonDetailUiStateViewModel`                                | `PersonDetailLogic`                                             | `PersonRepository`<br>`PersonSummaryRepository`<br>`UserSettingsRepository`<br>`AuditLogRepository`                                                                                               |
 
 
@@ -173,7 +176,8 @@ jp.mydns.fujiwara.carememo
 | 8. 利用者管理             | `DeleteOrRestorePerson`                                                  | 🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                                           |
 | 9. アプリ設定             | `SettingsScreen`                                                         | 🔴**`base/AppDeleteConfirmDialog.kt`**：破壊的な操作の警告ダイアログ<br>🔴**`base/AppInfoDialog.kt`**：共通の通知・エラーダイアログ<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                                                             |
 | 10. 操作ログ             | `AuditLogScreen`                                                         | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/ErrorState.kt`**：共通のエラー表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                                                              |
-| 11. 未割当写真            | `UnassignedPhotoManagementScreen`                                        | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/ErrorState.kt`**：共通のエラー表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                 |
+| 11. アラート             | `AlertReportScreen`                                                      | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/ErrorState.kt`**：共通のエラー表示<br>🔴**`base/LoadingScreen.kt`**：共通のローディング表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                           |
+| 12. 未割当写真            | `UnassignedPhotoManagementScreen`                                        | 🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理<br>🔴**`base/LoadingScreen.kt`**：共通のによるローディング表示<br>🔴**`base/EmptyState.kt`**：共通の「データなし」表示<br>🔴**`base/ErrorState.kt`**：共通のエラー表示<br>🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                                                                                                                                                                                                 |
 ---
 
 # Components - Screen 逆引きリファレンス
@@ -183,8 +187,8 @@ jp.mydns.fujiwara.carememo
 ※ **注意**: 一方の表を修正した際は、必ずもう一方も更新して矛盾が起きないようにしてください。
 <br>
 
-| コンポーネント (ファイル名)                                                         | 一覧 | (A)健康 | (B)所見 | (C)服薬 | (A)一括 | 管理 | 設定 | ログ | 写真 |
-|:------------------------------------------------------------------------|:--:|:-----:|:-----:|:-----:|:-----:|:--:|:--:|:--:|:--:|
+| コンポーネント (ファイル名)                                                         | 一覧 | (A)健康 | (B)所見 | (C)服薬 | (A)一括 | 管理 | 設定 | ログ | 写真 | アラート |
+|:------------------------------------------------------------------------|:--:|:-----:|:-----:|:-----:|:-----:|:--:|:--:|:--:|:--:|:----:|
 | **【共通部品 (複数画面で使用)】**                                                    |    |       |       |       |       |    |    |    |    |
 | **＜ドメイン非依存＞**                                                           |    |       |       |       |       |    |    |    |    |
 | **（入力フィールド）**                                                           |    |       |       |       |       |    |    |    |    |
@@ -197,9 +201,9 @@ jp.mydns.fujiwara.carememo
 | **（その他）**                                                               |    |       |       |       |       |    |    |    |    |
 | 　　🔴**`base/AppTopAppBarColors.kt`**：TopAppBar の配色管理                    | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  | ✓  | ✓  |
 | 　　🔴**`base/LoadingScreen.kt`**：共通のローディング表示                             | ✓  |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  |    | ✓  |
-| 　　🔴**`base/EmptyState.kt`**：共通の「データなし」表示                               | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  |    | ✓  | ✓  |
-| 　　🔴**`base/ErrorState.kt`**：共通のエラー表示（再試行ボタン付き）                         |    |   ✓   |       |       |   ✓   |    | ✓  | ✓  | ✓  |
-| 　　🔴**`base/SearchBox.kt`**：共通検索バー                                      | ✓  |       |   ✓   |       |       |    |    |    |    |
+| 　　🔴**`base/EmptyState.kt`**：共通の「データなし」表示                               | ✓  |   ✓   |   ✓   |   ✓   |       | ✓  |    | ✓  | ✓  |  ✓   |
+| 　　🔴**`base/ErrorState.kt`**：共通のエラー表示（再試行ボタン付き）                         |    |   ✓   |       |       |   ✓   |    | ✓  | ✓  | ✓  |  ✓   |
+| 　　🔴**`base/SearchBox.kt`**：共通検索バー                                      | ✓  |       |   ✓   |       |       |    |    |    |    |      |
 | 　　🔴**`base/VerticalScrollIndicator.kt`**：垂直スクロール補助                     |    |   ✓   |   ✓   |   ✓   |   ✓   | ✓  | ✓  | ✓  | ✓  |
 | **＜ドメイン依存＞**                                                            |    |       |       |       |       |    |    |    |
 | 　　🔴**`common/CategorySelectorBar.kt`**：(A)(B)(C)の切り替えバー                |    |   ✓   |   ✓   |   ✓   |       |    |    |    |
@@ -251,6 +255,7 @@ ViewModel (androidx.lifecycle.ViewModel)
     ├── AuditLogViewModel (監査ログ参照)
     ├── DeleteOrRestorePersonViewModel (アーカイブ利用者操作)
     ├── UnassignedPhotoViewModel (孤立写真管理)
+    ├── AlertReportViewModel (アラート異常値スキャン)
     │
     └── PersonBaseUiStateViewModel<S, E> (基盤：利用者コンテキストの自動ロード・同期、復元ガード)
         ├── PersonDetailUiStateViewModel (詳細共通：ヘッダー、カテゴリ遷移)
@@ -301,6 +306,7 @@ ViewModel から計算、判定、変換、およびバリデーションの純�
 | `VitalProcessor.kt`             | バイタルカテゴリ固有のロジック実装。                |
 | `GlucoseProcessor.kt`           | 血糖値カテゴリ固有のロジック実装。                 |
 | `HealthProcessorRegistry.kt`    | カテゴリ別プロセッサの集中管理レジストリ。             |
+| `AlertReportLogic.kt`           | 利用者全体の異常値スキャン、AlertItem への変換。     |
 | `PersonDetailLogic.kt`          | 詳細画面共通（ヘッダー・カテゴリ管理）の状態定義。         |
 | `AuditLogExportLogic.kt`        | 監査ログの CSV/JSON エクスポート用データ変換。      |
 
@@ -367,6 +373,10 @@ Android API を利用する重量級の共通処理をカプセル化してい�
 | **NAV-S-002**          | SCR-S-001  | SCR-S-002  | 設定画面で隠しメニューの「操作ログを参照」をタップ.                         | 監査ログ画面が表示される。                               |
 | **NAV-S-003**          | SCR-S-001  | SCR-S-003  | 設定画面で「利用終了者の復帰」または「利用修了者の完全抹消」をタップ.                | タップされたメニューに応じて利用者管理（復帰・完全抹消のいずれか）画面が表示される。  |
 | **NAV-S-004**          | SCR-S-001  | SCR-S-004  | 設定画面で「未割り当て写真の確認」をタップ.                             | 未割り当て写真確認画面が表示される。                          |
+| **[Report: アラート]**     |            |            |                                                    |                                             |
+| **NAV-R-001**          | SCR-M-001  | SCR-R-001  | 利用者一覧のハンバーガーメニューから「アラート」を選択。                       | アラート・レポート画面が表示される。                          |
+| **NAV-R-002**          | SCR-M-001  | SCR-R-001  | 利用者一覧のクイックアクションから「アラート」を選択。                        | アラート・レポート画面が表示される。                          |
+| **NAV-R-003**          | SCR-R-001  | SCR-PH-001 | アラート項目のカードをタップ（バイタル等）。                             | 対応する健康記録カテゴリの詳細画面が表示される。                    |
 | **[Common: 詳細画面間遷移]**  |            |            |                                                    |                                             |
 | **NAV-COM-001**        | SCR-PH-001 | SCR-PC-001 | 詳細画面のカテゴリバーで「所見メモ」をタップ.                            | 所見メモ画面に切り替わる（スタックは積まない）。                    |
 | **NAV-COM-002**        | SCR-PC-001 | SCR-PM-001 | 詳細画面のカテゴリバーで「服薬確認」をタップ.                            | 服薬管理画面に切り替わる（スタックは積まない）。                    |

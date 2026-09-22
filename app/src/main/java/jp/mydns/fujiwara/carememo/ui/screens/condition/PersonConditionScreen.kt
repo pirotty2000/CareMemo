@@ -165,7 +165,7 @@ fun PersonConditionScreen(
                     }
                 }
                 is PersonDetailViewEvent.NavigateBackToMain -> {
-                    navController.popBackStack(Destination.Main, inclusive = false)
+                    navController.popBackStack()
                 }
             }
         }

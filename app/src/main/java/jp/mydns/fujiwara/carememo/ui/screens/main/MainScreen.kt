@@ -43,6 +43,7 @@ sealed interface MainUiAction {
     // ナビゲーション
     data object AddClick : MainUiAction
     data object NavigateToSettings : MainUiAction
+    data class NavigateToAlertReport(val personId: String? = null) : MainUiAction
     data class UserClick(val person: Person) : MainUiAction
     data class EditUser(val person: Person) : MainUiAction
     data class EmergencyContactManageClick(val person: Person) : MainUiAction
@@ -206,6 +207,9 @@ fun MainScreen(
                 is PersonListViewEvent.NavigateToSettings -> {
                     navController.navigate(Destination.Settings)
                 }
+                is PersonListViewEvent.NavigateToAlertReport -> {
+                    navController.navigate(Destination.AlertReport(event.personId))
+                }
                 is PersonListViewEvent.NavigateToMedicalContacts -> {
                     navController.navigate(Destination.MedicalContacts(event.personId))
                 }
@@ -222,6 +226,7 @@ fun MainScreen(
                 is MainUiAction.SectionSelect -> viewModel.setSelectedSection(action.section)
                 MainUiAction.AddClick -> viewModel.navigateToAddPerson()
                 MainUiAction.NavigateToSettings -> viewModel.navigateToSettings()
+                is MainUiAction.NavigateToAlertReport -> viewModel.navigateToAlertReport(action.personId)
                 is MainUiAction.UserClick -> {
                     selectedPerson = action.person
                     showSheet = true

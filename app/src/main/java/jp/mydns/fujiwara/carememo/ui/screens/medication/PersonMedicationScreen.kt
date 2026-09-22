@@ -143,7 +143,7 @@ fun PersonMedicationScreen(
                     }
                 }
                 is PersonDetailViewEvent.NavigateBackToMain -> {
-                    navController.popBackStack(Destination.Main, inclusive = false)
+                    navController.popBackStack()
                 }
             }
         }
