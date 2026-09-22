@@ -25,7 +25,7 @@ class AlertReportLogicTest {
     private val logic = AlertReportLogic(personRepository, healthRepository)
 
     @Test
-    fun SCAN_01_scanAlerts_異常バイタル値を抽出できる() = runBlocking {
+    fun SCAN_01_scanAlerts_extractsAbnormalVitals() = runBlocking {
         // --- Mock Setup ---
         val personId = "user1"
         val person = Person(
@@ -61,7 +61,7 @@ class AlertReportLogicTest {
     }
 
     @Test
-    fun SCAN_02_scanAlerts_急激な体重減少を抽出できる() = runBlocking {
+    fun SCAN_02_scanAlerts_extractsWeightLossAlert() = runBlocking {
         // --- Mock Setup ---
         val personId = "user1"
         val person = Person(

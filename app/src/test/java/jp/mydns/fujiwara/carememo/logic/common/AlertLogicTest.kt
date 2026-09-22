@@ -9,7 +9,7 @@ import org.junit.Test
 class AlertLogicTest {
 
     @Test
-    fun WTL_01_evaluateWeightLoss_3kg減少でALERT() {
+    fun WTL_01_evaluateWeightLoss_exactThreshold_returnsAlert() {
         // 60.0 -> 57.0 (ちょうど3kg減少)
         val (level, diff) = AlertLogic.evaluateWeightLoss(57.0, 60.0)
         assertEquals(HealthAlertLevel.ALERT, level)
@@ -17,7 +17,7 @@ class AlertLogicTest {
     }
 
     @Test
-    fun WTL_02_evaluateWeightLoss_3kg超減少でALERT() {
+    fun WTL_02_evaluateWeightLoss_overThreshold_returnsAlert() {
         // 60.0 -> 56.5 (3.5kg減少)
         val (level, diff) = AlertLogic.evaluateWeightLoss(56.5, 60.0)
         assertEquals(HealthAlertLevel.ALERT, level)
@@ -25,20 +25,20 @@ class AlertLogicTest {
     }
 
     @Test
-    fun WTL_03_evaluateWeightLoss_3kg未満減少はNORMAL() {
+    fun WTL_03_evaluateWeightLoss_underThreshold_returnsNormal() {
         // 60.0 -> 57.1 (2.9kg減少)
         val (level, _) = AlertLogic.evaluateWeightLoss(57.1, 60.0)
         assertEquals(HealthAlertLevel.NORMAL, level)
     }
 
     @Test
-    fun WTL_04_evaluateWeightLoss_増加はNORMAL() {
+    fun WTL_04_evaluateWeightLoss_weightGain_returnsNormal() {
         val (level, _) = AlertLogic.evaluateWeightLoss(61.0, 60.0)
         assertEquals(HealthAlertLevel.NORMAL, level)
     }
 
     @Test
-    fun WTL_05_evaluateWeightLoss_nullはNORMAL() {
+    fun WTL_05_evaluateWeightLoss_nullInput_returnsNormal() {
         val (level1, _) = AlertLogic.evaluateWeightLoss(null, 60.0)
         val (level2, _) = AlertLogic.evaluateWeightLoss(60.0, null)
         assertEquals(HealthAlertLevel.NORMAL, level1)
