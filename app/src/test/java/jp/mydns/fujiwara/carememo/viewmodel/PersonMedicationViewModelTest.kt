@@ -8,6 +8,8 @@ import jp.mydns.fujiwara.carememo.data.*
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
 import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
+import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationScreenState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
@@ -81,7 +83,7 @@ class PersonMedicationViewModelTest {
             advanceUntilIdle()
             
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
+            assertTrue(state.screenState is PersonMedicationScreenState.Active)
             assertEquals(personId, state.personId)
             assertEquals(YearMonth.now(), state.selectedMonth)
         }
@@ -179,7 +181,7 @@ class PersonMedicationViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertTrue(viewModel.uiState.value.screenState is PersonMedicationScreenState.Error)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Fetch Error") }, any()) }
     }
 
@@ -197,7 +199,7 @@ class PersonMedicationViewModelTest {
         viewModel.syncMedicationDay()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(PersonMedicationOperation.Idle, viewModel.uiState.value.operation)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("Sync Error") }, any()) }
     }
 
@@ -237,8 +239,9 @@ class PersonMedicationViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(date, state.selectedDialogDate)
-        assertEquals(record, state.dialogTempRecords[0])
+        val session = state.dialogSession
+        assertEquals(date, session.selectedDialogDate)
+        assertEquals(record, session.dialogTempRecords[0])
     }
 
     @Test

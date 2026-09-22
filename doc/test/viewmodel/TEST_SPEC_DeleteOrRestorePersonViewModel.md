@@ -33,7 +33,7 @@
 | EXE-01 | 復帰処理成功    | 1名選択して `restoreSelectedPersons()` | リポジトリの `restorePersonsBatch` が呼ばれ、選択が解除されること                       |
 | EXE-02 | 抹消処理成功    | 1名選択して `deleteSelectedPersons()`  | リポジトリの `permanentlyDeletePersonsBatch` が呼ばれ、選択が解除されること             |
 | EXE-03 | 未選択エラー    | 選択なしの状態で保存ボタン（復帰/抹消）を実行           | 処理が中断され、バリデーションエラーダイアログ（R.string.archive_err_no_selection）が表示されること |
-| EXE-04 | 実行失敗時の安全性 | リポジトリで例外が発生                       | `isLoading` が解除され、監査ログに `ERROR` が記録されること                           |
+| EXE-04 | 実行失敗時の安全性 | リポジトリで例外が発生                       | `operation` が `Idle` に戻り、監査ログに `ERROR` が記録されること                    |
 
 ## 5. ナビゲーションテスト (Navigation)
 **目的:** UI 操作に伴う副作用（ViewEvent）が正しく発行されることを検証する。

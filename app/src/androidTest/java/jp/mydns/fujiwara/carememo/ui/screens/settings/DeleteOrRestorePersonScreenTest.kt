@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonUiState
 import jp.mydns.fujiwara.carememo.logic.feature.DeleteOrRestorePersonViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -42,6 +43,7 @@ class DeleteOrRestorePersonScreenTest {
     fun setup() {
         every { viewModel.uiState } returns MutableStateFlow(
             DeleteOrRestorePersonUiState(
+                screenState = DeleteOrRestorePersonScreenState.Active,
                 archivedPersons = mockPersons.toImmutableList(),
                 mode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE,
                 isNameMaskingEnabled = false // Disable masking for testing exact name matches
@@ -82,6 +84,7 @@ class DeleteOrRestorePersonScreenTest {
     @Test
     fun DSP_03_actionButton_isDisplayed_whenSelected() {
         setContent(DeleteOrRestorePersonUiState(
+            screenState = DeleteOrRestorePersonScreenState.Active,
             archivedPersons = mockPersons.toImmutableList(),
             selectedIds = persistentSetOf("u1"),
             mode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE
@@ -94,7 +97,11 @@ class DeleteOrRestorePersonScreenTest {
 
     @Test
     fun DSP_04_emptyState_isDisplayed() {
-        setContent(DeleteOrRestorePersonUiState(archivedPersons = persistentListOf(), isLoading = false))
+        setContent(DeleteOrRestorePersonUiState(
+            screenState = DeleteOrRestorePersonScreenState.Active,
+            archivedPersons = persistentListOf(), 
+            isLoading = false
+        ))
         composeTestRule.onNodeWithTag("DeleteOrRestore_EmptyState").assertIsDisplayed()
         composeTestRule.onNodeWithText("終了した利用者はいません", substring = true).assertIsDisplayed()
     }

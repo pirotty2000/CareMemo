@@ -8,26 +8,39 @@ import kotlinx.collections.immutable.persistentListOf
 /**
  * 監査ログ画面全体の表示状態を管理するデータクラス。
  *
- * @param auditLogs 全ログのリスト
- * @param filteredLogs 現在の条件でフィルタリングされたログのリスト
- * @param isLoading 読み込み中フラグ
- * @param selectedFeature 選択されている機能フィルタ（null は全機能）
- * @param selectedResult 選択されている結果フィルタ（null は全結果）
- * @param isAscending 日時の昇順ソートかどうか
- * @param availableFeatures ログ内に存在する、フィルタ選択可能な機能名のリスト
- * @param availableResults ログ内に存在する、フィルタ選択可能な結果タイプのリスト
+ * @param screenState 構造的状態 (Loading / Active / Error)
+ * @param filteredLogs 現在の条件でフィルタリングされたログのリスト (Domain Content)
+ * @param selectedFeature 選択されている機能フィルタ (UI Details)
+ * @param selectedResult 選択されている結果フィルタ (UI Details)
+ * @param isAscending 日時の昇順ソートかどうか (UI Details)
+ * @param availableFeatures フィルタ選択可能な機能名のリスト (Domain Content derived)
+ * @param availableResults フィルタ選択可能な結果タイプのリスト (Domain Content derived)
  */
 @Immutable
 data class AuditLogUiState(
+    val screenState: AuditLogScreenState = AuditLogScreenState.Loading,
+    
     val auditLogs: ImmutableList<AuditLog> = persistentListOf(),
     val filteredLogs: ImmutableList<AuditLog> = persistentListOf(),
-    val isLoading: Boolean = true,
+    val availableFeatures: ImmutableList<String> = persistentListOf(),
+    val availableResults: ImmutableList<String> = persistentListOf(),
+
     val selectedFeature: String? = null,
     val selectedResult: String? = null,
     val isAscending: Boolean = false,
-    val availableFeatures: ImmutableList<String> = persistentListOf(),
-    val availableResults: ImmutableList<String> = persistentListOf()
+
+    @Deprecated("Use screenState")
+    val isLoading: Boolean = true
 )
+
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface AuditLogScreenState {
+    data object Loading : AuditLogScreenState
+    data object Active : AuditLogScreenState
+    data class Error(val throwable: Throwable) : AuditLogScreenState
+}
 
 /**
  * 監査ログ画面固有のイベント定義。

@@ -15,27 +15,57 @@ import java.util.UUID
  *
  * 【役割】
  * 健康記録画面における、表示データ、選択状態、および表示優先設定を保持します。
- *
+ * 
+ * @param screenState 構造的状態 (Loading / Active / Error)
+ * @param operation 実行中の操作状態 (Idle / Refreshing / Saving / Deleting)
  * @param personId 対象の利用者ID
  * @param currentCategory 現在表示しているカテゴリ（身長体重、バイタル、血糖）
- * @param records 履歴レコードのリスト
+ * @param records 履歴レコードのリスト (Domain Content)
  * @param preferredShowHistory グラフよりも履歴リストを優先して表示するかどうかの設定
- * @param selectedRecordId 現在詳細表示または編集対象として選択されているレコードのID
- * @param isLoading データの読み込み中フラグ
- * @param editInput 現在の入力値
- * @param initialSnapshot 編集開始時のスナップショット（変更検知用）
- * @param isChanged 初期状態から変更があるかどうか
- * @param isSaveEnabled 保存ボタンを活性化できる状態（バリデーション成功かつ変更あり）かどうか
+ * @param editSession 編集セッションの詳細状態 (UI Content Details)
  */
 @Immutable
 data class PersonHealthUiState(
+    val screenState: PersonHealthScreenState = PersonHealthScreenState.Loading,
+    val operation: PersonHealthOperation = PersonHealthOperation.Idle,
+
     override val personId: String? = null,
     override val currentCategory: Category = Category.HEIGHT_AND_WEIGHT,
     val records: ImmutableList<HistoryRecord> = persistentListOf(),
     val preferredShowHistory: Boolean = true,
-    val selectedRecordId: String? = null,
-    override val isLoading: Boolean = false,
+    
+    val editSession: HealthEditSession = HealthEditSession(),
+
+    @Deprecated("Use screenState and operation")
+    override val isLoading: Boolean = false
+) : PersonAwareState
+
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface PersonHealthScreenState {
+    data object Loading : PersonHealthScreenState
+    data object Active : PersonHealthScreenState
+    data class Error(val throwable: Throwable) : PersonHealthScreenState
+}
+
+/**
+ * 操作状態 (Operation State)
+ */
+sealed interface PersonHealthOperation {
+    data object Idle : PersonHealthOperation
+    data object Refreshing : PersonHealthOperation
+    data object Saving : PersonHealthOperation
+    data class Deleting(val recordId: String) : PersonHealthOperation
+}
+
+/**
+ * 編集セッション状態 (UI Content Details)
+ */
+@Immutable
+data class HealthEditSession(
     val isEditing: Boolean = false,
+    val selectedRecordId: String? = null,
     val editInput: HealthEditInput = HealthEditInput(),
     val initialRecordTime: Instant? = null,
     val initialSnapshot: HealthEditInput? = null,
@@ -44,7 +74,7 @@ data class PersonHealthUiState(
     val fieldErrors: Map<String, Int?> = emptyMap(),
     val fieldErrorArgs: Map<String, List<String>> = emptyMap(),
     val touchedFields: Set<String> = emptySet()
-) : PersonAwareState
+)
 
 /**
  * 健康記録の入力フォーム状態。

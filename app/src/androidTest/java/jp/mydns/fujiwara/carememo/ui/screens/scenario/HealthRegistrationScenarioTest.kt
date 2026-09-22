@@ -256,7 +256,7 @@ class HealthRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
 
         // 3. 編集ボタンをタップ
-        composeTestRule.onNodeWithContentDescription("編集").performClick()
+        composeTestRule.onNodeWithContentDescription("編集", substring = true).performClick()
 
         // 4. 体重を 100.0 に修正
         composeTestRule.onNodeWithTag("HealthField_Weight").performTextReplacement("100")
@@ -291,7 +291,7 @@ class HealthRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
 
         // 3. 編集
-        composeTestRule.onNodeWithContentDescription("編集").performClick()
+        composeTestRule.onNodeWithContentDescription("編集", substring = true).performClick()
         composeTestRule.onNodeWithTag("HealthField_BpSystolic").performTextReplacement("200")
         
         Espresso.closeSoftKeyboard()
@@ -319,7 +319,7 @@ class HealthRegistrationScenarioTest {
         composeTestRule.onNodeWithTag("HistoryItem_$recordId").performScrollTo().performClick()
 
         // 3. 編集
-        composeTestRule.onNodeWithContentDescription("編集").performClick()
+        composeTestRule.onNodeWithContentDescription("編集", substring = true).performClick()
         composeTestRule.onNodeWithTag("HealthField_Glucose").performTextReplacement("100")
         
         Espresso.closeSoftKeyboard()

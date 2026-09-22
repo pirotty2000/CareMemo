@@ -23,7 +23,7 @@ object MedicationDisplayMapper {
     fun getStatusSymbol(status: MedicationStatus?): String = when (status) {
         MedicationStatus.NONE -> "×"
         MedicationStatus.ASSIST -> "△"
-        MedicationStatus.TAKEN -> "○"
+        MedicationStatus.TAKEN -> "〇"
         null -> "－"
     }
 

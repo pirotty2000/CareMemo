@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
@@ -145,7 +146,7 @@ fun PersonMedicationScreenTabletPreview() {
         PersonMedicationScreenTablet(
             uiState = PersonMedicationUiState(
                 selectedMonth = YearMonth.now(),
-                isLoading = false,
+                screenState = PersonMedicationScreenState.Active,
                 recordsByDate = persistentMapOf()
             ),
             currentPerson = Person(

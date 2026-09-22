@@ -10,6 +10,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.PersonEditScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonEditViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -59,7 +61,7 @@ class PersonEditScreenTest {
     @Test
     fun DSP_03_loadingIndicator_isDisplayed() {
         setContent {
-            PersonEditScreenContentWrapper(isLoading = true)
+            PersonEditScreenContentWrapper(screenState = PersonEditScreenState.Loading)
         }
         composeTestRule.onNodeWithTag("PersonEdit_Loading").assertIsDisplayed()
     }
@@ -95,8 +97,14 @@ class PersonEditScreenTest {
     @Test
     fun ACT_04_cancelWithChanges_showsConfirmDialog() {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
-        // Simulate changed state
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(isChanged = true, isNew = true))
+        // Simulate changed state + Active screenState
+        every { viewModel.uiState } returns MutableStateFlow(
+            PersonEditUiState(
+                screenState = PersonEditScreenState.Active,
+                isChanged = true, 
+                isNew = true
+            )
+        )
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
         every { viewModel.viewEvent } returns MutableSharedFlow()
 
@@ -120,7 +128,7 @@ class PersonEditScreenTest {
         val navController = mockk<NavHostController>(relaxed = true)
         val viewEventFlow = MutableSharedFlow<PersonEditViewEvent>(extraBufferCapacity = 1)
         
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(screenState = PersonEditScreenState.Active))
         every { viewModel.viewEvent } returns viewEventFlow
         every { viewModel.uiEventFlow } returns MutableSharedFlow()
 
@@ -143,7 +151,7 @@ class PersonEditScreenTest {
         val viewModel = mockk<PersonEditViewModel>(relaxed = true)
         val uiEventFlow = MutableSharedFlow<BaseUiStateViewModel.UiEvent>(extraBufferCapacity = 1)
         
-        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState())
+        every { viewModel.uiState } returns MutableStateFlow(PersonEditUiState(screenState = PersonEditScreenState.Active))
         every { viewModel.uiEventFlow } returns uiEventFlow
         every { viewModel.viewEvent } returns MutableSharedFlow()
 
@@ -175,7 +183,7 @@ class PersonEditScreenTest {
         restorationTester.setContent {
             CareMemoTheme {
                 // Content 層での内部状態 (ScrollState) の復元を検証
-                PersonEditScreenContentWrapper(isNew = true)
+                PersonEditScreenContentWrapper(isNew = true, screenState = PersonEditScreenState.Active)
             }
         }
 
@@ -200,6 +208,7 @@ class PersonEditScreenTest {
         setContent {
             PersonEditScreenContent(
                 uiState = PersonEditUiState(
+                    screenState = PersonEditScreenState.Active,
                     fieldErrors = mapOf("lastName" to R.string.main_err_edit_empty_last_name)
                 ),
                 onAction = {},
@@ -215,6 +224,7 @@ class PersonEditScreenTest {
         setContent {
             PersonEditScreenContent(
                 uiState = PersonEditUiState(
+                    screenState = PersonEditScreenState.Active,
                     fieldErrors = emptyMap()
                 ),
                 onAction = {},
@@ -237,7 +247,7 @@ class PersonEditScreenTest {
     @Composable
     private fun PersonEditScreenContentWrapper(
         isNew: Boolean = true,
-        isLoading: Boolean = false,
+        screenState: PersonEditScreenState = PersonEditScreenState.Active,
         lastName: String = "",
         firstName: String = "",
         isValid: Boolean = false,
@@ -246,9 +256,11 @@ class PersonEditScreenTest {
         PersonEditScreenContent(
             uiState = PersonEditUiState(
                 isNew = isNew,
-                isLoading = isLoading,
-                lastName = lastName,
-                firstName = firstName,
+                screenState = screenState,
+                input = PersonEditInput(
+                    lastName = lastName,
+                    firstName = firstName
+                ),
                 isValid = isValid
             ),
             onAction = onAction,

@@ -22,7 +22,10 @@ import jp.mydns.fujiwara.carememo.logic.common.ConditionLogic
 import jp.mydns.fujiwara.carememo.logic.common.ConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditInput
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditSession
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionViewEvent
@@ -30,6 +33,7 @@ import jp.mydns.fujiwara.carememo.ui.navigation.Destination
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
@@ -39,15 +43,6 @@ import java.util.UUID
  *
  * 【役割】
  * 所見メモ（訪問時の状態記録）の表示、検索、入力、および写真の管理を担当します。
- *
- * 【設計指針：UI 境界の責務】
- * 1. 状態の不変化：UI に公開するリストデータはすべて ImmutableList に変換し、Compose の再描画効率を最適化します。
- * 2. 変更検知の集約：編集中の入力内容と初期状態の比較ロジックを ViewModel に持たせ、
- *    「変更破棄ダイアログ」の表示判定などの業務判断を UI から分離しています。
- *
- * 【この ViewModel では行わないこと】
- * ・写真の物理的なリサイズや保存処理（ImageUtils が担当）。
- * ・未割り当て写真の具体的な判定アルゴリズム（ConditionMaintenanceLogic が担当）。
  */
 class PersonConditionViewModel(
     private val conditionRepository: ConditionRepository,
@@ -132,9 +127,10 @@ class PersonConditionViewModel(
         scope.launch {
             defaultRecorderName.collect { name ->
                 updateUiState { state ->
+                    val session = state.editSession
                     // 復元中、または既にユーザーが入力済みの場合は自動セットをバイパスする
-                    if (!isRestoring && state.isEditing && IdLogic.isNew(state.selectedConditionId ?: "") && state.editInput.author.isBlank()) {
-                        state.copy(editInput = state.editInput.copy(author = name))
+                    if (!isRestoring && session.isEditing && IdLogic.isNew(session.selectedConditionId ?: "") && session.editInput.author.isBlank()) {
+                        state.copy(editSession = session.copy(editInput = session.editInput.copy(author = name)))
                     } else {
                         state
                     }
@@ -174,15 +170,18 @@ class PersonConditionViewModel(
 
         updateUiState { current ->
             current.copy(
+                screenState = PersonConditionScreenState.Active,
                 searchQuery = query,
-                selectedConditionId = selectedId,
-                isEditing = isEditing,
                 previewUri = previewUri,
                 previewCaption = previewCaption,
-                editInput = input,
-                initialSnapshot = snapshot,
-                isChanged = isChanged,
-                isSaveEnabled = PersonConditionLogic.isValid(input) && isChanged
+                editSession = ConditionEditSession(
+                    selectedConditionId = selectedId,
+                    isEditing = isEditing,
+                    editInput = input,
+                    initialSnapshot = snapshot,
+                    isChanged = isChanged,
+                    isSaveEnabled = PersonConditionLogic.isValid(input) && isChanged
+                )
             )
         }
     }
@@ -192,21 +191,22 @@ class PersonConditionViewModel(
      */
     private fun backupRestorableState(state: PersonConditionUiState) {
         val handle = savedStateHandle ?: return
+        val session = state.editSession
         handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
         handle[KEY_SEARCH_QUERY] = state.searchQuery
-        handle[KEY_SELECTED_ID] = state.selectedConditionId
-        handle[KEY_IS_EDITING] = state.isEditing
+        handle[KEY_SELECTED_ID] = session.selectedConditionId
+        handle[KEY_IS_EDITING] = session.isEditing
         handle[KEY_PREVIEW_URI] = state.previewUri
         handle[KEY_PREVIEW_CAPTION] = state.previewCaption
 
         // Input
-        handle[KEY_IN_TITLE] = state.editInput.title
-        handle[KEY_IN_BODY] = state.editInput.condition
-        handle[KEY_IN_AUTHOR] = state.editInput.author
-        handle[KEY_IN_TIME] = state.editInput.recordTime?.toEpochMilli()
+        handle[KEY_IN_TITLE] = session.editInput.title
+        handle[KEY_IN_BODY] = session.editInput.condition
+        handle[KEY_IN_AUTHOR] = session.editInput.author
+        handle[KEY_IN_TIME] = session.editInput.recordTime?.toEpochMilli()
 
         // Snapshot
-        state.initialSnapshot?.let { base ->
+        session.initialSnapshot?.let { base ->
             handle[KEY_BASE_TITLE] = base.title
             handle[KEY_BASE_BODY] = base.condition
             handle[KEY_BASE_AUTHOR] = base.author
@@ -237,8 +237,26 @@ class PersonConditionViewModel(
         } catch (_: Exception) {}
     }
 
-    override fun copyWithLoadingState(state: PersonConditionUiState, isLoading: Boolean): PersonConditionUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: PersonConditionUiState, isLoading: Boolean, category: LoadingCategory): PersonConditionUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    (state.screenState as? PersonConditionScreenState.Error) ?: PersonConditionScreenState.Active
+                } else {
+                    (state.screenState as? PersonConditionScreenState.Active) ?: PersonConditionScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = PersonConditionOperation.Idle) else state
+            }
+            is LoadingCategory.Refresh -> {
+                state.copy(operation = if (isLoading) PersonConditionOperation.Refreshing else PersonConditionOperation.Idle)
+            }
+            is LoadingCategory.Default -> {
+                state.copy(isLoading = isLoading)
+            }
+        }
     }
 
     override fun updateWithPersonData(
@@ -259,9 +277,7 @@ class PersonConditionViewModel(
             personId = null,
             searchQuery = "",
             filteredRecords = persistentListOf(),
-            selectedConditionId = null,
-            isEditing = false,
-            editInput = ConditionEditInput()
+            editSession = ConditionEditSession()
         )
     }
 
@@ -271,9 +287,14 @@ class PersonConditionViewModel(
         recordsJob = safeCollect(
             operation = OP_RECORDS_FLOW,
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_CONDITION },
-            flowProvider = { conditionRepository.getConditionAtVisitByPersonId(personId) }
+            flowProvider = { 
+                conditionRepository.getConditionAtVisitByPersonId(personId).catch { e ->
+                    updateUiState { it.copy(screenState = PersonConditionScreenState.Error(e)) }
+                    throw e
+                }
+            }
         ) { records ->
             updateUiState { current ->
                 // UI 境界で ImmutableList に変換し、表示の安定性を確保
@@ -324,15 +345,10 @@ class PersonConditionViewModel(
 
     fun setSelectedConditionId(id: String?) {
         updateUiState {
-            val next = it.copy(selectedConditionId = id)
+            val next = it.copy(editSession = it.editSession.copy(selectedConditionId = id))
             if (id == null) {
                 val cleared = next.copy(
-                    isEditing = false,
-                    editInput = ConditionEditInput(),
-                    initialRecordTime = null,
-                    initialSnapshot = null,
-                    isChanged = false,
-                    isSaveEnabled = false
+                    editSession = ConditionEditSession()
                 )
                 clearRestorableState(
                     KEY_SELECTED_ID, KEY_IS_EDITING, KEY_IN_TITLE, KEY_IN_BODY, KEY_IN_AUTHOR, KEY_IN_TIME,
@@ -351,16 +367,19 @@ class PersonConditionViewModel(
                         author = defaultRecorderName.value,
                         recordTime = now
                     )
-                    val nextWithInput = next.copy(
-                        isEditing = true,
-                        editInput = initialInput,
-                        initialRecordTime = now,
-                        initialSnapshot = initialInput,
-                        isChanged = false,
-                        isSaveEnabled = false
+                    val nextWithSession = next.copy(
+                        editSession = ConditionEditSession(
+                            isEditing = true,
+                            selectedConditionId = id,
+                            editInput = initialInput,
+                            initialRecordTime = now,
+                            initialSnapshot = initialInput,
+                            isChanged = false,
+                            isSaveEnabled = false
+                        )
                     )
-                    backupRestorableState(nextWithInput)
-                    nextWithInput
+                    backupRestorableState(nextWithSession)
+                    nextWithSession
                 }
             } else {
                 // 既存レコード選択時は閲覧モードから開始
@@ -369,7 +388,7 @@ class PersonConditionViewModel(
                     isRestoring = false
                     next
                 } else {
-                    val nextView = next.copy(isEditing = false, initialRecordTime = null)
+                    val nextView = next.copy(editSession = next.editSession.copy(isEditing = false, initialRecordTime = null))
                     backupRestorableState(nextView)
                     nextView
                 }
@@ -381,7 +400,7 @@ class PersonConditionViewModel(
             photoJob = safeCollect(
                 operation = OP_PHOTOS_FLOW,
                 mode = CollectMode.INITIAL,
-                loadingState = loadingStateProxy,
+                loadingCategory = LoadingCategory.Structural,
                 contextBuilder = { tableName = TABLE_CONDITION },
                 flowProvider = { conditionRepository.getConditionPhotosByConditionId(id) }
             ) { photos ->
@@ -407,7 +426,8 @@ class PersonConditionViewModel(
      * 現在選択されているレコードの編集セッションを開始します。
      */
     fun startEditSession() {
-        val recordId = currentState.selectedConditionId ?: return
+        val session = currentState.editSession
+        val recordId = session.selectedConditionId ?: return
         val record = currentState.records.find { it.id == recordId } ?: return
 
         val initialInput = ConditionEditInput(
@@ -419,12 +439,14 @@ class PersonConditionViewModel(
 
         updateUiState {
             val next = it.copy(
-                isEditing = true,
-                editInput = initialInput,
-                initialRecordTime = record.recordTime,
-                initialSnapshot = initialInput,
-                isChanged = false,
-                isSaveEnabled = false
+                editSession = session.copy(
+                    isEditing = true,
+                    editInput = initialInput,
+                    initialRecordTime = record.recordTime,
+                    initialSnapshot = initialInput,
+                    isChanged = false,
+                    isSaveEnabled = false
+                )
             )
             backupRestorableState(next)
             next
@@ -435,12 +457,12 @@ class PersonConditionViewModel(
      * 編集をキャンセルします。新規なら閉じ、既存なら閲覧モードに戻ります。
      */
     fun cancelEditSession() {
-        val recordId = currentState.selectedConditionId
+        val recordId = currentState.editSession.selectedConditionId
         if (recordId != null && IdLogic.isNew(recordId)) {
             setSelectedConditionId(null)
         } else {
             updateUiState { 
-                val next = it.copy(isEditing = false)
+                val next = it.copy(editSession = it.editSession.copy(isEditing = false))
                 backupRestorableState(next)
                 next
             }
@@ -449,18 +471,15 @@ class PersonConditionViewModel(
 
     /**
      * 入力フォームの内容を更新し、変更検知とバリデーションを再計算します。
-     *
-     * 【設計指針：UI 境界の責務】
-     * 入力変更に伴う「変更あり」フラグの判定は、業務ロジックの重要な一部であるため 
-     * ViewModel で行います。
      */
     fun updateEditInput(update: (ConditionEditInput) -> ConditionEditInput) {
         updateUiState { state ->
-            val nextInput = update(state.editInput)
-            val isChanged = PersonConditionLogic.isChanged(nextInput, state.initialSnapshot)
+            val session = state.editSession
+            val nextInput = update(session.editInput)
+            val isChanged = PersonConditionLogic.isChanged(nextInput, session.initialSnapshot)
             
             // 操作されたフィールドの追跡
-            val nextTouched = getNewlyTouchedFields(state.editInput, nextInput, state.touchedFields)
+            val nextTouched = getNewlyTouchedFields(session.editInput, nextInput, session.touchedFields)
             
             // フィールドごとのエラーを計算
             val errors = calculateFieldErrors(nextInput, nextTouched)
@@ -468,11 +487,13 @@ class PersonConditionViewModel(
             val isSaveEnabled = PersonConditionLogic.isValid(nextInput) && isChanged
 
             val next = state.copy(
-                editInput = nextInput,
-                isChanged = isChanged,
-                isSaveEnabled = isSaveEnabled,
-                touchedFields = nextTouched,
-                fieldErrors = errors
+                editSession = session.copy(
+                    editInput = nextInput,
+                    isChanged = isChanged,
+                    isSaveEnabled = isSaveEnabled,
+                    touchedFields = nextTouched,
+                    fieldErrors = errors
+                )
             )
             backupRestorableState(next)
             next
@@ -482,11 +503,14 @@ class PersonConditionViewModel(
     /** フィールドにフォーカスが当たったことを記録します */
     fun markFieldAsTouched(fieldName: String) {
         updateUiState { state ->
-            val nextTouched = state.touchedFields + fieldName
-            val errors = calculateFieldErrors(state.editInput, nextTouched)
+            val session = state.editSession
+            val nextTouched = session.touchedFields + fieldName
+            val errors = calculateFieldErrors(session.editInput, nextTouched)
             val next = state.copy(
-                touchedFields = nextTouched,
-                fieldErrors = errors
+                editSession = session.copy(
+                    touchedFields = nextTouched,
+                    fieldErrors = errors
+                )
             )
             backupRestorableState(next)
             next
@@ -547,26 +571,33 @@ class PersonConditionViewModel(
         // 二重実行防止
         if (saveJob?.isActive == true) return
 
-        val input = currentState.editInput
-        val conditionId = currentState.selectedConditionId ?: ""
+        val session = currentState.editSession
+        val input = session.editInput
+        val conditionId = session.selectedConditionId ?: ""
+
+        updateUiState { it.copy(operation = PersonConditionOperation.Saving) }
         
         saveJob = safeLaunch(
             operation = OP_SAVE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = conditionId
             }
         ) {
             val validationResult = PersonConditionLogic.validate(input)
-            translateValidationResult(validationResult)
+            if (validationResult != PersonConditionValidationResult.SUCCESS) {
+                translateValidationResult(validationResult)
+            }
 
             val record = PersonConditionLogic.createRecord(requiredPersonId, conditionId, input)
             val isUpdate = !IdLogic.isNew(conditionId)
 
             val existing = conditionRepository.findConditionAtTime(record.personId, record.recordTime)
             val duplicateResult = ConditionLogic.validateDuplicate(record, existing)
-            translateValidationResult(duplicateResult)
+            if (duplicateResult != ConditionValidationResult.SUCCESS) {
+                translateValidationResult(duplicateResult)
+            }
 
             conditionRepository.saveConditionAtVisit(record, isUpdate, featureName, OP_SAVE)
 
@@ -580,17 +611,10 @@ class PersonConditionViewModel(
             val finalId = record.id
             setSelectedConditionId(finalId)
             onSuccess(finalId)
-
-            // 状態復元データを破棄
-            clearRestorableState(
-                KEY_SEARCH_QUERY, KEY_SELECTED_ID, KEY_IS_EDITING, KEY_IN_TITLE, KEY_IN_BODY, KEY_IN_AUTHOR, KEY_IN_TIME,
-                KEY_BASE_TITLE, KEY_BASE_BODY, KEY_BASE_AUTHOR, KEY_BASE_TIME, KEY_PREVIEW_URI, KEY_PREVIEW_CAPTION
-            )
         }
     }
 
     private fun translateValidationResult(result: PersonConditionValidationResult) {
-        if (result == PersonConditionValidationResult.SUCCESS) return
         val messageRes = when (result) {
             PersonConditionValidationResult.EMPTY_CONDITION -> R.string.p_cond_err_empty_condition
             PersonConditionValidationResult.EMPTY_AUTHOR -> R.string.p_cond_err_empty_author
@@ -603,7 +627,6 @@ class PersonConditionViewModel(
     }
 
     private fun translateValidationResult(result: ConditionValidationResult) {
-        if (result == ConditionValidationResult.SUCCESS) return
         val messageRes = if (result == ConditionValidationResult.DUPLICATE_TIME) R.string.common_err_duplicate_blocked_simple else R.string.common_error_save
         throw AppValidationException(R.string.common_error_title_save, messageRes, emptyList(), "Validation failed: $result")
     }
@@ -612,9 +635,11 @@ class PersonConditionViewModel(
         // 二重実行防止
         if (deleteJob?.isActive == true) return
 
+        updateUiState { it.copy(operation = PersonConditionOperation.Deleting(record.id)) }
+
         deleteJob = safeLaunch(
             operation = OP_DELETE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = record.id
@@ -648,7 +673,6 @@ class PersonConditionViewModel(
 
     /**
      * ナビゲーション引数から取得したコンテキストを ViewModel の状態に反映します。
-     * Shared ViewModel 構成において、個別の Destination から渡された引数を同期するために使用します。
      */
     fun setNavContext(
         personId: String,
@@ -659,9 +683,9 @@ class PersonConditionViewModel(
         updateUiState { current ->
             current.copy(
                 personId = personId,
-                selectedConditionId = conditionId ?: current.selectedConditionId,
                 previewUri = previewUri ?: current.previewUri,
-                initialPhotoId = initialPhotoId ?: current.initialPhotoId
+                initialPhotoId = initialPhotoId ?: current.initialPhotoId,
+                editSession = current.editSession.copy(selectedConditionId = conditionId ?: current.editSession.selectedConditionId)
             )
         }
         
@@ -671,7 +695,7 @@ class PersonConditionViewModel(
         }
 
         // レコードIDが指定されている場合はデータのロードを誘発
-        if (conditionId != null && conditionId != currentState.selectedConditionId) {
+        if (conditionId != null && conditionId != currentState.editSession.selectedConditionId) {
             setSelectedConditionId(conditionId)
         }
     }
@@ -681,9 +705,11 @@ class PersonConditionViewModel(
         // 二重実行防止
         if (photoActionJob?.isActive == true) return
 
+        updateUiState { it.copy(operation = PersonConditionOperation.PhotoProcessing) }
+
         photoActionJob = safeLaunch(
             operation = "reattachUnassignedPhoto",
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = conditionId
@@ -711,9 +737,11 @@ class PersonConditionViewModel(
         // 二重実行防止
         if (photoActionJob?.isActive == true) return
 
+        updateUiState { it.copy(operation = PersonConditionOperation.PhotoProcessing) }
+
         photoActionJob = safeLaunch(
             operation = OP_SAVE_PHOTO,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = conditionId
@@ -740,9 +768,11 @@ class PersonConditionViewModel(
         // 二重実行防止
         if (photoActionJob?.isActive == true) return
 
+        updateUiState { it.copy(operation = PersonConditionOperation.PhotoProcessing) }
+
         photoActionJob = safeLaunch(
             operation = OP_DELETE_PHOTO,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_CONDITION
                 affectedId = photo.id
@@ -755,10 +785,9 @@ class PersonConditionViewModel(
     }
 
     fun notifyPhotoError(message: String) {
-        updateUiState { it.copy(errorMessage = message) }
         showError(message)
         
-        // カメラ起動失敗や写真処理エラーを証跡として記録する (ID 12)
+        // カメラ起動失敗や写真処理エラーを証跡として記録する
         scope.launch {
             auditLogRepository.log(
                 featureName = featureName,
@@ -786,17 +815,6 @@ class PersonConditionViewModel(
     fun navigateToPhotoFullScreen(photoId: String, conditionId: String) {
         sendViewEvent(PersonConditionViewEvent.NavigateToPhotoFullScreen(conditionId, photoId))
     }
-
-    /*
-    /**
-     * 一覧画面へ戻ります。
-     * 現在はシステム側の戻るボタンやナビゲーションバーでの遷移が主であるため、
-     * 画面内に専用の「戻る」ボタンを配置してロジックを呼ぶ必要が生じた際に復活させるため保持。
-     */
-    fun navigateBackToMain() {
-        sendViewEvent(PersonConditionViewEvent.NavigateBackToMain)
-    }
-    */
 
     class Factory(
         private val personRepository: PersonRepository,

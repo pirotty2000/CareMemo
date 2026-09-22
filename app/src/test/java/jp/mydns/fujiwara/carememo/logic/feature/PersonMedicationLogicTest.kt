@@ -50,7 +50,7 @@ class PersonMedicationLogicTest {
         assertTrue(state.monthlyRecords.isEmpty())
         assertTrue(state.recordsByDate.isEmpty())
         assertTrue(state.allRecords.isEmpty())
-        assertFalse(state.isLoading)
+        assertTrue(state.screenState is PersonMedicationScreenState.Loading)
     }
 
     // endregion

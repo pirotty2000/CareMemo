@@ -101,5 +101,70 @@
 - **効果**: 
     - **性能向上**: 主要な Content コンポーネントが `skippable` となり、引数が `stable` であることが Compose Compiler Report で実証された。これにより、大規模なリストや複雑なフォームでも極めて高い描画レスポンスを確保。
     - **保守性の向上**: UI 側の「意図（Intent）」が Sealed Interface として型安全に定義され、Screen 側のひとつの when ブロックで一括管理できるようになったため、デバッグと機能追加が劇的に容易になった。
+## 15. UI 状態設計の標準化 (L/E/E/C + Content 詳細) の採用
+
+* 2026/09/06に15章として整理・追記。
+
+* **決定事項**: UI状態を、以下の要素に分離して設計する標準パターンを採用する。
+
+  * **Structural State**: 画面全体の成立状態（Loading / Empty / Error / Content）
+  * **Domain Content**: 画面が扱う業務データ・表示データ
+  * **UI Content Details**: 検索条件、選択状態、展開状態、表示モード等のUI詳細状態
+  * **Operation State**: 保存・追加・削除・復元・Refresh等の非同期操作状態
+
+* **背景**:
+
+  * 将来のAI Agentとの協調開発を見据え、UI状態の設計意図を明文化し、ドキュメントから設計を再現可能にする。
+  * Loading、Error、検索条件、選択状態等を単一の `isLoading` や画面全体の状態に混在させることで発生する状態破壊を防止する。
+  * データ再取得や一時的なエラーが発生しても、ユーザーが入力した検索条件や選択状態等を不用意に失わないUIを実現する。
+
+* **設計指針**:
+
+  1. **概念的分離**
+
+     * Structural State、Domain Content、UI Content Details、Operation Stateは概念的に分離して設計する。
+     * 一方の状態変化によって、他の状態を不用意に初期化・破壊してはならない。
+
+  2. **Loadingの意味を分類する**
+
+     * `Structural`: 画面構築に必要なデータが存在せず、画面全体を構築できない初期Loading。
+     * `Operation`: ユーザー操作に伴う非同期処理。
+     * `Refresh`: 既存Contentを保持したまま最新状態へ同期する処理。
+     * `Default`: 既存実装からの移行期間のみ使用する互換カテゴリ。新規実装では使用しない。
+
+  3. **BaseとViewModelの責務を分離する**
+
+     * `BaseUiStateViewModel` は非同期処理の機構と汎用的な `LoadingCategory` を管理する。
+     * 画面固有の操作意味（例: `Adding`、`Deleting(id)`、`Restoring(id)`）は各ViewModelが管理する。
+     * Base層に画面固有のOperation Stateを持ち込まない。
+
+  4. **Content保持**
+
+     * `Operation` / `Refresh` の開始・終了によって、既存のDomain Contentを `null` や空リストへ不用意に変更してはならない。
+     * 「処理中」と「Contentの有無」は別軸として扱う。
+
+  5. **Errorの分類**
+
+     * **Structural Error**: 画面構築に必要なデータを取得できず、利用可能なContentも存在しない場合の画面全体エラー。
+     * **Transient Error**: Operation / Refresh等の処理失敗時に、既存Contentを保持したまま通知する一時的エラー。
+     * エラーの発生によって、無関係なUI状態やユーザー入力を不用意に初期化しない。
+
+  6. **保存先は要件から決定する**
+
+     * UI状態の意味だけで保存先を固定せず、プロセス終了・再生成等で失われた場合の影響を評価して、`ViewModel`、`SavedStateHandle`、Composableの状態等から適切な保存先を選択する。
+     * 特に再生成・プロセス終了からの復元が必要な状態は `SavedStateHandle` 等のRestorable Stateとして扱う。
+
+  7. **Previewの状態カタログ化**
+
+     * 設計上意味のあるStructural State（特にEmpty / Error）および主要なContent詳細状態をPreviewで確認可能にする。
+     * Previewは単なる見た目確認ではなく、UI状態設計の実行可能な状態カタログとして扱う。
+     * ただし、状態の組合せを機械的に全列挙してPreviewを爆発させない。意味のある代表状態を選択する。
+
+* **効果**:
+
+  * 全画面でLoading / Empty / Error / Contentの扱いを統一し、UI状態の設計・実装のブレを抑制する。
+  * Operation / RefreshとContentを分離することで、処理中に既存データやユーザー操作状態が失われる問題を防止する。
+  * 新規画面追加時に必要な状態を体系的に検討でき、AI Agentに対しても設計意図を再現可能な形で提示できる。
+  * PreviewをUI状態カタログとして活用することで、状態漏れや特殊状態での表示崩れを早期発見できる。
 ---
-最終更新日: 2026/08/28
+最終更新日: 2026/09/06

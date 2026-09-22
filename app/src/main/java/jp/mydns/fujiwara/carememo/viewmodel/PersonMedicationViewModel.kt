@@ -21,13 +21,17 @@ import jp.mydns.fujiwara.carememo.logic.common.MedicationValidationResult
 import jp.mydns.fujiwara.carememo.logic.common.SyncAction
 import jp.mydns.fujiwara.carememo.logic.common.MedicationTimeSlot
 import jp.mydns.fujiwara.carememo.logic.common.MedicationStatus
+import jp.mydns.fujiwara.carememo.logic.feature.MedicationDialogSession
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonMedicationViewEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -38,17 +42,6 @@ import java.time.YearMonth
  *
  * 【役割】
  * 利用者の服薬管理画面における状態管理と実行制御を担当します。
- * 日々の服薬状況（朝・昼・夕・寝る前など）をカレンダー形式またはリスト形式で管理する機能を提供します。
- *
- * 【設計指針：UI 境界の責務】
- * 1. 状態の不変化：UI に公開する服薬記録リスト (`monthlyRecords`) およびグルーピング済みマップ (`recordsByDate`) は、
- *    UI 境界において ImmutableList / ImmutableMap へ変換し、不変性を保証します。
- * 2. グルーピングロジックの提供：カレンダー表示を効率化するため、日付ごとのグルーピング処理を行い、
- *    UI 層が O(1) で特定日のデータを取得できる構造を提供します。
- *
- * 【この ViewModel では行わないこと】
- * ・カレンダーの表示用日付リスト生成（MedicationLogic が担当）。
- * ・DB レコードと入力値の差分に基づく同期アクションの判定（MedicationLogic が担当）。
  */
 class PersonMedicationViewModel(
     private val medicationRepository: MedicationRepository,
@@ -69,11 +62,8 @@ class PersonMedicationViewModel(
 ) {
 
     companion object {
-        /** 監査ログ・例外用：機能名 */
         private const val FEATURE_NAME = "PersonMedication"
-        /** 監査ログ用：同期操作名 */
         private const val OP_SYNC = "syncMedicationDay"
-        /** 監査ログ用：対象テーブル名 */
         private const val TABLE_MEDICATION = "medication_db"
 
         // --- Restoration Keys ---
@@ -132,9 +122,12 @@ class PersonMedicationViewModel(
 
         updateUiState {
             it.copy(
+                screenState = PersonMedicationScreenState.Active,
                 selectedMonth = selectedMonth,
-                selectedDialogDate = selectedDialogDate,
-                dialogTempRecords = dialogRecords.toImmutableList()
+                dialogSession = MedicationDialogSession(
+                    selectedDialogDate = selectedDialogDate,
+                    dialogTempRecords = dialogRecords.toImmutableList()
+                )
             )
         }
     }
@@ -144,14 +137,33 @@ class PersonMedicationViewModel(
      */
     private fun backupRestorableState(state: PersonMedicationUiState) {
         val handle = savedStateHandle ?: return
+        val session = state.dialogSession
         handle[KEY_RESTORE_VERSION] = RESTORE_VERSION
         handle[KEY_SELECTED_MONTH] = state.selectedMonth.toString()
-        handle[KEY_DIALOG_DATE] = state.selectedDialogDate?.toString()
-        handle[KEY_DIALOG_RECORDS] = state.dialogTempRecords.toList()
+        handle[KEY_DIALOG_DATE] = session.selectedDialogDate?.toString()
+        handle[KEY_DIALOG_RECORDS] = session.dialogTempRecords.toList()
     }
 
-    override fun copyWithLoadingState(state: PersonMedicationUiState, isLoading: Boolean): PersonMedicationUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: PersonMedicationUiState, isLoading: Boolean, category: LoadingCategory): PersonMedicationUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    (state.screenState as? PersonMedicationScreenState.Error) ?: PersonMedicationScreenState.Active
+                } else {
+                    (state.screenState as? PersonMedicationScreenState.Active) ?: PersonMedicationScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = PersonMedicationOperation.Idle) else state
+            }
+            is LoadingCategory.Refresh -> {
+                state.copy(operation = if (isLoading) PersonMedicationOperation.Refreshing else PersonMedicationOperation.Idle)
+            }
+            is LoadingCategory.Default -> {
+                state.copy(isLoading = isLoading)
+            }
+        }
     }
 
     override fun updateWithPersonData(
@@ -184,7 +196,7 @@ class PersonMedicationViewModel(
         }
     }
 
-    // --- 購読ロジック (原子的な反映) ---
+    // --- 購読ロジック ---
 
     /**
      * 指定された年月の服薬記録の購読を開始・更新します。
@@ -199,15 +211,18 @@ class PersonMedicationViewModel(
         monthlyRecordsJob = safeCollect(
             operation = "monthlyRecordsFlow",
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_MEDICATION },
-            flowProvider = { medicationRepository.getMedicationRecordsByMonth(personId, month.toString()) }
+            flowProvider = { 
+                medicationRepository.getMedicationRecordsByMonth(personId, month.toString()).catch { e ->
+                    updateUiState { it.copy(screenState = PersonMedicationScreenState.Error(e)) }
+                    throw e
+                }
+            }
         ) { records ->
             updateUiState { current ->
-                // UI 境界において ImmutableList / ImmutableMap へ変換し、不変性と描画安定性を確保する
                 current.copy(
                     monthlyRecords = records.toImmutableList(),
-                    // 日付ごとにグループ化したマップを作成し、カレンダー表示を効率化する
                     recordsByDate = PersonMedicationLogic.groupRecordsByDate(records)
                         .mapValues { it.value.toImmutableList() }
                         .toImmutableMap()
@@ -217,7 +232,7 @@ class PersonMedicationViewModel(
     }
 
     /**
-     * 全期間の服薬記録の購読を開始します（統計表示用など）。
+     * 全期間の服薬記録の購読を開始します。
      *
      * @param state 現在の UI 状態
      */
@@ -270,8 +285,10 @@ class PersonMedicationViewModel(
             }.toImmutableList()
             
             val next = current.copy(
-                selectedDialogDate = date,
-                dialogTempRecords = initialRecords
+                dialogSession = MedicationDialogSession(
+                    selectedDialogDate = date,
+                    dialogTempRecords = initialRecords
+                )
             )
             backupRestorableState(next)
             next
@@ -283,7 +300,7 @@ class PersonMedicationViewModel(
      */
     fun dismissDialog() {
         updateUiState { current ->
-            val next = current.copy(selectedDialogDate = null)
+            val next = current.copy(dialogSession = MedicationDialogSession())
             clearRestorableState(KEY_DIALOG_DATE, KEY_DIALOG_RECORDS)
             next
         }
@@ -294,10 +311,11 @@ class PersonMedicationViewModel(
      */
     fun updateDialogRecord(slotIndex: Int, status: MedicationStatus, recordTime: Instant) {
         updateUiState { current ->
-            val date = current.selectedDialogDate ?: return@updateUiState current
-            val existing = current.dialogTempRecords[slotIndex]
+            val session = current.dialogSession
+            val date = session.selectedDialogDate ?: return@updateUiState current
+            val existing = session.dialogTempRecords[slotIndex]
             
-            val nextRecords = current.dialogTempRecords.toMutableList().apply {
+            val nextRecords = session.dialogTempRecords.toMutableList().apply {
                 if (existing?.status == status.code) {
                     // トグル：同じステータスなら解除
                     set(slotIndex, null)
@@ -314,7 +332,7 @@ class PersonMedicationViewModel(
                 }
             }.toImmutableList()
             
-            val next = current.copy(dialogTempRecords = nextRecords)
+            val next = current.copy(dialogSession = session.copy(dialogTempRecords = nextRecords))
             backupRestorableState(next)
             next
         }
@@ -324,15 +342,18 @@ class PersonMedicationViewModel(
      * 特定の日の服薬状況を一括同期（保存・削除）します。
      */
     fun syncMedicationDay() {
-        val date = currentState.selectedDialogDate?.toString() ?: return
-        val slotRecords = currentState.dialogTempRecords
+        val session = currentState.dialogSession
+        val date = session.selectedDialogDate?.toString() ?: return
+        val slotRecords = session.dialogTempRecords
 
         // 二重実行防止
         if (syncJob?.isActive == true) return
 
+        updateUiState { it.copy(operation = PersonMedicationOperation.Syncing) }
+
         syncJob = safeLaunch(
             operation = OP_SYNC,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_MEDICATION
                 affectedId = requiredPersonId
@@ -341,12 +362,14 @@ class PersonMedicationViewModel(
             // 1. 各レコードのバリデーションを実行
             slotRecords.filterNotNull().forEach { record ->
                 val validationResult = MedicationLogic.validateMedication(record)
-                translateValidationResult(validationResult)
+                if (validationResult != MedicationValidationResult.SUCCESS) {
+                    translateValidationResult(validationResult)
+                }
             }
 
             val currentDayRecords = currentState.recordsByDate[date] ?: emptyList()
             
-            // 2. ロジック層で、DB との差分に基づく同期アクション（Insert/Delete）を判定
+            // 2. ロジック層で、DB との差分に基づく同期アクションを判定
             val actions = MedicationLogic.determineSyncActions(currentDayRecords, slotRecords)
 
             // 3. 判定されたアクションを順次実行
@@ -361,7 +384,6 @@ class PersonMedicationViewModel(
                 }
             }
             
-            // 何らかの更新があった場合のみ通知を表示
             if (actions.any { it !is SyncAction.None }) {
                 showSnackbar(R.string.p_med_msg_update_success)
             }
@@ -374,7 +396,6 @@ class PersonMedicationViewModel(
      * 服薬管理固有のバリデーション結果を例外に変換し、エラー通知フローをトリガーします。
      */
     private fun translateValidationResult(result: MedicationValidationResult) {
-        if (result == MedicationValidationResult.SUCCESS) return
         val messageRes = when (result) {
             MedicationValidationResult.FUTURE_DATE_NOT_ALLOWED -> R.string.common_error_save
             else -> R.string.common_error_save
@@ -383,17 +404,6 @@ class PersonMedicationViewModel(
         
         throw AppValidationException(R.string.common_error_title_save, messageRes, args, "Validation failed: $result")
     }
-
-    /*
-    /**
-     * 一覧画面へ戻ります。
-     * 現在はシステム側の戻るボタンやナビゲーションバーでの遷移が主であるため、
-     * 画面内に専用の「戻る」ボタンを配置してロジックを呼ぶ必要が生じた際に復活させるため保持。
-     */
-    fun navigateBackToMain() {
-        sendViewEvent(PersonMedicationViewEvent.NavigateBackToMain)
-    }
-    */
 
     /**
      * PersonMedicationViewModel を生成するための Factory クラス。

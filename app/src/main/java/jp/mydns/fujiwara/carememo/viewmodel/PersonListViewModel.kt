@@ -16,13 +16,17 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.DeleteOrRestorePersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
+import jp.mydns.fujiwara.carememo.data.repository.HealthRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonSummaryRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDuplicateResult
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListLogic
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonListScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonListViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.AlertReportLogic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,6 +70,7 @@ class PersonListViewModel(
     summaryRepository: PersonSummaryRepository,
     private val conditionRepository: ConditionRepository,
     private val emergencyContactRepository: EmergencyContactRepository,
+    private val healthRepository: HealthRepository,
     userSettingsRepository: UserSettingsRepository,
     securitySession: SecuritySession,
     auditLogRepository: AuditLogRepository,
@@ -126,6 +131,9 @@ class PersonListViewModel(
             initialValue = emptyMap()
         )
 
+    /** アラートが存在する利用者IDのセット */
+    private val _alertPersonIds = MutableStateFlow<Set<String>>(emptySet())
+
     init {
         // 標準のエラーハンドラをセットアップ
         coroutineErrorHandler = ViewModelCoroutineErrorHandler(auditLogRepository) { title, msg, args ->
@@ -137,7 +145,13 @@ class PersonListViewModel(
             if (savedStateHandle.contains(KEY_RESTORE_VERSION)) {
                 val restoredQuery = savedStateHandle.get<String>(KEY_SEARCH_QUERY) ?: ""
                 val restoredSection = savedStateHandle.get<String>(KEY_SELECTED_SECTION) ?: AppSpecifications.Search.SECTION_ALL
-                updateUiState { it.copy(searchQuery = restoredQuery, selectedSection = restoredSection) }
+                updateUiState { 
+                    it.copy(
+                        searchQuery = restoredQuery, 
+                        selectedSection = restoredSection,
+                        screenState = PersonListScreenState.Active // 復元時は Active とみなす（再ロードは別途走る）
+                    ) 
+                }
             }
         } catch (e: Exception) {
             // 復元失敗時はログを記録して通常起動を継続（クラッシュ防止）
@@ -158,23 +172,41 @@ class PersonListViewModel(
             }
         }
 
+        // アラート情報の初回取得
+        refreshAlerts()
+
+        // アラートの同期（データ更新時に再スキャン）
+        scope.launch {
+            categorySummaries.collect {
+                // サマリーに変更があった場合、アラート状態も変わっている可能性があるため再スキャン
+                refreshAlerts()
+            }
+        }
+
         // 利用者リストの購読と統合フィルタリングフロー
         safeCollect(
             operation = "userListFlow",
             mode = CollectMode.INITIAL,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = TABLE_PERSON },
             flowProvider = {
                 combine(
                     repository.getAllPersons(),
                     uiState,
                     personsWithMatchedConditions,
-                    categorySummaries
-                ) { allPersons, state, matchedIds, summaries ->
+                    categorySummaries,
+                    _alertPersonIds
+                ) { allPersons, state, matchedIds, summaries, alertIds ->
                     val filtered = PersonListLogic.filterPersons(allPersons, state.selectedSection, matchedIds)
                     filtered.map { person ->
-                        PersonListLogic.createPersonUiState(person, state.isNameMaskingEnabled, summaries[person.id])
+                        val baseSummary = summaries[person.id] ?: PersonCategorySummary()
+                        val enrichedSummary = baseSummary.copy(hasAlert = alertIds.contains(person.id))
+                        PersonListLogic.createPersonUiState(person, state.isNameMaskingEnabled, enrichedSummary)
                     }
+                }.catch { e ->
+                    // 致命的な取得エラー時は Structural Error へ遷移
+                    updateUiState { it.copy(screenState = PersonListScreenState.Error(e)) }
+                    throw e
                 }
             }
         ) { newList ->
@@ -182,8 +214,33 @@ class PersonListViewModel(
         }
     }
 
-    override fun copyWithLoadingState(state: PersonListUiState, isLoading: Boolean): PersonListUiState {
-        return state.copy(isLoading = isLoading)
+    override fun copyWithLoadingState(state: PersonListUiState, isLoading: Boolean, category: LoadingCategory): PersonListUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                // 初回ロード完了時に Active へ遷移
+                // ただし、既に Error 状態にある場合はそれを維持する
+                val nextScreenState = if (!isLoading) {
+                    (state.screenState as? PersonListScreenState.Error) ?: PersonListScreenState.Active
+                } else {
+                    (state.screenState as? PersonListScreenState.Active) ?: PersonListScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                // 操作完了時に Idle へ戻す
+                if (!isLoading) state.copy(operation = PersonListOperation.Idle) else state
+            }
+            is LoadingCategory.Refresh -> {
+                // リフレッシュ状態の同期
+                state.copy(operation = if (isLoading) PersonListOperation.Refreshing else PersonListOperation.Idle)
+            }
+            is LoadingCategory.Default -> {
+                // 既存の isLoading 相当の処理（PersonList では未使用だが、一貫性のために Idle 復帰のみ定義）
+                if (!isLoading && state.operation != PersonListOperation.Idle) {
+                    state.copy(operation = PersonListOperation.Idle)
+                } else state
+            }
+        }
     }
 
     /**
@@ -222,9 +279,12 @@ class PersonListViewModel(
         // 二重実行防止
         if (actionJob?.isActive == true) return
 
+        // 操作状態を「追加中」に設定
+        updateUiState { it.copy(operation = PersonListOperation.Adding) }
+
         actionJob = safeLaunch(
             operation = OP_ADD,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = person.id
@@ -278,9 +338,12 @@ class PersonListViewModel(
         // 二重実行防止
         if (actionJob?.isActive == true) return
 
+        // 操作状態を「削除中」に設定（IDを保持）
+        updateUiState { it.copy(operation = PersonListOperation.Deleting(person.id)) }
+
         actionJob = safeLaunch(
             operation = OP_DELETE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = person.id
@@ -300,9 +363,12 @@ class PersonListViewModel(
         // 二重実行防止
         if (actionJob?.isActive == true) return
 
+        // 操作状態を「復旧中」に設定（IDを保持）
+        updateUiState { it.copy(operation = PersonListOperation.Restoring(person.id)) }
+
         actionJob = safeLaunch(
             operation = OP_RESTORE,
-            loadingState = loadingStateProxy,
+            loadingCategory = LoadingCategory.Operation,
             contextBuilder = {
                 tableName = TABLE_PERSON
                 affectedId = person.id
@@ -410,9 +476,29 @@ class PersonListViewModel(
         sendViewEvent(PersonListViewEvent.NavigateToSettings)
     }
 
+    /** アラート・レポート画面へ遷移します。 */
+    fun navigateToAlertReport(personId: String? = null) {
+        sendViewEvent(PersonListViewEvent.NavigateToAlertReport(personId))
+    }
+
     /** 緊急連絡先管理画面へ遷移します。 */
     fun navigateToMedicalContacts(personId: String) {
         sendViewEvent(PersonListViewEvent.NavigateToMedicalContacts(personId))
+    }
+
+    /**
+     * アラート情報を再スキャンして更新します。
+     */
+    fun refreshAlerts() {
+        safeLaunch(
+            operation = "refreshAlerts",
+            loadingCategory = LoadingCategory.Refresh
+        ) {
+            val logic = AlertReportLogic(repository, healthRepository)
+            // メイン画面用なので名前マスク設定は考慮せずID抽出のみ行う
+            val alerts = logic.scanAlerts(isNameMaskingEnabled = false)
+            _alertPersonIds.value = alerts.map { it.personId }.toSet()
+        }
     }
 
     /**
@@ -426,7 +512,8 @@ class PersonListViewModel(
         private val emergencyContactRepository: EmergencyContactRepository,
         private val userSettingsRepository: UserSettingsRepository,
         private val securitySession: SecuritySession,
-        private val auditLogRepository: AuditLogRepository
+        private val auditLogRepository: AuditLogRepository,
+        private val healthRepository: HealthRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -438,6 +525,7 @@ class PersonListViewModel(
                 summaryRepository,
                 conditionRepository,
                 emergencyContactRepository,
+                healthRepository,
                 userSettingsRepository,
                 securitySession,
                 auditLogRepository

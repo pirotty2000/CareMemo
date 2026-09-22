@@ -16,19 +16,22 @@ import java.time.YearMonth
  *
  * 【役割】
  * 服薬管理画面における、カレンダー表示、履歴テーブル、および選択されている期間（月）の状態を保持します。
- *
+ * 
+ * @param screenState 構造的状態 (Loading / Active / Error)
+ * @param operation 実行中の操作状態 (Idle / Refreshing / Syncing)
  * @param personId 対象の利用者ID
  * @param currentCategory 現在のカテゴリ（常に Category.MEDICATION）
  * @param selectedMonth 表示対象として選択されている年月
- * @param monthlyRecords 選択された月の全服薬記録リスト
- * @param recordsByDate 日付（"yyyy-MM-dd"）をキーとした、1日ごとの服薬記録リストのマップ
- * @param allRecords 全期間の服薬記録リスト（統計や将来的な拡張用）
- * @param isLoading データの読み込み中フラグ
- * @param selectedDialogDate ダイアログを表示している対象の日付（null なら非表示）
- * @param dialogTempRecords ダイアログ内での一時的な服用ステータス（4スロット分）
+ * @param monthlyRecords 選択された月の全服薬記録リスト (Domain Content)
+ * @param recordsByDate 日付（"yyyy-MM-dd"）をキーとしたマップ (Domain Content)
+ * @param allRecords 全期間の服薬記録リスト (Domain Content)
+ * @param dialogSession ダイアログ表示の詳細状態 (UI Content Details)
  */
 @Immutable
 data class PersonMedicationUiState(
+    val screenState: PersonMedicationScreenState = PersonMedicationScreenState.Loading,
+    val operation: PersonMedicationOperation = PersonMedicationOperation.Idle,
+
     override val personId: String? = null,
     override val currentCategory: Category = Category.MEDICATION,
 
@@ -37,12 +40,38 @@ data class PersonMedicationUiState(
     val recordsByDate: ImmutableMap<String, ImmutableList<MedicationRecord>> = persistentMapOf(),
     val allRecords: ImmutableList<MedicationRecord> = persistentListOf(),
 
-    override val isLoading: Boolean = false,
+    val dialogSession: MedicationDialogSession = MedicationDialogSession(),
 
-    // --- ダイアログ状態 ---
+    @Deprecated("Use screenState and operation")
+    override val isLoading: Boolean = false
+) : PersonAwareState
+
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface PersonMedicationScreenState {
+    data object Loading : PersonMedicationScreenState
+    data object Active : PersonMedicationScreenState
+    data class Error(val throwable: Throwable) : PersonMedicationScreenState
+}
+
+/**
+ * 操作状態 (Operation State)
+ */
+sealed interface PersonMedicationOperation {
+    data object Idle : PersonMedicationOperation
+    data object Refreshing : PersonMedicationOperation
+    data object Syncing : PersonMedicationOperation
+}
+
+/**
+ * ダイアログ・セッション状態 (UI Content Details)
+ */
+@Immutable
+data class MedicationDialogSession(
     val selectedDialogDate: LocalDate? = null,
     val dialogTempRecords: ImmutableList<MedicationRecord?> = persistentListOf(null, null, null, null)
-) : PersonAwareState
+)
 
 /**
  * View Event：PersonMedicationViewEvent

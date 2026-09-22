@@ -14,20 +14,44 @@ import kotlinx.collections.immutable.persistentSetOf
  * 【役割】
  * 利用者の復帰・抹消画面（DeleteOrRestorePersonScreen）全体の表示状態を保持します。
  *
- * @param isLoading 全体の読み込み中フラグ
+ * @param screenState 構造的状態 (Loading / Active / Error)
+ * @param operation 実行中の操作状態 (Idle / Restoring / Deleting)
  * @param mode 現在の操作モード（復帰：RESTORE / 抹消：DELETE）
- * @param archivedPersons アーカイブ（利用終了）された利用者のリスト
- * @param selectedIds 現在チェックボックスで選択されている利用者のIDセット
+ * @param archivedPersons アーカイブ（利用終了）された利用者のリスト (Domain Content)
+ * @param selectedIds 現在チェックボックスで選択されている利用者のIDセット (UI Details)
  * @param isNameMaskingEnabled 氏名のマスキング（伏せ字）が有効か
  */
 @Immutable
 data class DeleteOrRestorePersonUiState(
-    val isLoading: Boolean = false,
+    val screenState: DeleteOrRestorePersonScreenState = DeleteOrRestorePersonScreenState.Loading,
+    val operation: DeleteOrRestorePersonOperation = DeleteOrRestorePersonOperation.Idle,
+
     val mode: DeleteOrRestorePersonViewModel.OperationMode = DeleteOrRestorePersonViewModel.OperationMode.RESTORE,
     val archivedPersons: ImmutableList<Person> = persistentListOf(),
     val selectedIds: ImmutableSet<String> = persistentSetOf(),
-    val isNameMaskingEnabled: Boolean = true
+    val isNameMaskingEnabled: Boolean = true,
+
+    @Deprecated("Use screenState")
+    val isLoading: Boolean = false
 )
+
+/**
+ * 構造的状態 (Structural State)
+ */
+sealed interface DeleteOrRestorePersonScreenState {
+    data object Loading : DeleteOrRestorePersonScreenState
+    data object Active : DeleteOrRestorePersonScreenState
+    data class Error(val throwable: Throwable) : DeleteOrRestorePersonScreenState
+}
+
+/**
+ * 操作状態 (Operation State)
+ */
+sealed interface DeleteOrRestorePersonOperation {
+    data object Idle : DeleteOrRestorePersonOperation
+    data object Restoring : DeleteOrRestorePersonOperation
+    data object Deleting : DeleteOrRestorePersonOperation
+}
 
 /**
  * View Event：DeleteOrRestorePersonViewEvent

@@ -19,6 +19,7 @@ package jp.mydns.fujiwara.carememo.ui.components.main
  */
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,7 +39,8 @@ import jp.mydns.fujiwara.carememo.ui.screens.main.MainUiAction
  * └─ [1] QuickActionMenu (★本コンポーネント：DropdownMenu)
  *      ├─ DropdownMenuItem (ヘッダー：利用者名表示)
  *      ├─ HorizontalDivider
- *      └─ DropdownMenuItem (アクション：緊急連絡先への連絡)
+ *      ├─ DropdownMenuItem (アクション：緊急連絡先への連絡)
+ *      └─ DropdownMenuItem (アクション：この利用者のアラートを確認)
  */
 
 /**
@@ -87,6 +89,17 @@ fun QuickActionMenu(
                 onAction(MainUiAction.EmergencyContactClick(person))
             },
             modifier = Modifier.testTag("QuickActionMenu_EmergencyContact")
+        )
+
+        // アクション：アラート・レポート (その利用者のみ)
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.main_quick_action_alert_report)) },
+            leadingIcon = { Icon(Icons.Rounded.NotificationsActive, contentDescription = null) },
+            onClick = {
+                onAction(MainUiAction.DismissQuickMenu)
+                onAction(MainUiAction.NavigateToAlertReport(person.id))
+            },
+            modifier = Modifier.testTag("QuickActionMenu_AlertReport")
         )
 
         // 将来的な拡張領域（例：ここから一括入力を開始するなど）

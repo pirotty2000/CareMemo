@@ -17,11 +17,14 @@ import jp.mydns.fujiwara.carememo.logic.common.MedicationLogic
 import jp.mydns.fujiwara.carememo.logic.common.PersonLogic
 import jp.mydns.fujiwara.carememo.logic.feature.ImportValidationResult
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsLogic
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsOperation
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -31,14 +34,6 @@ import java.io.IOException
  *
  * 【役割】
  * アプリケーションの設定管理、バックアップ・復元、およびシステムメンテナンス操作の実行制御を担当します。
- *
- * 【設計指針：レイヤー責務と課題】
- * 1. 統括制御：複数のリポジトリを横断して、アプリ全体の動作設定や整合性修復などの「副作用を伴う操作」を安全に実行します。
- * 2. 疎結合：リポジトリを介して設定やメンテナンス操作を行い、プラットフォーム固有の機能（生体認証等）は UI 層からのフラグ制御により抽象化されています。
- *
- * 【この ViewModel では行わないこと】
- * ・ZIP ファイルの物理的な圧縮・解凍処理（AppMaintenanceRepository または Utils が担当）。
- * ・データのインポート/エクスポートにおける具体的な整合性検証（SettingsLogic が担当）。
  */
 class SettingsViewModel(
     private val maintenanceRepository: AppMaintenanceRepository,
@@ -87,6 +82,7 @@ class SettingsViewModel(
         safeCollect(
             operation = "initialSettingsSync",
             mode = CollectMode.INITIAL,
+            loadingCategory = LoadingCategory.Structural,
             contextBuilder = { tableName = "all_db" },
             flowProvider = {
                 combine(
@@ -100,28 +96,48 @@ class SettingsViewModel(
                     auditLogRepository.getAuditLogCountFlow(),
                     archivedPersonRepository.getArchivedPersons()
                 ) { values ->
-                    @Suppress("UNCHECKED_CAST")
-                    val archived = values[8] as List<Person>
-                    currentState.copy(
-                        isNameMaskingEnabled = values[0] as Boolean,
-                        isBiometricEnabled = values[1] as Boolean,
-                        defaultRecorderName = values[2] as String,
-                        isBackupPasswordEnabled = values[3] as Boolean,
-                        backupPassword = values[4] as String,
-                        themeSetting = values[5] as ThemeSetting,
-                        auditLogRetentionDays = values[6] as Int,
-                        auditLogCount = values[7] as Int,
-                        endedUserCount = archived.size
-                    )
+                    // 状態全体を返すのではなく、値の配列（または専用の型）を流す
+                    values
+                }.catch { e ->
+                    updateUiState { it.copy(screenState = SettingsScreenState.Error(e)) }
+                    throw e
                 }
             }
-        ) { nextState ->
-            updateUiState { nextState }
+        ) { values ->
+            // 受け取った最新の値を、現在の状態にマージする
+            updateUiState { state ->
+                @Suppress("UNCHECKED_CAST")
+                val archived = values[8] as List<Person>
+                state.copy(
+                    isNameMaskingEnabled = values[0] as Boolean,
+                    isBiometricEnabled = values[1] as Boolean,
+                    defaultRecorderName = values[2] as String,
+                    isBackupPasswordEnabled = values[3] as Boolean,
+                    backupPassword = values[4] as String,
+                    themeSetting = values[5] as ThemeSetting,
+                    auditLogRetentionDays = values[6] as Int,
+                    auditLogCount = values[7] as Int,
+                    endedUserCount = archived.size
+                )
+            }
         }
     }
 
-    override fun copyWithLoadingState(state: SettingsUiState, isLoading: Boolean): SettingsUiState {
-        return state.copy(isProcessing = isLoading)
+    override fun copyWithLoadingState(state: SettingsUiState, isLoading: Boolean, category: LoadingCategory): SettingsUiState {
+        return when (category) {
+            is LoadingCategory.Structural -> {
+                val nextScreenState = if (!isLoading) {
+                    (state.screenState as? SettingsScreenState.Error) ?: SettingsScreenState.Active
+                } else {
+                    (state.screenState as? SettingsScreenState.Active) ?: SettingsScreenState.Loading
+                }
+                state.copy(screenState = nextScreenState)
+            }
+            is LoadingCategory.Operation -> {
+                if (!isLoading) state.copy(operation = SettingsOperation.Idle) else state
+            }
+            else -> state.copy(isLoading = isLoading)
+        }
     }
 
     fun setNameMaskingEnabled(enabled: Boolean) { viewModelScope.launch { userSettingsRepository.setNameMaskingEnabled(enabled) } }
@@ -152,7 +168,7 @@ class SettingsViewModel(
         val errors = currentState.fieldErrors.toMutableMap()
         when (fieldName) {
             "defaultRecorderName" -> {
-                if (value.length > 50) { // Person.MAX_LENGTH_LAST_NAME 相当
+                if (value.length > 50) {
                     errors[fieldName] = R.string.settings_err_recorder_name_too_long
                 } else {
                     errors.remove(fieldName)
@@ -180,23 +196,27 @@ class SettingsViewModel(
 
     fun clearAuditLogs() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_CLEAR_LOGS) { auditLogRepository.deleteAllLogs(); showSnackbar(R.string.settings_msg_audit_log_cleared) }
+        updateUiState { it.copy(operation = SettingsOperation.Cleaning) }
+        actionJob = safeLaunch(OP_CLEAR_LOGS, loadingCategory = LoadingCategory.Operation) { auditLogRepository.deleteAllLogs(); showSnackbar(R.string.settings_msg_audit_log_cleared) }
     }
 
     fun rotateLogsManually() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_ROTATE_LOGS) { auditLogRepository.deleteOldLogs(currentState.auditLogRetentionDays); showSnackbar(R.string.settings_msg_rotate_success) }
+        updateUiState { it.copy(operation = SettingsOperation.Cleaning) }
+        actionJob = safeLaunch(OP_ROTATE_LOGS, loadingCategory = LoadingCategory.Operation) { auditLogRepository.deleteOldLogs(currentState.auditLogRetentionDays); showSnackbar(R.string.settings_msg_rotate_success) }
     }
 
     fun deleteEndedPersons() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_DELETE_ENDED) { archivedPersonRepository.deleteAllEndedPersons(featureName, OP_DELETE_ENDED); showSnackbar(R.string.settings_msg_delete_ended_success) }
+        updateUiState { it.copy(operation = SettingsOperation.Cleaning) }
+        actionJob = safeLaunch(OP_DELETE_ENDED, loadingCategory = LoadingCategory.Operation) { archivedPersonRepository.deleteAllEndedPersons(featureName, OP_DELETE_ENDED); showSnackbar(R.string.settings_msg_delete_ended_success) }
     }
 
     fun exportData(uri: Uri) {
         if (actionJob?.isActive == true) return
         val password = if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
-        actionJob = safeLaunch(OP_EXPORT, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
+        updateUiState { it.copy(operation = SettingsOperation.Exporting) }
+        actionJob = safeLaunch(OP_EXPORT, loadingCategory = LoadingCategory.Operation, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
             maintenanceRepository.exportData(uri, password) { updateUiState { s -> s.copy(processingProgress = it) } }
             sendViewEvent(SettingsViewEvent.ExportSuccess); showSnackbar(R.string.settings_msg_export_success)
         }
@@ -205,7 +225,8 @@ class SettingsViewModel(
     fun exportAuditLogs(uri: Uri) {
         if (actionJob?.isActive == true) return
         val password = if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
-        actionJob = safeLaunch(OP_EXPORT_LOGS, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
+        updateUiState { it.copy(operation = SettingsOperation.Exporting) }
+        actionJob = safeLaunch(OP_EXPORT_LOGS, loadingCategory = LoadingCategory.Operation, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
             maintenanceRepository.exportAuditLogs(uri, password) { updateUiState { s -> s.copy(processingProgress = it) } }
             showSnackbar(R.string.settings_msg_export_success)
         }
@@ -214,14 +235,14 @@ class SettingsViewModel(
     fun importData(uri: Uri, identifierSuffix: String, inputPassword: String? = null) {
         if (actionJob?.isActive == true) return
         val password = inputPassword ?: if (currentState.isBackupPasswordEnabled) currentState.backupPassword else null
-        actionJob = safeLaunch(OP_IMPORT, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
+        updateUiState { it.copy(operation = SettingsOperation.Importing) }
+        actionJob = safeLaunch(OP_IMPORT, loadingCategory = LoadingCategory.Operation, contextBuilder = { errorMessageRes = R.string.common_error_save }) {
             try {
                 maintenanceRepository.importData(
                     uri = uri,
                     password = password,
                     onProgress = { updateUiState { s -> s.copy(processingProgress = it) } }
                 ) { backup ->
-                    // 1. バージョンチェック (SettingsLogic)
                     val versionResult = SettingsLogic.validateVersion(
                         backupVersionCode = backup.appVersionCode,
                         currentVersionCode = BuildConfig.VERSION_CODE,
@@ -229,12 +250,9 @@ class SettingsViewModel(
                     )
                     
                     if (versionResult == ImportValidationResult.INCOMPATIBLE) {
-                        // 本来は文字列リソースを返したいが、ViewModel は Context 非依存のため例外を投げる。
-                        // エラーメッセージの構築は Repository 側で従来行っていたものを踏襲。
                         throw IOException("BACKUP_NEWER_THAN_APP") 
                     }
 
-                    // 2. データのクレンジングとフィルタリング
                     val validMedication = MedicationLogic.filterValidRecords(
                         backup.medicationRecords.map { it.toEntity() }
                     ).map { it.toBackupDto() }
@@ -264,29 +282,34 @@ class SettingsViewModel(
 
     fun clearAllData() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_CLEAR_ALL) { maintenanceRepository.clearAllData(); showSnackbar(R.string.settings_msg_clear_all_success) }
+        updateUiState { it.copy(operation = SettingsOperation.Cleaning) }
+        actionJob = safeLaunch(OP_CLEAR_ALL, loadingCategory = LoadingCategory.Operation) { maintenanceRepository.clearAllData(); showSnackbar(R.string.settings_msg_clear_all_success) }
     }
 
     fun importSampleData() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_IMPORT_SAMPLE) { maintenanceRepository.replaceAllData(jp.mydns.fujiwara.carememo.logic.sample.SampleDataGenerator.generate()); showSnackbar(R.string.settings_msg_import_sample_success) }
+        updateUiState { it.copy(operation = SettingsOperation.Importing) }
+        actionJob = safeLaunch(OP_IMPORT_SAMPLE, loadingCategory = LoadingCategory.Operation) { maintenanceRepository.replaceAllData(jp.mydns.fujiwara.carememo.logic.sample.SampleDataGenerator.generate()); showSnackbar(R.string.settings_msg_import_sample_success) }
     }
 
     fun checkIntegrity() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_INTEGRITY) { val results = maintenanceRepository.scanInconsistencies(); updateUiState { it.copy(inconsistencies = results.toImmutableList()) }; if (results.isEmpty()) showSnackbar(R.string.settings_msg_integrity_ok) }
+        updateUiState { it.copy(operation = SettingsOperation.Checking) }
+        actionJob = safeLaunch(OP_INTEGRITY, loadingCategory = LoadingCategory.Operation) { val results = maintenanceRepository.scanInconsistencies(); updateUiState { it.copy(inconsistencies = results.toImmutableList()) }; if (results.isEmpty()) showSnackbar(R.string.settings_msg_integrity_ok) }
     }
 
     fun fixInconsistencies() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_FIX_INCONSISTENCY) { maintenanceRepository.cleanInconsistencies(currentState.inconsistencies); val count = currentState.inconsistencies.size; updateUiState { it.copy(inconsistencies = persistentListOf()) }; showSnackbar(R.string.settings_msg_fix_success, count) }
+        updateUiState { it.copy(operation = SettingsOperation.Cleaning) }
+        actionJob = safeLaunch(OP_FIX_INCONSISTENCY, loadingCategory = LoadingCategory.Operation) { maintenanceRepository.cleanInconsistencies(currentState.inconsistencies); val count = currentState.inconsistencies.size; updateUiState { it.copy(inconsistencies = persistentListOf()) }; showSnackbar(R.string.settings_msg_fix_success, count) }
     }
 
     fun clearInconsistencyResults() { updateUiState { it.copy(inconsistencies = persistentListOf()) } }
 
     fun insertTestInconsistency() {
         if (actionJob?.isActive == true) return
-        actionJob = safeLaunch(OP_TEST_INCONSISTENCY) { maintenanceRepository.insertTestInconsistency(); showSnackbar(R.string.settings_msg_test_inconsistency_added) }
+        updateUiState { it.copy(operation = SettingsOperation.Checking) }
+        actionJob = safeLaunch(OP_TEST_INCONSISTENCY, loadingCategory = LoadingCategory.Operation) { maintenanceRepository.insertTestInconsistency(); showSnackbar(R.string.settings_msg_test_inconsistency_added) }
     }
     fun setAuditLogRetentionDays(days: Int) { viewModelScope.launch { userSettingsRepository.setAuditLogRetentionDays(days) } }
     fun navigateToArchiveManagement(mode: DeleteOrRestorePersonViewModel.OperationMode) { sendViewEvent(SettingsViewEvent.NavigateToArchiveManagement(mode)) }

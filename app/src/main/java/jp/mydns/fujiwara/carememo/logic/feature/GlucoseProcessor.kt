@@ -17,20 +17,20 @@ object GlucoseProcessor : HealthCategoryProcessor {
     override val categoryNameResId: Int = R.string.common_category_glucose
     override val outOfRangeErrorResId: Int = R.string.common_error_out_of_range_glucose
 
-    override fun isEmpty(state: BatchInputUiState): Boolean {
-        return state.glucose.isBlank() && state.hba1c.isBlank()
+    override fun isEmpty(input: BatchInputSession): Boolean {
+        return input.glucose.isBlank() && input.hba1c.isBlank()
     }
 
-    override fun validate(state: BatchInputUiState): HealthInputValidationResult {
-        return HealthLogic.validateGlucoseAndHbA1c(state.glucose, state.hba1c)
+    override fun validate(input: BatchInputSession): HealthInputValidationResult {
+        return HealthLogic.validateGlucoseAndHbA1c(input.glucose, input.hba1c)
     }
 
-    override fun createEntity(personId: String, time: Instant, state: BatchInputUiState): Any? {
-        if (isEmpty(state)) return null
+    override fun createEntity(personId: String, time: Instant, input: BatchInputSession): Any? {
+        if (isEmpty(input)) return null
         return GlucoseAndHbA1c(
             personId = personId,
-            glucose = state.glucose.toIntOrNull(),
-            hba1c = state.hba1c.toDoubleOrNull(),
+            glucose = input.glucose.toIntOrNull(),
+            hba1c = input.hba1c.toDoubleOrNull(),
             recordTime = time
         )
     }

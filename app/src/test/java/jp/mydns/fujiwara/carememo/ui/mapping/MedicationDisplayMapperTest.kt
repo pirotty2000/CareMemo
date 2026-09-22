@@ -15,7 +15,7 @@ class MedicationDisplayMapperTest {
 
     @Test
     fun SYM_01_taken_symbol() {
-        assertEquals("○", MedicationDisplayMapper.getStatusSymbol(MedicationStatus.TAKEN))
+        assertEquals("〇", MedicationDisplayMapper.getStatusSymbol(MedicationStatus.TAKEN))
     }
 
     @Test

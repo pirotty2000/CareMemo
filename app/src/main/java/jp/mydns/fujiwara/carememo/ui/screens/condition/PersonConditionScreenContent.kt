@@ -4,14 +4,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditSession
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
+import jp.mydns.fujiwara.carememo.ui.components.base.ErrorState
 import jp.mydns.fujiwara.carememo.ui.components.base.LoadingScreen
 import jp.mydns.fujiwara.carememo.ui.components.base.SearchBox
 import jp.mydns.fujiwara.carememo.ui.components.base.VerticalScrollIndicator
@@ -51,97 +56,122 @@ fun PersonConditionScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val lazyListState = rememberLazyListState()
+    val session = uiState.editSession
 
-    if (uiState.isLoading) {
-        LoadingScreen(modifier = modifier)
-    } else if (isExpanded) {
-        // --- タブレット・横向き: 2カラムレイアウト ---
-        Row(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .testTag("Condition_TabletLayout"),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // 左側: 履歴リスト
-            Column(
-                modifier = Modifier.weight(1f).testTag("Condition_HistoryList"),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 検索ボックス
-                SearchBox(
-                    query = uiState.searchQuery,
-                    onQueryChange = { onAction(PersonConditionUiAction.SearchQueryChanged(it)) },
-                    placeholder = stringResource(R.string.main_search_hint_short)
-                )
-                // 所見メモ・履歴一覧
-                Box(modifier = Modifier.weight(1f)) {
-                    if (uiState.filteredRecords.isEmpty()) {
-                        EmptyState(
-                            message = stringResource(R.string.p_detail_empty_records),
-                            description = stringResource(R.string.p_detail_empty_records_desc),
-                            icon = Icons.Outlined.Description
+    when (uiState.screenState) {
+        is PersonConditionScreenState.Loading -> {
+            LoadingScreen(modifier = modifier)
+        }
+        is PersonConditionScreenState.Error -> {
+            ErrorState(
+                message = stringResource(R.string.common_error_load_failed),
+                onRetry = { /* ViewModelで再試行を想定 */ },
+                modifier = modifier
+            )
+        }
+        is PersonConditionScreenState.Active -> {
+            if (isExpanded) {
+                // --- タブレット・横向き: 2カラムレイアウト ---
+                Row(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                        .testTag("Condition_TabletLayout"),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 左側: 履歴リスト
+                    Column(
+                        modifier = Modifier.weight(1f).testTag("Condition_HistoryList"),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 検索ボックス
+                        SearchBox(
+                            query = uiState.searchQuery,
+                            onQueryChange = { onAction(PersonConditionUiAction.SearchQueryChanged(it)) },
+                            placeholder = stringResource(R.string.main_search_hint_short)
                         )
-                    } else {
-                        ConditionList(
-                            records = uiState.filteredRecords,
-                            selectedId = uiState.selectedConditionId,
-                            conditionPhotoMap = uiState.conditionPhotoMap,
-                            isAnyDialogOpen = isAnyDialogOpen,
-                            onSelect = { onAction(PersonConditionUiAction.SelectedIdChanged(it)) },
-                            onDelete = { onAction(PersonConditionUiAction.DeleteRecordRequest(it)) },
-                            lazyListState = lazyListState
+                        // 所見メモ・履歴一覧
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (uiState.operation is PersonConditionOperation.Refreshing) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth().height(2.dp)
+                                )
+                            }
+
+                            if (uiState.filteredRecords.isEmpty()) {
+                                EmptyState(
+                                    message = stringResource(R.string.p_detail_empty_records),
+                                    description = stringResource(R.string.p_detail_empty_records_desc),
+                                    icon = Icons.Outlined.Description
+                                )
+                            } else {
+                                ConditionList(
+                                    records = uiState.filteredRecords,
+                                    selectedId = session.selectedConditionId,
+                                    conditionPhotoMap = uiState.conditionPhotoMap,
+                                    isAnyDialogOpen = isAnyDialogOpen,
+                                    onSelect = { onAction(PersonConditionUiAction.SelectedIdChanged(it)) },
+                                    onDelete = { onAction(PersonConditionUiAction.DeleteRecordRequest(it)) },
+                                    lazyListState = lazyListState
+                                )
+                                VerticalScrollIndicator(lazyListState = lazyListState)
+                            }
+                        }
+                    }
+                    // 右側・記録の詳細
+                    Box(
+                        modifier = Modifier
+                            .weight(2f)
+                            .padding(end = 16.dp) // 右端に余白を確保
+                            .testTag("Condition_DetailPane")
+                    ) {
+                        ConditionDetailPane(
+                            uiState = uiState,
+                            onAction = onAction
                         )
-                        VerticalScrollIndicator(lazyListState = lazyListState)
                     }
                 }
-            }
-            // 右側・記録の詳細
-            Box(
-                modifier = Modifier
-                    .weight(2f)
-                    .padding(end = 16.dp) // 右端に余白を確保
-                    .testTag("Condition_DetailPane")
-            ) {
-                ConditionDetailPane(
-                    uiState = uiState,
-                    onAction = onAction
-                )
-            }
-        }
-    } else {
-        // スマホ用レイアウト
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // 検索ボックス
-            SearchBox(
-                query = uiState.searchQuery,
-                onQueryChange = { onAction(PersonConditionUiAction.SearchQueryChanged(it)) },
-                modifier = Modifier.testTag("ConditionScreen_SearchBox")
-            )
-            // 所見メモ・履歴一覧
-            Box(modifier = Modifier.weight(1f)) {
-                if (uiState.filteredRecords.isEmpty()) {
-                    EmptyState(
-                        message = stringResource(R.string.p_detail_empty_records),
-                        description = stringResource(R.string.p_detail_empty_records_desc),
-                        icon = Icons.Outlined.Description
+            } else {
+                // スマホ用レイアウト
+                Column(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 検索ボックス
+                    SearchBox(
+                        query = uiState.searchQuery,
+                        onQueryChange = { onAction(PersonConditionUiAction.SearchQueryChanged(it)) },
+                        modifier = Modifier.testTag("ConditionScreen_SearchBox")
                     )
-                } else {
-                    ConditionList(
-                        records = uiState.filteredRecords,
-                        selectedId = uiState.selectedConditionId,
-                        conditionPhotoMap = uiState.conditionPhotoMap,
-                        isAnyDialogOpen = isAnyDialogOpen,
-                        onSelect = { onAction(PersonConditionUiAction.SelectedIdChanged(it)) },
-                        onDelete = { onAction(PersonConditionUiAction.DeleteRecordRequest(it)) },
-                        lazyListState = lazyListState
-                    )
-                    VerticalScrollIndicator(lazyListState = lazyListState)
+                    // 所見メモ・履歴一覧
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (uiState.operation is PersonConditionOperation.Refreshing) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().height(2.dp)
+                            )
+                        }
+
+                        if (uiState.filteredRecords.isEmpty()) {
+                            EmptyState(
+                                message = stringResource(R.string.p_detail_empty_records),
+                                description = stringResource(R.string.p_detail_empty_records_desc),
+                                icon = Icons.Outlined.Description
+                            )
+                        } else {
+                            ConditionList(
+                                records = uiState.filteredRecords,
+                                selectedId = session.selectedConditionId,
+                                conditionPhotoMap = uiState.conditionPhotoMap,
+                                isAnyDialogOpen = isAnyDialogOpen,
+                                onSelect = { onAction(PersonConditionUiAction.SelectedIdChanged(it)) },
+                                onDelete = { onAction(PersonConditionUiAction.DeleteRecordRequest(it)) },
+                                lazyListState = lazyListState
+                            )
+                            VerticalScrollIndicator(lazyListState = lazyListState)
+                        }
+                    }
                 }
             }
         }
@@ -162,8 +192,10 @@ private fun PreviewPersonConditionScreenContent(
             isExpanded = state.isExpanded,
             uiState = PersonConditionUiState(
                 records = state.records,
-                isLoading = state.isLoading,
-                selectedConditionId = state.selectedRecordId
+                screenState = if (state.isLoading) PersonConditionScreenState.Loading else PersonConditionScreenState.Active,
+                editSession = ConditionEditSession(
+                    selectedConditionId = state.selectedRecordId
+                )
             ),
             onAction = {},
             isAnyDialogOpen = false

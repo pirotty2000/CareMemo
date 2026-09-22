@@ -91,6 +91,7 @@ fun PersonMedicationScreen(
     val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
     val medicationState by medicationViewModel.uiState.collectAsStateWithLifecycle()
     val isNameMaskingEnabled by detailViewModel.isNameMaskingEnabled.collectAsStateWithLifecycle()
+    val session = medicationState.dialogSession
 
     // カテゴリ変更の同期
     LaunchedEffect(detailState.currentCategory) {
@@ -142,7 +143,7 @@ fun PersonMedicationScreen(
                     }
                 }
                 is PersonDetailViewEvent.NavigateBackToMain -> {
-                    navController.popBackStack(Destination.Main, inclusive = false)
+                    navController.popBackStack()
                 }
             }
         }
@@ -241,10 +242,10 @@ fun PersonMedicationScreen(
         )
     }
 
-    if (medicationState.selectedDialogDate != null) {
+    if (session.selectedDialogDate != null) {
         MedicationInputDialog(
-            date = medicationState.selectedDialogDate!!,
-            tempRecords = medicationState.dialogTempRecords,
+            date = session.selectedDialogDate,
+            tempRecords = session.dialogTempRecords,
             onAction = handleAction
         )
     }

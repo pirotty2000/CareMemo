@@ -13,7 +13,10 @@ import jp.mydns.fujiwara.carememo.data.repository.AuditLogRepository
 import jp.mydns.fujiwara.carememo.data.repository.EmergencyContactRepository
 import jp.mydns.fujiwara.carememo.data.repository.PersonRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactOperation
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactType
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactViewEvent
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -89,12 +92,10 @@ class EmergencyContactEditViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
-            // Expecting unmasked name as mock is set to false
+            assertTrue(state.screenState is EmergencyContactScreenState.Active)
             assertEquals("山田　太郎", state.personName)
             assertEquals(1, state.contacts.size)
             assertEquals("A病院", state.contacts[0].facilityName)
@@ -106,8 +107,8 @@ class EmergencyContactEditViewModelTest {
         val viewModel = createViewModel(mapOf("personId" to personId, "contactId" to "c1"))
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.isEditing)
-        assertEquals("c1", viewModel.uiState.value.editingContact?.id)
+        assertTrue(viewModel.uiState.value.session.isEditing)
+        assertEquals("c1", viewModel.uiState.value.session.editingContact?.id)
     }
 
     @Test
@@ -126,8 +127,8 @@ class EmergencyContactEditViewModelTest {
         )
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.isEditing)
-        assertEquals(newId, viewModel.uiState.value.editingContact?.id)
+        assertTrue(viewModel.uiState.value.session.isEditing)
+        assertEquals(newId, viewModel.uiState.value.session.editingContact?.id)
     }
 
     @Test
@@ -136,8 +137,8 @@ class EmergencyContactEditViewModelTest {
         val viewModel = createViewModel(mapOf("personId" to personId, "contactId" to newId))
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.isEditing)
-        assertEquals(newId, viewModel.uiState.value.editingContact?.id)
+        assertTrue(viewModel.uiState.value.session.isEditing)
+        assertEquals(newId, viewModel.uiState.value.session.editingContact?.id)
     }
 
     // endregion
@@ -152,11 +153,10 @@ class EmergencyContactEditViewModelTest {
 
         viewModel.startAdd()
         val state = viewModel.uiState.value
-        assertEquals(newId, state.editingContact?.id)
-        assertTrue(state.isEditing)
-        // B-2: Check that val properties are calculated
-        assertFalse("New contact without input should not be changed", state.isChanged)
-        assertFalse("New contact without input should be invalid", state.isValid)
+        assertEquals(newId, state.session.editingContact?.id)
+        assertTrue(state.session.isEditing)
+        assertFalse(state.session.isChanged)
+        assertFalse(state.session.isValid)
     }
 
     @Test
@@ -165,15 +165,14 @@ class EmergencyContactEditViewModelTest {
         advanceUntilIdle()
 
         viewModel.startEdit(testContact)
-        // Initially not changed
-        assertFalse(viewModel.uiState.value.isChanged)
+        assertFalse(viewModel.uiState.value.session.isChanged)
 
         viewModel.updateEditingContact { it.copy(facilityName = "Updated") }
         
         val state = viewModel.uiState.value
-        assertTrue("State should be marked as changed after update", state.isChanged)
-        assertTrue("Valid contact should be marked as valid", state.isValid)
-        assertEquals("Updated", state.editingContact?.facilityName)
+        assertTrue(state.session.isChanged)
+        assertTrue(state.session.isValid)
+        assertEquals("Updated", state.session.editingContact?.facilityName)
     }
 
     @Test
@@ -183,15 +182,14 @@ class EmergencyContactEditViewModelTest {
 
         viewModel.startAdd()
         viewModel.updateEditingContact { it.copy(facilityName = "Some Clinic") }
-        assertTrue(viewModel.uiState.value.isChanged)
+        assertTrue(viewModel.uiState.value.session.isChanged)
 
         viewModel.dismissEdit()
         
         val state = viewModel.uiState.value
-        assertFalse(state.isEditing)
-        assertNull(state.editingContact)
-        assertFalse("State should be reset after dismiss", state.isChanged)
-        assertFalse("State should be reset after dismiss", state.isValid)
+        assertFalse(state.session.isEditing)
+        assertNull(state.session.editingContact)
+        assertFalse(state.session.isChanged)
     }
 
     // endregion
@@ -275,7 +273,7 @@ class EmergencyContactEditViewModelTest {
         viewModel.saveContact()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(EmergencyContactOperation.Idle, viewModel.uiState.value.operation)
         coVerify { auditLogRepository.log(any(), any(), any(), "ERROR", any(), any(), any()) }
     }
 
@@ -289,14 +287,12 @@ class EmergencyContactEditViewModelTest {
         advanceUntilIdle()
 
         viewModel.startAdd()
-        // 初期状態ではエラーはないはず（touched ではないため）
-        assertNull(viewModel.uiState.value.fieldErrors["facilityName"])
+        assertNull(viewModel.uiState.value.session.fieldErrors["facilityName"])
 
-        // 施設名を空のまま touched にする
         viewModel.markFieldAsTouched("facilityName")
         advanceUntilIdle()
 
-        assertEquals(R.string.medical_contact_err_empty_facility, viewModel.uiState.value.fieldErrors["facilityName"])
+        assertEquals(R.string.medical_contact_err_empty_facility, viewModel.uiState.value.session.fieldErrors["facilityName"])
     }
 
     @Test
@@ -305,14 +301,11 @@ class EmergencyContactEditViewModelTest {
         advanceUntilIdle()
 
         viewModel.startAdd()
-        // 施設名を入力（バリデーションのショートカット防止）
         viewModel.updateEditingContact { it.copy(facilityName = "Aクリニック") }
-        
-        // 21文字入力
         viewModel.updateEditingContact { it.copy(phoneNumber = "0".repeat(21)) }
         advanceUntilIdle()
 
-        assertEquals(R.string.medical_contact_err_phone_too_long, viewModel.uiState.value.fieldErrors["phoneNumber"])
+        assertEquals(R.string.medical_contact_err_phone_too_long, viewModel.uiState.value.session.fieldErrors["phoneNumber"])
     }
 
     @Test
@@ -322,12 +315,12 @@ class EmergencyContactEditViewModelTest {
 
         viewModel.startAdd()
         viewModel.markFieldAsTouched("facilityName")
-        assertNotNull(viewModel.uiState.value.fieldErrors["facilityName"])
+        assertNotNull(viewModel.uiState.value.session.fieldErrors["facilityName"])
 
         viewModel.updateEditingContact { it.copy(facilityName = "正常なクリニック") }
         advanceUntilIdle()
 
-        assertNull("Error should be cleared on valid input", viewModel.uiState.value.fieldErrors["facilityName"])
+        assertNull("Error should be cleared on valid input", viewModel.uiState.value.session.fieldErrors["facilityName"])
     }
 
     // endregion

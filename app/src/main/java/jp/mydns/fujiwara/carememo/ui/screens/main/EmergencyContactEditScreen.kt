@@ -19,14 +19,16 @@ import androidx.navigation.NavHostController
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.EmergencyContact
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactOperation
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactSession
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactUiState
+import jp.mydns.fujiwara.carememo.logic.feature.EmergencyContactViewEvent
 import jp.mydns.fujiwara.carememo.logic.common.IdLogic
 import jp.mydns.fujiwara.carememo.ui.utils.PhoneNumberVisualTransformation
 import jp.mydns.fujiwara.carememo.ui.components.base.*
 import jp.mydns.fujiwara.carememo.ui.mapping.EmergencyContactMapping
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactEditViewModel
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactUiState
-import jp.mydns.fujiwara.carememo.viewmodel.EmergencyContactViewEvent
 
 /**
  * UI Action：緊急連絡先編集画面におけるユーザー操作の集約定義
@@ -45,13 +47,6 @@ sealed interface EmergencyContactEditUiAction {
  *
  * 【役割】
  * 緊急連絡先（SCR-M-004）の新規登録および既存情報の修正を行うための独立した画面です。
- * 施設種別（医師・家族等）、名称、電話番号、および優先順位の入力を担当します。
- *
- * 【主な機能】
- * ・入力フォーム：`AppTextField` およびドロップダウンを用いた連絡先情報の編集。
- * ・バリデーション連携：ViewModel からの `isValid` 状態に基づいた保存ボタンの制御。
- * ・書式整形：`PhoneNumberVisualTransformation` を用いた電話番号の読みやすい表示。
- * ・破棄保護：未保存での離脱時に `AppDialog` による変更破棄の確認。
  */
 @Composable
 fun EmergencyContactEditScreen(
@@ -93,9 +88,7 @@ fun EmergencyContactEditScreen(
                     navController.popBackStack()
                 }
                 EmergencyContactEditUiAction.DismissDialog -> {
-                    // ダイアログを閉じる制御は Content 側で行う（または状態を ViewModel へ戻す）
-                    // ここでは ViewModel にダイアログ状態がないため、Content 側のローカル状態で閉じる。
-                    // もし ViewModel で管理するなら、ここで resetDiscardDialogRequest() 等を呼ぶ。
+                    // ダイアログを閉じる制御は Content 側で行う
                 }
             }
         }
@@ -118,12 +111,14 @@ fun EmergencyContactEditContent(
     onAction: (EmergencyContactEditUiAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val contact = uiState.editingContact ?: return
+    val session = uiState.session
+    val contact = session.editingContact ?: return
     var showDiscardDialog by remember { mutableStateOf(false) }
+    val isOperating = uiState.operation != EmergencyContactOperation.Idle
 
     // 戻る操作の制御
     val handleBack = {
-        if (uiState.isChanged) {
+        if (session.isChanged) {
             showDiscardDialog = true
         } else {
             onAction(EmergencyContactEditUiAction.CancelClick)
@@ -140,7 +135,7 @@ fun EmergencyContactEditContent(
                     Text(stringResource(if (IdLogic.isNew(contact.id)) R.string.medical_contact_add_title else R.string.medical_contact_edit_title)) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = handleBack) {
+                    IconButton(onClick = handleBack, enabled = !isOperating) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
@@ -162,9 +157,14 @@ fun EmergencyContactEditContent(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                if (uiState.operation is EmergencyContactOperation.Saving) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
+                }
+
                 // 種別選択
                 ContactTypeDropdown(
                     selectedType = contact.contactType,
+                    enabled = !isOperating,
                     onAction = onAction,
                     modifier = Modifier.testTag("EmergencyContact_TypeDropdown")
                 )
@@ -177,9 +177,10 @@ fun EmergencyContactEditContent(
                     },
                     label = { Text(stringResource(R.string.medical_contact_facility_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_facility_placeholder)) },
+                    enabled = !isOperating,
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_FACILITY_NAME,
-                    isError = uiState.fieldErrors["facilityName"] != null,
-                    supportingText = uiState.fieldErrors["facilityName"]?.let { { Text(stringResource(it)) } },
+                    isError = session.fieldErrors["facilityName"] != null,
+                    supportingText = session.fieldErrors["facilityName"]?.let { { Text(stringResource(it)) } },
                     onFocusChanged = { if (!it.isFocused) onAction(EmergencyContactEditUiAction.MarkFieldAsTouched("facilityName")) },
                     modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_FacilityField")
                 )
@@ -192,9 +193,10 @@ fun EmergencyContactEditContent(
                     },
                     label = { Text(stringResource(R.string.medical_contact_person_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_person_placeholder)) },
+                    enabled = !isOperating,
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PERSON_NAME,
-                    isError = uiState.fieldErrors["personName"] != null,
-                    supportingText = uiState.fieldErrors["personName"]?.let { { Text(stringResource(it)) } },
+                    isError = session.fieldErrors["personName"] != null,
+                    supportingText = session.fieldErrors["personName"]?.let { { Text(stringResource(it)) } },
                     onFocusChanged = { if (!it.isFocused) onAction(EmergencyContactEditUiAction.MarkFieldAsTouched("personName")) },
                     modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PersonField")
                 )
@@ -209,17 +211,18 @@ fun EmergencyContactEditContent(
                     type = AppTextFieldType.PHONE,
                     label = { Text(stringResource(R.string.medical_contact_phone_label)) },
                     placeholder = { Text(stringResource(R.string.medical_contact_phone_placeholder)) },
+                    enabled = !isOperating,
                     visualTransformation = if (isPhoneFocused) {
                         VisualTransformation.None
                     } else {
                         PhoneNumberVisualTransformation()
                     },
-                    supportingText = if (uiState.fieldErrors["phoneNumber"] != null) {
-                        { Text(stringResource(uiState.fieldErrors["phoneNumber"]!!), color = MaterialTheme.colorScheme.error) }
+                    supportingText = if (session.fieldErrors["phoneNumber"] != null) {
+                        { Text(stringResource(session.fieldErrors["phoneNumber"]!!), color = MaterialTheme.colorScheme.error) }
                     } else {
                         { Text(stringResource(R.string.medical_contact_phone_note)) }
                     },
-                    isError = uiState.fieldErrors["phoneNumber"] != null,
+                    isError = session.fieldErrors["phoneNumber"] != null,
                     maxLength = AppSpecifications.MedicalContact.Validation.MAX_LENGTH_PHONE_NUMBER,
                     onFocusChanged = { 
                         isPhoneFocused = it.isFocused
@@ -236,6 +239,7 @@ fun EmergencyContactEditContent(
                     },
                     type = AppTextFieldType.INTEGER,
                     label = { Text(stringResource(R.string.medical_contact_priority_label)) },
+                    enabled = !isOperating,
                     maxLength = 2,
                     modifier = Modifier.fillMaxWidth().testTag("EmergencyContact_PriorityField")
                 )
@@ -251,13 +255,14 @@ fun EmergencyContactEditContent(
                 ) {
                     OutlinedButton(
                         onClick = handleBack,
+                        enabled = !isOperating,
                         modifier = Modifier.weight(1f).testTag("EmergencyContact_CancelButton")
                     ) {
                         Text(stringResource(R.string.common_cancel))
                     }
                     Button(
                         onClick = { onAction(EmergencyContactEditUiAction.SaveClick) },
-                        enabled = uiState.isValid,
+                        enabled = session.isValid && !isOperating,
                         modifier = Modifier.weight(1f).testTag("EmergencyContact_SaveButton")
                     ) {
                         Text(stringResource(R.string.common_save))
@@ -304,6 +309,7 @@ fun EmergencyContactEditContent(
 @Composable
 fun ContactTypeDropdown(
     selectedType: String,
+    enabled: Boolean,
     onAction: (EmergencyContactEditUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -311,20 +317,21 @@ fun ContactTypeDropdown(
     val types = AppSpecifications.MedicalContact.Types.ORDERED_TYPES
 
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        expanded = expanded && enabled,
+        onExpandedChange = { if (enabled) expanded = !expanded },
         modifier = modifier
     ) {
         OutlinedTextField(
             value = EmergencyContactMapping.getLabel(selectedType),
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(stringResource(R.string.medical_contact_type_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = enabled)
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -351,7 +358,7 @@ fun EmergencyContactEditContentPreview_New() {
     val contact = EmergencyContact(personId = "1", facilityName = "", contactType = "DOCTOR")
     CareMemoTheme {
         EmergencyContactEditContent(
-            uiState = EmergencyContactUiState(editingContact = contact, initialContact = contact),
+            uiState = EmergencyContactUiState(session = EmergencyContactSession(editingContact = contact, initialContact = contact)),
             onAction = {}
         )
     }
@@ -369,7 +376,7 @@ fun EmergencyContactEditContentPreview_Edit() {
     )
     CareMemoTheme {
         EmergencyContactEditContent(
-            uiState = EmergencyContactUiState(editingContact = contact, initialContact = contact),
+            uiState = EmergencyContactUiState(session = EmergencyContactSession(editingContact = contact, initialContact = contact)),
             onAction = {}
         )
     }

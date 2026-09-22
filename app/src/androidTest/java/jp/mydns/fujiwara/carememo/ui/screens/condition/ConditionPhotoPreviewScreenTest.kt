@@ -7,6 +7,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditSession
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionOperation
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -42,14 +45,14 @@ class ConditionPhotoPreviewScreenTest {
         )
         every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
         every { conditionViewModel.uiState } returns MutableStateFlow(
-            PersonConditionUiState(previewUri = mockUri.toString(), selectedConditionId = "c1")
+            PersonConditionUiState(previewUri = mockUri.toString(), editSession = ConditionEditSession(selectedConditionId = "c1"))
         )
         every { conditionViewModel.viewEvent } returns MutableSharedFlow()
         every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
     }
 
     private fun setContent(
-        conditionState: PersonConditionUiState = PersonConditionUiState(previewUri = mockUri.toString(), selectedConditionId = "c1")
+        conditionState: PersonConditionUiState = PersonConditionUiState(previewUri = mockUri.toString(), editSession = ConditionEditSession(selectedConditionId = "c1"))
     ) {
         every { conditionViewModel.uiState } returns MutableStateFlow(conditionState)
 
@@ -75,14 +78,14 @@ class ConditionPhotoPreviewScreenTest {
 
     @Test
     fun DSP_03_loadingIndicator_isDisplayed_duringProcessing() {
-        setContent(PersonConditionUiState(previewUri = mockUri.toString(), isProcessing = true))
+        setContent(PersonConditionUiState(previewUri = mockUri.toString(), operation = PersonConditionOperation.PhotoProcessing))
         composeTestRule.onNodeWithTag("PhotoPreview_Loading").assertIsDisplayed()
         composeTestRule.onNodeWithTag("PhotoPreview_SaveButton").assertDoesNotExist()
     }
 
     @Test
     fun DSP_04_errorMessage_isDisplayed() {
-        setContent(PersonConditionUiState(previewUri = mockUri.toString(), errorMessage = "Load Error"))
+        setContent(PersonConditionUiState(previewUri = mockUri.toString(), screenState = PersonConditionScreenState.Error(RuntimeException("Load Error"))))
         composeTestRule.onNodeWithText("Load Error").assertIsDisplayed()
     }
 

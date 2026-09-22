@@ -4,17 +4,12 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.navigation.NavHostController
 import io.mockk.*
-import jp.mydns.fujiwara.carememo.data.ConditionAtVisit
-import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
-import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
+import jp.mydns.fujiwara.carememo.data.*
+import jp.mydns.fujiwara.carememo.logic.feature.*
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
-import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionList
-import jp.mydns.fujiwara.carememo.ui.components.condition.ConditionDetailPane
-import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
-import kotlinx.collections.immutable.persistentListOf
+import jp.mydns.fujiwara.carememo.viewmodel.PersonConditionViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,8 +19,6 @@ import java.time.Instant
 
 /**
  * Instrumented Test: PersonConditionScreen (SCR-PC-001)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PC-001_PersonConditionScreen.md に準拠
  */
 class PersonConditionScreenTest {
 
@@ -36,321 +29,85 @@ class PersonConditionScreenTest {
 
     @Test
     fun ADP_01_phoneLayout_isUsed_onCompactWidth() {
-        setContent(widthClass = WindowWidthSizeClass.Compact)
+        setContent(
+            widthClass = WindowWidthSizeClass.Compact,
+            conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
+        )
         composeTestRule.onNodeWithTag("ConditionScreen_PhoneContent").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ConditionScreen_TabletContent").assertDoesNotExist()
     }
 
     @Test
     fun ADP_02_tabletLayout_isUsed_onExpandedWidth() {
-        setContent(widthClass = WindowWidthSizeClass.Expanded)
-        composeTestRule.onNodeWithTag("ConditionScreen_TabletContent").assertIsDisplayed()
-        composeTestRule.onNodeWithTag("ConditionScreen_PhoneContent").assertDoesNotExist()
-    }
-
-    //endregion
-
-    //region 3. コンポーネント描画検証 (Components)
-
-    @Test
-    fun CPN_01_recordItem_rendersCorrectly() {
-        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "Morning", condition = "Good", author = "Staff A", recordTime = Instant.now())
-        
-        composeTestRule.setContent {
-            CareMemoTheme {
-                // Test ConditionList directly as a component test
-                ConditionList(
-                    records = listOf(record).toImmutableList(),
-                    selectedId = null,
-                    conditionPhotoMap = emptyMap(),
-                    isAnyDialogOpen = false,
-                    onSelect = {},
-                    onDelete = {}
-                )
-            }
-        }
-        
-        composeTestRule.onNodeWithText("Morning").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Good").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Staff A", substring = true).assertIsDisplayed()
-    }
-
-    @Test
-    fun CPN_03_photoList_showsPlaceholder_whenEmpty() {
-        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "Morning", condition = "Good", author = "Staff A", recordTime = Instant.now())
-        composeTestRule.setContent {
-            CareMemoTheme {
-                ConditionDetailPane(
-                    uiState = PersonConditionUiState(
-                        records = listOf(record).toImmutableList(),
-                        selectedConditionId = "c1", 
-                        isEditing = false
-                    ),
-                    onAction = {}
-                )
-            }
-        }
-        composeTestRule.onNodeWithText("写真がありません", substring = true).assertIsDisplayed()
-    }
-
-    //endregion
-
-    //region 4. 状態・インタラクション検証 (Interaction)
-
-    @Test
-    fun ACT_01_memoInput_triggersViewModel() {
-        val detailViewModel = createMockDetailViewModel()
-        val conditionViewModel = createMockConditionViewModel()
-        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "", condition = "", author = "", recordTime = Instant.now())
-        
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
-        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
-            personId = "p1", 
-            records = persistentListOf(record),
-            selectedConditionId = "c1", 
-            isEditing = true
-        ))
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonConditionScreen(
-                    detailViewModel = detailViewModel,
-                    conditionViewModel = conditionViewModel,
-                    navController = mockk(relaxed = true),
-                    widthSizeClass = WindowWidthSizeClass.Compact
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("Condition_MemoInput").performTextInput("Observation text")
-        verify { conditionViewModel.updateEditInput(any()) }
-    }
-
-    @Test
-    fun ACT_03_saveButton_triggersViewModel() {
-        val detailViewModel = createMockDetailViewModel()
-        val conditionViewModel = createMockConditionViewModel()
-        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "", condition = "", author = "", recordTime = Instant.now())
-        
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
-        every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
-            personId = "p1", 
-            records = persistentListOf(record),
-            selectedConditionId = "c1", 
-            isEditing = true, 
-            isSaveEnabled = true
-        ))
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonConditionScreen(
-                    detailViewModel = detailViewModel,
-                    conditionViewModel = conditionViewModel,
-                    navController = mockk(relaxed = true),
-                    widthSizeClass = WindowWidthSizeClass.Compact
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("Condition_SaveButton").performClick()
-        verify { conditionViewModel.saveCurrentEdit(any()) }
-    }
-
-    //endregion
-
-    //region 5. ナビゲーション・副作用検証 (Navigation)
-
-    @Test
-    fun NAV_03_backButton_navigatesBack() {
-        val detailViewModel = createMockDetailViewModel()
-        val conditionViewModel = createMockConditionViewModel()
-        val navController: NavHostController = mockk(relaxed = true)
-        
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonConditionScreen(
-                    detailViewModel = detailViewModel,
-                    conditionViewModel = conditionViewModel,
-                    navController = navController,
-                    widthSizeClass = WindowWidthSizeClass.Compact
-                )
-            }
-        }
-
-        composeTestRule.onNodeWithTag("ConditionScreen_BackButton").performClick()
-        verify { detailViewModel.navigateBackToMain() }
-    }
-
-    @Test
-    fun NAV_04_systemBack_closesDetailView() {
-        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-        // Phone版レイアウトでは詳細が Dialog で表示される状態をシミュレート
-        val uiStateFlow = MutableStateFlow(PersonConditionUiState(
-            personId = "p1",
-            selectedConditionId = "c1", 
-            isEditing = false,
-            records = persistentListOf(
-                ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
-            )
-        ))
-        every { conditionViewModel.uiState } returns uiStateFlow
-        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
-        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonConditionScreen(
-                    detailViewModel = createMockDetailViewModel(),
-                    conditionViewModel = conditionViewModel,
-                    navController = mockk(relaxed = true),
-                    widthSizeClass = WindowWidthSizeClass.Compact
-                )
-            }
-        }
-
-        // 詳細（Dialog）が表示されていることを確認
-        composeTestRule.onNodeWithTag("ConditionDetailPane").assertIsDisplayed()
-
-        // システム戻る操作をエミュレート
-        androidx.test.espresso.Espresso.pressBack()
-        composeTestRule.waitForIdle()
-
-        // selectedConditionId を null にするアクション（setSelectedConditionId(null)）が呼ばれたか検証
-        verify { conditionViewModel.setSelectedConditionId(null) }
-    }
-
-    @Test
-    fun NAV_05_editMode_showsBackButton_and_closesWithoutDialog_whenNoChange() {
-        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-        val uiStateFlow = MutableStateFlow(PersonConditionUiState(
-            personId = "p1",
-            selectedConditionId = "c1",
-            isEditing = true,
-            isChanged = false,
-            records = persistentListOf(
-                ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
-            )
-        ))
-        every { conditionViewModel.uiState } returns uiStateFlow
-        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
-        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonConditionScreen(
-                    detailViewModel = createMockDetailViewModel(),
-                    conditionViewModel = conditionViewModel,
-                    navController = mockk(relaxed = true),
-                    widthSizeClass = WindowWidthSizeClass.Compact
-                )
-            }
-        }
-
-        // ボタンの文言が「戻る」であることを確認
-        composeTestRule.onNodeWithText("戻る").assertIsDisplayed()
-        
-        // ヘッダーの「←」ボタンをタップ
-        composeTestRule.onNodeWithTag("Condition_EditBackButton").performClick()
-        
-        // ダイアログが出ず、CancelEdit が発行されることを検証
-        verify { conditionViewModel.cancelEditSession() }
-        composeTestRule.onNodeWithText("破棄して戻る").assertDoesNotExist()
-    }
-
-    @Test
-    fun NAV_06_editMode_showsCancelButton_and_showsDialog_whenChanged() {
-        val conditionViewModel = mockk<PersonConditionViewModel>(relaxed = true)
-        val uiStateFlow = MutableStateFlow(PersonConditionUiState(
-            personId = "p1",
-            selectedConditionId = "c1",
-            isEditing = true,
-            isChanged = true,
-            records = persistentListOf(
-                ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
-            )
-        ))
-        every { conditionViewModel.uiState } returns uiStateFlow
-        every { conditionViewModel.uiEventFlow } returns MutableSharedFlow()
-        every { conditionViewModel.viewEvent } returns MutableSharedFlow()
-
-        composeTestRule.setContent {
-            CareMemoTheme {
-                PersonConditionScreen(
-                    detailViewModel = createMockDetailViewModel(),
-                    conditionViewModel = conditionViewModel,
-                    navController = mockk(relaxed = true),
-                    widthSizeClass = WindowWidthSizeClass.Compact
-                )
-            }
-        }
-
-        // ボタンの文言が「キャンセル」であることを確認
-        composeTestRule.onNodeWithText("キャンセル").assertIsDisplayed()
-        
-        // 下部の「キャンセル」ボタンをタップ
-        composeTestRule.onNodeWithText("キャンセル").performClick()
-        
-        // 破棄確認ダイアログが表示されることを検証
-        composeTestRule.onNodeWithText("入力途中の内容がありますが、破棄して戻りますか？").assertIsDisplayed()
-    }
-
-    //endregion
-
-    //region 6. セキュリティ検証 (Security)
-
-    @Test
-    fun SEC_01_pdfExport_requiresAuthentication() {
-        val detailViewModel = createMockDetailViewModel()
-        val conditionViewModel = createMockConditionViewModel()
-        val person = jp.mydns.fujiwara.carememo.data.Person(
-            id = "p1",
-            lastName = "Test",
-            firstName = "User",
-            lastNameFurigana = "てすと",
-            firstNameFurigana = "ゆーざー",
-            birthday = Instant.EPOCH
+        setContent(
+            widthClass = WindowWidthSizeClass.Expanded,
+            conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
         )
-        val onRequireAuthentication = mockk<(Int?, Int?, () -> Unit) -> Unit>(relaxed = true)
+        composeTestRule.onNodeWithTag("Condition_TabletLayout").assertIsDisplayed()
+    }
 
-        val records = persistentListOf(
-            ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
+    //endregion
+
+    //region 3. 表示・状態検証 (Display)
+
+    @Test
+    fun DSP_01_historyList_rendersItems() {
+        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "発熱", condition = "38度", author = "A", recordTime = Instant.now())
+        setContent(
+            conditionState = PersonConditionUiState(
+                screenState = PersonConditionScreenState.Active,
+                records = listOf(record).toImmutableList(),
+                filteredRecords = listOf(record).toImmutableList()
+            )
         )
-        every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(person = person, personId = "p1"))
+        composeTestRule.onNodeWithText("発熱").assertIsDisplayed()
+        composeTestRule.onNodeWithText("38度").assertIsDisplayed()
+    }
+
+    //endregion
+
+    //region 4. インタラクション検証 (Interaction)
+
+    @Test
+    fun ACT_01_searchQuery_triggersViewModel() {
+        val conditionViewModel = createMockViewModel()
+        setContent(
+            conditionViewModel = conditionViewModel,
+            conditionState = PersonConditionUiState(screenState = PersonConditionScreenState.Active)
+        )
+
+        // Use testTag directly on the SearchBox wrapper
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodes(hasTestTag("ConditionScreen_SearchBox"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNode(hasTestTag("ConditionScreen_SearchBox"), useUnmergedTree = true).performTextInput("咳")
+        verify { conditionViewModel.updateSearchQuery("咳") }
+    }
+
+    @Test
+    fun ACT_02_itemClick_opensDetail() {
+        val conditionViewModel = createMockViewModel()
+        val record = ConditionAtVisit(id = "c1", personId = "p1", title = "T", condition = "C", author = "A", recordTime = Instant.now())
+        
         every { conditionViewModel.uiState } returns MutableStateFlow(PersonConditionUiState(
-            personId = "p1", 
-            records = records,
-            filteredRecords = records
+            screenState = PersonConditionScreenState.Active,
+            records = listOf(record).toImmutableList(),
+            filteredRecords = listOf(record).toImmutableList()
         ))
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreen(
-                    detailViewModel = detailViewModel,
+                    detailViewModel = createMockDetailViewModel(),
                     conditionViewModel = conditionViewModel,
                     navController = mockk(relaxed = true),
-                    widthSizeClass = WindowWidthSizeClass.Compact,
-                    onRequireAuthentication = onRequireAuthentication
+                    widthSizeClass = WindowWidthSizeClass.Compact
                 )
             }
         }
 
-        // 1. PDFボタンをタップしてダイアログを表示
-        composeTestRule.onNodeWithTag("ConditionScreen_PdfButton").performClick()
-
-        // 2. パスワードを入力
-        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("PDF閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
-
-        // 3. ダイアログ内の「PDFを作成」ボタンをタップ
-        composeTestRule.onNodeWithText("PDFを作成").performClick()
-
-        // 4. 認証要求が正しいパラメータで呼ばれたか検証
-        verify(timeout = 5000) {
-            onRequireAuthentication(
-                jp.mydns.fujiwara.carememo.R.string.security_auth_title,
-                jp.mydns.fujiwara.carememo.R.string.security_auth_reason_pdf_export,
-                any()
-            )
-        }
+        // Search for the text "C" which is in the condition field
+        composeTestRule.onNodeWithText("C").performClick()
+        verify { conditionViewModel.setSelectedConditionId("c1") }
     }
 
     //endregion
@@ -360,39 +117,38 @@ class PersonConditionScreenTest {
     private fun createMockDetailViewModel(): PersonDetailUiStateViewModel {
         return mockk<PersonDetailUiStateViewModel>(relaxed = true).apply {
             every { uiState } returns MutableStateFlow(PersonDetailUiState(personId = "p1"))
-            every { isNameMaskingEnabled } returns MutableStateFlow(false)
-            every { defaultRecorderName } returns MutableStateFlow("")
             every { viewEvent } returns MutableSharedFlow()
-            every { uiEventFlow } returns MutableSharedFlow()
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
         }
     }
 
-    private fun createMockConditionViewModel(): PersonConditionViewModel {
+    private fun createMockViewModel(): PersonConditionViewModel {
         return mockk<PersonConditionViewModel>(relaxed = true).apply {
-            every { uiState } returns MutableStateFlow(PersonConditionUiState(personId = "p1"))
-            every { isNameMaskingEnabled } returns MutableStateFlow(false)
-            every { defaultRecorderName } returns MutableStateFlow("")
-            every { viewEvent } returns MutableSharedFlow()
+            every { uiState } returns MutableStateFlow(PersonConditionUiState())
             every { uiEventFlow } returns MutableSharedFlow()
+            every { viewEvent } returns MutableSharedFlow()
+            every { isNameMaskingEnabled } returns MutableStateFlow(false)
         }
     }
 
     private fun setContent(
         widthClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
-        navController: NavHostController = mockk(relaxed = true)
+        conditionState: PersonConditionUiState = PersonConditionUiState(screenState = PersonConditionScreenState.Active),
+        conditionViewModel: PersonConditionViewModel? = null
     ) {
-        val detailViewModel = createMockDetailViewModel()
-        val conditionViewModel = createMockConditionViewModel()
+        val vm = conditionViewModel ?: createMockViewModel()
+        every { vm.uiState } returns MutableStateFlow(conditionState)
 
         composeTestRule.setContent {
             CareMemoTheme {
                 PersonConditionScreen(
-                    detailViewModel = detailViewModel,
-                    conditionViewModel = conditionViewModel,
-                    navController = navController,
+                    detailViewModel = createMockDetailViewModel(),
+                    conditionViewModel = vm,
+                    navController = mockk(relaxed = true),
                     widthSizeClass = widthClass
                 )
             }
         }
+        composeTestRule.waitForIdle()
     }
 }

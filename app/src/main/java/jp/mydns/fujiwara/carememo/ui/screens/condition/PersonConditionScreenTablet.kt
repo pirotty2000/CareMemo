@@ -12,7 +12,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.*
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import jp.mydns.fujiwara.carememo.logic.feature.ConditionEditSession
+import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonConditionUiState
+import jp.mydns.fujiwara.carememo.ui.preview.MockData
+import jp.mydns.fujiwara.carememo.ui.preview.PersonConditionPreviewState
+import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
+import kotlinx.collections.immutable.toImmutableList
+import androidx.compose.runtime.*
 import jp.mydns.fujiwara.carememo.ui.components.common.CategorySelectorBar
 import jp.mydns.fujiwara.carememo.ui.components.common.PersonHeaderTitle
 import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
@@ -95,5 +104,29 @@ fun PersonConditionScreenTablet(
                 isAnyDialogOpen = isAnyDialogOpen
             )
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=1280dp,height=800dp,dpi=240")
+@Composable
+fun PersonConditionScreenTabletPreview(
+    @PreviewParameter(PersonConditionPreviewParameterProvider::class) state: PersonConditionPreviewState
+) {
+    CareMemoTheme {
+        PersonConditionScreenTablet(
+            uiState = PersonConditionUiState(
+                screenState = if (state.isLoading) PersonConditionScreenState.Loading else PersonConditionScreenState.Active,
+                records = state.records.toImmutableList(),
+                editSession = ConditionEditSession(
+                    selectedConditionId = state.selectedRecordId
+                )
+            ),
+            currentPerson = MockData.person,
+            isNameMaskingEnabled = false,
+            personCategorySummary = null,
+            isAnyDialogOpen = false,
+            onAction = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

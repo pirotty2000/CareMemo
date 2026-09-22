@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.NavHostController
 import io.mockk.*
 import jp.mydns.fujiwara.carememo.R
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputScreenState
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputSession
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputUiState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
@@ -20,8 +22,6 @@ import org.junit.Test
 
 /**
  * Instrumented Test: BatchInputScreen (SCR-PH-002)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-002_BatchInputScreen.md に準拠
  */
 class BatchInputScreenTest {
 
@@ -34,7 +34,7 @@ class BatchInputScreenTest {
     private val viewEventFlow = MutableSharedFlow<BatchInputViewEvent>(extraBufferCapacity = 1)
     private val uiStateFlow = MutableStateFlow(BatchInputUiState(
         personId = "u1",
-        currentPersonName = "山田 太郎"
+        screenState = BatchInputScreenState.Active
     ))
 
     @Before
@@ -71,11 +71,11 @@ class BatchInputScreenTest {
 
     @Test
     fun DSP_02_saveButton_reflectsValidity() {
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = true)
+        uiStateFlow.value = uiStateFlow.value.copy(input = BatchInputSession(isValid = true))
         setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsEnabled()
 
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = false)
+        uiStateFlow.value = uiStateFlow.value.copy(input = BatchInputSession(isValid = false))
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().assertIsNotEnabled()
     }
@@ -100,7 +100,7 @@ class BatchInputScreenTest {
 
     @Test
     fun ACT_03_saveButton_callsViewModel() {
-        uiStateFlow.value = uiStateFlow.value.copy(isValid = true)
+        uiStateFlow.value = uiStateFlow.value.copy(input = BatchInputSession(isValid = true))
         setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_SaveButton").performScrollTo().performClick()
         verify { viewModel.saveBatch() }
@@ -108,7 +108,7 @@ class BatchInputScreenTest {
 
     @Test
     fun ACT_04_cancelWithChanges_showsDiscardDialog() {
-        uiStateFlow.value = uiStateFlow.value.copy(isChanged = true)
+        uiStateFlow.value = uiStateFlow.value.copy(input = BatchInputSession(isChanged = true))
         setContent()
         composeTestRule.onNodeWithTag("BatchInputScreen_CancelButton").performScrollTo().performClick()
         composeTestRule.onNodeWithText("変更の破棄", substring = true).assertIsDisplayed()
@@ -130,7 +130,6 @@ class BatchInputScreenTest {
     fun EVT_02_duplicateError_displaysDialog() {
         setContent()
         
-        // Simulate duplicate error for Height/Weight
         val categoryName = "__RES__" + R.string.common_category_height_weight
         uiEventFlow.tryEmit(BaseUiStateViewModel.UiEvent.ShowErrorDialogRes(
             R.string.common_error_title_save,
@@ -140,9 +139,7 @@ class BatchInputScreenTest {
         
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("保存エラー").assertIsDisplayed()
-        // Check if category name is resolved in implementation (it should be according to BatchInputScreen logic)
         val expectedCategoryName = composeTestRule.activity.getString(R.string.common_category_height_weight)
-        // Use hasAnyAncestor(isDialog()) to find the text inside the error dialog
         composeTestRule.onNode(hasText(expectedCategoryName, substring = true) and hasAnyAncestor(isDialog())).assertIsDisplayed()
     }
 
@@ -153,12 +150,13 @@ class BatchInputScreenTest {
     @Test
     fun FBK_01_outOfRange_showsErrorMessage() {
         uiStateFlow.value = uiStateFlow.value.copy(
-            fieldErrors = mapOf("bodyTemperature" to R.string.health_err_range_format),
-            fieldErrorArgs = mapOf("bodyTemperature" to listOf("34.0", "43.0"))
+            input = BatchInputSession(
+                fieldErrors = mapOf("bodyTemperature" to R.string.health_err_range_format),
+                fieldErrorArgs = mapOf("bodyTemperature" to listOf("34.0", "43.0"))
+            )
         )
         setContent()
         
-        // 範囲外メッセージが表示されていること
         composeTestRule.onNodeWithText("34.0 〜 43.0 の範囲で入力してください").assertIsDisplayed()
     }
 

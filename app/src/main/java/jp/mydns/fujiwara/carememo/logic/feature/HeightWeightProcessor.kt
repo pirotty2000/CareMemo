@@ -17,20 +17,20 @@ object HeightWeightProcessor : HealthCategoryProcessor {
     override val categoryNameResId: Int = R.string.common_category_height_weight
     override val outOfRangeErrorResId: Int = R.string.common_error_out_of_range_height_weight
 
-    override fun isEmpty(state: BatchInputUiState): Boolean {
-        return state.height.isBlank() && state.weight.isBlank()
+    override fun isEmpty(input: BatchInputSession): Boolean {
+        return input.height.isBlank() && input.weight.isBlank()
     }
 
-    override fun validate(state: BatchInputUiState): HealthInputValidationResult {
-        return HealthLogic.validateHeightAndWeight(state.height, state.weight)
+    override fun validate(input: BatchInputSession): HealthInputValidationResult {
+        return HealthLogic.validateHeightAndWeight(input.height, input.weight)
     }
 
-    override fun createEntity(personId: String, time: Instant, state: BatchInputUiState): Any? {
-        if (isEmpty(state)) return null
+    override fun createEntity(personId: String, time: Instant, input: BatchInputSession): Any? {
+        if (isEmpty(input)) return null
         return HeightAndWeight(
             personId = personId,
-            height = state.height.toDoubleOrNull(),
-            weight = state.weight.toDoubleOrNull(),
+            height = input.height.toDoubleOrNull(),
+            weight = input.weight.toDoubleOrNull(),
             recordTime = time
         )
     }

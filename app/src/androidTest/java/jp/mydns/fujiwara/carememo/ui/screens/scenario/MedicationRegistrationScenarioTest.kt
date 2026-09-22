@@ -22,8 +22,6 @@ import java.time.temporal.TemporalAdjusters
 
 /**
  * UI Scenario Test: 服薬管理登録フロー (SCN-REG-06)
- *
- * 仕様書: doc/test/scenario/TEST_SCENARIO_DataRegistrationFlow.md に準拠
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class MedicationRegistrationScenarioTest {
@@ -38,14 +36,10 @@ class MedicationRegistrationScenarioTest {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as CareMemoApplication
 
         runBlocking {
-            // 1. マスキング設定を無効化
             appContext.userSettingsRepository.setNameMaskingEnabled(false)
-
-            // 2. テスト用データのリストア
             ScenarioTestDataLoader.restoreFromBackup()
         }
 
-        // 3. セキュリティロックをバイパスして起動
         val intent = Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java).apply {
             putExtra("IS_TEST_MODE", true)
         }
@@ -57,60 +51,63 @@ class MedicationRegistrationScenarioTest {
      */
     @Test
     fun SCN_01_REG_AddMedicationFlow() {
-        // 実行時の「今月の第1土曜日」を動的に計算する
         val firstSaturday = LocalDate.now()
             .withDayOfMonth(1)
             .with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY))
-        val targetDate = firstSaturday.toString() // "yyyy-MM-dd" 形式
+        val targetDate = firstSaturday.toString()
 
-        // 1. 利用者を選択して服薬管理画面へ遷移
-        composeTestRule.waitUntil(30000) {
+        composeTestRule.waitUntil(40000) {
             composeTestRule.onAllNodesWithText(targetPersonName).fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNodeWithText(targetPersonName).performClick()
+        
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithTag("CategorySelectionSheet_Button_MEDICATION").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithTag("CategorySelectionSheet_Button_MEDICATION").performClick()
 
-        // 2. 計算した第1土曜日のセルをタップ
-        composeTestRule.waitUntil(20000) {
+        composeTestRule.waitUntil(30000) {
             composeTestRule.onAllNodesWithTag("Medication_DayCell_$targetDate").fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNodeWithTag("Medication_DayCell_$targetDate").performClick()
 
-        // 3. ダイアログでの入力
-        // 朝：未
-        // 昼：介助
-        // 夕：服用
+        // 朝：未 (status 0)
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_未", useUnmergedTree = true)[0].performClick()
         
-        // 朝の行の「未」をタップ
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_未").onFirst().performClick()
+        // 昼：介助 (status 1)
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_介助", useUnmergedTree = true)[1].performClick()
         
-        // 昼の行の「介助」をタップ (2番目の「介助」ボタン)
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_介助")[1].performClick()
-        
-        // 夕の行の「服用」をタップ (3番目の「服用」ボタン)
-        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用")[2].performClick()
+        // 夕：服用 (status 2)
+        composeTestRule.onAllNodesWithTag("Medication_StatusChip_服用", useUnmergedTree = true)[2].performClick()
 
-        // 入力により日時フィールドが表示されるのを待ち、キーボードを閉じる
-        composeTestRule.waitForIdle()
         Espresso.closeSoftKeyboard()
+        composeTestRule.waitForIdle()
 
         // 4. 保存
         composeTestRule.onNodeWithTag("Medication_SaveButton").performClick()
 
-        // 保存成功スナックバーの出現と消失を待つ (安定化のため)
-        composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithText("服薬状況を更新しました").fetchSemanticsNodes().isNotEmpty()
-        }
+        // Wait for dialog to close
         composeTestRule.waitUntil(15000) {
-            composeTestRule.onAllNodesWithText("服薬状況を更新しました").fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodesWithTag("Medication_SaveButton").fetchSemanticsNodes().isEmpty()
         }
 
         // 5. カレンダー上での反映確認
-        // アイコン内のテキストは階層が深いため、useUnmergedTree = true を指定して確実に検出します
+        // 安定化のため、セル自体が表示されるまで待つ
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodes(hasTestTag("Medication_DayCell_$targetDate"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // セルまでスクロール
+        composeTestRule.onNode(hasTestTag("Medication_DayCell_$targetDate"), useUnmergedTree = true).performScrollTo()
+
         val cellMatcher = hasAnyAncestor(hasTestTag("Medication_DayCell_$targetDate"))
         
-        composeTestRule.onNode(hasText("×").and(cellMatcher), useUnmergedTree = true).assertExists()
-        composeTestRule.onNode(hasText("昼").and(cellMatcher), useUnmergedTree = true).assertExists()
-        composeTestRule.onNode(hasText("夕").and(cellMatcher), useUnmergedTree = true).assertExists()
+        // Wait for the symbols to appear in the cell
+        composeTestRule.waitUntil(15000) {
+            composeTestRule.onAllNodes(hasText("×", substring = true).and(cellMatcher), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        
+        composeTestRule.onNode(hasText("×", substring = true).and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("昼", substring = true).and(cellMatcher), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(hasText("夕", substring = true).and(cellMatcher), useUnmergedTree = true).assertExists()
     }
 }

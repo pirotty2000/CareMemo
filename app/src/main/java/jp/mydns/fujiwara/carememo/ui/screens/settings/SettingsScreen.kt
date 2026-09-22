@@ -40,6 +40,8 @@ import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.DeleteOrRestorePersonViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.SettingsViewModel
 import jp.mydns.fujiwara.carememo.viewmodel.BaseUiStateViewModel
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsOperation
+import jp.mydns.fujiwara.carememo.logic.feature.SettingsScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsUiState
 import jp.mydns.fujiwara.carememo.logic.feature.SettingsViewEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,20 +109,6 @@ sealed interface SettingsUiAction {
  *
  * 【役割】
  * アプリケーションの設定・管理機能を統括する最上位 Screen コンポーネントです。
- * 表示設定、セキュリティ、データ管理、および開発者向けツールに至るまで、アプリの振る舞いをカスタマイズする全設定項目を集約します。
- *
- * 【全体像：設定画面階層（Settings Hierarchy）】
- *
- * ■ SettingsScreen (★本コンポーネント：全体制御・ダイアログ管理)
- * │
- * └─ [1] SettingsScreenContent (表示層：各セクションの配置)
- *      ├─ DisplayAndRecordingSection (表示・記録設定)
- *      ├─ UserManagementSection (利用者管理) ➔ [ 子画面 ] DeleteOrRestorePerson
- *      ├─ DataManagementSection (データ管理) ➔ [ 子画面 ] UnassignedPhotoManagement
- *      ├─ SecuritySection (セキュリティ)
- *      ├─ ThemeSection (テーマ設定)
- *      ├─ OtherSection (その他) ➔ バージョン情報
- *      └─ ResetSection (開発者用：条件付き表示) ➔ [ 子画面 ] AuditLogScreen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,13 +127,12 @@ fun SettingsScreen(
     // 設定変更があったかどうかの内部状態
     var isChangedByMe by rememberSaveable { mutableStateOf(false) }
 
-    // 子画面（利用者管理 S-003）からの更新要求を監視
+    // 子画面からの更新要求を監視
     val childRefreshRequested by remember(navController.currentBackStackEntry) {
         navController.currentBackStackEntry?.savedStateHandle?.getStateFlow("refresh_needed", false)
             ?: MutableStateFlow(false)
     }.collectAsStateWithLifecycle()
 
-    // 戻る際の処理（親画面への通知準備）
     val performBack = {
         if (isChangedByMe || childRefreshRequested) {
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_needed", true)
@@ -644,10 +631,6 @@ fun SettingsScreen(
 
 /**
  * Component：SettingsScreenContent
- *
- * 【役割】
- * 設定画面の UI レイアウト本体を構築します。
- * 各設定項目（表示、ユーザー、データ、セキュリティ、テーマ等）をセクションごとに整理して表示します。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -682,63 +665,81 @@ fun SettingsScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .imePadding() // キーボード回避
+                .imePadding()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .navigationBarsPadding()
-                    .padding(16.dp)
-                    .testTag("Settings_ScrollColumn"),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                DisplayAndRecordingSection(
-                    uiState = uiState,
-                    onAction = onAction
-                )
-
-                UserManagementSection(
-                    uiState = uiState,
-                    onAction = onAction
-                )
-
-                DataManagementSection(
-                    uiState = uiState,
-                    onAction = onAction,
-                    isPasswordValid = isPasswordValid,
-                    isPasswordVisible = isPasswordVisible
-                )
-
-                SecuritySection(
-                    uiState = uiState,
-                    onAction = onAction
-                )
-
-                ThemeSection(
-                    uiState = uiState,
-                    onAction = onAction
-                )
-
-                OtherSection(
-                    onAction = onAction
-                )
-
-                if (uiState.isDeveloperModeEnabled) {
-                    ResetSection(
-                        uiState = uiState,
-                        onAction = onAction
+            when (uiState.screenState) {
+                is SettingsScreenState.Loading -> {
+                    LoadingScreen(modifier = Modifier.fillMaxSize().testTag("Settings_Loading"))
+                }
+                is SettingsScreenState.Error -> {
+                    ErrorState(
+                        message = stringResource(R.string.common_error_load_failed),
+                        onRetry = { /* viewModel.startInitialSettingsSync() */ }
                     )
                 }
+                is SettingsScreenState.Active -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState)
+                            .navigationBarsPadding()
+                            .padding(16.dp)
+                            .testTag("Settings_ScrollColumn"),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        DisplayAndRecordingSection(
+                            uiState = uiState,
+                            onAction = onAction
+                        )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                        UserManagementSection(
+                            uiState = uiState,
+                            onAction = onAction
+                        )
+
+                        DataManagementSection(
+                            uiState = uiState,
+                            onAction = onAction,
+                            isPasswordValid = isPasswordValid,
+                            isPasswordVisible = isPasswordVisible
+                        )
+
+                        SecuritySection(
+                            uiState = uiState,
+                            onAction = onAction
+                        )
+
+                        ThemeSection(
+                            uiState = uiState,
+                            onAction = onAction
+                        )
+
+                        OtherSection(
+                            onAction = onAction
+                        )
+
+                        if (uiState.isDeveloperModeEnabled) {
+                            ResetSection(
+                                uiState = uiState,
+                                onAction = onAction
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
+                }
             }
-            
             VerticalScrollIndicator(scrollState = scrollState)
         }
     }
 
-    if (uiState.isProcessing) {
+    if (uiState.operation != SettingsOperation.Idle) {
+        val operationTitle = when (uiState.operation) {
+            SettingsOperation.Exporting -> stringResource(R.string.common_exporting)
+            SettingsOperation.Importing -> stringResource(R.string.common_importing)
+            else -> stringResource(R.string.common_processing)
+        }
+
         AppDialog(
             onDismissRequest = { },
             modifier = Modifier.testTag("Settings_ProcessingDialog"),
@@ -746,7 +747,7 @@ fun SettingsScreenContent(
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false
             ),
-            title = { Text(stringResource(R.string.common_loading)) },
+            title = { Text(operationTitle) },
             text = {
                 AppDialogContent {
                     Column(
@@ -1118,6 +1119,7 @@ fun SettingsScreenPreview() {
     CareMemoTheme {
         SettingsScreenContent(
             uiState = SettingsUiState(
+                screenState = SettingsScreenState.Active,
                 isNameMaskingEnabled = false,
                 defaultRecorderName = "記録者名",
                 endedUserCount = 2,
@@ -1128,7 +1130,7 @@ fun SettingsScreenPreview() {
                 auditLogRetentionDays = 30,
                 auditLogCount = 120,
                 isDeveloperModeEnabled = true,
-                isProcessing = false,
+                operation = SettingsOperation.Idle,
                 processingProgress = 0,
             ),
             onAction = {},

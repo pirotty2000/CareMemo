@@ -127,6 +127,7 @@ class BirthdayInputState(
 fun BirthdayInputFields(
     state: BirthdayInputState,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
     onFocusChanged: (String, Boolean) -> Unit = { _, _ -> }
@@ -149,14 +150,15 @@ fun BirthdayInputFields(
         ) {
             // --- 元号選択ドロップダウン ---
             ExposedDropdownMenuBox(
-                expanded = eraExpanded,
-                onExpandedChange = { eraExpanded = !eraExpanded },
+                expanded = eraExpanded && enabled,
+                onExpandedChange = { if (enabled) eraExpanded = !eraExpanded },
                 modifier = Modifier.weight(1.2f)
             ) {
                 AppCompactTextField(
                     value = stringResource(BirthEraDisplayMapper.getDisplayNameRes(state.era.value)),
                     onValueChange = {},
                     readOnly = true,
+                    enabled = enabled,
                     isError = isError,
                     suffix = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = eraExpanded)
@@ -166,7 +168,7 @@ fun BirthdayInputFields(
                         .testTag("PersonEdit_EraSelector")
                 )
                 ExposedDropdownMenu(
-                    expanded = eraExpanded,
+                    expanded = eraExpanded && enabled,
                     onDismissRequest = { eraExpanded = false }
                 ) {
                     BirthEra.entries.forEach { e ->
@@ -191,6 +193,7 @@ fun BirthdayInputFields(
             AppCompactTextField(
                 value = state.year.value,
                 onValueChange = { state.year.value = it },
+                enabled = enabled,
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthYear"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = if (state.era.value == BirthEra.AD) 4 else 2,
@@ -209,6 +212,7 @@ fun BirthdayInputFields(
             AppCompactTextField(
                 value = state.month.value,
                 onValueChange = { state.month.value = it },
+                enabled = enabled,
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthMonth"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = 2,
@@ -221,6 +225,7 @@ fun BirthdayInputFields(
             AppCompactTextField(
                 value = state.day.value,
                 onValueChange = { state.day.value = it },
+                enabled = enabled,
                 modifier = Modifier.weight(1f).testTag("PersonEdit_BirthDay"),
                 type = AppTextFieldType.INTEGER,
                 maxLength = 2,

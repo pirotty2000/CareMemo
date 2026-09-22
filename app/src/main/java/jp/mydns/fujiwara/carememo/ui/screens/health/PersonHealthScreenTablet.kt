@@ -40,6 +40,8 @@ import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditSession
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
 import jp.mydns.fujiwara.carememo.ui.components.base.EmptyState
@@ -76,6 +78,8 @@ fun PersonHealthScreenTablet(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
+    val session = uiState.editSession
+
     Scaffold(
         modifier = modifier.testTag("HealthScreen_TabletContent"),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -131,7 +135,7 @@ fun PersonHealthScreenTablet(
                 onDismiss = { recordToDelete = null },
                 onDelete = {
                     recordToDelete?.let {
-                        if (uiState.selectedRecordId == it.id) onAction(PersonHealthUiAction.SelectedRecordIdChanged(null))
+                        if (session.selectedRecordId == it.id) onAction(PersonHealthUiAction.SelectedRecordIdChanged(null))
                         onAction(PersonHealthUiAction.DeleteRecord(it))
                     }
                     recordToDelete = null
@@ -145,7 +149,10 @@ fun PersonHealthScreenTablet(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if ((uiState.records.isEmpty() && uiState.selectedRecordId == null && !uiState.isLoading)) {
+            val isEmpty = uiState.screenState is PersonHealthScreenState.Active && 
+                         uiState.records.isEmpty() && session.selectedRecordId == null
+
+            if (isEmpty) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         message = stringResource(R.string.p_detail_empty_records),
@@ -175,8 +182,8 @@ fun PersonHealthScreenTabletPreview(
             uiState = PersonHealthUiState(
                 currentCategory = state.category,
                 records = state.records,
-                isLoading = state.isLoading,
-                selectedRecordId = state.selectedRecordId
+                screenState = if (state.isLoading) PersonHealthScreenState.Loading else PersonHealthScreenState.Active,
+                editSession = HealthEditSession(selectedRecordId = state.selectedRecordId)
             ),
             currentPerson = state.person,
             personCategorySummary = state.summary,

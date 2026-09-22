@@ -7,7 +7,9 @@ import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.ConditionRepository
 import jp.mydns.fujiwara.carememo.data.repository.UserSettingsRepository
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
+import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoType
+import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoViewEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -63,11 +65,10 @@ class UnassignedPhotoViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
             val loaded = expectMostRecentItem()
-            assertFalse(loaded.isLoading)
+            assertTrue(loaded.screenState is UnassignedPhotoScreenState.Active)
             assertTrue(loaded.unassignedPhotos.isEmpty())
         }
     }

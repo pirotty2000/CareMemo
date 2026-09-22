@@ -8,7 +8,9 @@ import io.mockk.*
 import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HeightAndWeight
 import jp.mydns.fujiwara.carememo.data.AppSpecifications
+import jp.mydns.fujiwara.carememo.logic.feature.HealthEditSession
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
@@ -23,8 +25,6 @@ import java.time.Instant
 
 /**
  * Instrumented Test: PersonHealthScreen (SCR-PH-001)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-001_PersonHealthScreen.md に準拠
  */
 class PersonHealthScreenTest {
 
@@ -56,6 +56,7 @@ class PersonHealthScreenTest {
         val record = HeightAndWeight(id = "h1", personId = "p1", height = 170.0, weight = 65.0, recordTime = Instant.now())
         setContent(
             healthState = PersonHealthUiState(
+                screenState = PersonHealthScreenState.Active,
                 currentCategory = Category.HEIGHT_AND_WEIGHT,
                 records = listOf(record).toImmutableList(),
                 preferredShowHistory = true
@@ -69,7 +70,11 @@ class PersonHealthScreenTest {
     @Test
     fun CPN_03_emptyState_isDisplayed_whenNoRecords() {
         setContent(
-            healthState = PersonHealthUiState(records = emptyList<jp.mydns.fujiwara.carememo.data.HistoryRecord>().toImmutableList(), preferredShowHistory = true)
+            healthState = PersonHealthUiState(
+                screenState = PersonHealthScreenState.Active,
+                records = emptyList<jp.mydns.fujiwara.carememo.data.HistoryRecord>().toImmutableList(), 
+                preferredShowHistory = true
+            )
         )
         composeTestRule.onNodeWithText("記録がありません", substring = true).assertIsDisplayed()
     }
@@ -87,6 +92,7 @@ class PersonHealthScreenTest {
         val record = HeightAndWeight(id = "h1", personId = "p1", height = 170.0, weight = 60.0, recordTime = Instant.now())
         
         every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(
+            screenState = PersonHealthScreenState.Active,
             preferredShowHistory = true,
             records = persistentListOf(record)
         ))
@@ -115,7 +121,10 @@ class PersonHealthScreenTest {
         
         // Set state to editing with valid input
         every { healthViewModel.uiState } returns MutableStateFlow(
-            PersonHealthUiState(selectedRecordId = newId, isEditing = true, isSaveEnabled = true)
+            PersonHealthUiState(
+                screenState = PersonHealthScreenState.Active,
+                editSession = HealthEditSession(selectedRecordId = newId, isEditing = true, isSaveEnabled = true)
+            )
         )
 
         composeTestRule.setContent {
@@ -144,7 +153,10 @@ class PersonHealthScreenTest {
         val healthViewModel = createMockHealthViewModel()
         
         // 確実に back が呼ばれる状態にする (編集モードではない状態)
-        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(selectedRecordId = null))
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(
+            screenState = PersonHealthScreenState.Active,
+            editSession = HealthEditSession(selectedRecordId = null)
+        ))
 
         composeTestRule.setContent {
             CareMemoTheme {
@@ -182,15 +194,13 @@ class PersonHealthScreenTest {
 
         // PDFダイアログが表示される状態にする
         every { detailViewModel.uiState } returns MutableStateFlow(PersonDetailUiState(person = person))
-        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(records = persistentListOf()))
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(
+            screenState = PersonHealthScreenState.Active,
+            records = persistentListOf()
+        ))
 
         composeTestRule.setContent {
             CareMemoTheme {
-                // state variable showPdfSettingsDialog is internal to PersonHealthScreen, 
-                // but we can trigger it by clicking the PDF button if we provide a mock that handles it.
-                // However, the simplest way is to test PdfExportActionHandler directly if it's exported,
-                // but here we test via Screen.
-                
                 PersonHealthScreen(
                     detailViewModel = detailViewModel,
                     healthViewModel = healthViewModel,
@@ -205,10 +215,10 @@ class PersonHealthScreenTest {
         composeTestRule.onNodeWithTag("HealthScreen_PdfButton").performClick()
 
         // 2. パスワードを入力
-        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("PDF閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
+        composeTestRule.onNode(hasSetTextAction() and hasAnyChild(hasText("閲覧用パスワード", substring = true)), useUnmergedTree = true).performTextInput("123456")
 
         // 3. ダイアログ内の「PDFを作成」ボタンをタップ
-        composeTestRule.onNodeWithText("PDFを作成").performClick()
+        composeTestRule.onNodeWithText("PDFを作成", substring = true).performClick()
 
         // 4. 認証要求が正しいパラメータで呼ばれたか検証
         verify(timeout = 5000) {

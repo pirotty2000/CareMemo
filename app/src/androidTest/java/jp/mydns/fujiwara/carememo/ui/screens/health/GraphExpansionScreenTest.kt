@@ -12,6 +12,7 @@ import jp.mydns.fujiwara.carememo.data.Category
 import jp.mydns.fujiwara.carememo.data.HistoryRecord
 import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.logic.feature.PersonDetailUiState
+import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.PersonHealthUiState
 import jp.mydns.fujiwara.carememo.ui.theme.CareMemoTheme
 import jp.mydns.fujiwara.carememo.viewmodel.PersonDetailUiStateViewModel
@@ -26,8 +27,6 @@ import java.time.Instant
 
 /**
  * Instrumented Test: GraphExpansionScreen (SCR-PH-003)
- * 
- * 仕様書: doc/test/screen/TEST_SPEC_SCR-PH-003_GraphExpansionScreen.md に準拠
  */
 class GraphExpansionScreenTest {
 
@@ -54,18 +53,18 @@ class GraphExpansionScreenTest {
             PersonDetailUiState(person = testPerson, personId = "u1", currentCategory = Category.BP_AND_PULSE)
         )
         every { detailViewModel.isNameMaskingEnabled } returns MutableStateFlow(false)
-        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(personId = "u1"))
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(personId = "u1", screenState = PersonHealthScreenState.Active))
         every { healthViewModel.getHealthRecords(any()) } returns MutableStateFlow(mockRecords.toImmutableList())
         every { healthViewModel.viewEvent } returns MutableSharedFlow()
         every { healthViewModel.uiEventFlow } returns MutableSharedFlow()
     }
 
     private fun setContent(
-        isLoading: Boolean = false,
+        screenState: PersonHealthScreenState = PersonHealthScreenState.Active,
         records: List<HistoryRecord> = mockRecords
     ) {
         every { healthViewModel.getHealthRecords(any()) } returns MutableStateFlow(records.toImmutableList())
-        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(isLoading = isLoading, personId = "u1"))
+        every { healthViewModel.uiState } returns MutableStateFlow(PersonHealthUiState(screenState = screenState, personId = "u1"))
 
         composeTestRule.setContent {
             val context = LocalContext.current
@@ -111,7 +110,7 @@ class GraphExpansionScreenTest {
 
     @Test
     fun DSP_05_loadingIndicator_isDisplayed() {
-        setContent(isLoading = true, records = emptyList())
+        setContent(screenState = PersonHealthScreenState.Loading, records = emptyList())
         composeTestRule.onNodeWithTag("GraphExpansion_Loading").assertIsDisplayed()
     }
 
@@ -121,8 +120,6 @@ class GraphExpansionScreenTest {
 
     @Test
     fun ACT_01_graphList_isScrollable() {
-        // Mock multiple graphs (Category.BP_AND_PULSE has 2 graphs: Vital and BodyTemp usually, 
-        // depending on HealthChartHelper implementation)
         setContent()
         val list = composeTestRule.onNodeWithTag("GraphExpansion_GraphList")
         list.assert(hasScrollAction())

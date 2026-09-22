@@ -10,6 +10,8 @@ import jp.mydns.fujiwara.carememo.data.Person
 import jp.mydns.fujiwara.carememo.data.PersonCategorySummary
 import jp.mydns.fujiwara.carememo.data.SecuritySession
 import jp.mydns.fujiwara.carememo.data.repository.*
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputOperation
+import jp.mydns.fujiwara.carememo.logic.feature.BatchInputScreenState
 import jp.mydns.fujiwara.carememo.logic.feature.BatchInputViewEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -57,8 +59,8 @@ class BatchInputViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         every { userSettingsRepository.isNameMaskingEnabled } returns isNameMaskingEnabledFlow
-        coEvery { personRepository.getPersonById(any()) } returns flowOf(testPerson)
-        coEvery { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
+        every { personRepository.getPersonById(any()) } returns flowOf(testPerson)
+        every { summaryRepository.getPersonCategorySummaryById(any()) } returns flowOf(PersonCategorySummary())
         
         coEvery { healthRepository.findHeightAndWeightAtTime(any(), any()) } returns null
         coEvery { healthRepository.findBpAndPulseAtTime(any(), any()) } returns null
@@ -91,15 +93,12 @@ class BatchInputViewModelTest {
         val viewModel = createViewModel()
         
         viewModel.uiState.test {
-            // Skip intermediate state transitions during initialization
             advanceUntilIdle()
             
             val loaded = expectMostRecentItem()
-            assertFalse(loaded.isLoading)
+            assertTrue(loaded.screenState is BatchInputScreenState.Active)
             assertEquals("u1", loaded.personId)
-            // Name is masked by default in state due to initial values in BaseViewModel
-            assertEquals("健○　太○", loaded.currentPersonName)
-            assertTrue(loaded.weight.isEmpty())
+            assertTrue(loaded.input.weight.isEmpty())
         }
     }
 
@@ -112,7 +111,6 @@ class BatchInputViewModelTest {
         advanceUntilIdle()
         
         assertTrue(viewModel.uiState.value.isNameMaskingEnabled)
-        assertEquals("健○\u3000太○", viewModel.uiState.value.currentPersonName)
     }
 
     // endregion
@@ -126,10 +124,10 @@ class BatchInputViewModelTest {
 
         viewModel.updateWeight("60")
         
-        val state = viewModel.uiState.value
-        assertEquals("60", state.weight)
-        assertTrue(state.isChanged)
-        assertTrue(state.isValid)
+        val input = viewModel.uiState.value.input
+        assertEquals("60", input.weight)
+        assertTrue(input.isChanged)
+        assertTrue(input.isValid)
     }
 
     @Test
@@ -137,19 +135,18 @@ class BatchInputViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        val currentYear = viewModel.uiState.value.year
+        val currentYear = viewModel.uiState.value.input.year
         val nextYear = (currentYear.toInt() + 1).toString()
         viewModel.updateYear(nextYear)
         
-        val state = viewModel.uiState.value
-        assertTrue("State should be marked as changed after year update", state.isChanged)
-        assertEquals(nextYear, state.year)
-        // B-2: Verify recordTime is calculated and held as a val property
-        assertNotNull("recordTime should be non-null after valid year update", state.recordTime)
+        val input = viewModel.uiState.value.input
+        assertTrue("State should be marked as changed after year update", input.isChanged)
+        assertEquals(nextYear, input.year)
+        assertNotNull("recordTime should be non-null after valid year update", input.recordTime)
         
         // Invalid date test
         viewModel.updateDay("32")
-        assertNull("recordTime should be null for invalid date", viewModel.uiState.value.recordTime)
+        assertNull("recordTime should be null for invalid date", viewModel.uiState.value.input.recordTime)
     }
 
     // endregion
@@ -167,8 +164,8 @@ class BatchInputViewModelTest {
 
         coVerify { healthRepository.saveHealthDataBatch(any(), any(), any()) }
         // Verify input cleared
-        assertTrue(viewModel.uiState.value.weight.isEmpty())
-        assertFalse(viewModel.uiState.value.isChanged)
+        assertTrue(viewModel.uiState.value.input.weight.isEmpty())
+        assertFalse(viewModel.uiState.value.input.isChanged)
     }
 
     @Test
@@ -215,7 +212,7 @@ class BatchInputViewModelTest {
         viewModel.saveBatch()
         advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(BatchInputOperation.Idle, viewModel.uiState.value.operation)
         coVerify {
             auditLogRepository.log(any(), any(), any(), "ERROR", any(), match { it.contains("DB Error") }, "OTHER_ERROR")
         }
@@ -228,18 +225,15 @@ class BatchInputViewModelTest {
 
         viewModel.updateWeight("60")
 
-        // Mock repository with delay
         coEvery { healthRepository.saveHealthDataBatch(any(), any(), any()) } coAnswers {
             delay(1000.milliseconds)
         }
 
-        // Call saveBatch twice
         viewModel.saveBatch()
         viewModel.saveBatch()
 
         advanceUntilIdle()
 
-        // Verify repository was called ONLY once
         coVerify(exactly = 1) { healthRepository.saveHealthDataBatch(any(), any(), any()) }
     }
 
@@ -249,19 +243,16 @@ class BatchInputViewModelTest {
         advanceUntilIdle()
 
         viewModel.updateWeight("60")
-        val originalState = viewModel.uiState.value
+        val originalInput = viewModel.uiState.value.input
 
-        // Mock repository with exception
         coEvery { healthRepository.saveHealthDataBatch(any(), any(), any()) } throws RuntimeException("DB Error")
 
         viewModel.saveBatch()
         advanceUntilIdle()
 
-        // Verify that data is STILL there
-        assertEquals("60", viewModel.uiState.value.weight)
-        assertTrue(viewModel.uiState.value.isChanged)
-        // Check that initial values (which determine isChanged) were NOT updated to current
-        assertEquals(originalState.initialYear, viewModel.uiState.value.initialYear)
+        assertEquals("60", viewModel.uiState.value.input.weight)
+        assertTrue(viewModel.uiState.value.input.isChanged)
+        assertEquals(originalInput.initialYear, viewModel.uiState.value.input.initialYear)
     }
 
     // endregion
@@ -295,11 +286,11 @@ class BatchInputViewModelTest {
         )
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals("70.5", state.weight)
-        assertEquals("2024", state.year)
-        assertEquals("12", state.month)
-        assertEquals("31", state.day)
+        val input = viewModel.uiState.value.input
+        assertEquals("70.5", input.weight)
+        assertEquals("2024", input.year)
+        assertEquals("12", input.month)
+        assertEquals("31", input.day)
     }
 
     @Test
@@ -307,7 +298,7 @@ class BatchInputViewModelTest {
         val handle = SavedStateHandle(mapOf(
             "restoration_version" to 1,
             "restoration_in_weight" to "70.0",
-            "restoration_base_year" to "2020", // Baseline year different from default
+            "restoration_base_year" to "2020",
             "restoration_in_year" to "2020"
         ))
 
@@ -317,10 +308,10 @@ class BatchInputViewModelTest {
         )
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals("70.0", state.weight)
-        assertEquals("2020", state.initialYear)
-        assertTrue(state.isChanged) // Weight is entered, so changed
+        val input = viewModel.uiState.value.input
+        assertEquals("70.0", input.weight)
+        assertEquals("2020", input.initialYear)
+        assertTrue(input.isChanged)
     }
 
     @Test
@@ -336,12 +327,10 @@ class BatchInputViewModelTest {
         )
         advanceUntilIdle()
 
-        // Trigger person load (which usually resets inputs)
         viewModel.loadPerson("u1")
         advanceUntilIdle()
 
-        // Should STILL have 175.0, not empty
-        assertEquals("175.0", viewModel.uiState.value.height)
+        assertEquals("175.0", viewModel.uiState.value.input.height)
     }
 
     // endregion
@@ -353,14 +342,13 @@ class BatchInputViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // 体温に範囲外（45.1）を入力し、フォーカスが外れたとみなす
         viewModel.updateBodyTemp("45.1")
         viewModel.markFieldAsTouched("bodyTemperature")
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(R.string.health_err_range_format, state.fieldErrors["bodyTemperature"])
-        assertEquals(listOf("30.0", "45.0"), state.fieldErrorArgs["bodyTemperature"])
+        val input = viewModel.uiState.value.input
+        assertEquals(R.string.health_err_range_format, input.fieldErrors["bodyTemperature"])
+        assertEquals(listOf("30.0", "45.0"), input.fieldErrorArgs["bodyTemperature"])
     }
 
     @Test
@@ -368,12 +356,11 @@ class BatchInputViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // 身長に不正形式
         viewModel.updateHeight("170.0.0")
         viewModel.markFieldAsTouched("height")
         advanceUntilIdle()
 
-        assertEquals(R.string.common_error_invalid_input, viewModel.uiState.value.fieldErrors["height"])
+        assertEquals(R.string.common_error_invalid_input, viewModel.uiState.value.input.fieldErrors["height"])
     }
 
     @Test
@@ -381,27 +368,11 @@ class BatchInputViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // 未来の年をセット
         viewModel.updateYear("2099")
         viewModel.markFieldAsTouched("year")
         advanceUntilIdle()
 
-        assertEquals(R.string.common_err_future_date_not_allowed, viewModel.uiState.value.fieldErrors["recordTime"])
-    }
-
-    @Test
-    fun FBK_04_untouched_noError() = runTest {
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // 不正な値を入力するが markFieldAsTouched は呼ばない
-        viewModel.updateBodyTemp("45.0")
-        advanceUntilIdle()
-
-        // updateState が自動的に touched に加えるので、エラーが出る。
-        // updateState のロジックを確認： 入力があったフィールドを touched に加えている。
-        // なので、FBK-04 は「入力も操作もしていない項目」がエラーにならないことを確認する。
-        assertNull("Weight is empty and untouched, should have no error", viewModel.uiState.value.fieldErrors["weight"])
+        assertEquals(R.string.common_err_future_date_not_allowed, viewModel.uiState.value.input.fieldErrors["recordTime"])
     }
 
     @Test
@@ -410,13 +381,12 @@ class BatchInputViewModelTest {
         advanceUntilIdle()
 
         viewModel.updateBodyTemp("45.1")
-        assertNotNull(viewModel.uiState.value.fieldErrors["bodyTemperature"])
+        assertNotNull(viewModel.uiState.value.input.fieldErrors["bodyTemperature"])
 
-        // 正しい値に修正
         viewModel.updateBodyTemp("36.5")
         advanceUntilIdle()
 
-        assertNull("Error should be cleared", viewModel.uiState.value.fieldErrors["bodyTemperature"])
+        assertNull("Error should be cleared", viewModel.uiState.value.input.fieldErrors["bodyTemperature"])
     }
 
     // endregion

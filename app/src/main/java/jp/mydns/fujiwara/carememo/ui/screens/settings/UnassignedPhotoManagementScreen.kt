@@ -22,8 +22,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import jp.mydns.fujiwara.carememo.R
 import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoInfo
-import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewEvent
+import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoOperation
+import jp.mydns.fujiwara.carememo.logic.feature.UnassignedPhotoViewEvent
 import jp.mydns.fujiwara.carememo.ui.components.base.AppDeleteConfirmDialog
+import jp.mydns.fujiwara.carememo.ui.components.base.appTopAppBarColors
 import jp.mydns.fujiwara.carememo.viewmodel.UnassignedPhotoViewModel
 
 /**
@@ -41,12 +43,6 @@ sealed interface UnassignedPhotoUiAction {
  *
  * 【役割】
  * DB レコード（経過記録）との紐付けが失われた「未割り当て」の画像ファイル（SCR-S-004）を一覧管理するための画面です。
- * ストレージ容量の節約や、データの整合性維持のための保守機能を提供します。
- *
- * 【主な機能】
- * ・一覧表示：`UnassignedPhotoManagementContent` による孤立した写真のサムネイル表示。
- * ・削除操作：不要になった画像ファイルのストレージからの完全削除。
- * ・安全性：削除実行前に `AppDeleteConfirmDialog` による確認を強制。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,8 +53,8 @@ fun UnassignedPhotoManagementScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var photoToDelete by remember { mutableStateOf<UnassignedPhotoInfo?>(null) }
+    val isOperating = uiState.operation != UnassignedPhotoOperation.Idle
 
-    // ViewModel からの画面遷移イベントを監視
     LaunchedEffect(Unit) {
         viewModel.viewEvent.collect { event ->
             when (event) {
@@ -69,8 +65,6 @@ fun UnassignedPhotoManagementScreen(
         }
     }
 
-    // アクションハンドラ
-    // 削除対象の選択状態をキーに含め、ダイアログ表示状態の変化に追従する
     val handleAction: (UnassignedPhotoUiAction) -> Unit = remember(viewModel, photoToDelete) {
         { action ->
             when (action) {
@@ -85,7 +79,6 @@ fun UnassignedPhotoManagementScreen(
         }
     }
 
-    // 削除確認ダイアログ
     photoToDelete?.let {
         AppDeleteConfirmDialog(
             onDismiss = { handleAction(UnassignedPhotoUiAction.DismissDialog) },
@@ -99,10 +92,15 @@ fun UnassignedPhotoManagementScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.unassigned_photo_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { handleAction(UnassignedPhotoUiAction.Back) }, modifier = Modifier.testTag("UnassignedPhoto_BackButton")) {
+                    IconButton(
+                        onClick = { handleAction(UnassignedPhotoUiAction.Back) },
+                        enabled = !isOperating,
+                        modifier = Modifier.testTag("UnassignedPhoto_BackButton")
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
-                }
+                },
+                colors = appTopAppBarColors()
             )
         }
     ) { paddingValues ->

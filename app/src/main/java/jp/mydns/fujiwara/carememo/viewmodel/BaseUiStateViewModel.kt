@@ -173,18 +173,32 @@ abstract class BaseUiStateViewModel<S, E>(
     /** 
      * 子クラスにおいて、UiState 内の loading フラグを更新するための抽象メソッド。
      * 基盤側からローディングの開始・終了を通知するために使用します。
+     *
+     * @param state 現在の状態
+     * @param isLoading ロード中かどうか
+     * @param category ロードの性質（構造的、操作的、更新的など）
      */
-    protected abstract fun copyWithLoadingState(state: S, isLoading: Boolean): S
+    protected abstract fun copyWithLoadingState(state: S, isLoading: Boolean, category: LoadingCategory): S
+
+    /**
+     * ロード状態の変化を UI State へ反映させます。
+     *
+     * @param isLoading ロード中かどうか
+     * @param category ロードの性質
+     */
+    protected open fun onLoadingChanged(isLoading: Boolean, category: LoadingCategory) {
+        updateUiState { copyWithLoadingState(it, isLoading, category) }
+    }
 
     /** 
      * safeLaunch 等で利用するローディング状態管理プロキシ。
-     * この Flow の値が変化すると、自動的に copyWithLoadingState が呼び出され UiState へ反映されます。
+     * この Flow の値が変化すると、自動的に copyWithLoadingState が [LoadingCategory.Default] として呼び出されます。
      */
     protected val loadingStateProxy: MutableStateFlow<Boolean> by lazy {
         val proxy = MutableStateFlow(false)
         scope.launch {
             proxy.collect { isLoading ->
-                updateUiState { copyWithLoadingState(it, isLoading) }
+                onLoadingChanged(isLoading, LoadingCategory.Default)
             }
         }
         proxy
@@ -192,9 +206,16 @@ abstract class BaseUiStateViewModel<S, E>(
 
     /**
      * 安全にコルーチンを起動します。
+     *
+     * @param operation 操作名（監査ログ用）
+     * @param loadingCategory ロードの性質（デフォルトは Default）
+     * @param loadingState ローディング状態管理用 Flow（指定時は ViewModel 側で表示制御を行う）
+     * @param contextBuilder 追加のログコンテキスト
+     * @param block 実行する処理本体
      */
     open fun safeLaunch(
         operation: String,
+        loadingCategory: LoadingCategory = LoadingCategory.Default,
         loadingState: MutableStateFlow<Boolean>? = null,
         contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
         block: suspend CoroutineScope.() -> Unit
@@ -213,10 +234,13 @@ abstract class BaseUiStateViewModel<S, E>(
             .apply { contextBuilder?.invoke(this) }
             .build()
 
-        val actualLoadingState = loadingState ?: loadingStateProxy
-
         return scope.launch {
-            actualLoadingState.value = true
+            if (loadingState != null) {
+                loadingState.value = true
+            } else {
+                onLoadingChanged(true, loadingCategory)
+            }
+
             try {
                 block()
             } catch (t: Throwable) {
@@ -232,7 +256,11 @@ abstract class BaseUiStateViewModel<S, E>(
                 coroutineErrorHandler.handleException(t, effectiveContext)
                 if (t is Error) throw t
             } finally {
-                actualLoadingState.value = false
+                if (loadingState != null) {
+                    loadingState.value = false
+                } else {
+                    onLoadingChanged(false, loadingCategory)
+                }
             }
         }
     }
@@ -243,6 +271,7 @@ abstract class BaseUiStateViewModel<S, E>(
      *
      * @param operation 操作名（監査ログ用）
      * @param mode コレクションモード（INITIAL: 開始時にローディング表示, MONITORING: 表示なし）
+     * @param loadingCategory ロードの性質（デフォルトは Default）
      * @param loadingState ローディング状態管理用 Flow
      * @param contextBuilder 追加のログコンテキスト
      * @param retryCount エラー発生時の再試行回数（デフォルト 0）
@@ -253,6 +282,7 @@ abstract class BaseUiStateViewModel<S, E>(
     open fun <T> safeCollect(
         operation: String,
         mode: CollectMode,
+        loadingCategory: LoadingCategory = LoadingCategory.Default,
         loadingState: MutableStateFlow<Boolean>? = null,
         contextBuilder: (ErrorContextBuilder.() -> Unit)? = null,
         retryCount: Int = 0,
@@ -272,16 +302,20 @@ abstract class BaseUiStateViewModel<S, E>(
             .apply { contextBuilder?.invoke(this) }
             .build()
 
-        val actualLoadingState = loadingState ?: loadingStateProxy
-
         return scope.launch {
             var currentRetry = 0
             while (true) {
-                if (mode == CollectMode.INITIAL) actualLoadingState.value = true
+                if (mode == CollectMode.INITIAL) {
+                    if (loadingState != null) loadingState.value = true
+                    else onLoadingChanged(true, loadingCategory)
+                }
                 try {
                     flowProvider().collect { value ->
                         // INITIAL モードの場合、最初のデータを受信した時点でローディングを解除する
-                        if (mode == CollectMode.INITIAL) actualLoadingState.value = false
+                        if (mode == CollectMode.INITIAL) {
+                            if (loadingState != null) loadingState.value = false
+                            else onLoadingChanged(false, loadingCategory)
+                        }
                         action(value)
                     }
                     // 正常終了（有限の Flow の場合）
@@ -308,7 +342,10 @@ abstract class BaseUiStateViewModel<S, E>(
                     if (t is Error) throw t
                     break
                 } finally {
-                    if (mode == CollectMode.INITIAL) actualLoadingState.value = false
+                    if (mode == CollectMode.INITIAL) {
+                        if (loadingState != null) loadingState.value = false
+                        else onLoadingChanged(false, loadingCategory)
+                    }
                 }
             }
         }
