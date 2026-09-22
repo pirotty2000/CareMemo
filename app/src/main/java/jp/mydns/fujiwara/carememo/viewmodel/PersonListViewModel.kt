@@ -175,6 +175,14 @@ class PersonListViewModel(
         // アラート情報の初回取得
         refreshAlerts()
 
+        // アラートの同期（データ更新時に再スキャン）
+        scope.launch {
+            categorySummaries.collect {
+                // サマリーに変更があった場合、アラート状態も変わっている可能性があるため再スキャン
+                refreshAlerts()
+            }
+        }
+
         // 利用者リストの購読と統合フィルタリングフロー
         safeCollect(
             operation = "userListFlow",

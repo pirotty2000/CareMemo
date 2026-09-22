@@ -33,7 +33,7 @@ class AlertReportLogic(
     suspend fun scanAlerts(
         sinceDays: Int? = null,
         isNameMaskingEnabled: Boolean = true
-    ): List<AlertItem> = withContext(Dispatchers.Default) {
+    ): List<AlertItem> = withContext(Dispatchers.IO) {
         val allAlerts = mutableListOf<AlertItem>()
         val cutoff = sinceDays?.let { Instant.now().minus(it.toLong(), ChronoUnit.DAYS) }
 

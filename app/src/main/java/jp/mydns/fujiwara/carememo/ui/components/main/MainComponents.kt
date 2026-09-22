@@ -215,7 +215,7 @@ fun UserListItem(
         // 異常値や誕生日に応じた背景色の切り替え
         colors = ListItemDefaults.colors(
             containerColor = when {
-                summary?.hasAlert == true -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
+                summary?.hasAlert == true -> MaterialTheme.colorScheme.errorContainer
                 isBirthdayToday -> MaterialTheme.colorScheme.tertiaryContainer
                 else -> MaterialTheme.colorScheme.surface
             },
